@@ -7,7 +7,7 @@ const groups = [
   { label: "DISCOVER", items: [["▦", "Home", "/dashboard"], ["⇄", "True Price", "/dashboard/true-price"], ["⌂", "Indie Stores", "/dashboard/stores"]] },
   { label: "TRACK", items: [["◉", "Alerts", "/dashboard/alerts"], ["♡", "FateMatch", "/dashboard/watchlist"]] },
   { label: "NETWORK", items: [["□", "Events", "/dashboard/events"], ["⌖", "Local Radar", "/dashboard/local-radar"], ["◌", "Discord", "/dashboard/discord"]] },
-  { label: "ACCOUNT", items: [["◎", "My FateDrop ID", "/dashboard/profile"], ["♛", "Membership", "/dashboard/membership"]] },
+  { label: "ACCOUNT", items: [["◎", "My FateDrop ID", "/dashboard/profile"], ["◇", "Design My Avatar", "/dashboard/avatar"], ["♛", "Membership", "/dashboard/membership"]] },
 ] as const;
 
 function active(pathname: string, href: string) {
