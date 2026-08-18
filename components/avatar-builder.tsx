@@ -104,7 +104,7 @@ export function AvatarBuilder({ initialLoadout, initialFavouriteTcgs, persistent
       gear: pick(AVATAR_GEAR),
       companion: pick(AVATAR_COMPANIONS),
       aura: pick(AVATAR_AURAS),
-      background: pick(AVATAR_BACKGROUNDS.filter((item) => item !== "collector-desk")),
+      background: pick(AVATAR_BACKGROUNDS),
       tcgStyle: pick(AVATAR_TCG_STYLES),
     });
     setMessage("Randomised · unsaved");
