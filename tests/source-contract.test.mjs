@@ -20,6 +20,11 @@ test("all current FateDrop routes and core project files are present", async () 
     "app/terms/page.tsx",
     "app/trust/page.tsx",
     "app/api/leads/route.ts",
+    "app/dashboard/page.tsx",
+    "app/api/dashboard/activity/route.ts",
+    "app/api/dashboard/network-snapshot/route.ts",
+    "lib/dashboard-storage.ts",
+    "docs/dashboard-metrics.md",
     "app/globals.css",
     "package.json",
     ".env.example",
@@ -75,6 +80,7 @@ test("visual assets, animation rules and responsive behaviour remain included", 
     "public/assets/app-search.jpeg",
     "public/assets/app-indie.jpeg",
     "public/assets/app-settings.jpeg",
+    "public/assets/fatedrop-logo-mark.png",
   ]) await access(new URL(asset, root));
 });
 

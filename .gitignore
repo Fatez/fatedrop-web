@@ -46,3 +46,19 @@ next-env.d.ts
 # local FateDrop lead storage
 /data/beta-leads.ndjson
 /data/beta-leads.json
+
+# local FateDrop account/session storage
+/data/accounts.json
+/data/accounts.json.*.tmp
+
+# local FateDrop dashboard metric/audit storage
+/data/dashboard-metrics.json
+/data/dashboard-metrics.json.*.tmp
+
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example

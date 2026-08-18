@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { NetworkProof } from "@/components/network-proof";
 import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { FateSignalField } from "@/components/fate-signal-field";
+import { SignalIcon, type SignalIconName } from "@/components/signal-icon";
 
 const retailerFaq = [
   ["What does FateDrop cost?", "Free Retailer, Indie at £9.99/month or £99/year and Indie Pro at £24.99/month or £249/year are provisional founding-member prices. Billing is not active."],
@@ -30,12 +32,12 @@ export const metadata: Metadata = {
 export default function BusinessesPage() {
   return (
     <SiteShell>
-      <PageHero eyebrow="For retailers & vendors" title="Your stock deserves to be discovered." description="Put products in front of collectors already searching while keeping the transaction, fulfilment, service and customer relationship. Your products. Your prices. Your website. Your checkout.">
+      <PageHero motif="market" eyebrow="For retailers & vendors" title="Your stock deserves to be discovered." description="Put products in front of collectors already searching while keeping the transaction, fulfilment, service and customer relationship. Your products. Your prices. Your website. Your checkout.">
         <div className="button-row"><Link className="button button-primary" href="/join?type=business">Connect your catalogue <span>↗</span></Link><Link className="button button-secondary" href="#partner-demo">Request a partner demo</Link></div>
       </PageHero>
       <section className="content-section section-shell split-section">
         <div className="copy-stack"><p className="eyebrow"><span />The discovery problem</p><h2>Great stock can still be almost invisible.</h2><p>Collectors cannot buy what they cannot find. FateDrop makes independent products discoverable across search, local and event journeys—without turning the retailer into a faceless fulfilment endpoint.</p><div className="point-list"><div><span>01</span><p>Your business identity stays attached to your listings.</p></div><div><span>02</span><p>Collectors continue to your existing website to purchase.</p></div><div><span>03</span><p>Catalogue support is assessed with you—never assumed.</p></div></div></div>
-        <div className="insight-panel"><small>YOUR CATALOGUE / FATEDROP DISCOVERY</small><div className="search-journey"><div className="search-query">Collector searches the network</div><div className="journey-arrow" /><div className="journey-result"><span className="journey-thumb" /><div><b>Your product is surfaced</b><small>Your store name remains visible</small></div><span>Match</span></div><div className="journey-arrow" /><div className="journey-store"><small>DIRECT TRAFFIC</small><strong>Your product page. Your checkout.</strong><p>FateDrop does not present itself as the stockist.</p></div></div></div>
+        <div className="insight-panel retailer-network-panel"><FateSignalField variant="market" className="panel-signal-field" /><small>YOUR CATALOGUE / FATEDROP DISCOVERY</small><div className="retailer-network-flow" aria-label="Retailer catalogue to collector journey"><span>Catalogue</span><i /><span>FateDrop network</span><i /><span>Collector search</span><i /><span>Retailer checkout</span></div><div className="search-journey"><div className="search-query">Collector searches the network</div><div className="journey-arrow" /><div className="journey-result"><span className="journey-thumb" /><div><b>Your product is surfaced</b><small>Your store name remains visible</small></div><span>Match</span></div><div className="journey-arrow" /><div className="journey-store"><small>DIRECT TRAFFIC</small><strong>Your product page. Your checkout.</strong><p>FateDrop does not present itself as the stockist.</p></div></div></div>
       </section>
       <section className="onboarding-section section-shell" id="onboarding">
         <div className="onboarding-copy"><p className="eyebrow"><span />Founding retailer onboarding</p><h2>From catalogue to collector search.</h2><p>Start with the safest practical connection for your business. FateDrop does not promise a fixed onboarding time or assume every catalogue is identical.</p><strong className="retailer-promise">Your products. Your prices. Your website. Your checkout.</strong><p>FateDrop does not become the seller and does not handle fulfilment or customer service for retailer purchases.</p><Link className="button button-primary" href="/join?type=business">Connect Your Catalogue <span>↗</span></Link></div>
@@ -56,16 +58,16 @@ export default function BusinessesPage() {
         <SectionHeading eyebrow="Retailer journey" title="More relevant visibility. More qualified traffic. Better demand insight." body="Connect the catalogue you already operate, become discoverable in relevant journeys and learn what collectors want but cannot currently find." />
         <div className="feature-cards">
           {[
-            ["01", "Connect or import", "Start with Shopify, WooCommerce, CSV or another structured-feed foundation."],
-            ["02", "Verified storefront", "Present business details and catalogue visibility without flattening your identity."],
-            ["03", "Relevant search", "Appear when collectors search for products your catalogue currently holds."],
-            ["04", "Direct journeys", "Send buyers to your own product pages and checkout. Referral measurement is being validated; clicks are never presented as invented sales."],
-            ["05", "Events + releases", "Promote events, preorders and releases with clearly labelled information."],
-            ["06", "Demand insight", "Understand available product interest and aggregated searches that find no matching stock."],
-            ["07", "Catalogue health", "Identify stale data, broken links and catalogue changes that need attention."],
-            ["08", "Stock arrivals", "Observe relevant catalogue arrivals and availability transitions."],
-            ["09", "Retailer analytics · active expansion", "Build toward search-visibility and outbound-referral reporting without claiming unverified conversion."],
-          ].map(([number, title, body]) => <article className="mini-feature" key={title}><span>{number}</span><h3>{title}</h3><p>{body}</p></article>)}
+            ["01", "Connect or import", "Start with Shopify, WooCommerce, CSV or another structured-feed foundation.", "wishlist"],
+            ["02", "Verified storefront", "Present business details and catalogue visibility without flattening your identity.", "fatescore"],
+            ["03", "Relevant search", "Appear when collectors search for products your catalogue currently holds.", "unified-search"],
+            ["04", "Direct journeys", "Send buyers to your own product pages and checkout. Referral measurement is being validated; clicks are never presented as invented sales.", "manifested"],
+            ["05", "Events + releases", "Promote events, preorders and releases with clearly labelled information.", "events"],
+            ["06", "Demand insight", "Understand available product interest and aggregated searches that find no matching stock.", "fatefind"],
+            ["07", "Catalogue health", "Identify stale data, broken links and catalogue changes that need attention.", "fatescore"],
+            ["08", "Stock arrivals", "Observe relevant catalogue arrivals and availability transitions.", "drop-pulse"],
+            ["09", "Retailer analytics · active expansion", "Build toward search-visibility and outbound-referral reporting without claiming unverified conversion.", "local-radar"],
+          ].map(([number, title, body, icon]) => <article className="mini-feature" key={title}><div className="mini-feature-top"><span>{number}</span><SignalIcon name={icon as SignalIconName} /></div><h3>{title}</h3><p>{body}</p></article>)}
         </div>
       </section>
       <section className="content-section section-shell" id="partner-demo">

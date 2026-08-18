@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Nav } from "./nav";
 import { Footer } from "./footer";
+import { FateSignalField, type FateSignalVariant } from "./fate-signal-field";
 
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
@@ -19,15 +20,18 @@ export function PageHero({
   title,
   description,
   children,
+  motif = "signal",
 }: {
   eyebrow: string;
   title: string;
   description: string;
   children?: ReactNode;
+  motif?: FateSignalVariant;
 }) {
   return (
-    <section className="page-hero section-shell">
+    <section className={`page-hero page-hero-${motif} section-shell`}>
       <div className="orb orb-one" />
+      <FateSignalField variant={motif} className="page-hero-signal-field" />
       <div className="page-hero-copy reveal">
         <p className="eyebrow"><span />{eyebrow}</p>
         <h1>{title}</h1>

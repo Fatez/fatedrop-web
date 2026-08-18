@@ -7,6 +7,8 @@ import { NetworkProof } from "@/components/network-proof";
 import { FinalCta, SiteShell } from "@/components/page-shell";
 import { StockLifecycle } from "@/components/stock-lifecycle";
 import { WhyFateDrop } from "@/components/why-fatedrop";
+import { FateSignalField } from "@/components/fate-signal-field";
+import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, TRIAL_DAYS } from "@/lib/membership";
 
 export const metadata: Metadata = {
   title: "FateDrop | UK TCG Discovery & Stock Intelligence",
@@ -18,6 +20,7 @@ export default function Home() {
     <SiteShell>
       <section className="home-hero section-shell">
         <div className="hero-atmosphere" aria-hidden="true"><i /><i /><i /></div>
+        <FateSignalField variant="signal" className="hero-signal-field" />
         <div className="hero-copy reveal">
           <p className="eyebrow"><span />UK TCG discovery network</p>
           <p className="hero-positioning">Participating catalogues, evidence-backed stock signals and independent discovery—connected.</p>
@@ -67,6 +70,7 @@ export default function Home() {
 
       <section className="business-section section-shell">
         <div className="business-visual">
+          <FateSignalField variant="market" className="business-signal-field" />
           <div className="catalogue-panel panel-main"><small>CATALOGUE SIGNAL</small><strong>Discovery, connected.</strong><div className="signal-bars">{[42, 70, 54, 82, 64, 90, 76, 98].map((height, i) => <i style={{ height: `${height}%` }} key={i} />)}</div></div>
           <div className="catalogue-panel panel-float"><span>QUALIFIED JOURNEY</span><b>Search → Indie</b></div>
           <div className="catalogue-panel panel-float-two"><span>YOUR CHECKOUT</span><b>Your brand stays yours.</b></div>
@@ -91,8 +95,14 @@ export default function Home() {
       </section>
 
       <section className="subscription-teaser section-shell">
-        <div><p className="eyebrow"><span />Free and paid value</p><h2>Free discovery. Paid depth—when the infrastructure is ready.</h2><p>Free FateDrop covers useful product, retailer and event discovery. Provisional paid plans add deeper collector intelligence or broader retailer distribution, monitoring, analytics, promotions and event tools.</p><Link className="button button-secondary" href="/subscriptions">See Provisional Plans <span>↗</span></Link></div>
-        <div className="subscription-summary"><article><span>Collectors</span><strong>£0 → £7.99</strong><p>Discovery first; lifecycle, FateFind, comparison and collection depth in paid tiers.</p></article><article><span>Retailers</span><strong>£0 → £24.99</strong><p>Organic discovery first; distribution, monitoring and insight in paid tiers.</p></article><small>Provisional founding-member pricing · no authentication, billing or checkout active</small></div>
+        <div><p className="eyebrow"><span />FateDrop membership</p><h2>One identity. One entitlement. More useful the longer you stay.</h2><p>Create a FateDrop ID for free, keep your permanent member-since history and start a {TRIAL_DAYS}-day collector trial when you want deeper stock intelligence. The same entitlement is designed to unlock the app and Premium Discord access.</p><div className="button-row"><Link className="button button-primary" href="/account/register">Create FateDrop ID <span>↗</span></Link><Link className="button button-secondary" href="/subscriptions">See Membership</Link></div></div>
+        <div className="subscription-summary"><article><span>Collectors</span><strong>£0 → £7.99</strong><p>Free identity and discovery; lifecycle, FateFind, comparison and collection depth in paid tiers.</p></article><article><span>Connected access</span><strong>WEB → APP → DISCORD</strong><p>One membership state designed to follow the collector across the FateDrop network.</p></article><small>Billing and Discord automation activate when production credentials are connected.</small></div>
+      </section>
+
+      <section className="identity-community-teaser section-shell">
+        <FateSignalField variant="radar" className="identity-community-field" />
+        <div className="identity-community-copy"><p className="eyebrow"><span />Your network identity</p><h2>Become part of the signal.</h2><p>Your FateDrop ID is more than login credentials. It carries your profile, membership age and—when Premium is active—the entitlement used by the app and Discord community layer.</p><div className="identity-community-steps"><span><i>01</i>Create your ID</span><span><i>02</i>Build your profile</span><span><i>03</i>Connect Discord</span><span><i>04</i>Keep your network age</span></div><div className="button-row"><Link className="button button-primary" href="/account">Open FateDrop ID <span>↗</span></Link>{DISCORD_COMMUNITY_OPEN ? <a className="button button-secondary" href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">Join the Discord</a> : <span className="button button-secondary disabled-link" aria-disabled="true">Discord opening soon</span>}</div></div>
+        <div className="identity-card-preview"><div className="identity-preview-head"><span>FATEDROP / NETWORK ID</span><i>SIGNAL READY</i></div><div className="identity-preview-person"><b>FD</b><div><small>@YOUR_HANDLE</small><strong>Collector identity</strong><p>FD-••••••••••</p></div></div><div className="identity-preview-meta"><span><small>MEMBER SINCE</small><b>DAY ONE</b></span><span><small>PROFILE</small><b>YOUR SIGNAL</b></span><span><small>ACCESS</small><b>ONE MEMBERSHIP</b></span></div><div className="identity-preview-rings"><i /><i /><i /></div></div>
       </section>
 
       <FutureExpansion />

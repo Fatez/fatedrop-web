@@ -8,7 +8,12 @@ Standalone, maintainable source for the current FateDrop website. This project p
 - React 19
 - TypeScript
 - Tailwind CSS 4 processing plus the existing handcrafted FateDrop stylesheet
-- Next.js route handler for beta lead capture
+- Next.js route handlers for beta lead capture, FateDrop ID authentication, billing and Discord linking
+- FateDrop ID profiles with permanent member-since history
+- Collector membership entitlement with Stripe-ready 14-day trials
+- Discord OAuth + Premium-role sync foundation
+- Authenticated FateDrop dashboard with auditable personal/network metrics
+- Append-only activity, network-snapshot and Stripe webhook audit ledgers
 - Local-file storage for development
 - Optional managed PostgreSQL storage for hosted deployments
 
@@ -27,7 +32,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The default example environment stores validated form submissions in `data/beta-leads.ndjson`. That file is ignored by Git and must not be committed.
+The default example environment stores validated form submissions in `data/beta-leads.ndjson`, development FateDrop IDs/sessions in `data/accounts.json`, and local dashboard metric/audit records in `data/dashboard-metrics.json`. All are ignored by Git and must not be committed.
 
 ## Quality checks
 
@@ -44,21 +49,25 @@ app/                  Routes, layouts, metadata and API handlers
 components/           Reusable FateDrop interface components
 database/             PostgreSQL schema and retained Cloudflare D1 schema
 docs/                 Lead-storage and Sites migration notes
-lib/                  Analytics event helper, site data and storage adapter
+lib/                  Analytics, account/auth, membership, Stripe/Discord helpers and storage adapters
 public/assets/        FateDrop artwork and current app reference images
 tests/                Source-contract and storage tests
 ```
 
 ## Environment variables
 
-| Variable | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Canonical deployment URL used by metadata, robots and sitemap. |
-| `FATEDROP_LEAD_STORE` | `file` for local development, `postgres` for managed hosted storage, or omitted/`disabled` to reject submissions honestly. |
-| `FATEDROP_LEAD_FILE` | Local NDJSON path used by `file` mode. |
-| `DATABASE_URL` | PostgreSQL connection string used only by `postgres` mode. |
+The safe template is documented in `.env.example`. Core groups are:
 
-Never commit `.env.local`, database exports or the local lead file.
+| Group | Variables | Purpose |
+| --- | --- | --- |
+| Public URL | `NEXT_PUBLIC_SITE_URL` | Canonical deployment URL and OAuth/checkout redirects. |
+| Leads | `FATEDROP_LEAD_STORE`, `FATEDROP_LEAD_FILE` | Beta enquiry storage. |
+| Accounts | `FATEDROP_ACCOUNT_STORE`, `FATEDROP_ACCOUNT_FILE`, `DATABASE_URL` | FateDrop ID, sessions, membership and Discord-link storage. |
+| Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PLUS`, `STRIPE_PRICE_PRO`, `FATEDROP_TRIAL_REQUIRE_CARD` | Collector subscription checkout, trial and entitlement sync. |
+| Discord | `NEXT_PUBLIC_DISCORD_ENABLED`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_PREMIUM_ROLE_ID` | Public community launch gate, Discord identity link and Premium role automation. |
+| Dashboard metrics | `FATEDROP_METRIC_STORE`, `FATEDROP_METRIC_FILE`, `FATEDROP_METRICS_INGEST_SECRET` | Persistent personal activity, network snapshots, Stripe audit trail and FateDrop Cloud ingestion. |
+
+Never commit `.env.local`, database exports, account files, session data or the local lead file.
 
 ## Lead database setup
 
@@ -68,9 +77,18 @@ For a hosted project:
 2. Run `database/postgres.sql` against it.
 3. Set `FATEDROP_LEAD_STORE=postgres`.
 4. Set `DATABASE_URL` as a protected hosting-provider environment variable.
-5. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain.
+5. Set `FATEDROP_ACCOUNT_STORE=postgres` if FateDrop IDs are enabled.
+6. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain.
 
-Without configured hosted storage, the form returns a `503` and explicitly says nothing was saved.
+Without configured hosted storage, write endpoints reject the operation rather than pretending data was saved.
+
+## FateDrop ID + membership
+
+See [docs/membership-foundation.md](docs/membership-foundation.md) for the account model, Stripe trial flow, Discord linking, production environment variables and app-entitlement handoff.
+
+See [docs/dashboard-metrics.md](docs/dashboard-metrics.md) for the exact source/calculation behind every dashboard metric, ingestion contracts and the no-fake-data rule.
+
+See [docs/change-log.md](docs/change-log.md) for the working file-by-file change log, including the separately held Wear the Signal design patch.
 
 ## GitHub
 

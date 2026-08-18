@@ -9,6 +9,7 @@ import { BrandMark } from "./brand-mark";
 
 export function Nav() {
   const [open, setOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const pathname = usePathname();
 
   return (
@@ -26,6 +27,30 @@ export function Nav() {
               {item.label}
             </Link>
           ))}
+          <div className={`account-menu${pathname.startsWith("/dashboard") || pathname.startsWith("/account") ? " active" : ""}${accountOpen ? " is-open" : ""}`}>
+            <button
+              className="account-menu-trigger"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={accountOpen}
+              onClick={() => setAccountOpen((current) => !current)}
+            >
+              <span className="account-menu-signal" aria-hidden="true" />
+              FateDrop ID
+              <span className="account-menu-chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div className="account-menu-popover" role="menu">
+              <Link href="/account" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
+                <span><b>My FateDrop ID</b><small>Profile, member since & identity</small></span><i>◎</i>
+              </Link>
+              <Link href="/dashboard" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
+                <span><b>Dashboard</b><small>Signals, metrics & activity</small></span><i>▦</i>
+              </Link>
+              <Link href="/subscriptions#collectors" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
+                <span><b>Membership</b><small>Trial, Premium & billing</small></span><i>◇</i>
+              </Link>
+            </div>
+          </div>
           <Link
             className="button button-small button-primary nav-cta"
             href="/join"
@@ -42,7 +67,7 @@ export function Nav() {
           type="button"
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
-          onClick={() => setOpen((current) => !current)}
+          onClick={() => { setOpen((current) => !current); setAccountOpen(false); }}
         >
           <span />
           <span />

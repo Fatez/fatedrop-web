@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
 import { siteConfig } from "@/lib/site-data";
+import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL } from "@/lib/membership";
 
 export function Footer() {
   return (
@@ -17,6 +18,7 @@ export function Footer() {
               <Link href={item.href} key={item.href}>{item.label}</Link>
             ))}
             <Link href="/subscriptions">Subscriptions</Link>
+            <Link href="/account">My FateDrop ID</Link>
             <Link href="/about">About</Link>
           </div>
           <div>
@@ -25,6 +27,7 @@ export function Footer() {
             <Link href="/join?type=business">Business enquiry</Link>
             <Link href="/join?type=event">List an event</Link>
             <Link href="/join?type=collector">Free Drops list</Link>
+            {DISCORD_COMMUNITY_OPEN ? <a href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">FateDrop Discord</a> : <span className="footer-coming-soon">Discord · opening soon</span>}
           </div>
           <div>
             <span>Legal</span>
