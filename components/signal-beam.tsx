@@ -9,9 +9,12 @@ export function SignalBeam({ pulseKey, state = "manifested", autoPulse = true }:
 
   useEffect(() => {
     if (!autoPulse) return;
-    setPulse(true);
+    const frame = window.requestAnimationFrame(() => setPulse(true));
     const timer = window.setTimeout(() => setPulse(false), 1800);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
   }, [pulseKey, autoPulse]);
 
   function replay() {
