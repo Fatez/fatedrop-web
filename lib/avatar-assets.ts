@@ -4,13 +4,9 @@ export const AVATAR_SPRITE_SHEET = "/assets/avatar-v2/avatar-sprites.svg";
 
 export type AvatarLayerKind = "background" | "aura" | "base" | "skin" | "hairBack" | "face" | "eyes" | "outfit" | "accessory" | "gear" | "hairFront" | "headwear" | "companion";
 
-function normalisedBackground(background: AvatarLoadout["background"]) {
-  return background === "collector-desk" ? "neon-desk" : background;
-}
-
 export function avatarLayerId(kind: AvatarLayerKind, loadout: AvatarLoadout) {
   switch (kind) {
-    case "background": return `bg-${normalisedBackground(loadout.background)}`;
+    case "background": return `bg-${loadout.background}`;
     case "aura": return `aura-${loadout.aura}`;
     case "base": return `base-${loadout.base}`;
     case "skin": return `skin-${loadout.skin}-tone`;
