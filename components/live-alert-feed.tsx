@@ -70,18 +70,36 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
     };
   }, []);
 
+  function testBeam() {
+    const id = `local-demo-${Date.now()}`;
+    const demo: NetworkSignal = {
+      id,
+      state: "manifested",
+      title: "FateDrop Beam Test · DEMO",
+      retailer: "Local visual test",
+      detail: "This signal exists only in your browser. It is not stored, sent to Discord or treated as production intelligence.",
+      deliveredPricePence: 4999,
+      occurredAt: Math.floor(Date.now() / 1000),
+    };
+    setSignals((current) => [demo, ...current.filter((signal) => !signal.id.startsWith("local-demo-"))]);
+    setFreshIds(new Set([id]));
+    window.setTimeout(() => setFreshIds(new Set<string>()), 2600);
+  }
+
   return <section className="fd-alerts-feed">
-    <div className="fd-alerts-feedhead"><div><span>LIVE SIGNAL CARDS</span><small>{source ? `Source: ${source} · checks every 10s` : "Awaiting FateDrop Cloud"}</small></div><b>{signals.length} SIGNAL{signals.length === 1 ? "" : "S"}</b></div>
+    <div className="fd-alerts-feedhead"><div><span>LIVE SIGNAL CARDS</span><small>{source ? `Source: ${source} · checks every 10s` : "Awaiting FateDrop Cloud"}</small></div><div className="fd-alert-feed-actions"><button type="button" onClick={testBeam}>TEST BEAM</button><b>{signals.length} SIGNAL{signals.length === 1 ? "" : "S"}</b></div></div>
     {signals.length ? <div className="fd-signal-grid">{signals.map((signal) => {
       const meta = stateMeta[signal.state];
-      return <article className={`fd-signal-card state-${signal.state} ${unlocked ? "" : "locked"}`} key={signal.id}>
-        <div className="fd-signal-card-top"><span><i>{meta.glyph}</i>{meta.label}</span><time>{relativeTime(signal.occurredAt, now)}</time></div>
-        <div className={unlocked ? "" : "fd-alert-blur"}><h2>{signal.title}</h2><p>{unlocked ? (signal.retailer || "Retailer pending") : "Retailer hidden"}</p></div>
+      const demo = signal.id.startsWith("local-demo-");
+      return <article className={`fd-signal-card state-${signal.state} ${unlocked || demo ? "" : "locked"} ${demo ? "demo" : ""}`} key={signal.id}>
+        <div className="fd-signal-card-top"><span><i>{meta.glyph}</i>{meta.label}{demo ? <em>LOCAL DEMO</em> : null}</span><time>{relativeTime(signal.occurredAt, now)}</time></div>
+        <div className={unlocked || demo ? "" : "fd-alert-blur"}><h2>{signal.title}</h2><p>{demo ? signal.retailer : unlocked ? (signal.retailer || "Retailer pending") : "Retailer hidden"}</p></div>
         <SignalBeam pulseKey={signal.id} state={signal.state} autoPulse={freshIds.has(signal.id)}/>
-        <div className={`fd-signal-detail ${unlocked ? "" : "fd-alert-blur"}`}>{unlocked ? (signal.detail || "FateDrop lifecycle event detected.") : "Unlock Premium to reveal product, retailer and actionable signal context."}</div>
-        <footer><span><small>TRUE PRICE</small><b>{unlocked ? money(signal.deliveredPricePence) : "£—.——"}</b></span><span><small>DETECTED</small><b>{relativeTime(signal.occurredAt, now)}</b></span><span><small>STATE</small><b>{meta.label}</b></span></footer>
-        {!unlocked ? <div className="fd-alert-lock">♛</div> : null}
+        <div className={`fd-signal-detail ${unlocked || demo ? "" : "fd-alert-blur"}`}>{demo ? signal.detail : unlocked ? (signal.detail || "FateDrop lifecycle event detected.") : "Unlock Premium to reveal product, retailer and actionable signal context."}</div>
+        <footer><span><small>TRUE PRICE</small><b>{demo ? money(signal.deliveredPricePence) : unlocked ? money(signal.deliveredPricePence) : "£—.——"}</b></span><span><small>DETECTED</small><b>{relativeTime(signal.occurredAt, now)}</b></span><span><small>STATE</small><b>{meta.label}</b></span></footer>
+        {!unlocked && !demo ? <div className="fd-alert-lock">♛</div> : null}
       </article>;
-    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>When FateDrop Cloud publishes a lifecycle event, its signal card will materialise here automatically.</p></div>}
+    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>When FateDrop Cloud publishes a lifecycle event, its signal card will materialise here automatically.</p><button type="button" onClick={testBeam}>Test the beam locally</button></div>}
+    <style jsx>{`.fd-alert-feed-actions{display:flex;align-items:center;gap:10px}.fd-alert-feed-actions button,.fd-alerts-empty button{min-height:32px;padding:0 10px;border:1px solid rgba(88,232,255,.18);border-radius:9px;background:linear-gradient(135deg,rgba(88,232,255,.07),rgba(157,109,255,.08));color:#b9f3ff;font-size:7px;font-weight:900;letter-spacing:.11em;cursor:pointer}.fd-signal-card.demo{box-shadow:inset 0 0 0 1px rgba(88,232,255,.14)}.fd-signal-card-top em{margin-left:4px;padding:3px 5px;border:1px solid rgba(88,232,255,.18);border-radius:999px;color:#75eaff;font-size:5px;font-style:normal;letter-spacing:.1em}`}</style>
   </section>;
 }
