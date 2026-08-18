@@ -1,4 +1,4 @@
-import type { NetworkLocation, NetworkOffer, NetworkProductIdentity, NetworkRetailer, NetworkSignalEvent } from "@/lib/network-domain";
+import type { NetworkInventoryObservation, NetworkLocation, NetworkOffer, NetworkProduct, NetworkProductIdentity, NetworkRetailer, NetworkSignalEvent } from "@/lib/network-domain";
 import { fateDropPostgres } from "@/lib/postgres";
 
 export async function upsertNetworkRetailer(retailer: NetworkRetailer) {
@@ -25,11 +25,26 @@ export async function upsertProductIdentity(product: NetworkProductIdentity) {
     ON CONFLICT (id) DO UPDATE SET tcg=EXCLUDED.tcg,canonical_key=EXCLUDED.canonical_key,title=EXCLUDED.title,product_type=EXCLUDED.product_type,set_name=EXCLUDED.set_name,edition=EXCLUDED.edition,official_rrp_pence=COALESCE(EXCLUDED.official_rrp_pence,fatedrop_product_identities.official_rrp_pence),rrp_source=COALESCE(EXCLUDED.rrp_source,fatedrop_product_identities.rrp_source),rrp_verified_at=COALESCE(EXCLUDED.rrp_verified_at,fatedrop_product_identities.rrp_verified_at),updated_at=EXCLUDED.updated_at`;
 }
 
+export async function upsertNetworkProduct(product: NetworkProduct) {
+  const sql = await fateDropPostgres();
+  await sql`INSERT INTO fatedrop_products (id,retailer_id,product_identity_id,retailer_sku,title,url,image_url,created_at,updated_at)
+    VALUES (${product.id},${product.retailerId},${product.productIdentityId},${product.retailerSku},${product.title},${product.url},${product.imageUrl},${product.createdAt},${product.updatedAt})
+    ON CONFLICT (id) DO UPDATE SET retailer_id=EXCLUDED.retailer_id,product_identity_id=EXCLUDED.product_identity_id,retailer_sku=EXCLUDED.retailer_sku,title=EXCLUDED.title,url=EXCLUDED.url,image_url=EXCLUDED.image_url,updated_at=EXCLUDED.updated_at`;
+}
+
 export async function upsertNetworkOffer(offer: NetworkOffer) {
   const sql = await fateDropPostgres();
-  await sql`INSERT INTO fatedrop_offers (id,retailer_id,location_id,product_identity_id,retailer_sku,title,url,channel,item_price_pence,mandatory_postage_pence,mandatory_fees_pence,delivery_known,stock_state,stock_quantity,observed_at)
-    VALUES (${offer.id},${offer.retailerId},${offer.locationId},${offer.productIdentityId},${offer.retailerSku},${offer.title},${offer.url},${offer.channel},${offer.itemPricePence},${offer.mandatoryPostagePence},${offer.mandatoryFeesPence},${offer.deliveryKnown},${offer.stockState},${offer.stockQuantity},${offer.observedAt})
-    ON CONFLICT (id) DO UPDATE SET retailer_id=EXCLUDED.retailer_id,location_id=EXCLUDED.location_id,product_identity_id=EXCLUDED.product_identity_id,retailer_sku=EXCLUDED.retailer_sku,title=EXCLUDED.title,url=EXCLUDED.url,channel=EXCLUDED.channel,item_price_pence=EXCLUDED.item_price_pence,mandatory_postage_pence=EXCLUDED.mandatory_postage_pence,mandatory_fees_pence=EXCLUDED.mandatory_fees_pence,delivery_known=EXCLUDED.delivery_known,stock_state=EXCLUDED.stock_state,stock_quantity=EXCLUDED.stock_quantity,observed_at=EXCLUDED.observed_at`;
+  await sql`INSERT INTO fatedrop_offers (id,product_id,retailer_id,location_id,product_identity_id,retailer_sku,title,url,channel,item_price_pence,mandatory_postage_pence,mandatory_fees_pence,delivery_known,stock_state,stock_quantity,observed_at)
+    VALUES (${offer.id},${offer.productId},${offer.retailerId},${offer.locationId},${offer.productIdentityId},${offer.retailerSku},${offer.title},${offer.url},${offer.channel},${offer.itemPricePence},${offer.mandatoryPostagePence},${offer.mandatoryFeesPence},${offer.deliveryKnown},${offer.stockState},${offer.stockQuantity},${offer.observedAt})
+    ON CONFLICT (id) DO UPDATE SET product_id=EXCLUDED.product_id,retailer_id=EXCLUDED.retailer_id,location_id=EXCLUDED.location_id,product_identity_id=EXCLUDED.product_identity_id,retailer_sku=EXCLUDED.retailer_sku,title=EXCLUDED.title,url=EXCLUDED.url,channel=EXCLUDED.channel,item_price_pence=EXCLUDED.item_price_pence,mandatory_postage_pence=EXCLUDED.mandatory_postage_pence,mandatory_fees_pence=EXCLUDED.mandatory_fees_pence,delivery_known=EXCLUDED.delivery_known,stock_state=EXCLUDED.stock_state,stock_quantity=EXCLUDED.stock_quantity,observed_at=EXCLUDED.observed_at`;
+}
+
+export async function saveInventoryObservation(inventory: NetworkInventoryObservation) {
+  const sql = await fateDropPostgres();
+  const rows = await sql`INSERT INTO fatedrop_inventory (id,offer_id,location_id,source_event_id,stock_state,quantity,observed_at)
+    VALUES (${inventory.id},${inventory.offerId},${inventory.locationId},${inventory.sourceEventId},${inventory.stockState},${inventory.quantity},${inventory.observedAt})
+    ON CONFLICT DO NOTHING RETURNING id`;
+  return Boolean(rows[0]);
 }
 
 export async function saveSignalEvent(signal: NetworkSignalEvent) {
