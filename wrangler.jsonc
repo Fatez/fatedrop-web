@@ -6,6 +6,9 @@
   "compatibility_flags": [
     "global_fetch_strictly_public"
   ],
+  "vars": {
+    "FATEDROP_ACCOUNT_STORE": "postgres"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
