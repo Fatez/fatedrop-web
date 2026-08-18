@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { evaluateActiveFateMatches } from "@/lib/fate-match";
 import { listActiveFateMatches, saveFateMatchHit } from "@/lib/fate-match-storage";
-import { saveInventoryObservation, saveSignalEvent, upsertNetworkLocation, upsertNetworkOffer, upsertNetworkProduct, upsertProductIdentity } from "@/lib/fate-network-storage";
-import type { NetworkInventoryObservation, NetworkLocation, NetworkOffer, NetworkProduct, NetworkProductIdentity, NetworkSignalEvent } from "@/lib/network-domain";
+import { saveInventoryObservation, saveSignalEvent, upsertNetworkLocation, upsertNetworkOffer, upsertNetworkProduct, upsertNetworkRetailer, upsertProductIdentity } from "@/lib/fate-network-storage";
+import type { NetworkInventoryObservation, NetworkLocation, NetworkOffer, NetworkProduct, NetworkProductIdentity, NetworkRetailer, NetworkSignalEvent } from "@/lib/network-domain";
 import { calculateTruePrice } from "@/lib/true-price";
 
 function stableId(prefix: string, ...parts: string[]) {
@@ -10,6 +10,7 @@ function stableId(prefix: string, ...parts: string[]) {
 }
 
 export type NetworkOpportunity = {
+  retailer: NetworkRetailer;
   productIdentity: NetworkProductIdentity;
   product?: NetworkProduct | null;
   offer: NetworkOffer;
@@ -19,6 +20,7 @@ export type NetworkOpportunity = {
 };
 
 export async function processNetworkOpportunity(input: NetworkOpportunity) {
+  await upsertNetworkRetailer(input.retailer);
   await upsertProductIdentity(input.productIdentity);
   if (input.location) await upsertNetworkLocation(input.location);
   if (input.product) await upsertNetworkProduct(input.product);
