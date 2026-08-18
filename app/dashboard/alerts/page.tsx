@@ -4,6 +4,8 @@ import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { LiveAlertFeed } from "@/components/live-alert-feed";
 import { StartMembershipButton } from "@/components/membership-actions";
 import { getCurrentSnapshot } from "@/lib/auth";
+import { DEFAULT_AVATAR_LOADOUT } from "@/lib/avatar-loadout";
+import { getUserAvatar } from "@/lib/avatar-storage";
 import { getLatestNetworkMetricSnapshot } from "@/lib/dashboard-storage";
 import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
 import { serverNowSeconds } from "@/lib/server-time";
@@ -29,6 +31,10 @@ export default async function AlertsPage() {
     detail: null,
     deliveredPricePence: null,
   }));
+  let avatarLoadout = DEFAULT_AVATAR_LOADOUT;
+  if (snapshot) {
+    try { avatarLoadout = (await getUserAvatar(snapshot.account.id))?.loadout ?? avatarLoadout; } catch { /* use safe default avatar */ }
+  }
   const trialEligible = Boolean(snapshot && !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt);
   const hasOpenSubscription = Boolean(snapshot?.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
   const counts = {
@@ -41,14 +47,14 @@ export default async function AlertsPage() {
   return <DashboardPageShell title="Alerts" eyebrow="LIVE SIGNAL NETWORK">
     <div className="fd-alerts-content">
       <section className="fd-alert-hero">
-        <div><span>FATEDROP // SIGNAL ENGINE</span><h1>When the network moves,<br/><em>you should feel the difference.</em></h1><p>FateDrop now grades the visual response to the evidence. Major queue/security/traffic conditions can trigger a full Network Surge; actual product stock events arrive as focused Signal Cards; quieter price, launch and Vanished movement stays deliberately restrained.</p></div>
+        <div><span>FATEDROP // SIGNAL ENGINE</span><h1>When the network moves,<br/><em>your companion moves with it.</em></h1><p>Major upstream conditions can now wake your saved Fate companion, charge the scene and fire the alert into view. Product-level stock transitions remain distinct Signal Cards, so the drama gets bigger without making the evidence less precise.</p></div>
         <div className="fd-alert-orbit" aria-hidden="true"><i/><i/><b>◇</b></div>
         <div className="fd-alert-counts"><span><b>{counts.whisper}</b>WHISPER</span><span><b>{counts.manifested}</b>MANIFESTED</span><span><b>{counts.echo}</b>ECHO</span><span><b>{counts.vanished}</b>VANISHED</span></div>
       </section>
 
       {!unlocked ? <section className="fd-alerts-gate"><div><span>PREMIUM SIGNAL INTELLIGENCE</span><h2>The movement is visible. The actionable intelligence is locked.</h2><p>{plan} access can see signal activity. Plus and Pro reveal the product, retailer, confidence and price context; the live API redacts those fields before they reach a free member&apos;s browser.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot?.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
 
-      <LiveAlertFeed initialSignals={initialSignals} initialNow={now} initialSource={network?.source ?? null} unlocked={unlocked}/>
+      <LiveAlertFeed initialSignals={initialSignals} initialNow={now} initialSource={network?.source ?? null} unlocked={unlocked} avatarLoadout={avatarLoadout}/>
     </div>
 
     <style>{`
