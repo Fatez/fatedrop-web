@@ -20,13 +20,12 @@ export type NetworkOpportunity = {
 };
 
 export async function processRrpReferenceProduct(productIdentity: NetworkProductIdentity) {
-  await upsertProductIdentity(productIdentity);
-  return productIdentity;
+  return upsertProductIdentity(productIdentity);
 }
 
 export async function processNetworkOpportunity(input: NetworkOpportunity) {
   await upsertNetworkRetailer(input.retailer);
-  await upsertProductIdentity(input.productIdentity);
+  const resolvedProductIdentity = await upsertProductIdentity(input.productIdentity);
   if (input.location) await upsertNetworkLocation(input.location);
   if (input.product) await upsertNetworkProduct(input.product);
   await upsertNetworkOffer(input.offer);
@@ -38,9 +37,9 @@ export async function processNetworkOpportunity(input: NetworkOpportunity) {
     mandatoryPostagePence: input.offer.mandatoryPostagePence,
     mandatoryFeesPence: input.offer.mandatoryFeesPence,
     deliveryKnown: input.offer.deliveryKnown,
-    officialRrpPence: input.productIdentity.officialRrpPence,
+    officialRrpPence: resolvedProductIdentity.officialRrpPence,
   });
-  const matches = await listActiveFateMatches(input.productIdentity.id);
+  const matches = await listActiveFateMatches(resolvedProductIdentity.id);
   const results = evaluateActiveFateMatches(matches, input.offer, truePrice, input.location ?? null);
   const occurredAt = input.signal?.occurredAt ?? input.inventory?.observedAt ?? input.offer.observedAt;
   for (const result of results) {
@@ -53,5 +52,5 @@ export async function processNetworkOpportunity(input: NetworkOpportunity) {
       occurredAt,
     });
   }
-  return { truePrice, matches: results };
+  return { productIdentity: resolvedProductIdentity, truePrice, matches: results };
 }
