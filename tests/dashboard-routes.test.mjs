@@ -11,6 +11,7 @@ const dashboardRoutes = [
   "app/dashboard/true-price/page.tsx",
   "app/dashboard/local-radar/page.tsx",
   "app/dashboard/profile/page.tsx",
+  "app/dashboard/avatar/page.tsx",
   "app/dashboard/membership/page.tsx",
   "app/dashboard/discord/page.tsx",
 ];
@@ -22,7 +23,7 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation follows Discover Track Network Account structure", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group), `shared dashboard nav missing ${group}`);
-  for (const href of ["/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/membership", "/dashboard/discord"]) {
+  for (const href of ["/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) {
     assert.ok(nav.includes(href), `shared dashboard nav missing ${href}`);
   }
   assert.equal(nav.includes('["⌕", "Search", "/dashboard/search"]'), false, "dead standalone Search navigation should stay removed");
@@ -36,6 +37,25 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes("MEMBER SINCE"));
   assert.ok(root.includes("TIME IN NETWORK"));
   assert.ok(root.includes("FATEWINDOW BETA"));
+});
+
+test("custom avatar is a real account feature and FateMatch companion", () => {
+  const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
+  const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
+  const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
+  const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
+  const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
+  const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
+  assert.ok(page.includes("Design My Avatar"));
+  assert.ok(builder.includes("SAVE AVATAR"));
+  assert.ok(builder.includes("FAVOURITE TCGs"));
+  assert.ok(builder.includes("TCG Style"));
+  assert.ok(preview.includes("radar-drone"));
+  assert.ok(preview.includes("mood-manifested"));
+  assert.ok(fateMatch.includes("YOUR COMPANION"));
+  assert.ok(fateMatch.includes("AvatarPreview"));
+  assert.ok(api.includes("assertSameOrigin"));
+  assert.ok(storage.includes("fatedrop_user_avatars"));
 });
 
 test("free live alert feed redacts actionable signal fields before browser delivery", () => {
