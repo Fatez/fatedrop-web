@@ -39,29 +39,46 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes("FATEWINDOW BETA"));
 });
 
-test("custom avatar is a real account feature and FateMatch companion", () => {
+test("custom avatar uses a shared illustrated asset rig and persists as account data", () => {
   const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
   const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
   const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
-  const character = fs.readFileSync("components/avatar-anime-character.tsx", "utf8");
+  const layered = fs.readFileSync("components/avatar-layered-character.tsx", "utf8");
+  const legacyAdapter = fs.readFileSync("components/avatar-anime-character.tsx", "utf8");
+  const thumb = fs.readFileSync("components/avatar-option-thumbnail.tsx", "utf8");
   const loadout = fs.readFileSync("lib/avatar-loadout.ts", "utf8");
+  const assets = fs.readFileSync("lib/avatar-assets.ts", "utf8");
+  const sprites = fs.readFileSync("public/assets/avatar-v2/avatar-sprites.svg", "utf8");
   const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
+
   assert.ok(page.includes("Design My Avatar"));
   assert.ok(builder.includes("SAVE AVATAR"));
-  assert.ok(builder.includes("FAVOURITE TCGs"));
-  assert.ok(builder.includes("TCG Style"));
-  assert.ok(builder.includes("AVATAR_HAIR"));
-  assert.ok(loadout.includes("midnight-spikes"));
-  assert.ok(preview.includes("AvatarAnimeCharacter"));
-  assert.ok(preview.includes("fd-avatar-command-room"));
-  assert.ok(character.includes("FATEDROP"));
-  assert.ok(character.includes("radar-drone"));
-  assert.ok(character.includes('"surge"'));
+  assert.ok(builder.includes("AvatarOptionThumbnail"));
+  for (const category of ["skin", "hair", "face", "eyes", "outfit", "headwear", "accessory", "gear", "companion", "aura", "background"]) assert.ok(builder.includes(`${category}:`), `avatar builder missing ${category}`);
+  assert.ok(loadout.includes("AVATAR_SKINS"));
+  assert.ok(loadout.includes("AVATAR_FACES"));
+  assert.ok(loadout.includes("AVATAR_EYES"));
+  assert.ok(loadout.includes("AVATAR_ACCESSORIES"));
+  assert.ok(loadout.includes('"ember-fringe"'));
+  assert.ok(loadout.includes('"spectral-bomber"'));
+  assert.ok(loadout.includes('"command-room"'));
+  assert.ok(loadout.includes('"neon-desk"'));
+  assert.ok(assets.includes("avatar-sprites.svg"));
+  assert.ok(layered.includes("avatarLayerHref"));
+  assert.ok(layered.includes("<use"));
+  assert.ok(preview.includes("AvatarLayeredCharacter"));
+  assert.ok(legacyAdapter.includes("AvatarLayeredCharacter"));
+  assert.ok(thumb.includes("AvatarLayeredCharacter"));
+  assert.ok(sprites.includes('id="hair-front-midnight-spikes"'));
+  assert.ok(sprites.includes('id="outfit-spectral-bomber"'));
+  assert.ok(sprites.includes('id="companion-radar-drone"'));
+  assert.ok(sprites.includes('id="bg-command-room"'));
   assert.ok(fateMatch.includes("YOUR COMPANION"));
   assert.ok(fateMatch.includes("AvatarPreview"));
   assert.ok(api.includes("assertSameOrigin"));
+  assert.ok(api.includes("normalizeAvatarLoadout"));
   assert.ok(storage.includes("fatedrop_user_avatars"));
 });
 
