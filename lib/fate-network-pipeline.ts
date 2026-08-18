@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { evaluateActiveFateMatches } from "@/lib/fate-match";
 import { listActiveFateMatches, saveFateMatchHit } from "@/lib/fate-match-storage";
-import { saveSignalEvent, upsertNetworkLocation, upsertNetworkOffer, upsertProductIdentity } from "@/lib/fate-network-storage";
-import type { NetworkLocation, NetworkOffer, NetworkProductIdentity, NetworkSignalEvent } from "@/lib/network-domain";
+import { saveInventoryObservation, saveSignalEvent, upsertNetworkLocation, upsertNetworkOffer, upsertNetworkProduct, upsertProductIdentity } from "@/lib/fate-network-storage";
+import type { NetworkInventoryObservation, NetworkLocation, NetworkOffer, NetworkProduct, NetworkProductIdentity, NetworkSignalEvent } from "@/lib/network-domain";
 import { calculateTruePrice } from "@/lib/true-price";
 
 function stableId(prefix: string, ...parts: string[]) {
@@ -10,16 +10,20 @@ function stableId(prefix: string, ...parts: string[]) {
 }
 
 export type NetworkOpportunity = {
-  product: NetworkProductIdentity;
+  productIdentity: NetworkProductIdentity;
+  product?: NetworkProduct | null;
   offer: NetworkOffer;
+  inventory?: NetworkInventoryObservation | null;
   location?: NetworkLocation | null;
   signal?: NetworkSignalEvent | null;
 };
 
 export async function processNetworkOpportunity(input: NetworkOpportunity) {
-  await upsertProductIdentity(input.product);
+  await upsertProductIdentity(input.productIdentity);
   if (input.location) await upsertNetworkLocation(input.location);
+  if (input.product) await upsertNetworkProduct(input.product);
   await upsertNetworkOffer(input.offer);
+  if (input.inventory) await saveInventoryObservation(input.inventory);
   if (input.signal) await saveSignalEvent(input.signal);
 
   const truePrice = calculateTruePrice({
@@ -27,11 +31,11 @@ export async function processNetworkOpportunity(input: NetworkOpportunity) {
     mandatoryPostagePence: input.offer.mandatoryPostagePence,
     mandatoryFeesPence: input.offer.mandatoryFeesPence,
     deliveryKnown: input.offer.deliveryKnown,
-    officialRrpPence: input.product.officialRrpPence,
+    officialRrpPence: input.productIdentity.officialRrpPence,
   });
-  const matches = await listActiveFateMatches(input.product.id);
+  const matches = await listActiveFateMatches(input.productIdentity.id);
   const results = evaluateActiveFateMatches(matches, input.offer, truePrice, input.location ?? null);
-  const occurredAt = input.signal?.occurredAt ?? input.offer.observedAt;
+  const occurredAt = input.signal?.occurredAt ?? input.inventory?.observedAt ?? input.offer.observedAt;
   for (const result of results) {
     await saveFateMatchHit({
       id: stableId("fmh", result.matchId, result.offerId, input.signal?.id ?? String(occurredAt)),
