@@ -40,7 +40,7 @@ export const siteConfig = {
     },
     {
       name: "FateDrop Pro",
-      price: "£7.99 / month",
+      price: "£14.99 / month",
       features: ["Earliest evidence-backed stock signals", "Priority delivery when production infrastructure supports it", "Advanced lifecycle intelligence", "Basket Breaker", "Collection Gap Finder", "Set Completion Basket", "FateFair", "Advanced event and vendor features", "Future multi-TCG access"],
     },
   ],
