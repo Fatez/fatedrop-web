@@ -39,7 +39,7 @@ export default async function AlertsPage() {
         <div className="fd-alert-counts"><span><b>{counts.whisper}</b>WHISPER</span><span><b>{counts.manifested}</b>MANIFESTED</span><span><b>{counts.echo}</b>ECHO</span><span><b>{counts.vanished}</b>VANISHED</span></div>
       </section>
 
-      {!unlocked ? <section className="fd-alerts-gate"><div><span>PREMIUM SIGNAL INTELLIGENCE</span><h2>The movement is visible. The actionable intelligence is locked.</h2><p>{plan} access can see lifecycle activity. Plus and Pro reveal the product, retailer and price context; the live API redacts those fields before they reach a free member's browser.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot?.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
+      {!unlocked ? <section className="fd-alerts-gate"><div><span>PREMIUM SIGNAL INTELLIGENCE</span><h2>The movement is visible. The actionable intelligence is locked.</h2><p>{plan} access can see lifecycle activity. Plus and Pro reveal the product, retailer and price context; the live API redacts those fields before they reach a free member&apos;s browser.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot?.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
 
       <LiveAlertFeed initialSignals={initialSignals} initialNow={now} initialSource={network?.source ?? null} unlocked={unlocked}/>
     </div>
