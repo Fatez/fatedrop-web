@@ -24,6 +24,24 @@ function mapFateMatch(row: Record<string, unknown>): FateMatch {
   };
 }
 
+export async function createFateMatch(match: FateMatch) {
+  const sql = await fateDropPostgres();
+  const rows = await sql`INSERT INTO fatedrop_fate_matches (
+    id,user_id,query_text,product_identity_id,max_item_price_pence,max_true_price_pence,max_percent_above_rrp,scope,radius_km,postcode,latitude,longitude,
+    preferred_retailers_json,excluded_retailers_json,stock_requirement,notification_preferences_json,enabled,created_at,updated_at
+  ) VALUES (
+    ${match.id},${match.userId},${match.query},${match.productIdentityId},${match.maxItemPricePence},${match.maxTruePricePence},${match.maxPercentAboveRrp},${match.scope},${match.radiusKm},${match.postcode},${match.latitude},${match.longitude},
+    ${JSON.stringify(match.preferredRetailerIds)}::jsonb,${JSON.stringify(match.excludedRetailerIds)}::jsonb,${match.stockRequirement},${JSON.stringify(match.notificationPreferences)}::jsonb,${match.enabled},${match.createdAt},${match.updatedAt}
+  ) RETURNING *`;
+  return rows[0] ? mapFateMatch(rows[0] as Record<string, unknown>) : null;
+}
+
+export async function setFateMatchEnabled(userId: string, matchId: string, enabled: boolean, updatedAt = Math.floor(Date.now() / 1000)) {
+  const sql = await fateDropPostgres();
+  const rows = await sql`UPDATE fatedrop_fate_matches SET enabled=${enabled},updated_at=${updatedAt} WHERE id=${matchId} AND user_id=${userId} RETURNING *`;
+  return rows[0] ? mapFateMatch(rows[0] as Record<string, unknown>) : null;
+}
+
 export async function listActiveFateMatches(productIdentityId?: string | null) {
   const sql = await fateDropPostgres();
   const rows = productIdentityId
