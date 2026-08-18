@@ -9,7 +9,7 @@ export const AVATAR_ACCESSORIES = ["none", "chain", "card-charm", "signal-pin", 
 export const AVATAR_GEAR = ["scanner", "binder", "slab-case", "none"] as const;
 export const AVATAR_COMPANIONS = ["radar-drone", "signal-orb", "mini-beacon", "none"] as const;
 export const AVATAR_AURAS = ["violet", "cyan", "spectral", "gold"] as const;
-export const AVATAR_BACKGROUNDS = ["fate-network", "command-room", "card-vault", "tournament-floor", "neon-desk", "collector-desk"] as const;
+export const AVATAR_BACKGROUNDS = ["fate-network", "command-room", "card-vault", "tournament-floor", "neon-desk"] as const;
 export const AVATAR_TCG_STYLES = ["neutral", "pokemon", "one-piece", "lorcana", "magic", "yugioh"] as const;
 export const FAVOURITE_TCGS = ["pokemon", "one-piece", "lorcana", "magic", "yugioh"] as const;
 
@@ -79,7 +79,7 @@ export const AVATAR_OPTION_LABELS = {
   gear: { scanner: "Signal Scanner", binder: "Binder", "slab-case": "Slab Case", none: "No Gear" },
   companion: { "radar-drone": "Radar Drone", "signal-orb": "Signal Orb", "mini-beacon": "Mini Beacon", none: "No Companion" },
   aura: { violet: "Violet Signal", cyan: "Icy Radar", spectral: "Spectral Foil", gold: "Gold Trace" },
-  background: { "fate-network": "Fate Network", "command-room": "Collector Command Room", "card-vault": "Card Vault", "tournament-floor": "Tournament Floor", "neon-desk": "Neon Collector Desk", "collector-desk": "Neon Collector Desk" },
+  background: { "fate-network": "Fate Network", "command-room": "Collector Command Room", "card-vault": "Card Vault", "tournament-floor": "Tournament Floor", "neon-desk": "Neon Collector Desk" },
   tcgStyle: { neutral: "FateDrop", pokemon: "Pokémon TCG", "one-piece": "One Piece TCG", lorcana: "Lorcana", magic: "Magic", yugioh: "Yu-Gi-Oh!" },
 } as const;
 
