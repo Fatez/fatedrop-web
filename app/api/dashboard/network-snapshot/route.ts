@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { saveNetworkMetricSnapshot, type NetworkEventListing, type NetworkMetricSnapshot, type NetworkSignal, type SignalLifecycle } from "@/lib/dashboard-storage";
+import { processNetworkOpportunity } from "@/lib/fate-network-pipeline";
+import { parseNetworkOpportunity } from "@/lib/network-ingest";
 
 export const runtime = "nodejs";
 
@@ -33,15 +35,7 @@ export async function POST(request: Request) {
       const title = text(item.title, 180);
       if (!state || !title) return [];
       const occurredInput = Number(item.occurredAt);
-      return [{
-        id: text(item.id, 160) || randomUUID(),
-        state,
-        title,
-        retailer: text(item.retailer, 140),
-        detail: text(item.detail, 240),
-        deliveredPricePence: metric(item.deliveredPricePence),
-        occurredAt: Number.isFinite(occurredInput) && occurredInput > 0 ? Math.floor(occurredInput) : measuredAt,
-      }];
+      return [{ id: text(item.id, 160) || randomUUID(), state, title, retailer: text(item.retailer, 140), detail: text(item.detail, 240), deliveredPricePence: metric(item.deliveredPricePence), occurredAt: Number.isFinite(occurredInput) && occurredInput > 0 ? Math.floor(occurredInput) : measuredAt }];
     }) : [];
     const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.slice(0, 60).flatMap((raw): NetworkEventListing[] => {
       if (!raw || typeof raw !== "object") return [];
@@ -49,38 +43,33 @@ export async function POST(request: Request) {
       const name = text(item.name, 180);
       const startsInput = Number(item.startsAt);
       if (!name || !Number.isFinite(startsInput) || startsInput <= 0) return [];
-      return [{
-        id: text(item.id, 160) || randomUUID(),
-        name,
-        venue: text(item.venue, 180),
-        location: text(item.location, 180),
-        startsAt: Math.floor(startsInput),
-        ticketUrl: text(item.ticketUrl, 500),
-        vendorCount: metric(item.vendorCount),
-      }];
+      return [{ id: text(item.id, 160) || randomUUID(), name, venue: text(item.venue, 180), location: text(item.location, 180), startsAt: Math.floor(startsInput), ticketUrl: text(item.ticketUrl, 500), vendorCount: metric(item.vendorCount) }];
     }) : [];
     const snapshot: NetworkMetricSnapshot = {
-      id: randomUUID(),
-      sourceEventId,
-      source,
-      measuredAt,
-      recordedAt: now,
-      metrics: {
-        whisper: metric(metrics.whisper),
-        manifested: metric(metrics.manifested),
-        vanished: metric(metrics.vanished),
-        echo: metric(metrics.echo),
-        changes24h: metric(metrics.changes24h),
-        productsTracked: metric(metrics.productsTracked),
-        inStock: metric(metrics.inStock),
-        catalogueRetailers: metric(metrics.catalogueRetailers),
-        healthyMonitors: metric(metrics.healthyMonitors),
-      },
-      recentSignals,
-      upcomingEvents,
+      id: randomUUID(), sourceEventId, source, measuredAt, recordedAt: now,
+      metrics: { whisper: metric(metrics.whisper), manifested: metric(metrics.manifested), vanished: metric(metrics.vanished), echo: metric(metrics.echo), changes24h: metric(metrics.changes24h), productsTracked: metric(metrics.productsTracked), inStock: metric(metrics.inStock), catalogueRetailers: metric(metrics.catalogueRetailers), healthyMonitors: metric(metrics.healthyMonitors) },
+      recentSignals, upcomingEvents,
     };
     const inserted = await saveNetworkMetricSnapshot(snapshot);
-    return Response.json({ stored: inserted, measuredAt }, { status: inserted ? 201 : 200 });
+
+    let opportunitiesProcessed = 0;
+    let fateMatchesTriggered = 0;
+    let opportunitiesDeferred = 0;
+    const opportunities = Array.isArray(payload.opportunities) ? payload.opportunities.slice(0, 250) : [];
+    for (const raw of opportunities) {
+      const opportunity = parseNetworkOpportunity(raw, measuredAt);
+      if (!opportunity) { opportunitiesDeferred += 1; continue; }
+      try {
+        const result = await processNetworkOpportunity(opportunity);
+        opportunitiesProcessed += 1;
+        fateMatchesTriggered += result.matches.length;
+      } catch {
+        // Snapshot ingestion remains backwards-compatible while the additive Fate Network migration is staged.
+        opportunitiesDeferred += 1;
+      }
+    }
+
+    return Response.json({ stored: inserted, measuredAt, opportunitiesProcessed, opportunitiesDeferred, fateMatchesTriggered }, { status: inserted ? 201 : 200 });
   } catch {
     return Response.json({ error: "Network snapshot could not be stored." }, { status: 500 });
   }
