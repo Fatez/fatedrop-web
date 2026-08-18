@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS fatedrop_product_identities (
 );
 CREATE INDEX IF NOT EXISTS fatedrop_product_identity_tcg_idx ON fatedrop_product_identities(tcg);
 
-CREATE TABLE IF NOT EXISTS fatedrop_products (
+CREATE TABLE IF NOT EXISTS fatedrop_catalogue_items (
   id text PRIMARY KEY,
   retailer_id text NOT NULL REFERENCES fatedrop_retailers(id),
   product_identity_id text NOT NULL REFERENCES fatedrop_product_identities(id),
@@ -57,12 +57,12 @@ CREATE TABLE IF NOT EXISTS fatedrop_products (
   created_at bigint NOT NULL,
   updated_at bigint NOT NULL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS fatedrop_products_retailer_sku_uidx ON fatedrop_products(retailer_id, retailer_sku) WHERE retailer_sku IS NOT NULL;
-CREATE INDEX IF NOT EXISTS fatedrop_products_identity_idx ON fatedrop_products(product_identity_id);
+CREATE UNIQUE INDEX IF NOT EXISTS fatedrop_catalogue_items_retailer_sku_uidx ON fatedrop_catalogue_items(retailer_id, retailer_sku) WHERE retailer_sku IS NOT NULL;
+CREATE INDEX IF NOT EXISTS fatedrop_catalogue_items_identity_idx ON fatedrop_catalogue_items(product_identity_id);
 
 CREATE TABLE IF NOT EXISTS fatedrop_offers (
   id text PRIMARY KEY,
-  product_id text REFERENCES fatedrop_products(id),
+  catalogue_item_id text REFERENCES fatedrop_catalogue_items(id),
   retailer_id text NOT NULL REFERENCES fatedrop_retailers(id),
   location_id text REFERENCES fatedrop_retailer_locations(id),
   product_identity_id text NOT NULL REFERENCES fatedrop_product_identities(id),
