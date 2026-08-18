@@ -18,6 +18,9 @@ export default async function DashboardMembershipPage({ searchParams }: { search
   const params = await searchParams;
   const premium = snapshot ? hasPremiumAccess(snapshot.membership) : false;
   const plan = snapshot ? membershipLabel(snapshot.membership) : "Free";
+  const trialEligible = Boolean(snapshot && !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt);
+  const hasOpenSubscription = Boolean(snapshot?.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
+  const startLabel = trialEligible ? "Start" : snapshot?.membership.stripeCustomerId ? "Restart" : "Choose";
 
   return (
     <DashboardPageShell title="Membership" eyebrow="BILLING + ACCESS">
@@ -29,12 +32,14 @@ export default async function DashboardMembershipPage({ searchParams }: { search
           <div className="fd-dash-card-head"><span>YOUR MEMBERSHIP</span><i className={premium ? "live" : "pending"}>{snapshot?.membership.status?.toUpperCase() || "FREE"}</i></div>
           <div className="fd-billing-state"><strong>{plan}</strong><span>{premium ? "PREMIUM ACCESS" : "STANDARD ACCESS"}</span></div>
           <div className="fd-billing-facts"><span><small>STRIPE CUSTOMER</small><b>{snapshot?.membership.stripeCustomerId ? "Connected" : "Not created"}</b></span><span><small>SUBSCRIPTION</small><b>{snapshot?.membership.stripeSubscriptionId ? "Connected" : "Not created"}</b></span><span><small>TRIAL ENDS</small><b>{dateLabel(snapshot?.membership.trialEndsAt)}</b></span><span><small>PERIOD ENDS</small><b>{dateLabel(snapshot?.membership.currentPeriodEnd)}</b></span></div>
-          <div style={{ marginTop: 20 }}>{snapshot?.membership.stripeCustomerId ? <BillingPortalButton /> : <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}><StartMembershipButton tier="plus" label="Start Plus trial" /><StartMembershipButton tier="pro" label="Start Pro trial" /></div>}</div>
+          <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {hasOpenSubscription ? <BillingPortalButton /> : <><StartMembershipButton tier="plus" label={`${startLabel} Plus${trialEligible ? " trial" : ""}`} /><StartMembershipButton tier="pro" label={`${startLabel} Pro${trialEligible ? " trial" : ""}`} />{snapshot?.membership.stripeCustomerId ? <BillingPortalButton /> : null}</>}
+          </div>
         </section>
 
         <section className="fd-dash-card">
           <div className="fd-dash-card-head"><span>STRIPE READINESS</span><i className={readiness.configured ? "live" : "pending"}>{readiness.configured ? "READY" : "SETUP REQUIRED"}</i></div>
-          <div className="fd-billing-facts"><span><small>MODE</small><b>{readiness.mode.toUpperCase()}</b></span><span><small>CHECKOUT</small><b>{readiness.checkoutConfigured ? "Configured" : "Pending"}</b></span><span><small>WEBHOOK</small><b>{readiness.webhookConfigured ? "Configured" : "Pending"}</b></span><span><small>TRIAL</small><b>{readiness.trialDays} days · {readiness.requireCardForTrial ? "card required" : "no card required"}</b></span></div>
+          <div className="fd-billing-facts"><span><small>MODE</small><b>{readiness.mode.toUpperCase()}</b></span><span><small>CHECKOUT</small><b>{readiness.checkoutConfigured ? "Configured" : "Pending"}</b></span><span><small>WEBHOOK</small><b>{readiness.webhookConfigured ? "Configured" : "Pending"}</b></span><span><small>TRIAL</small><b>{trialEligible ? `${readiness.trialDays} days · ${readiness.requireCardForTrial ? "card required" : "no card required"}` : "Already used / not eligible"}</b></span></div>
           {!readiness.configured ? <p style={{ marginTop: 18 }}>Remaining server configuration: {readiness.missing.join(", ")}.</p> : <p style={{ marginTop: 18 }}>The application-side Stripe integration is configured. A real end-to-end payment test is still required before live billing should be opened to customers.</p>}
         </section>
       </div>
