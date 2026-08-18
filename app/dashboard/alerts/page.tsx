@@ -5,6 +5,7 @@ import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { getLatestNetworkMetricSnapshot, type NetworkSignal, type SignalLifecycle } from "@/lib/dashboard-storage";
 import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
+import { serverNowSeconds } from "@/lib/server-time";
 
 export const metadata: Metadata = {
   title: "Alerts | FateDrop Dashboard",
@@ -57,7 +58,7 @@ export default async function AlertsPage() {
   const network = await getLatestNetworkMetricSnapshot();
   const unlocked = snapshot ? hasPremiumAccess(snapshot.membership) : false;
   const plan = snapshot ? membershipLabel(snapshot.membership) : "Free";
-  const now = Math.floor(Date.now() / 1000);
+  const now = serverNowSeconds();
   const signals = [...(network?.recentSignals ?? [])].sort((a, b) => b.occurredAt - a.occurredAt);
   const trialEligible = Boolean(snapshot && !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt);
   const hasOpenSubscription = Boolean(snapshot?.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
