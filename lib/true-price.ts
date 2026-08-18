@@ -13,6 +13,8 @@ export type TruePriceInput = {
   officialRrpPence: number | null;
 };
 
+export type TruePriceRrpLookup = Record<string, { rrpPence: number; source: string }>;
+
 export function truePriceLabel(percentFromRrp: number | null): TruePriceResult["label"] {
   if (percentFromRrp === null) return "RRP unknown";
   if (percentFromRrp < -0.5) return "Below RRP";
@@ -61,9 +63,11 @@ export type TruePriceOffer = CatalogueProduct & {
   truePriceLabel: TruePriceResult["label"];
 };
 
-export function buildTruePriceOffer(product: CatalogueProduct): TruePriceOffer {
+export function buildTruePriceOffer(product: CatalogueProduct, rrpLookup: TruePriceRrpLookup = {}): TruePriceOffer {
   const identity = identifyProduct(product.title);
-  const rrp = getCanonicalRrp(identity);
+  const networkRrp = rrpLookup[identity.key] ?? null;
+  const fallbackRrp = networkRrp ? null : getCanonicalRrp(identity);
+  const rrp = networkRrp ?? fallbackRrp;
   const retailer = retailerRegistry.find((item) => item.id === product.retailerId);
   const delivery = calculateDeliveredPrice(product.pricePence, retailer?.freeDeliveryThresholdPence, retailer?.standardDeliveryPence);
   const result = calculateTruePrice({
@@ -92,8 +96,8 @@ export function buildTruePriceOffer(product: CatalogueProduct): TruePriceOffer {
   };
 }
 
-export function buildTruePriceOffers(products: CatalogueProduct[]) {
-  return products.map(buildTruePriceOffer).sort(compareTruePriceOffers);
+export function buildTruePriceOffers(products: CatalogueProduct[], rrpLookup: TruePriceRrpLookup = {}) {
+  return products.map((product) => buildTruePriceOffer(product, rrpLookup)).sort(compareTruePriceOffers);
 }
 
 export function compareTruePriceOffers(a: TruePriceOffer, b: TruePriceOffer) {
