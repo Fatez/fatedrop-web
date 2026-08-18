@@ -1,6 +1,24 @@
 import type { NetworkInventoryObservation, NetworkLocation, NetworkOffer, NetworkProduct, NetworkProductIdentity, NetworkRetailer, NetworkSignalEvent } from "@/lib/network-domain";
 import { fateDropPostgres } from "@/lib/postgres";
 
+function nullableNumber(value: unknown) { return value === null || value === undefined ? null : Number(value); }
+function nullableString(value: unknown) { return value === null || value === undefined ? null : String(value); }
+
+function mapProductIdentity(row: Record<string, unknown>): NetworkProductIdentity {
+  return {
+    id: String(row.id),
+    tcg: String(row.tcg),
+    canonicalKey: String(row.canonical_key),
+    title: String(row.title),
+    productType: nullableString(row.product_type),
+    setName: nullableString(row.set_name),
+    edition: nullableString(row.edition),
+    officialRrpPence: nullableNumber(row.official_rrp_pence),
+    rrpSource: nullableString(row.rrp_source),
+    rrpVerifiedAt: nullableNumber(row.rrp_verified_at),
+  };
+}
+
 export async function upsertNetworkRetailer(retailer: NetworkRetailer) {
   const sql = await fateDropPostgres();
   const now = Math.floor(Date.now() / 1000);
@@ -20,9 +38,11 @@ export async function upsertNetworkLocation(location: NetworkLocation) {
 export async function upsertProductIdentity(product: NetworkProductIdentity) {
   const sql = await fateDropPostgres();
   const now = Math.floor(Date.now() / 1000);
-  await sql`INSERT INTO fatedrop_product_identities (id,tcg,canonical_key,title,product_type,set_name,edition,official_rrp_pence,rrp_source,rrp_verified_at,updated_at)
+  const rows = await sql`INSERT INTO fatedrop_product_identities (id,tcg,canonical_key,title,product_type,set_name,edition,official_rrp_pence,rrp_source,rrp_verified_at,updated_at)
     VALUES (${product.id},${product.tcg},${product.canonicalKey},${product.title},${product.productType},${product.setName},${product.edition},${product.officialRrpPence},${product.rrpSource},${product.rrpVerifiedAt},${now})
-    ON CONFLICT (id) DO UPDATE SET tcg=EXCLUDED.tcg,canonical_key=EXCLUDED.canonical_key,title=EXCLUDED.title,product_type=EXCLUDED.product_type,set_name=EXCLUDED.set_name,edition=EXCLUDED.edition,official_rrp_pence=COALESCE(EXCLUDED.official_rrp_pence,fatedrop_product_identities.official_rrp_pence),rrp_source=COALESCE(EXCLUDED.rrp_source,fatedrop_product_identities.rrp_source),rrp_verified_at=COALESCE(EXCLUDED.rrp_verified_at,fatedrop_product_identities.rrp_verified_at),updated_at=EXCLUDED.updated_at`;
+    ON CONFLICT (id) DO UPDATE SET tcg=EXCLUDED.tcg,canonical_key=EXCLUDED.canonical_key,title=EXCLUDED.title,product_type=EXCLUDED.product_type,set_name=EXCLUDED.set_name,edition=EXCLUDED.edition,official_rrp_pence=COALESCE(EXCLUDED.official_rrp_pence,fatedrop_product_identities.official_rrp_pence),rrp_source=COALESCE(EXCLUDED.rrp_source,fatedrop_product_identities.rrp_source),rrp_verified_at=COALESCE(EXCLUDED.rrp_verified_at,fatedrop_product_identities.rrp_verified_at),updated_at=EXCLUDED.updated_at
+    RETURNING id,tcg,canonical_key,title,product_type,set_name,edition,official_rrp_pence,rrp_source,rrp_verified_at`;
+  return mapProductIdentity(rows[0] as Record<string, unknown>);
 }
 
 export async function upsertNetworkProduct(product: NetworkProduct) {
