@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { avatarPresetPath, normalizeAvatarValue } from "../lib/avatar.ts";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const { avatarPresetPath, normalizeAvatarValue } = require("../lib/avatar.ts");
 
 test("FateDrop preset avatar paths are accepted exactly", () => {
   const path = avatarPresetPath("signal-hood");
