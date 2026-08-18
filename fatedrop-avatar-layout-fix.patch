@@ -1,0 +1,420 @@
+diff --git a/components/avatar-picker.module.css b/components/avatar-picker.module.css
+new file mode 100644
+index 0000000..0af6020
+--- /dev/null
++++ b/components/avatar-picker.module.css
+@@ -0,0 +1,336 @@
++.picker {
++  position: relative;
++  margin: 0 0 30px;
++  padding: 28px;
++  overflow: hidden;
++  border: 1px solid rgba(157, 109, 255, 0.24);
++  border-radius: 24px;
++  background:
++    radial-gradient(circle at 88% 8%, rgba(88, 232, 255, 0.09), transparent 26%),
++    radial-gradient(circle at 10% 100%, rgba(157, 109, 255, 0.10), transparent 32%),
++    linear-gradient(145deg, rgba(15, 12, 25, 0.96), rgba(7, 6, 12, 0.92));
++  box-shadow: inset 0 1px rgba(255,255,255,.04), 0 24px 70px rgba(0,0,0,.26);
++}
++
++.picker::before {
++  content: "";
++  position: absolute;
++  right: -92px;
++  top: -108px;
++  width: 310px;
++  height: 310px;
++  border: 1px solid rgba(88,232,255,.09);
++  border-radius: 50%;
++  box-shadow: 0 0 0 38px rgba(157,109,255,.025), 0 0 0 76px rgba(88,232,255,.014);
++  pointer-events: none;
++}
++
++.header {
++  position: relative;
++  z-index: 2;
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) auto;
++  align-items: center;
++  gap: 28px;
++}
++
++.kicker {
++  display: inline-flex;
++  align-items: center;
++  gap: 8px;
++  color: #58e8ff;
++  font-size: 9px;
++  font-weight: 800;
++  letter-spacing: .15em;
++  text-transform: uppercase;
++}
++
++.kicker::before {
++  content: "";
++  width: 7px;
++  height: 7px;
++  border-radius: 50%;
++  background: linear-gradient(135deg,#58e8ff,#9d6dff);
++  box-shadow: 0 0 14px rgba(88,232,255,.45);
++}
++
++.title {
++  margin: 8px 0 8px;
++  color: #f7f4fb;
++  font-size: clamp(1.55rem, 3vw, 2.15rem);
++  line-height: 1;
++  letter-spacing: -.045em;
++}
++
++.copy {
++  max-width: 660px;
++  margin: 0;
++  color: #8d8797;
++  font-size: 11px;
++  line-height: 1.65;
++}
++
++.previewWrap {
++  display: grid;
++  justify-items: center;
++  gap: 9px;
++}
++
++.preview {
++  position: relative;
++  width: 102px;
++  height: 102px;
++  display: grid;
++  place-items: center;
++  overflow: hidden;
++  border: 1px solid rgba(88,232,255,.38);
++  border-radius: 50%;
++  background: radial-gradient(circle at 50% 40%,rgba(157,109,255,.24),rgba(7,6,12,.98) 68%);
++  box-shadow: 0 0 0 8px rgba(157,109,255,.03), 0 0 38px rgba(88,232,255,.11);
++}
++
++.preview::after {
++  content: "";
++  position: absolute;
++  inset: 8px;
++  z-index: 3;
++  border: 1px solid rgba(255,255,255,.08);
++  border-radius: 50%;
++  pointer-events: none;
++}
++
++.preview strong {
++  position: relative;
++  z-index: 2;
++  color: #f7f3ff;
++  font-size: 24px;
++  letter-spacing: -.05em;
++}
++
++.previewImage {
++  position: absolute;
++  inset: 0;
++  background-position: center;
++  background-size: cover;
++}
++
++.previewLabel {
++  color: #777080;
++  font-size: 8px;
++  font-weight: 750;
++  letter-spacing: .11em;
++  text-transform: uppercase;
++}
++
++.divider {
++  position: relative;
++  z-index: 2;
++  height: 1px;
++  margin: 24px 0 18px;
++  background: linear-gradient(90deg, rgba(88,232,255,.14), rgba(157,109,255,.22), rgba(255,255,255,.04));
++}
++
++.sectionLabel {
++  position: relative;
++  z-index: 2;
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 12px;
++  margin-bottom: 12px;
++}
++
++.sectionLabel strong {
++  color: #dcd7e5;
++  font-size: 10px;
++  letter-spacing: .06em;
++  text-transform: uppercase;
++}
++
++.sectionLabel span {
++  color: #625d69;
++  font-size: 8px;
++}
++
++.grid {
++  position: relative;
++  z-index: 2;
++  display: grid;
++  grid-template-columns: repeat(6, minmax(0,1fr));
++  gap: 11px;
++}
++
++.preset {
++  position: relative;
++  min-width: 0;
++  padding: 11px 8px 9px;
++  display: grid;
++  justify-items: center;
++  gap: 8px;
++  border: 1px solid rgba(255,255,255,.08);
++  border-radius: 16px;
++  color: #8e8897;
++  background: rgba(255,255,255,.022);
++  cursor: pointer;
++  font: inherit;
++  transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
++}
++
++.preset:hover {
++  transform: translateY(-2px);
++  border-color: rgba(157,109,255,.34);
++  background: rgba(157,109,255,.055);
++}
++
++.active {
++  border-color: rgba(88,232,255,.48);
++  background: linear-gradient(145deg,rgba(88,232,255,.065),rgba(157,109,255,.07));
++  box-shadow: 0 0 0 2px rgba(88,232,255,.04), 0 12px 32px rgba(0,0,0,.22);
++}
++
++.thumb {
++  width: 72px;
++  max-width: 100%;
++  aspect-ratio: 1;
++  border-radius: 50%;
++  background-position: center;
++  background-size: cover;
++  box-shadow: inset 0 0 0 1px rgba(255,255,255,.13), 0 8px 22px rgba(0,0,0,.22);
++}
++
++.name {
++  max-width: 100%;
++  overflow: hidden;
++  color: inherit;
++  font-size: 8px;
++  font-weight: 720;
++  line-height: 1.2;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.check {
++  position: absolute;
++  right: 8px;
++  top: 8px;
++  width: 19px;
++  height: 19px;
++  display: grid;
++  place-items: center;
++  border-radius: 50%;
++  color: #061114;
++  background: #58e8ff;
++  box-shadow: 0 0 16px rgba(88,232,255,.42);
++  font-size: 9px;
++  font-weight: 900;
++}
++
++.uploadPanel {
++  position: relative;
++  z-index: 2;
++  margin-top: 18px;
++  padding: 16px;
++  display: grid;
++  grid-template-columns: minmax(0,1fr) auto;
++  align-items: center;
++  gap: 16px;
++  border: 1px dashed rgba(157,109,255,.23);
++  border-radius: 16px;
++  background: rgba(255,255,255,.018);
++}
++
++.uploadCopy strong {
++  display: block;
++  margin-bottom: 4px;
++  color: #ddd8e5;
++  font-size: 10px;
++}
++
++.uploadCopy span {
++  color: #6f6977;
++  font-size: 8px;
++  line-height: 1.45;
++}
++
++.actions {
++  display: flex;
++  flex-wrap: wrap;
++  justify-content: flex-end;
++  gap: 8px;
++}
++
++.uploadButton,
++.removeButton {
++  min-height: 38px;
++  padding: 0 14px;
++  border-radius: 11px;
++  font: inherit;
++  font-size: 9px;
++  font-weight: 760;
++  cursor: pointer;
++  transition: transform .18s ease, border-color .18s ease, background .18s ease;
++}
++
++.uploadButton {
++  border: 1px solid rgba(88,232,255,.25);
++  color: #f6f3fb;
++  background: linear-gradient(135deg,rgba(71,54,220,.72),rgba(134,45,224,.72));
++}
++
++.removeButton {
++  border: 1px solid rgba(255,255,255,.09);
++  color: #aaa3b1;
++  background: rgba(255,255,255,.025);
++}
++
++.uploadButton:hover,
++.removeButton:hover { transform: translateY(-1px); }
++.uploadButton:focus-visible,
++.removeButton:focus-visible,
++.preset:focus-visible { outline: 2px solid #58e8ff; outline-offset: 2px; }
++.uploadButton:disabled { opacity: .55; cursor: wait; transform: none; }
++
++.fileInput {
++  position: absolute !important;
++  width: 1px !important;
++  height: 1px !important;
++  margin: -1px !important;
++  padding: 0 !important;
++  overflow: hidden !important;
++  clip: rect(0 0 0 0) !important;
++  white-space: nowrap !important;
++  border: 0 !important;
++}
++
++.status {
++  position: relative;
++  z-index: 2;
++  margin: 12px 0 0;
++  color: #a39dab;
++  font-size: 9px;
++  line-height: 1.45;
++}
++
++@media (max-width: 1050px) {
++  .grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
++}
++
++@media (max-width: 700px) {
++  .picker { padding: 22px 16px; }
++  .header { grid-template-columns: 1fr; }
++  .previewWrap { justify-items: start; }
++  .preview { width: 88px; height: 88px; }
++  .grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
++  .uploadPanel { grid-template-columns: 1fr; }
++  .actions { justify-content: stretch; }
++  .uploadButton,.removeButton { flex: 1 1 140px; }
++}
++
++@media (max-width: 430px) {
++  .grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
++  .thumb { width: 66px; }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .preset,.uploadButton,.removeButton { transition: none !important; }
++}
+diff --git a/components/avatar-picker.tsx b/components/avatar-picker.tsx
+index 806de25..baa0abf 100644
+--- a/components/avatar-picker.tsx
++++ b/components/avatar-picker.tsx
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import { ChangeEvent, useMemo, useRef, useState } from "react";
++import styles from "./avatar-picker.module.css";
+ 
+ const PRESETS = [
+   { id: "signal-hood", label: "Signal Hood" },
+@@ -103,40 +104,46 @@ export function AvatarPicker({ value, displayName, onChange }: { value: string;
+   }
+ 
+   return (
+-    <section className="avatar-picker" id="avatar-picker" aria-labelledby="avatar-picker-title">
+-      <div className="avatar-picker-head">
++    <section className={styles.picker} id="avatar-picker" aria-labelledby="avatar-picker-title">
++      <div className={styles.header}>
+         <div>
+-          <span>FATEDROP AVATAR</span>
+-          <h3 id="avatar-picker-title">Choose your signal.</h3>
+-          <p>Use a FateDrop preset or upload your own image. Custom uploads are automatically cropped square and compressed before they are saved.</p>
++          <span className={styles.kicker}>FateDrop avatar</span>
++          <h3 className={styles.title} id="avatar-picker-title">Choose your signal.</h3>
++          <p className={styles.copy}>Pick a FateDrop preset or upload your own image. Your avatar follows your FateDrop ID across your profile and dashboard.</p>
+         </div>
+-        <div className="avatar-picker-preview" aria-label="Current avatar preview">
+-          {value ? <span className="avatar-picker-preview-image" style={{ backgroundImage: `url("${value}")` }} /> : <strong>{initials}</strong>}
+-          <i />
++        <div className={styles.previewWrap}>
++          <div className={styles.preview} aria-label="Current avatar preview">
++            {value ? <span className={styles.previewImage} style={{ backgroundImage: `url("${value}")` }} /> : <strong>{initials}</strong>}
++          </div>
++          <span className={styles.previewLabel}>Live preview</span>
+         </div>
+       </div>
+ 
+-      <div className="avatar-preset-grid" role="list" aria-label="FateDrop preset avatars">
++      <div className={styles.divider} />
++      <div className={styles.sectionLabel}><strong>Preset avatars</strong><span>Choose one now · change anytime</span></div>
++      <div className={styles.grid} role="list" aria-label="FateDrop preset avatars">
+         {PRESETS.map((preset) => {
+           const src = presetPath(preset.id);
+           const active = value === src;
+           return (
+-            <button className={`avatar-preset${active ? " active" : ""}`} type="button" key={preset.id} onClick={() => { onChange(src); setMessage(`${preset.label} selected. Save profile to keep it.`); }} aria-pressed={active} title={preset.label}>
+-              <span style={{ backgroundImage: `url("${src}")` }} />
+-              <small>{preset.label}</small>
+-              {active ? <b>✓</b> : null}
++            <button className={`${styles.preset}${active ? ` ${styles.active}` : ""}`} type="button" key={preset.id} onClick={() => { onChange(src); setMessage(`${preset.label} selected. Save profile to keep it.`); }} aria-pressed={active} title={preset.label}>
++              <span className={styles.thumb} style={{ backgroundImage: `url("${src}")` }} />
++              <small className={styles.name}>{preset.label}</small>
++              {active ? <b className={styles.check}>✓</b> : null}
+             </button>
+           );
+         })}
+       </div>
+ 
+-      <div className="avatar-upload-row">
+-        <input ref={fileRef} className="avatar-file-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
+-        <button className="button button-secondary" type="button" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? "Preparing…" : "Upload your own"}</button>
+-        {value ? <button className="button button-quiet" type="button" onClick={() => { onChange(""); setMessage("Avatar removed. Save profile to keep the change."); }}>Remove avatar</button> : null}
+-        <span>JPG, PNG or WEBP · max 5MB</span>
++      <div className={styles.uploadPanel}>
++        <div className={styles.uploadCopy}><strong>Upload your own</strong><span>JPG, PNG or WEBP · max 5MB · automatically cropped square and compressed.</span></div>
++        <div className={styles.actions}>
++          <input ref={fileRef} className={styles.fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
++          <button className={styles.uploadButton} type="button" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? "Preparing…" : "Choose image"}</button>
++          {value ? <button className={styles.removeButton} type="button" onClick={() => { onChange(""); setMessage("Avatar removed. Save profile to keep the change."); }}>Remove</button> : null}
++        </div>
+       </div>
+-      {message ? <p className="avatar-picker-status" role="status">{message}</p> : null}
++      {message ? <p className={styles.status} role="status">{message}</p> : null}
+     </section>
+   );
+ }
