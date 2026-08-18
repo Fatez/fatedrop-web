@@ -28,7 +28,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
   const [signals, setSignals] = useState(initialSignals);
   const [now, setNow] = useState(initialNow);
   const [source, setSource] = useState(initialSource);
-  const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set<string>());
   const knownIds = useRef(new Set(initialSignals.map((signal) => signal.id)));
 
   useEffect(() => {
@@ -38,6 +38,8 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
 
   useEffect(() => {
     let disposed = false;
+    let freshTimer: number | null = null;
+
     async function poll() {
       try {
         const response = await fetch("/api/dashboard/signals", { cache: "no-store" });
@@ -51,14 +53,21 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
         setSource(payload.source ?? null);
         if (nextFresh.length) {
           setFreshIds(new Set(nextFresh));
-          window.setTimeout(() => setFreshIds(new Set()), 2600);
+          if (freshTimer) window.clearTimeout(freshTimer);
+          freshTimer = window.setTimeout(() => setFreshIds(new Set<string>()), 2600);
         }
       } catch {
         // Keep the last good persisted snapshot visible if a poll fails.
       }
     }
+
+    void poll();
     const timer = window.setInterval(poll, 10_000);
-    return () => { disposed = true; window.clearInterval(timer); };
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      if (freshTimer) window.clearTimeout(freshTimer);
+    };
   }, []);
 
   return <section className="fd-alerts-feed">
