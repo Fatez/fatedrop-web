@@ -84,11 +84,12 @@ test("visual assets, animation rules and responsive behaviour remain included", 
   ]) await access(new URL(asset, root));
 });
 
-test("standalone project excludes ChatGPT Sites build identity and Vinext runtime", async () => {
+test("standalone project keeps its Next.js source identity and Cloudflare deployment runtime", async () => {
   const packageJson = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   assert.equal(packageJson.name, "fatedrop-web");
   assert.equal(packageJson.scripts.dev, "next dev");
   assert.equal(packageJson.dependencies?.vinext, undefined);
-  assert.equal(packageJson.devDependencies?.wrangler, undefined);
+  assert.ok(packageJson.dependencies?.["@opennextjs/cloudflare"]);
+  assert.ok(packageJson.devDependencies?.wrangler);
   assert.equal(packageJson.devDependencies?.vite, undefined);
 });
