@@ -1,46 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
-import { LiveStorefront } from "@/components/live-storefront";
-import { NetworkSummaryPanels } from "@/components/network-summary-panels";
-import { RetailerNetworkBrowser } from "@/components/retailer-network-browser";
-import { getCobAndPipCatalogue } from "@/lib/retailer-catalogue";
-import { retailerRegistry } from "@/lib/retailer-registry";
+import { getCobAndPipCatalogue, getWishlistCollectablesCatalogue } from "@/lib/retailer-catalogue";
 
-export const metadata: Metadata = { title: "Retailer Network | FateDrop Dashboard", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Indie Stores | FateDrop Dashboard", robots: { index: false, follow: false } };
 
 export default async function DashboardStoresPage() {
-  const liveOffers = await getCobAndPipCatalogue();
-  const retailCount = retailerRegistry.filter((store) => store.category !== "indie").length;
-  const indieCount = retailerRegistry.filter((store) => store.category === "indie").length;
+  const [cobAndPip, wishlist] = await Promise.all([getCobAndPipCatalogue(), getWishlistCollectablesCatalogue()]);
+  const stores = [
+    { id: "wishlist-collectables", name: "Wishlist Collectables", location: "London · Online + physical", tags: ["Pokémon", "Lorcana", "One Piece", "Yu-Gi-Oh"], products: wishlist, href: "/dashboard/stores/wishlist-collectables", note: "Experimental sub-store" },
+    { id: "cob-and-pip", name: "Cob & Pip", location: "UK · Online", tags: ["Pokémon", "TCG"], products: cobAndPip, href: "https://cobandpip.co.uk", note: "Sub-store coming next" },
+  ];
+  const indexed = stores.reduce((total, store) => total + store.products.length, 0);
 
-  return (
-    <DashboardPageShell title="Retailer Network" eyebrow="UK TCG COMMERCE MAP">
-      <div className="fd-stores-page">
-        <section className="fd-dash-card fd-network-card fd-stores-hero">
-          <div className="fd-dash-card-head"><span>NETWORK FOUNDATION</span><i className="live">● {retailerRegistry.length} STORES MAPPED</i></div>
-          <div className="fd-network-message"><h1>One storefront. Two networks. Every retailer keeps the sale.</h1><p>Retailers and independent stores remain distinct networks, but their products flow into one FateDrop catalogue. Product identity joins matching listings, True Price compares offers, and checkout stays with the seller.</p></div>
-          <div className="fd-network-metrics"><div><strong>{retailCount}</strong><span>RETAIL NETWORK</span><small>Major retail + TCG specialists</small></div><div><strong>{indieCount}</strong><span>INDEPENDENT NETWORK</span><small>Indies with equal visibility</small></div><div><strong>{liveOffers.length}</strong><span>LIVE OFFERS</span><small>Feeding the universal catalogue</small></div></div>
-        </section>
+  return <DashboardPageShell title="Indie Stores" eyebrow="DISCOVER THE FATEDROP RETAILER NETWORK">
+    <div className="fd-indie-hub">
+      <section className="fd-dash-card fd-indie-hub-hero"><div className="fd-dash-card-head"><span>INDEPENDENT NETWORK</span><i className="live">● {stores.length} STORES IN LAB</i></div><div className="fd-network-message"><h1>Walk into a store. Browse their world.</h1><p>Indie Stores is for discovering independent retailers and entering their own FateDrop sub-store. Product-vs-product comparison belongs in True Price; this is where the retailers themselves get an identity.</p></div><div className="fd-network-metrics"><div><strong>{stores.length}</strong><span>INDIE STORES</span><small>Experimental network</small></div><div><strong>{indexed}</strong><span>INDEXED ITEMS</span><small>Across connected indie feeds</small></div><div><strong>1</strong><span>SUB-STORE LIVE</span><small>Wishlist experiment</small></div></div></section>
 
-        <NetworkSummaryPanels stores={retailerRegistry} products={liveOffers} />
+      <section className="fd-dash-card fd-indie-discovery"><div className="fd-dash-card-head"><span>STORE DIRECTORY</span><Link href="/dashboard/true-price">Need a product? Open True Price ↗</Link></div><div className="fd-indie-store-grid">{stores.map((store) => { const inStock = store.products.filter((product) => product.available).length; return <article className="fd-indie-store-card" key={store.id}><div className="fd-indie-store-card-top"><span className="fd-indie-store-logo">{store.name.split(" ").map((word) => word[0]).join("").slice(0,2)}</span><span className="fd-indie-store-status">{store.note}</span></div><h2>{store.name}</h2><p>{store.location}</p><div className="fd-indie-store-tags">{store.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="fd-indie-store-stats"><div><strong>{store.products.length}</strong><small>INDEXED</small></div><div><strong>{inStock}</strong><small>IN STOCK</small></div></div>{store.href.startsWith("http") ? <a className="fd-indie-store-open" href={store.href} target="_blank" rel="noreferrer">Visit retailer ↗</a> : <Link className="fd-indie-store-open" href={store.href}>Enter FateDrop store →</Link>}</article>; })}</div></section>
 
-        <div className="fd-stores-workspace">
-          <div className="fd-stores-column">
-            <LiveStorefront products={liveOffers} />
-          </div>
-
-          <section className="fd-dash-card fd-stores-directory-card">
-            <div className="fd-dash-card-head"><span>NETWORK DIRECTORY</span><Link href="/dashboard/true-price">Open True Price ↗</Link></div>
-            <div className="fd-network-message"><h1>See the network without cluttering the buying experience.</h1><p>Filter the mapped retailer network by type, inspect catalogue readiness and open each store directly. Live catalogue offers remain in the storefront beside it.</p></div>
-            <RetailerNetworkBrowser stores={retailerRegistry} />
-          </section>
-        </div>
-      </div>
-
-      <style>{`
-        .fd-stores-page{display:grid;gap:22px}.fd-stores-hero{padding:30px}.fd-stores-hero .fd-network-message h1{font-size:clamp(2rem,3vw,3.15rem);line-height:1.02;max-width:900px}.fd-stores-hero .fd-network-message p{font-size:15px;line-height:1.72;max-width:900px}.fd-network-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:stretch}.fd-network-summary-card{height:100%;display:flex;flex-direction:column;padding:26px}.fd-network-summary-card .fd-network-message h1{font-size:25px;line-height:1.1}.fd-network-summary-card .fd-network-message p{font-size:14px;line-height:1.65}.fd-network-summary-card .fd-network-mini-list{margin-top:auto}.fd-network-mini-list>div{min-height:48px;padding:11px 0}.fd-network-mini-list strong{font-size:13px}.fd-network-mini-list span{font-size:10px}.fd-stores-workspace{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(420px,.92fr);gap:22px;align-items:start}.fd-stores-column .fd-universal-storefront{margin-top:0!important;height:100%}.fd-stores-directory-card{padding:26px;min-width:0}.fd-stores-directory-card .fd-network-message h1{font-size:24px;line-height:1.12}.fd-stores-directory-card .fd-network-message p{font-size:14px;line-height:1.65}.fd-store-directory-browser{margin-top:20px}.fd-store-directory-controls{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}.fd-store-directory-tabs{display:flex;flex-wrap:wrap;gap:8px}.fd-store-directory-tab{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.035);color:#a9a3b2;border-radius:11px;padding:10px 13px;font-size:12px;font-weight:750;cursor:pointer;transition:.2s ease}.fd-store-directory-tab:hover,.fd-store-directory-tab[data-active="true"]{color:white;border-color:rgba(96,224,255,.38);background:linear-gradient(135deg,rgba(88,232,255,.1),rgba(157,109,255,.1));box-shadow:0 0 0 1px rgba(88,232,255,.05)}.fd-store-directory-count{font-size:10px;letter-spacing:.12em;color:#7e7887;text-transform:uppercase;white-space:nowrap}.fd-store-directory-list article{min-height:76px}.fd-store-directory-list article>div strong{font-size:14px}.fd-store-directory-list article>div small{font-size:11px;line-height:1.45}.fd-store-directory-list aside span{font-size:9px}.fd-store-directory-list aside a{font-size:10px;font-weight:800}.fd-stores-page .fd-dash-card-head>span{font-size:11px;letter-spacing:.15em}.fd-stores-page .fd-dash-card-head small,.fd-stores-page .fd-dash-card-head a{font-size:11px}@media(max-width:1180px){.fd-stores-workspace{grid-template-columns:1fr}.fd-stores-directory-card{min-width:0}}@media(max-width:820px){.fd-network-summary-grid{grid-template-columns:1fr}.fd-stores-hero,.fd-network-summary-card,.fd-stores-directory-card{padding:20px}.fd-store-directory-controls{align-items:flex-start;flex-direction:column}.fd-stores-hero .fd-network-message h1{font-size:2rem}}
-      `}</style>
-    </DashboardPageShell>
-  );
+      <section className="fd-dash-card fd-indie-model"><div><span>HOW THIS DIFFERS FROM TRUE PRICE</span><h2>Stores are destinations. True Price is the comparison engine.</h2></div><p>Browse an indie here when you want to explore that retailer. Jump to True Price when you already know the product and want FateDrop to compare every matching offer across the wider network.</p></section>
+    </div>
+    <style>{`.fd-indie-hub{display:grid;gap:22px}.fd-indie-hub-hero{padding:30px}.fd-indie-hub-hero .fd-network-message h1{font-size:clamp(2rem,3vw,3.2rem);line-height:1.02;max-width:850px}.fd-indie-hub-hero .fd-network-message p{font-size:15px;line-height:1.7;max-width:900px}.fd-indie-discovery{padding:28px}.fd-indie-store-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}.fd-indie-store-card{min-height:330px;padding:22px;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:radial-gradient(circle at 90% 0%,rgba(157,109,255,.1),transparent 34%),rgba(255,255,255,.022)}.fd-indie-store-card-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.fd-indie-store-logo{width:52px;height:52px;display:grid;place-items:center;border:1px solid rgba(88,232,255,.25);border-radius:15px;background:linear-gradient(135deg,rgba(88,232,255,.1),rgba(157,109,255,.13));font-size:16px;font-weight:900}.fd-indie-store-status{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#8d8795}.fd-indie-store-card h2{margin:20px 0 5px;font-size:24px}.fd-indie-store-card>p{margin:0;color:#89838f;font-size:12px}.fd-indie-store-tags{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}.fd-indie-store-tags span{padding:6px 8px;border:1px solid rgba(255,255,255,.08);border-radius:999px;font-size:8px;color:#aaa4b0}.fd-indie-store-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}.fd-indie-store-stats div{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)}.fd-indie-store-stats strong{display:block;font-size:19px}.fd-indie-store-stats small{font-size:7px;letter-spacing:.12em;color:#77717d}.fd-indie-store-open{margin-top:14px;min-height:42px;display:grid;place-items:center;border:1px solid rgba(88,232,255,.25);border-radius:12px;background:linear-gradient(135deg,rgba(88,232,255,.08),rgba(157,109,255,.1));color:#fff;font-size:10px;font-weight:850;text-decoration:none}.fd-indie-model{padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:center}.fd-indie-model span{font-size:8px;letter-spacing:.15em;color:#68e8fb;font-weight:850}.fd-indie-model h2{margin:7px 0 0;font-size:22px}.fd-indie-model p{margin:0;color:#96909c;font-size:12px;line-height:1.65}@media(max-width:850px){.fd-indie-store-grid,.fd-indie-model{grid-template-columns:1fr}.fd-indie-hub-hero,.fd-indie-discovery{padding:20px}}`}</style>
+  </DashboardPageShell>;
 }
