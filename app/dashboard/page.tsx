@@ -17,13 +17,13 @@ export const metadata: Metadata = {
 
 const navItems = [
   ["▦", "Dashboard", "/dashboard"],
-  ["⌕", "Search", "/collectors#search"],
-  ["◉", "Alerts", "/collectors#signals"],
-  ["♡", "Watchlist", "/collectors#wishlist"],
-  ["⌂", "Indie Stores", "/businesses"],
-  ["□", "Events", "/events"],
-  ["⇄", "True Price", "/collectors#true-price"],
-  ["⌖", "Local Radar", "/collectors#local-radar"],
+  ["⌕", "Search", "/dashboard/search"],
+  ["◉", "Alerts", "/dashboard/alerts"],
+  ["♡", "Watchlist", "/dashboard/watchlist"],
+  ["⌂", "Indie Stores", "/dashboard/stores"],
+  ["□", "Events", "/dashboard/events"],
+  ["⇄", "True Price", "/dashboard/true-price"],
+  ["⌖", "Local Radar", "/dashboard/local-radar"],
 ] as const;
 
 function chartPoints(values: number[]) {
@@ -67,8 +67,9 @@ export default async function DashboardPage() {
         <nav aria-label="Dashboard navigation">
           {navItems.map(([icon, label, href]) => <Link key={label} className={label === "Dashboard" ? "active" : ""} href={href}><span>{icon}</span>{label}</Link>)}
           <div className="fd-dashboard-nav-separator" />
-          <Link href="/account"><span>◎</span>My FateDrop ID</Link>
-          {DISCORD_COMMUNITY_OPEN ? <a href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer"><span>◌</span>Discord <i>PREMIUM</i></a> : <span className="fd-dashboard-nav-disabled"><span>◌</span>Discord <i>SOON</i></span>}
+          <Link href="/dashboard/profile"><span>◎</span>My FateDrop ID</Link>
+          <Link href="/dashboard/membership"><span>♛</span>Membership</Link>
+          <Link href="/dashboard/discord"><span>◌</span>Discord <i>PREMIUM</i></Link>
         </nav>
         <div className="fd-dashboard-trial-card">
           <span>{premium ? plan : "14-Day Free Trial"}</span>
@@ -82,8 +83,8 @@ export default async function DashboardPage() {
       <section className="fd-dashboard-main">
         <header className="fd-dashboard-topbar">
           <div><span>DASHBOARD</span><p>Welcome back, {snapshot.account.displayName}.</p></div>
-          <form action="/collectors" method="get" className="fd-dashboard-search"><span>⌕</span><input name="q" aria-label="Search FateDrop" placeholder="Search products, sets or stores…" /></form>
-          <div className="fd-dashboard-top-actions"><Link href="/account" className="fd-dashboard-avatar-link" aria-label="Open profile">{snapshot.account.avatarUrl ? <span style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }} /> : <img src="/assets/fatedrop-logo-mark.png" alt="" />}</Link><AccountSignOut /></div>
+          <form action="/dashboard/search" method="get" className="fd-dashboard-search"><span>⌕</span><input name="q" aria-label="Search FateDrop" placeholder="Search products, sets or stores…" /></form>
+          <div className="fd-dashboard-top-actions"><Link href="/dashboard/profile" className="fd-dashboard-avatar-link" aria-label="Open profile">{snapshot.account.avatarUrl ? <span style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }} /> : <img src="/assets/fatedrop-logo-mark.png" alt="" />}</Link><AccountSignOut /></div>
         </header>
 
         <div className="fd-dashboard-grid">
@@ -111,7 +112,7 @@ export default async function DashboardPage() {
             <div className="fd-profile-identity"><div className="fd-profile-orbit">{snapshot.account.avatarUrl ? <span style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }} /> : <img src="/assets/fatedrop-logo-mark.png" alt="" />}</div><div><h2>{snapshot.account.displayName}</h2><p>@{snapshot.account.username}</p><small>{plan}</small></div></div>
             <div className="fd-profile-badges"><span>NETWORK MEMBER</span>{snapshot.discord ? <span>DISCORD LINKED</span> : null}</div>
             <div className="fd-profile-dates"><div><span>MEMBER SINCE</span><strong>{formatMemberSince(snapshot.account.createdAt)}</strong></div><div><span>NETWORK AGE</span><strong>{networkAge(snapshot.account.createdAt)}</strong></div></div>
-            <Link className="fd-dashboard-wide-button" href="/account">View / edit profile</Link>
+            <Link className="fd-dashboard-wide-button" href="/dashboard/profile">View profile</Link>
           </section>
 
           <section className="fd-dash-card fd-stats-card">
@@ -126,23 +127,23 @@ export default async function DashboardPage() {
           </section>
 
           <section className="fd-dash-card fd-stores-card">
-            <div className="fd-dash-card-head"><span>FAVOURITE STORES</span><Link href="/businesses">Browse</Link></div>
+            <div className="fd-dash-card-head"><span>FAVOURITE STORES</span><Link href="/dashboard/stores">Browse</Link></div>
             <div className="fd-dashboard-list compact-list">
               {data.personal.favoriteStores.length ? data.personal.favoriteStores.map((store) => <article key={store.name}><span className="fd-store-thumb">◇</span><div><strong>{store.name}</strong><small>{store.count} tracked interaction{store.count === 1 ? "" : "s"}</small></div><aside>♡<small>{relativeTime(store.latestAt, data.generatedAt)}</small></aside></article>) : <div className="fd-dashboard-empty"><strong>No stores tracked yet.</strong><span>Store counts are built only from saved activity events.</span></div>}
             </div>
-            <Link className="fd-dashboard-wide-button" href="/businesses">Browse all stores →</Link>
+            <Link className="fd-dashboard-wide-button" href="/dashboard/stores">Browse all stores →</Link>
           </section>
 
           <section className="fd-dash-card fd-events-card">
-            <div className="fd-dash-card-head"><span>UPCOMING EVENTS</span><Link href="/events">View all</Link></div>
+            <div className="fd-dash-card-head"><span>UPCOMING EVENTS</span><Link href="/dashboard/events">View all</Link></div>
             <div className="fd-event-list">
               {data.upcomingEvents.length ? data.upcomingEvents.map((event) => <article key={event.id}><time>{eventDate(event.startsAt)}</time><div><strong>{event.name}</strong><small>{event.venue || event.location || "Venue details pending"}</small>{event.vendorCount !== null ? <span>{event.vendorCount}+ vendors</span> : null}</div>{event.ticketUrl ? <a href={event.ticketUrl} target="_blank" rel="noreferrer" aria-label={`Open ${event.name} tickets`}>↗</a> : null}</article>) : <div className="fd-dashboard-empty"><strong>No live event feed connected yet.</strong><span>Upcoming listings will appear here when FateDrop Cloud includes verified event records in the network snapshot.</span></div>}
             </div>
-            <Link className="fd-dashboard-wide-button" href="/events">See all events</Link>
+            <Link className="fd-dashboard-wide-button" href="/dashboard/events">See all events</Link>
           </section>
 
           <section className="fd-dash-card fd-billing-card">
-            <div className="fd-dash-card-head"><span>MEMBERSHIP + STRIPE</span><i className={stripeReady ? "live" : "pending"}>{stripeReady ? "READY" : "SETUP"}</i></div>
+            <div className="fd-dash-card-head"><span>MEMBERSHIP + STRIPE</span><Link href="/dashboard/membership">Open billing</Link></div>
             <div className="fd-billing-state"><strong>{plan}</strong><span>{snapshot.membership.status.toUpperCase()}</span></div>
             <p>{snapshot.membership.status === "trialing" ? `Your trial has ${trialDaysLeft ?? 0} day${trialDaysLeft === 1 ? "" : "s"} remaining.` : premium ? "Your Premium entitlement is active across the FateDrop account layer." : "Start a 14-day Plus trial when Stripe keys and prices are connected."}</p>
             <div className="fd-billing-facts"><span><small>CUSTOMER</small><b>{snapshot.membership.stripeCustomerId ? "Connected" : "Not created"}</b></span><span><small>DISCORD ROLE</small><b>{snapshot.discord?.roleSyncedAt ? "Synced" : "Not synced"}</b></span></div>
@@ -150,14 +151,14 @@ export default async function DashboardPage() {
           </section>
 
           <section className="fd-dash-card fd-whispers-card">
-            <div className="fd-dash-card-head"><span>ECHO / WHISPERS</span><small>Live evidence feed</small></div>
+            <div className="fd-dash-card-head"><span>ECHO / WHISPERS</span><Link href="/dashboard/alerts">Live feed</Link></div>
             <div className="fd-dashboard-list compact-list">
               {data.echoWhispers.length ? data.echoWhispers.map((item) => <article key={item.id}><span className={`fd-signal-thumb ${item.state}`}>{item.state === "echo" ? "E" : "W"}</span><div><strong>{item.title}</strong><small>{item.detail || item.retailer || signalLabel(item)}</small></div><aside>{signalLabel(item)}<small>{relativeTime(item.occurredAt, data.generatedAt)}</small></aside></article>) : <div className="fd-dashboard-empty"><strong>No Whisper / Echo records yet.</strong><span>These populate only from persisted network snapshots.</span></div>}
             </div>
           </section>
 
           <section className="fd-dash-card fd-watchlist-card">
-            <div className="fd-dash-card-head"><span>WATCHLIST HIGHLIGHTS</span><Link href="/collectors#wishlist">Wishlist</Link></div>
+            <div className="fd-dash-card-head"><span>WATCHLIST HIGHLIGHTS</span><Link href="/dashboard/watchlist">Wishlist</Link></div>
             <div className="fd-dashboard-list compact-list">
               {data.personal.watchlist.length ? data.personal.watchlist.map((item) => <article key={item.id}><span className="fd-store-thumb">♡</span><div><strong>{item.title || "Wishlist match"}</strong><small>{item.retailer || item.subtitle || "FateDrop activity"}</small></div><aside>{item.amountPence ? moneyFromPence(item.amountPence) : "HIT"}<small>{relativeTime(item.occurredAt, data.generatedAt)}</small></aside></article>) : <div className="fd-dashboard-empty"><strong>No wishlist hits recorded yet.</strong><span>Your stats stay at zero until the app or site records a real match.</span></div>}
             </div>
@@ -165,7 +166,7 @@ export default async function DashboardPage() {
 
           <section className="fd-dash-card fd-community-card">
             <div><span>COMMUNITY</span><h2>Join the network beyond the dashboard.</h2><p>Connect with collectors, react to signals and unlock Premium Discord spaces when the server is ready.</p></div>
-            {DISCORD_COMMUNITY_OPEN ? <a className="button button-primary" href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">Join FateDrop Discord ↗</a> : <span className="button button-secondary disabled-link" aria-disabled="true">Discord launch held until ready</span>}
+            <Link className="button button-primary" href="/dashboard/discord">Manage Discord →</Link>
           </section>
 
           <section className="fd-dash-card fd-data-card">
