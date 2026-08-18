@@ -38,7 +38,7 @@ export default async function DashboardTruePricePage() {
         </div>
       </section>
 
-      <LiveStorefront products={cobAndPip} retailerName="Cob & Pip" />
+      <LiveStorefront products={cobAndPip} />
 
       <section className="fd-dash-card" style={{ marginTop: 18 }}>
         <div className="fd-dash-card-head"><span>NEXT FEED</span><small>Cross-retailer comparison</small></div>
