@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CatalogueProduct } from "@/lib/retailer-catalogue";
 import { formatGBP } from "@/lib/retailer-catalogue";
 import { catalogueProductMatches } from "@/lib/catalogue-search";
@@ -9,10 +9,25 @@ import { retailerRegistry } from "@/lib/retailer-registry";
 import { buildTruePriceOffers, formatSignedGBP, formatSignedPercent, type TruePriceRrpLookup } from "@/lib/true-price";
 
 const retailerCategory = new Map(retailerRegistry.map((retailer) => [retailer.id, retailer.category]));
+const EMPTY_RRP_LOOKUP: TruePriceRrpLookup = {};
 
-export function LiveStorefront({ products, rrpLookup = {} }: { products: CatalogueProduct[]; rrpLookup?: TruePriceRrpLookup }) {
+export function LiveStorefront({ products, rrpLookup = EMPTY_RRP_LOOKUP }: { products: CatalogueProduct[]; rrpLookup?: TruePriceRrpLookup }) {
   const [query,setQuery]=useState(""); const [stockOnly,setStockOnly]=useState(true); const [network,setNetwork]=useState<"all"|"retail"|"indie">("all");
-  const offers=useMemo(()=>buildTruePriceOffers(products,rrpLookup),[products,rrpLookup]);
+  const [networkRrpLookup,setNetworkRrpLookup]=useState<TruePriceRrpLookup>(rrpLookup);
+
+  useEffect(()=>{
+    let cancelled=false;
+    fetch("/api/dashboard/rrp",{cache:"no-store"})
+      .then((response)=>response.ok?response.json():null)
+      .then((payload)=>{
+        if(cancelled||!payload?.rrpLookup||typeof payload.rrpLookup!=="object")return;
+        setNetworkRrpLookup(payload.rrpLookup as TruePriceRrpLookup);
+      })
+      .catch(()=>undefined);
+    return()=>{cancelled=true};
+  },[]);
+
+  const offers=useMemo(()=>buildTruePriceOffers(products,networkRrpLookup),[products,networkRrpLookup]);
   const availableByIdentity=useMemo(()=>{const counts=new Map<string,number>();for(const offer of offers){if(!offer.available)continue;counts.set(offer.identityKey,(counts.get(offer.identityKey)??0)+1)}return counts},[offers]);
   const visible=useMemo(()=>offers.filter((p)=>{if(stockOnly&&!p.available)return false;if(!catalogueProductMatches(p,query))return false;const category=retailerCategory.get(p.retailerId);if(network==="indie"&&category!=="indie")return false;if(network==="retail"&&category==="indie")return false;return true}).slice(0,80),[offers,query,stockOnly,network]);
   return <section className="fd-dash-card fd-universal-storefront" style={{marginTop:0}}>
