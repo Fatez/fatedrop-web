@@ -2,6 +2,8 @@ import type { NeonQueryFunction } from "@neondatabase/serverless";
 
 export type DashboardActivityType = "signal_seen" | "wishlist_hit" | "store_tracked" | "market_saving";
 export type SignalLifecycle = "whisper" | "manifested" | "vanished" | "echo";
+export type SignalKind = SignalLifecycle | "price_change" | "launch_date_change" | "queue" | "security" | "drop_pulse";
+export type SignalIntensity = "subtle" | "standard" | "major";
 
 export type DashboardActivityEvent = {
   id: string;
@@ -22,6 +24,9 @@ export type DashboardActivityEvent = {
 export type NetworkSignal = {
   id: string;
   state: SignalLifecycle;
+  kind?: SignalKind;
+  intensity?: SignalIntensity;
+  confidence?: number | null;
   title: string;
   retailer: string | null;
   detail: string | null;
