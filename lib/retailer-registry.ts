@@ -9,6 +9,7 @@ export type RetailerRecord = {
   onlineCatalogue: boolean;
   physicalStores: boolean;
   deliveryKnown: boolean;
+  standardDeliveryPence?: number;
   freeDeliveryThresholdPence?: number;
   catalogueStatus: "planned" | "candidate" | "connected";
   partnerStatus: "network" | "candidate" | "partner";
@@ -30,7 +31,7 @@ export const retailerRegistry: RetailerRecord[] = [
   { id: "magic-madhouse", name: "Magic Madhouse", category: "tcg-specialist", website: "https://magicmadhouse.co.uk", pokemon: true, onlineCatalogue: true, physicalStores: false, deliveryKnown: false, catalogueStatus: "planned", partnerStatus: "network" },
   { id: "total-cards", name: "Total Cards", category: "tcg-specialist", website: "https://totalcards.net", pokemon: true, onlineCatalogue: true, physicalStores: true, deliveryKnown: false, catalogueStatus: "planned", partnerStatus: "network" },
   { id: "zatu", name: "Zatu Games", category: "tcg-specialist", website: "https://www.board-game.co.uk", pokemon: true, onlineCatalogue: true, physicalStores: false, deliveryKnown: false, catalogueStatus: "planned", partnerStatus: "network" },
-  { id: "cob-and-pip", name: "Cob & Pip", category: "indie", website: "https://cobandpip.co.uk", pokemon: true, onlineCatalogue: true, physicalStores: false, deliveryKnown: true, freeDeliveryThresholdPence: 5000, catalogueStatus: "candidate", partnerStatus: "candidate", notes: "Family-run UK online TCG store. Free UK postage over £50; registered office is not a retail location." },
+  { id: "cob-and-pip", name: "Cob & Pip", category: "indie", website: "https://cobandpip.co.uk", pokemon: true, onlineCatalogue: true, physicalStores: false, deliveryKnown: true, freeDeliveryThresholdPence: 5000, catalogueStatus: "candidate", partnerStatus: "candidate", notes: "Family-run UK online TCG store. Free UK postage over £50; registered office is not a retail location. Standard delivery below the free-delivery threshold remains unverified." },
 ];
 
 export const retailerCategoryLabels: Record<RetailerCategory, string> = {
