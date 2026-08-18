@@ -39,7 +39,14 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
       <section className="fd-dashboard-main">
         <header className="fd-dashboard-topbar">
           <div><span>{eyebrow || title.toUpperCase()}</span><p>{title}</p></div>
-          <form action="/dashboard/search" method="get" className="fd-dashboard-search"><span>⌕</span><input name="q" aria-label="Search FateDrop" placeholder="Search products, sets or stores…" /></form>
+          <form action="/dashboard/search" method="get" className="fd-dashboard-search fd-dashboard-search-upgraded">
+            <span className="fd-dashboard-search-icon" aria-hidden="true">⌕</span>
+            <label>
+              <small>SEARCH FATEDROP</small>
+              <input name="q" aria-label="Search FateDrop" placeholder="Products, sets, stores…" />
+            </label>
+            <button type="submit" aria-label="Run FateDrop search">→</button>
+          </form>
           <div className="fd-dashboard-top-actions">
             <Link href="/dashboard/profile" className="fd-dashboard-avatar-link" aria-label="Open FateDrop profile">
               {snapshot.account.avatarUrl ? <span style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }} /> : <img src="/assets/fatedrop-logo-mark.png" alt="" />}
@@ -49,6 +56,20 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
         </header>
         {children}
       </section>
+
+      <style>{`
+        .fd-dashboard-search-upgraded{position:relative;min-width:min(430px,38vw);min-height:58px;padding:7px 7px 7px 14px;display:grid;grid-template-columns:30px 1fr 42px;align-items:center;gap:8px;border:1px solid rgba(157,109,255,.3);border-radius:17px;background:radial-gradient(circle at 15% 0%,rgba(88,232,255,.08),transparent 45%),linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));box-shadow:0 12px 36px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.04);transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+        .fd-dashboard-search-upgraded:focus-within{border-color:rgba(88,232,255,.58);box-shadow:0 0 0 3px rgba(88,232,255,.08),0 16px 42px rgba(49,31,93,.2);transform:translateY(-1px)}
+        .fd-dashboard-search-icon{font-size:24px;line-height:1;color:#b89cff;text-align:center;filter:drop-shadow(0 0 10px rgba(157,109,255,.25))}
+        .fd-dashboard-search-upgraded label{display:flex;min-width:0;flex-direction:column;gap:2px;cursor:text}
+        .fd-dashboard-search-upgraded label small{font-size:8px;font-weight:850;letter-spacing:.16em;color:#817b8d}
+        .fd-dashboard-search-upgraded input{width:100%;padding:0;border:0;outline:0;background:transparent;color:#fff;font-size:14px;font-weight:650;line-height:1.4}
+        .fd-dashboard-search-upgraded input::placeholder{color:#77717f;font-weight:520}
+        .fd-dashboard-search-upgraded button{width:42px;height:42px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:linear-gradient(135deg,#f5f6ff,#c8f8ff 58%,#b79dff);color:#09080d;font-size:19px;font-weight:900;cursor:pointer;box-shadow:0 8px 22px rgba(88,232,255,.11);transition:transform .2s ease,box-shadow .2s ease}
+        .fd-dashboard-search-upgraded button:hover{transform:translateX(2px);box-shadow:0 10px 28px rgba(88,232,255,.2)}
+        @media(max-width:980px){.fd-dashboard-search-upgraded{min-width:260px}.fd-dashboard-search-upgraded label small{display:none}}
+        @media(max-width:760px){.fd-dashboard-topbar{flex-wrap:wrap}.fd-dashboard-search-upgraded{order:3;width:100%;min-width:100%;margin-top:8px}}
+      `}</style>
     </main>
   );
 }
