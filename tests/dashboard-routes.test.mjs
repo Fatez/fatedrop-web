@@ -28,11 +28,14 @@ test("core dashboard navigation follows Discover Track Network Account structure
   assert.equal(nav.includes('["⌕", "Search", "/dashboard/search"]'), false, "dead standalone Search navigation should stay removed");
 });
 
-test("dashboard home uses the shared shell instead of duplicating sidebar navigation", () => {
+test("dashboard home uses the shared shell and retains personal collector identity", () => {
   const root = fs.readFileSync("app/dashboard/page.tsx", "utf8");
   assert.ok(root.includes("DashboardPageShell"));
   assert.equal(root.includes("fd-dashboard-sidebar"), false);
   assert.equal(root.includes('action="/dashboard/search"'), false);
+  assert.ok(root.includes("MEMBER SINCE"));
+  assert.ok(root.includes("TIME IN NETWORK"));
+  assert.ok(root.includes("FATEWINDOW BETA"));
 });
 
 test("free live alert feed redacts actionable signal fields before browser delivery", () => {
@@ -47,13 +50,28 @@ test("free live alert feed redacts actionable signal fields before browser deliv
   assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
-test("live alerts poll the membership-safe endpoint and use interactive signal beams", () => {
+test("live alerts poll safely and provide a non-persisted beam demo", () => {
   const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
   const beam = fs.readFileSync("components/signal-beam.tsx", "utf8");
   assert.ok(feed.includes('fetch("/api/dashboard/signals"'));
   assert.ok(feed.includes("10_000"));
   assert.ok(feed.includes("SignalBeam"));
+  assert.ok(feed.includes("TEST BEAM"));
+  assert.ok(feed.includes("local-demo-"));
+  assert.ok(feed.includes("not stored, sent to Discord"));
   assert.ok(beam.includes("REPLAY SIGNAL"));
+});
+
+test("True Price includes the evidence-safe FateWindow decision layer", () => {
+  const page = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
+  const storefront = fs.readFileSync("components/live-storefront.tsx", "utf8");
+  const engine = fs.readFileSync("lib/fate-window.ts", "utf8");
+  assert.ok(page.includes("FATEWINDOW · BETA"));
+  assert.ok(storefront.includes("evaluateFateWindow"));
+  assert.ok(engine.includes('label: "BUY WINDOW OPEN"'));
+  assert.ok(engine.includes('label: "WAIT"'));
+  assert.ok(engine.includes('label: "EVIDENCE BUILDING"'));
+  assert.ok(engine.includes("Official RRP is not verified"));
 });
 
 test("Stripe checkout blocks duplicate live subscriptions and repeat trials", () => {
