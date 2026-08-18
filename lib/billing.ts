@@ -54,6 +54,7 @@ export async function createCheckoutSession(input: {
   fateId: string;
   tier: Exclude<MembershipTier, "free">;
   existingCustomerId?: string | null;
+  trialEligible: boolean;
   origin: string;
 }) {
   const priceId = priceIdForTier(input.tier);
@@ -66,10 +67,12 @@ export async function createCheckoutSession(input: {
   body.set("client_reference_id", input.userId);
   body.set("line_items[0][price]", priceId);
   body.set("line_items[0][quantity]", "1");
-  body.set("subscription_data[trial_period_days]", String(TRIAL_DAYS));
-  if ((process.env.FATEDROP_TRIAL_REQUIRE_CARD ?? "true") === "false") {
-    body.set("payment_method_collection", "if_required");
-    body.set("subscription_data[trial_settings][end_behavior][missing_payment_method]", "cancel");
+  if (input.trialEligible) {
+    body.set("subscription_data[trial_period_days]", String(TRIAL_DAYS));
+    if ((process.env.FATEDROP_TRIAL_REQUIRE_CARD ?? "true") === "false") {
+      body.set("payment_method_collection", "if_required");
+      body.set("subscription_data[trial_settings][end_behavior][missing_payment_method]", "cancel");
+    }
   }
   body.set("subscription_data[metadata][fatedrop_user_id]", input.userId);
   body.set("subscription_data[metadata][fatedrop_fate_id]", input.fateId);
