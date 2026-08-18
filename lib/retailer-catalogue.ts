@@ -27,7 +27,10 @@ type ShopifyProduct = {
 };
 type ShopifyResponse = { products?: ShopifyProduct[] };
 
-const COB_AND_PIP_BASE = "https://cobandpip.co.uk";
+type ShopifyStore = { id: string; name: string; baseUrl: string };
+
+const COB_AND_PIP: ShopifyStore = { id: "cob-and-pip", name: "Cob & Pip", baseUrl: "https://cobandpip.co.uk" };
+const WISHLIST_COLLECTABLES: ShopifyStore = { id: "wishlist-collectables", name: "Wishlist Collectables", baseUrl: "https://www.wishlistcollectables.co.uk" };
 const PAGE_SIZE = 250;
 const MAX_PRODUCTS = 2500;
 
@@ -36,17 +39,17 @@ function moneyToPence(value?: string) {
   return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
 }
 
-function normaliseCobAndPip(product: ShopifyProduct): CatalogueProduct | null {
+function normaliseShopifyProduct(store: ShopifyStore, product: ShopifyProduct): CatalogueProduct | null {
   const variants = product.variants ?? [];
   const prices = variants.map((variant) => moneyToPence(variant.price)).filter((price) => price > 0);
   if (!prices.length) return null;
   return {
-    id: `cob-and-pip:${product.id}`,
-    retailerId: "cob-and-pip",
-    retailerName: "Cob & Pip",
+    id: `${store.id}:${product.id}`,
+    retailerId: store.id,
+    retailerName: store.name,
     title: product.title,
     handle: product.handle,
-    url: `${COB_AND_PIP_BASE}/products/${product.handle}`,
+    url: `${store.baseUrl}/products/${product.handle}`,
     image: product.images?.[0]?.src,
     pricePence: Math.min(...prices),
     available: variants.some((variant) => variant.available === true),
@@ -56,13 +59,13 @@ function normaliseCobAndPip(product: ShopifyProduct): CatalogueProduct | null {
   };
 }
 
-export async function getCobAndPipCatalogue(): Promise<CatalogueProduct[]> {
+async function getShopifyCatalogue(store: ShopifyStore): Promise<CatalogueProduct[]> {
   try {
     const all: ShopifyProduct[] = [];
     let sinceId: string | number | undefined;
     while (all.length < MAX_PRODUCTS) {
       const suffix = sinceId ? `&since_id=${encodeURIComponent(String(sinceId))}` : "";
-      const response = await fetch(`${COB_AND_PIP_BASE}/products.json?limit=${PAGE_SIZE}${suffix}`, {
+      const response = await fetch(`${store.baseUrl}/products.json?limit=${PAGE_SIZE}${suffix}`, {
         next: { revalidate: 300 },
         headers: { Accept: "application/json", "User-Agent": "FateDrop/1.0 catalogue discovery" },
       });
@@ -75,10 +78,18 @@ export async function getCobAndPipCatalogue(): Promise<CatalogueProduct[]> {
       sinceId = page[page.length - 1]?.id;
       if (!sinceId) break;
     }
-    return all.map(normaliseCobAndPip).filter((product): product is CatalogueProduct => product !== null);
+    return all.map((product) => normaliseShopifyProduct(store, product)).filter((product): product is CatalogueProduct => product !== null);
   } catch {
     return [];
   }
+}
+
+export function getCobAndPipCatalogue() {
+  return getShopifyCatalogue(COB_AND_PIP);
+}
+
+export function getWishlistCollectablesCatalogue() {
+  return getShopifyCatalogue(WISHLIST_COLLECTABLES);
 }
 
 export function formatGBP(pence: number) {
