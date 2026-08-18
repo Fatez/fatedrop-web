@@ -19,6 +19,11 @@ export type NetworkOpportunity = {
   signal?: NetworkSignalEvent | null;
 };
 
+export async function processRrpReferenceProduct(productIdentity: NetworkProductIdentity) {
+  await upsertProductIdentity(productIdentity);
+  return productIdentity;
+}
+
 export async function processNetworkOpportunity(input: NetworkOpportunity) {
   await upsertNetworkRetailer(input.retailer);
   await upsertProductIdentity(input.productIdentity);
