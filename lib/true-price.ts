@@ -3,6 +3,48 @@ import { calculateDeliveredPrice, calculateMarkup } from "@/lib/retailer-catalog
 import { getCanonicalRrp } from "@/lib/canonical-rrp";
 import { identifyProduct } from "@/lib/product-identity";
 import { retailerRegistry } from "@/lib/retailer-registry";
+import type { TruePriceResult } from "@/lib/network-domain";
+
+export type TruePriceInput = {
+  itemPricePence: number;
+  mandatoryPostagePence: number | null;
+  mandatoryFeesPence?: number | null;
+  deliveryKnown: boolean;
+  officialRrpPence: number | null;
+};
+
+export function truePriceLabel(percentFromRrp: number | null): TruePriceResult["label"] {
+  if (percentFromRrp === null) return "RRP unknown";
+  if (percentFromRrp < -0.5) return "Below RRP";
+  if (Math.abs(percentFromRrp) <= 0.5) return "RRP";
+  if (percentFromRrp <= 10) return "Fair";
+  if (percentFromRrp <= 25) return "Elevated";
+  return "High Premium";
+}
+
+export function calculateTruePrice(input: TruePriceInput): TruePriceResult {
+  const fees = input.mandatoryFeesPence ?? 0;
+  const deliveredTruePricePence = input.deliveryKnown && input.mandatoryPostagePence !== null
+    ? input.itemPricePence + input.mandatoryPostagePence + fees
+    : null;
+  const differenceFromRrpPence = input.officialRrpPence !== null && deliveredTruePricePence !== null
+    ? deliveredTruePricePence - input.officialRrpPence
+    : null;
+  const percentFromRrp = input.officialRrpPence !== null && deliveredTruePricePence !== null
+    ? calculateMarkup(deliveredTruePricePence, input.officialRrpPence)
+    : null;
+  return {
+    itemPricePence: input.itemPricePence,
+    mandatoryPostagePence: input.mandatoryPostagePence,
+    mandatoryFeesPence: input.mandatoryFeesPence ?? 0,
+    deliveryKnown: input.deliveryKnown,
+    deliveredTruePricePence,
+    rrpPence: input.officialRrpPence,
+    differenceFromRrpPence,
+    percentFromRrp,
+    label: truePriceLabel(percentFromRrp),
+  };
+}
 
 export type TruePriceOffer = CatalogueProduct & {
   identityKey: string;
@@ -11,28 +53,28 @@ export type TruePriceOffer = CatalogueProduct & {
   itemMarkupPence: number | null;
   itemMarkupPercent: number | null;
   deliveryPence: number | null;
+  mandatoryFeesPence: number;
   deliveryKnown: boolean;
   deliveredPence: number | null;
   deliveredPremiumPence: number | null;
   deliveredPremiumPercent: number | null;
+  truePriceLabel: TruePriceResult["label"];
 };
 
 export function buildTruePriceOffer(product: CatalogueProduct): TruePriceOffer {
   const identity = identifyProduct(product.title);
   const rrp = getCanonicalRrp(identity);
   const retailer = retailerRegistry.find((item) => item.id === product.retailerId);
-  const delivery = calculateDeliveredPrice(
-    product.pricePence,
-    retailer?.freeDeliveryThresholdPence,
-    retailer?.standardDeliveryPence,
-  );
-
-  const deliveredPence = delivery.known ? delivery.deliveredPence : null;
+  const delivery = calculateDeliveredPrice(product.pricePence, retailer?.freeDeliveryThresholdPence, retailer?.standardDeliveryPence);
+  const result = calculateTruePrice({
+    itemPricePence: product.pricePence,
+    mandatoryPostagePence: delivery.deliveryPence,
+    mandatoryFeesPence: 0,
+    deliveryKnown: delivery.known,
+    officialRrpPence: rrp?.rrpPence ?? null,
+  });
   const itemMarkupPence = rrp ? product.pricePence - rrp.rrpPence : null;
   const itemMarkupPercent = rrp ? calculateMarkup(product.pricePence, rrp.rrpPence) : null;
-  const deliveredPremiumPence = rrp && deliveredPence !== null ? deliveredPence - rrp.rrpPence : null;
-  const deliveredPremiumPercent = rrp && deliveredPence !== null ? calculateMarkup(deliveredPence, rrp.rrpPence) : null;
-
   return {
     ...product,
     identityKey: identity.key,
@@ -40,11 +82,13 @@ export function buildTruePriceOffer(product: CatalogueProduct): TruePriceOffer {
     rrpSource: rrp?.source ?? null,
     itemMarkupPence,
     itemMarkupPercent,
-    deliveryPence: delivery.deliveryPence,
-    deliveryKnown: delivery.known,
-    deliveredPence,
-    deliveredPremiumPence,
-    deliveredPremiumPercent,
+    deliveryPence: result.mandatoryPostagePence,
+    mandatoryFeesPence: result.mandatoryFeesPence ?? 0,
+    deliveryKnown: result.deliveryKnown,
+    deliveredPence: result.deliveredTruePricePence,
+    deliveredPremiumPence: result.differenceFromRrpPence,
+    deliveredPremiumPercent: result.percentFromRrp,
+    truePriceLabel: result.label,
   };
 }
 
