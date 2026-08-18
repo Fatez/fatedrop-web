@@ -41,25 +41,41 @@ test("dashboard home uses the shared shell and retains personal collector identi
 test("free live alert feed redacts actionable signal fields before browser delivery", () => {
   const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
   const api = fs.readFileSync("app/api/dashboard/signals/route.ts", "utf8");
-  assert.ok(alerts.includes('title: "Premium signal detail"'));
+  assert.ok(alerts.includes('"Premium signal detail"'));
   assert.ok(alerts.includes("deliveredPricePence: null"));
-  assert.ok(api.includes('title: "Premium signal detail"'));
+  assert.ok(alerts.includes("confidence: null"));
+  assert.ok(api.includes('"Premium signal detail"'));
+  assert.ok(api.includes('"Major network movement detected"'));
   assert.ok(api.includes("retailer: null"));
   assert.ok(api.includes("detail: null"));
+  assert.ok(api.includes("confidence: null"));
   assert.ok(api.includes("deliveredPricePence: null"));
   assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
-test("live alerts poll safely and provide a non-persisted beam demo", () => {
+test("live alerts grade major surges separately from product signals", () => {
   const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
   const beam = fs.readFileSync("components/signal-beam.tsx", "utf8");
+  const surge = fs.readFileSync("components/signal-surge.tsx", "utf8");
+  const ingest = fs.readFileSync("app/api/dashboard/network-snapshot/route.ts", "utf8");
   assert.ok(feed.includes('fetch("/api/dashboard/signals"'));
   assert.ok(feed.includes("10_000"));
   assert.ok(feed.includes("SignalBeam"));
-  assert.ok(feed.includes("TEST BEAM"));
+  assert.ok(feed.includes("SignalSurge"));
+  assert.ok(feed.includes("TEST MAJOR SURGE"));
+  assert.ok(feed.includes("TEST PRODUCT SIGNAL"));
+  assert.ok(feed.includes('kind: "security"'));
+  assert.ok(feed.includes('intensity: "major"'));
+  assert.ok(feed.includes('kind: "manifested"'));
+  assert.ok(feed.includes('intensity: "standard"'));
   assert.ok(feed.includes("local-demo-"));
-  assert.ok(feed.includes("not stored, sent to Discord"));
-  assert.ok(beam.includes("REPLAY SIGNAL"));
+  assert.ok(beam.includes("intensity-subtle"));
+  assert.ok(beam.includes("intensity-major"));
+  assert.ok(surge.includes("NETWORK SURGE"));
+  assert.ok(surge.includes("Listening across the network"));
+  assert.ok(ingest.includes('"queue"'));
+  assert.ok(ingest.includes('"security"'));
+  assert.ok(ingest.includes('"drop_pulse"'));
 });
 
 test("True Price includes the evidence-safe FateWindow decision layer", () => {
