@@ -43,6 +43,8 @@ test("custom avatar is a real account feature and FateMatch companion", () => {
   const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
   const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
   const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
+  const character = fs.readFileSync("components/avatar-anime-character.tsx", "utf8");
+  const loadout = fs.readFileSync("lib/avatar-loadout.ts", "utf8");
   const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
@@ -50,8 +52,13 @@ test("custom avatar is a real account feature and FateMatch companion", () => {
   assert.ok(builder.includes("SAVE AVATAR"));
   assert.ok(builder.includes("FAVOURITE TCGs"));
   assert.ok(builder.includes("TCG Style"));
-  assert.ok(preview.includes("radar-drone"));
-  assert.ok(preview.includes("mood-manifested"));
+  assert.ok(builder.includes("AVATAR_HAIR"));
+  assert.ok(loadout.includes("midnight-spikes"));
+  assert.ok(preview.includes("AvatarAnimeCharacter"));
+  assert.ok(preview.includes("fd-avatar-command-room"));
+  assert.ok(character.includes("FATEDROP"));
+  assert.ok(character.includes("radar-drone"));
+  assert.ok(character.includes('"surge"'));
   assert.ok(fateMatch.includes("YOUR COMPANION"));
   assert.ok(fateMatch.includes("AvatarPreview"));
   assert.ok(api.includes("assertSameOrigin"));
@@ -73,16 +80,17 @@ test("free live alert feed redacts actionable signal fields before browser deliv
   assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
-test("live alerts grade major surges separately from product signals", () => {
+test("live alerts grade major surges separately and use the saved avatar cinematic", () => {
   const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
   const beam = fs.readFileSync("components/signal-beam.tsx", "utf8");
-  const surge = fs.readFileSync("components/signal-surge.tsx", "utf8");
+  const cinematic = fs.readFileSync("components/avatar-signal-cinematic.tsx", "utf8");
+  const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
   const ingest = fs.readFileSync("app/api/dashboard/network-snapshot/route.ts", "utf8");
   assert.ok(feed.includes('fetch("/api/dashboard/signals"'));
   assert.ok(feed.includes("10_000"));
   assert.ok(feed.includes("SignalBeam"));
-  assert.ok(feed.includes("SignalSurge"));
-  assert.ok(feed.includes("TEST MAJOR SURGE"));
+  assert.ok(feed.includes("AvatarSignalCinematic"));
+  assert.ok(feed.includes("TEST AVATAR SURGE"));
   assert.ok(feed.includes("TEST PRODUCT SIGNAL"));
   assert.ok(feed.includes('kind: "security"'));
   assert.ok(feed.includes('intensity: "major"'));
@@ -91,8 +99,13 @@ test("live alerts grade major surges separately from product signals", () => {
   assert.ok(feed.includes("local-demo-"));
   assert.ok(beam.includes("intensity-subtle"));
   assert.ok(beam.includes("intensity-major"));
-  assert.ok(surge.includes("NETWORK SURGE"));
-  assert.ok(surge.includes("Listening across the network"));
+  assert.ok(cinematic.includes("MAJOR NETWORK ACTIVITY"));
+  assert.ok(cinematic.includes("DROP DETECTED"));
+  assert.ok(cinematic.includes("CONDITIONS BUILDING"));
+  assert.ok(cinematic.includes("AvatarAnimeCharacter"));
+  assert.ok(cinematic.includes("fd-cinematic-beam"));
+  assert.ok(alerts.includes("getUserAvatar"));
+  assert.ok(alerts.includes("avatarLoadout"));
   assert.ok(ingest.includes('"queue"'));
   assert.ok(ingest.includes('"security"'));
   assert.ok(ingest.includes('"drop_pulse"'));
