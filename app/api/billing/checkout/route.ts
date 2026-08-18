@@ -12,17 +12,23 @@ export async function POST(request: Request) {
     const payload = await request.json() as { tier?: unknown };
     const tier = payload.tier === "plus" || payload.tier === "pro" ? payload.tier : null;
     if (!tier) return Response.json({ error: "Choose a valid membership tier." }, { status: 400 });
-    if (hasPremiumAccess(snapshot.membership)) return Response.json({ error: "This FateDrop ID already has Premium access. Use Manage billing from your profile to change the subscription." }, { status: 409 });
+    if (hasPremiumAccess(snapshot.membership)) return Response.json({ error: "This FateDrop ID already has Premium access. Use Manage billing from Membership to change the subscription." }, { status: 409 });
+    if (snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled") {
+      return Response.json({ error: "An existing Stripe subscription needs attention. Open Manage billing instead of creating a second subscription." }, { status: 409 });
+    }
+
+    const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
     const session = await createCheckoutSession({
       userId: snapshot.account.id,
       email: snapshot.account.email,
       fateId: snapshot.account.fateId,
       tier,
       existingCustomerId: snapshot.membership.stripeCustomerId,
+      trialEligible,
       origin: new URL(request.url).origin,
     });
     if (typeof session.url !== "string") return Response.json({ error: "Stripe did not return a checkout address." }, { status: 502 });
-    return Response.json({ url: session.url });
+    return Response.json({ url: session.url, trialEligible });
   } catch (error) {
     if (error instanceof BillingUnavailableError) return Response.json({ error: "Billing is prepared but Stripe has not been connected yet." }, { status: 503 });
     if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
