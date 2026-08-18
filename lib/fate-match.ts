@@ -1,5 +1,5 @@
-import type { NetworkLocation, NetworkOffer, TruePriceResult } from "@/lib/network-domain";
-import { distanceKm } from "@/lib/location";
+import type { NetworkLocation, NetworkOffer, TruePriceResult } from "./network-domain";
+import { distanceKm } from "./location";
 
 export type FateMatchScope = "online" | "local" | "either";
 export type FateMatchStockRequirement = "in_stock" | "purchasable" | "any";
