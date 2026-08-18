@@ -13,6 +13,29 @@ export class BillingUnavailableError extends Error {
   }
 }
 
+export function billingReadiness() {
+  const secret = process.env.STRIPE_SECRET_KEY || "";
+  const webhook = process.env.STRIPE_WEBHOOK_SECRET || "";
+  const plus = process.env.STRIPE_PRICE_PLUS || "";
+  const pro = process.env.STRIPE_PRICE_PRO || "";
+  const missing = [
+    ["STRIPE_SECRET_KEY", secret],
+    ["STRIPE_WEBHOOK_SECRET", webhook],
+    ["STRIPE_PRICE_PLUS", plus],
+    ["STRIPE_PRICE_PRO", pro],
+  ].filter(([, value]) => !value).map(([name]) => name);
+  const mode = secret.startsWith("sk_live_") ? "live" : secret.startsWith("sk_test_") ? "test" : secret ? "unknown" : "unconfigured";
+  return {
+    configured: missing.length === 0,
+    checkoutConfigured: Boolean(secret && plus && pro),
+    webhookConfigured: Boolean(webhook),
+    mode,
+    missing,
+    trialDays: TRIAL_DAYS,
+    requireCardForTrial: (process.env.FATEDROP_TRIAL_REQUIRE_CARD ?? "true") !== "false",
+  } as const;
+}
+
 export function priceIdForTier(tier: MembershipTier) {
   if (tier === "plus") return process.env.STRIPE_PRICE_PLUS ?? null;
   if (tier === "pro") return process.env.STRIPE_PRICE_PRO ?? null;
@@ -38,8 +61,8 @@ export async function createCheckoutSession(input: {
 
   const body = new URLSearchParams();
   body.set("mode", "subscription");
-  body.set("success_url", `${input.origin}/account?billing=success`);
-  body.set("cancel_url", `${input.origin}/subscriptions?billing=cancelled`);
+  body.set("success_url", `${input.origin}/dashboard/membership?billing=success`);
+  body.set("cancel_url", `${input.origin}/dashboard/membership?billing=cancelled`);
   body.set("client_reference_id", input.userId);
   body.set("line_items[0][price]", priceId);
   body.set("line_items[0][quantity]", "1");
@@ -62,7 +85,7 @@ export async function createCheckoutSession(input: {
 export async function createBillingPortalSession(customerId: string, origin: string) {
   const body = new URLSearchParams();
   body.set("customer", customerId);
-  body.set("return_url", `${origin}/account`);
+  body.set("return_url", `${origin}/dashboard/membership`);
   return stripeRequest("/billing_portal/sessions", body);
 }
 
