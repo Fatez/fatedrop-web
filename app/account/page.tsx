@@ -10,6 +10,7 @@ import { SiteShell } from "@/components/page-shell";
 import { ProfileEditor } from "@/components/profile-editor";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, formatMemberSince, hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
+import { serverNowSeconds } from "@/lib/server-time";
 
 export const metadata: Metadata = { title: "My FateDrop ID", description: "Your FateDrop profile, membership and connected network access.", robots: { index: false, follow: false } };
 
@@ -33,6 +34,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const age = networkAge(snapshot.account.createdAt);
   const trialEnd = dateLabel(snapshot.membership.trialEndsAt);
   const discordRoleSynced = Boolean(premium && snapshot.discord?.roleSyncedAt);
+  const now = serverNowSeconds();
+  const networkDays = Math.max(1, Math.floor((now - snapshot.account.createdAt) / 86400) + 1);
 
   return (
     <SiteShell>
@@ -80,7 +83,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
         <article className="account-panel loyalty-panel">
           <div className="account-panel-head"><div><span>04 / LOYALTY</span><h2>Time matters.</h2></div><i>FOUNDATION</i></div>
-          <div className="loyalty-orbit" aria-hidden="true"><span /><span /><span /><strong>{Math.max(1, Math.floor((Date.now() / 1000 - snapshot.account.createdAt) / 86400) + 1)}</strong><small>DAYS</small></div>
+          <div className="loyalty-orbit" aria-hidden="true"><span /><span /><span /><strong>{networkDays}</strong><small>DAYS</small></div>
           <p>Your join date is permanent account history. For now we simply surface membership age; later it can support genuine loyalty milestones without inventing an economy too early.</p>
         </article>
       </section>
