@@ -7,7 +7,7 @@ import { BillingPortalButton, StartMembershipButton } from "@/components/members
 import { BrandMark } from "@/components/brand-mark";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { buildDashboardData, moneyFromPence, relativeTime, signalLabel } from "@/lib/dashboard";
-import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, formatMemberSince, hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
+import { formatMemberSince, hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
 
 export const metadata: Metadata = {
   title: "Dashboard | FateDrop",
@@ -59,6 +59,8 @@ export default async function DashboardPage() {
   const points = chartPoints(activityValues);
   const trialDaysLeft = snapshot.membership.trialEndsAt ? Math.max(0, Math.ceil((snapshot.membership.trialEndsAt - data.generatedAt) / 86_400)) : null;
   const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET && process.env.STRIPE_PRICE_PLUS && process.env.STRIPE_PRICE_PRO);
+  const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
+  const hasOpenSubscription = Boolean(snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
 
   return (
     <main className="fd-dashboard">
@@ -72,9 +74,9 @@ export default async function DashboardPage() {
           <Link href="/dashboard/discord"><span>◌</span>Discord <i>PREMIUM</i></Link>
         </nav>
         <div className="fd-dashboard-trial-card">
-          <span>{premium ? plan : "14-Day Free Trial"}</span>
-          <p>{premium ? (snapshot.membership.status === "trialing" ? `${trialDaysLeft ?? 0} trial days remaining.` : "Premium entitlement active.") : "Unlock Premium signals, Discord access and deeper discovery."}</p>
-          {snapshot.membership.stripeCustomerId ? <BillingPortalButton /> : <StartMembershipButton tier="plus" label="Start free trial" />}
+          <span>{premium ? plan : trialEligible ? "14-Day Free Trial" : "Membership"}</span>
+          <p>{premium ? (snapshot.membership.status === "trialing" ? `${trialDaysLeft ?? 0} trial days remaining.` : "Premium entitlement active.") : trialEligible ? "Unlock Premium signals, Discord access and deeper discovery." : "Manage or restart your FateDrop membership."}</p>
+          {hasOpenSubscription ? <BillingPortalButton /> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"} />}
           <small>{stripeReady ? "Stripe billing ready" : "Stripe keys still need connecting"}</small>
         </div>
         <div className="fd-dashboard-sidebar-art" aria-hidden="true" />
@@ -145,9 +147,9 @@ export default async function DashboardPage() {
           <section className="fd-dash-card fd-billing-card">
             <div className="fd-dash-card-head"><span>MEMBERSHIP + STRIPE</span><Link href="/dashboard/membership">Open billing</Link></div>
             <div className="fd-billing-state"><strong>{plan}</strong><span>{snapshot.membership.status.toUpperCase()}</span></div>
-            <p>{snapshot.membership.status === "trialing" ? `Your trial has ${trialDaysLeft ?? 0} day${trialDaysLeft === 1 ? "" : "s"} remaining.` : premium ? "Your Premium entitlement is active across the FateDrop account layer." : "Start a 14-day Plus trial when Stripe keys and prices are connected."}</p>
+            <p>{snapshot.membership.status === "trialing" ? `Your trial has ${trialDaysLeft ?? 0} day${trialDaysLeft === 1 ? "" : "s"} remaining.` : premium ? "Your Premium entitlement is active across the FateDrop account layer." : trialEligible ? "Start a 14-day Plus trial when Stripe is connected." : "Manage or restart your subscription from the Membership page."}</p>
             <div className="fd-billing-facts"><span><small>CUSTOMER</small><b>{snapshot.membership.stripeCustomerId ? "Connected" : "Not created"}</b></span><span><small>DISCORD ROLE</small><b>{snapshot.discord?.roleSyncedAt ? "Synced" : "Not synced"}</b></span></div>
-            {snapshot.membership.stripeCustomerId ? <BillingPortalButton /> : <StartMembershipButton tier="plus" label="Start Plus free trial" />}
+            {hasOpenSubscription ? <BillingPortalButton /> : <StartMembershipButton tier="plus" label={trialEligible ? "Start Plus free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"} />}
           </section>
 
           <section className="fd-dash-card fd-whispers-card">
