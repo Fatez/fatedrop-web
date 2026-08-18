@@ -25,42 +25,57 @@ type ShopifyProduct = {
   variants?: ShopifyVariant[];
   images?: ShopifyImage[];
 };
-
 type ShopifyResponse = { products?: ShopifyProduct[] };
 
 const COB_AND_PIP_BASE = "https://cobandpip.co.uk";
+const PAGE_SIZE = 250;
+const MAX_PRODUCTS = 2500;
 
 function moneyToPence(value?: string) {
   const parsed = Number.parseFloat(value ?? "");
   return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
 }
 
-export async function getCobAndPipCatalogue(limit = 250): Promise<CatalogueProduct[]> {
+function normaliseCobAndPip(product: ShopifyProduct): CatalogueProduct | null {
+  const variants = product.variants ?? [];
+  const prices = variants.map((variant) => moneyToPence(variant.price)).filter((price) => price > 0);
+  if (!prices.length) return null;
+  return {
+    id: `cob-and-pip:${product.id}`,
+    retailerId: "cob-and-pip",
+    retailerName: "Cob & Pip",
+    title: product.title,
+    handle: product.handle,
+    url: `${COB_AND_PIP_BASE}/products/${product.handle}`,
+    image: product.images?.[0]?.src,
+    pricePence: Math.min(...prices),
+    available: variants.some((variant) => variant.available === true),
+    vendor: product.vendor,
+    productType: product.product_type,
+    updatedAt: product.updated_at,
+  };
+}
+
+export async function getCobAndPipCatalogue(): Promise<CatalogueProduct[]> {
   try {
-    const response = await fetch(`${COB_AND_PIP_BASE}/products.json?limit=${Math.min(limit, 250)}`, {
-      next: { revalidate: 300 },
-      headers: { Accept: "application/json", "User-Agent": "FateDrop/1.0 catalogue discovery" },
-    });
-    if (!response.ok) return [];
-    const data = (await response.json()) as ShopifyResponse;
-    return (data.products ?? []).map((product) => {
-      const variants = product.variants ?? [];
-      const prices = variants.map((variant) => moneyToPence(variant.price)).filter((price) => price > 0);
-      return {
-        id: `cob-and-pip:${product.id}`,
-        retailerId: "cob-and-pip",
-        retailerName: "Cob & Pip",
-        title: product.title,
-        handle: product.handle,
-        url: `${COB_AND_PIP_BASE}/products/${product.handle}`,
-        image: product.images?.[0]?.src,
-        pricePence: prices.length ? Math.min(...prices) : 0,
-        available: variants.some((variant) => variant.available === true),
-        vendor: product.vendor,
-        productType: product.product_type,
-        updatedAt: product.updated_at,
-      };
-    }).filter((product) => product.pricePence > 0);
+    const all: ShopifyProduct[] = [];
+    let sinceId: string | number | undefined;
+    while (all.length < MAX_PRODUCTS) {
+      const suffix = sinceId ? `&since_id=${encodeURIComponent(String(sinceId))}` : "";
+      const response = await fetch(`${COB_AND_PIP_BASE}/products.json?limit=${PAGE_SIZE}${suffix}`, {
+        next: { revalidate: 300 },
+        headers: { Accept: "application/json", "User-Agent": "FateDrop/1.0 catalogue discovery" },
+      });
+      if (!response.ok) break;
+      const data = (await response.json()) as ShopifyResponse;
+      const page = data.products ?? [];
+      if (!page.length) break;
+      all.push(...page);
+      if (page.length < PAGE_SIZE) break;
+      sinceId = page[page.length - 1]?.id;
+      if (!sinceId) break;
+    }
+    return all.map(normaliseCobAndPip).filter((product): product is CatalogueProduct => product !== null);
   } catch {
     return [];
   }
