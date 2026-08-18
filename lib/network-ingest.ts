@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { NetworkOpportunity } from "@/lib/fate-network-pipeline";
-import type { SignalKind, StockState } from "@/lib/network-domain";
+import type { NetworkProductIdentity, SignalKind, StockState } from "@/lib/network-domain";
 
 function stableId(prefix: string, ...parts: string[]) {
   return `${prefix}_${createHash("sha256").update(parts.join("\u001f")).digest("hex").slice(0, 24)}`;
@@ -20,6 +20,29 @@ function signalKind(value: unknown): SignalKind | null {
   const state = String(value ?? "").toLowerCase();
   if (["whisper","echo","manifested","vanished","price_change","launch_date_change","queue","security","drop_pulse"].includes(state)) return state as SignalKind;
   return null;
+}
+
+export function parseRrpReferenceProduct(raw: unknown, fallbackObservedAt = Math.floor(Date.now() / 1000)): NetworkProductIdentity | null {
+  const product = object(raw);
+  const id = text(product.id, 180);
+  const canonicalKey = text(product.canonicalKey, 240);
+  const title = text(product.title, 240);
+  const rrpSource = text(product.rrpSource, 180);
+  const officialRrpPence = numberOrNull(product.officialRrpPence);
+  const verifiedAt = numberOrNull(product.rrpObservedAt ?? product.rrpVerifiedAt) ?? fallbackObservedAt;
+  if (!id || !canonicalKey || !title || !rrpSource || officialRrpPence === null || officialRrpPence < 0) return null;
+  return {
+    id,
+    tcg: text(product.tcg, 80) ?? "pokemon",
+    canonicalKey,
+    title,
+    productType: text(product.productType, 120),
+    setName: text(product.setName, 180),
+    edition: text(product.edition, 120),
+    officialRrpPence: Math.round(officialRrpPence),
+    rrpSource,
+    rrpVerifiedAt: Math.floor(verifiedAt),
+  };
 }
 
 export function parseNetworkOpportunity(raw: unknown, fallbackObservedAt = Math.floor(Date.now() / 1000)): NetworkOpportunity | null {
