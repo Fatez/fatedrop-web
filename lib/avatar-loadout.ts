@@ -1,4 +1,5 @@
 export const AVATAR_BASES = ["scout", "runner", "warden"] as const;
+export const AVATAR_HAIR = ["midnight-spikes", "violet-wave", "silver-fade", "cyan-crop"] as const;
 export const AVATAR_OUTFITS = ["signal-hoodie", "collector-jacket", "tournament-shell"] as const;
 export const AVATAR_HEADWEAR = ["signal-cap", "headphones", "visor", "beanie"] as const;
 export const AVATAR_GEAR = ["scanner", "binder", "slab-case", "none"] as const;
@@ -9,6 +10,7 @@ export const AVATAR_TCG_STYLES = ["neutral", "pokemon", "one-piece", "lorcana", 
 export const FAVOURITE_TCGS = ["pokemon", "one-piece", "lorcana", "magic", "yugioh"] as const;
 
 export type AvatarBase = typeof AVATAR_BASES[number];
+export type AvatarHair = typeof AVATAR_HAIR[number];
 export type AvatarOutfit = typeof AVATAR_OUTFITS[number];
 export type AvatarHeadwear = typeof AVATAR_HEADWEAR[number];
 export type AvatarGear = typeof AVATAR_GEAR[number];
@@ -20,6 +22,7 @@ export type FavouriteTcg = typeof FAVOURITE_TCGS[number];
 
 export type AvatarLoadout = {
   base: AvatarBase;
+  hair: AvatarHair;
   outfit: AvatarOutfit;
   headwear: AvatarHeadwear;
   gear: AvatarGear;
@@ -38,6 +41,7 @@ export type AvatarRecord = {
 
 export const DEFAULT_AVATAR_LOADOUT: AvatarLoadout = {
   base: "scout",
+  hair: "midnight-spikes",
   outfit: "signal-hoodie",
   headwear: "signal-cap",
   gear: "scanner",
@@ -49,6 +53,7 @@ export const DEFAULT_AVATAR_LOADOUT: AvatarLoadout = {
 
 export const AVATAR_OPTION_LABELS = {
   base: { scout: "Signal Scout", runner: "Network Runner", warden: "Vault Warden" },
+  hair: { "midnight-spikes": "Midnight Spikes", "violet-wave": "Violet Wave", "silver-fade": "Silver Fade", "cyan-crop": "Cyan Crop" },
   outfit: { "signal-hoodie": "Signal Hoodie", "collector-jacket": "Collector Jacket", "tournament-shell": "Tournament Shell" },
   headwear: { "signal-cap": "Signal Cap", headphones: "Headphones", visor: "Scanner Visor", beanie: "Collector Beanie" },
   gear: { scanner: "Signal Scanner", binder: "Binder", "slab-case": "Slab Case", none: "No Gear" },
@@ -66,6 +71,7 @@ export function normalizeAvatarLoadout(input: unknown): AvatarLoadout {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
   return {
     base: isOneOf(raw.base, AVATAR_BASES) ? raw.base : DEFAULT_AVATAR_LOADOUT.base,
+    hair: isOneOf(raw.hair, AVATAR_HAIR) ? raw.hair : DEFAULT_AVATAR_LOADOUT.hair,
     outfit: isOneOf(raw.outfit, AVATAR_OUTFITS) ? raw.outfit : DEFAULT_AVATAR_LOADOUT.outfit,
     headwear: isOneOf(raw.headwear, AVATAR_HEADWEAR) ? raw.headwear : DEFAULT_AVATAR_LOADOUT.headwear,
     gear: isOneOf(raw.gear, AVATAR_GEAR) ? raw.gear : DEFAULT_AVATAR_LOADOUT.gear,
