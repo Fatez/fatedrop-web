@@ -1,9 +1,9 @@
-import type { CatalogueProduct } from "@/lib/retailer-catalogue";
-import { calculateDeliveredPrice, calculateMarkup } from "@/lib/retailer-catalogue";
-import { getCanonicalRrp } from "@/lib/canonical-rrp";
-import { identifyProduct } from "@/lib/product-identity";
-import { retailerRegistry } from "@/lib/retailer-registry";
-import type { TruePriceResult } from "@/lib/network-domain";
+import type { CatalogueProduct } from "./retailer-catalogue";
+import { calculateDeliveredPrice, calculateMarkup } from "./retailer-catalogue";
+import { getCanonicalRrp } from "./canonical-rrp";
+import { identifyProduct } from "./product-identity";
+import { retailerRegistry } from "./retailer-registry";
+import type { TruePriceResult } from "./network-domain";
 
 export type TruePriceInput = {
   itemPricePence: number;
