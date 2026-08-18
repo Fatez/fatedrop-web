@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { saveNetworkMetricSnapshot, type NetworkEventListing, type NetworkMetricSnapshot, type NetworkSignal, type SignalLifecycle } from "@/lib/dashboard-storage";
-import { processNetworkOpportunity } from "@/lib/fate-network-pipeline";
-import { parseNetworkOpportunity } from "@/lib/network-ingest";
+import { processNetworkOpportunity, processRrpReferenceProduct } from "@/lib/fate-network-pipeline";
+import { parseNetworkOpportunity, parseRrpReferenceProduct } from "@/lib/network-ingest";
 
 export const runtime = "nodejs";
 
@@ -52,6 +52,20 @@ export async function POST(request: Request) {
     };
     const inserted = await saveNetworkMetricSnapshot(snapshot);
 
+    let rrpReferenceProcessed = 0;
+    let rrpReferenceDeferred = 0;
+    const rrpReferenceProducts = Array.isArray(payload.rrpReferenceProducts) ? payload.rrpReferenceProducts.slice(0, 2000) : [];
+    for (const raw of rrpReferenceProducts) {
+      const product = parseRrpReferenceProduct(raw, measuredAt);
+      if (!product) { rrpReferenceDeferred += 1; continue; }
+      try {
+        await processRrpReferenceProduct(product);
+        rrpReferenceProcessed += 1;
+      } catch {
+        rrpReferenceDeferred += 1;
+      }
+    }
+
     let opportunitiesProcessed = 0;
     let fateMatchesTriggered = 0;
     let opportunitiesDeferred = 0;
@@ -64,12 +78,11 @@ export async function POST(request: Request) {
         opportunitiesProcessed += 1;
         fateMatchesTriggered += result.matches.length;
       } catch {
-        // Snapshot ingestion remains backwards-compatible while the additive Fate Network migration is staged.
         opportunitiesDeferred += 1;
       }
     }
 
-    return Response.json({ stored: inserted, measuredAt, opportunitiesProcessed, opportunitiesDeferred, fateMatchesTriggered }, { status: inserted ? 201 : 200 });
+    return Response.json({ stored: inserted, measuredAt, rrpReferenceProcessed, rrpReferenceDeferred, opportunitiesProcessed, opportunitiesDeferred, fateMatchesTriggered }, { status: inserted ? 201 : 200 });
   } catch {
     return Response.json({ error: "Network snapshot could not be stored." }, { status: 500 });
   }
