@@ -15,24 +15,45 @@ const dashboardRoutes = [
   "app/dashboard/discord/page.tsx",
 ];
 
-test("every dashboard navigation destination has a real page", () => {
+test("every retained dashboard destination has a real page", () => {
   for (const route of dashboardRoutes) assert.equal(fs.existsSync(route), true, `${route} is missing`);
 });
 
-test("dashboard navigation stays inside the signed-in dashboard", () => {
-  const root = fs.readFileSync("app/dashboard/page.tsx", "utf8");
+test("core dashboard navigation follows Discover Track Network Account structure", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
-  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/membership", "/dashboard/discord"]) {
-    assert.ok(root.includes(href) || href === "/dashboard/profile" || href === "/dashboard/membership" || href === "/dashboard/discord", `root dashboard missing ${href}`);
+  for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group), `shared dashboard nav missing ${group}`);
+  for (const href of ["/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/membership", "/dashboard/discord"]) {
     assert.ok(nav.includes(href), `shared dashboard nav missing ${href}`);
   }
+  assert.equal(nav.includes('["⌕", "Search", "/dashboard/search"]'), false, "dead standalone Search navigation should stay removed");
 });
 
-test("free alert cards render placeholders instead of actionable signal fields", () => {
+test("dashboard home uses the shared shell instead of duplicating sidebar navigation", () => {
+  const root = fs.readFileSync("app/dashboard/page.tsx", "utf8");
+  assert.ok(root.includes("DashboardPageShell"));
+  assert.equal(root.includes("fd-dashboard-sidebar"), false);
+  assert.equal(root.includes('action="/dashboard/search"'), false);
+});
+
+test("free live alert feed redacts actionable signal fields before browser delivery", () => {
   const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
-  assert.ok(alerts.includes('const title = unlocked ? signal.title : "Premium signal detail"'));
-  assert.ok(alerts.includes('const retailer = unlocked ?'));
-  assert.ok(alerts.includes('const delivered = unlocked ?'));
+  const api = fs.readFileSync("app/api/dashboard/signals/route.ts", "utf8");
+  assert.ok(alerts.includes('title: "Premium signal detail"'));
+  assert.ok(alerts.includes("deliveredPricePence: null"));
+  assert.ok(api.includes('title: "Premium signal detail"'));
+  assert.ok(api.includes("retailer: null"));
+  assert.ok(api.includes("detail: null"));
+  assert.ok(api.includes("deliveredPricePence: null"));
+  assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
+});
+
+test("live alerts poll the membership-safe endpoint and use interactive signal beams", () => {
+  const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
+  const beam = fs.readFileSync("components/signal-beam.tsx", "utf8");
+  assert.ok(feed.includes('fetch("/api/dashboard/signals"'));
+  assert.ok(feed.includes("10_000"));
+  assert.ok(feed.includes("SignalBeam"));
+  assert.ok(beam.includes("REPLAY SIGNAL"));
 });
 
 test("Stripe checkout blocks duplicate live subscriptions and repeat trials", () => {
