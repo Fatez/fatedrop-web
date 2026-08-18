@@ -1,11 +1,12 @@
 import type { MembershipRecord, MembershipTier } from "./account-storage";
+import { hasCapability } from "./entitlements";
 
 export const DISCORD_INVITE_URL = "https://discord.gg/QK9ahpYSFk";
 export const DISCORD_COMMUNITY_OPEN = process.env.NEXT_PUBLIC_DISCORD_ENABLED === "true";
 export const TRIAL_DAYS = 14;
 
 export function hasPremiumAccess(membership: MembershipRecord) {
-  return membership.tier !== "free" && (membership.status === "trialing" || membership.status === "active");
+  return hasCapability(membership, "advanced_fate_match");
 }
 
 export function membershipLabel(membership: MembershipRecord) {
