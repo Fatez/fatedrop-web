@@ -1,12 +1,28 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateTruePrice, truePriceLabel } from "../lib/true-price.ts";
-import { evaluateFateMatch, evaluateActiveFateMatches } from "../lib/fate-match.ts";
-import { distanceKm, dedupeLocations } from "../lib/location.ts";
-import { aggregateAnonymousDemand } from "../lib/demand-aggregation.ts";
-import { canCreateReservation, reservationIdempotencyHit } from "../lib/fate-lock.ts";
-import { capabilitiesForMembership, hasCapability } from "../lib/entitlements.ts";
-import { identifyProduct } from "../lib/product-identity.ts";
+import * as truePriceNamespace from "../lib/true-price.ts";
+import * as fateMatchNamespace from "../lib/fate-match.ts";
+import * as locationNamespace from "../lib/location.ts";
+import * as demandNamespace from "../lib/demand-aggregation.ts";
+import * as fateLockNamespace from "../lib/fate-lock.ts";
+import * as entitlementsNamespace from "../lib/entitlements.ts";
+import * as productIdentityNamespace from "../lib/product-identity.ts";
+
+const truePriceModule = truePriceNamespace.default ?? truePriceNamespace;
+const fateMatchModule = fateMatchNamespace.default ?? fateMatchNamespace;
+const locationModule = locationNamespace.default ?? locationNamespace;
+const demandModule = demandNamespace.default ?? demandNamespace;
+const fateLockModule = fateLockNamespace.default ?? fateLockNamespace;
+const entitlementsModule = entitlementsNamespace.default ?? entitlementsNamespace;
+const productIdentityModule = productIdentityNamespace.default ?? productIdentityNamespace;
+
+const { calculateTruePrice, truePriceLabel } = truePriceModule;
+const { evaluateFateMatch, evaluateActiveFateMatches } = fateMatchModule;
+const { distanceKm, dedupeLocations } = locationModule;
+const { aggregateAnonymousDemand } = demandModule;
+const { canCreateReservation, reservationIdempotencyHit } = fateLockModule;
+const { capabilitiesForMembership, hasCapability } = entitlementsModule;
+const { identifyProduct } = productIdentityModule;
 
 const productId = "prd_destined-rivals-etb";
 const baseOffer = {
