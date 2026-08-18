@@ -1,28 +1,43 @@
 import type { Metadata } from "next";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
+import { FateMatchBuilder } from "@/components/fate-match-builder";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { buildDashboardData, moneyFromPence, relativeTime } from "@/lib/dashboard";
+import { hasCapability } from "@/lib/entitlements";
+import { listUserFateMatches } from "@/lib/fate-match-storage";
 
-export const metadata: Metadata = { title: "Watchlist | FateDrop Dashboard", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "FateMatch | FateDrop Dashboard", robots: { index: false, follow: false } };
 
-export default async function DashboardWatchlistPage() {
+export default async function DashboardFateMatchPage() {
   const snapshot = await getCurrentSnapshot();
   const data = snapshot ? await buildDashboardData(snapshot) : null;
-  const items = data?.personal.watchlist ?? [];
-  return (
-    <DashboardPageShell title="Watchlist" eyebrow="SAVED HUNTS">
-      <div className="fd-dashboard-grid">
-        <section className="fd-dash-card fd-watchlist-card">
-          <div className="fd-dash-card-head"><span>WATCHLIST</span><small>{items.length} stored hit{items.length === 1 ? "" : "s"}</small></div>
-          <div className="fd-dashboard-list">
-            {items.length && data ? items.map((item) => <article key={item.id}><span className="fd-store-thumb">♡</span><div><strong>{item.title || "Wishlist match"}</strong><small>{item.retailer || item.subtitle || "FateDrop activity"}</small></div><aside>{item.amountPence ? moneyFromPence(item.amountPence) : "HIT"}<small>{relativeTime(item.occurredAt, data.generatedAt)}</small></aside></article>) : <div className="fd-dashboard-empty"><strong>No stored watchlist hits yet.</strong><span>Saved products and FateFind matches will appear here without disappearing when stock sells out.</span></div>}
-          </div>
+  const legacyHits = data?.personal.watchlist ?? [];
+  const premium = snapshot ? hasCapability(snapshot.membership, "advanced_fate_match") : false;
+  let matches: Awaited<ReturnType<typeof listUserFateMatches>> = [];
+  let migrationPending = false;
+  if (snapshot) {
+    try { matches = await listUserFateMatches(snapshot.account.id); }
+    catch { migrationPending = true; }
+  }
+
+  return <DashboardPageShell title="FateMatch" eyebrow="SAVED INTENT · ACTIVE MONITORING">
+    <div className="fd-fatematch-page">
+      <section className="fd-dash-card fd-fm-hero">
+        <div className="fd-dash-card-head"><span>FATEMATCH</span><i className={premium ? "live" : "pending"}>{premium ? "● ACTIVE ENTITLEMENT" : "○ PREMIUM MONITORING"}</i></div>
+        <div className="fd-network-message"><h1>Tell FateDrop what you want.<br/>Let the network do the hunting.</h1><p>FateMatch is the evolution of FateFind and saved hunts — one intent record evaluated against Signals, True Price, online offers and participating local stock. It does not create a second watchlist system.</p></div>
+        <FateMatchBuilder premium={premium}/>
+      </section>
+
+      <div className="fd-fm-grid">
+        <section className="fd-dash-card fd-fm-list"><div className="fd-dash-card-head"><span>YOUR FATEMATCHES</span><small>{migrationPending ? "Fate Network migration pending" : `${matches.length} saved`}</small></div>
+          {matches.length ? <div className="fd-dashboard-list">{matches.map((match)=><article key={match.id}><span className="fd-store-thumb">♡</span><div><strong>{match.query || "Resolved product"}</strong><small>{match.scope === "online" ? "Online only" : match.scope === "local" ? `Local${match.radiusKm ? ` · ${match.radiusKm} km` : ""}` : "Online or local"}{match.maxTruePricePence !== null ? ` · max £${(match.maxTruePricePence/100).toFixed(2)} True Price` : ""}{match.maxPercentAboveRrp !== null ? ` · max +${match.maxPercentAboveRrp}% RRP` : ""}</small></div><aside>{match.enabled ? "ACTIVE" : "PAUSED"}<small>{match.productIdentityId ? "identity locked" : "search intent"}</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>{migrationPending ? "FateMatch storage is staged, not live yet." : "No FateMatches yet."}</strong><span>{migrationPending ? "Your existing saved-hit history remains untouched while the additive Fate Network migration waits for approval." : "Create one above and qualifying network changes can be evaluated automatically."}</span></div>}
         </section>
-        <section className="fd-dash-card">
-          <div className="fd-dash-card-head"><span>HOW IT WILL WORK</span><small>One saved-intent system</small></div>
-          <div className="fd-network-message"><h1>Save the hunt, not just the listing.</h1><p>Watchlist will preserve the product you want across retailers and stock states, then connect matching Echo, Manifested and price signals when catalogue data is live.</p></div>
-        </section>
+
+        <section className="fd-dash-card fd-fm-explain"><div className="fd-dash-card-head"><span>ONE INTENT SYSTEM</span><small>FateFind → FateMatch</small></div><div className="fd-fm-flow"><span><b>1</b><strong>YOU SET THE RULE</strong><small>Product · price · RRP · online/local</small></span><i>→</i><span><b>2</b><strong>FATEDROP WATCHES</strong><small>Signals · catalogue · inventory</small></span><i>→</i><span><b>3</b><strong>MATCH EXPLAINS WHY</strong><small>Structured evidence, not mystery alerts</small></span></div></section>
       </div>
-    </DashboardPageShell>
-  );
+
+      <section className="fd-dash-card fd-fm-legacy"><div className="fd-dash-card-head"><span>PREVIOUS SAVED-HUNT HITS</span><small>Retained history · not deleted</small></div><div className="fd-dashboard-list">{legacyHits.length && data ? legacyHits.map((item)=><article key={item.id}><span className="fd-store-thumb">◇</span><div><strong>{item.title || "Saved-hunt match"}</strong><small>{item.retailer || item.subtitle || "FateDrop activity"}</small></div><aside>{item.amountPence ? moneyFromPence(item.amountPence) : "HIT"}<small>{relativeTime(item.occurredAt,data.generatedAt)}</small></aside></article>) : <div className="fd-dashboard-empty"><strong>No previous saved-hunt hits.</strong><span>Nothing is being fabricated or migrated into FateMatch without a real user intent record.</span></div>}</div></section>
+    </div>
+    <style>{`.fd-fatematch-page{display:grid;gap:22px}.fd-fm-hero{padding:30px}.fd-fm-hero .fd-network-message{margin-bottom:22px}.fd-fm-hero .fd-network-message h1{font-size:clamp(2rem,3.2vw,3.6rem);line-height:.98}.fd-fm-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px}.fd-fm-list,.fd-fm-explain,.fd-fm-legacy{padding:25px}.fd-fm-flow{display:grid;gap:12px;margin-top:20px}.fd-fm-flow>span{padding:14px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.02)}.fd-fm-flow b{display:inline-grid;width:23px;height:23px;place-items:center;margin-right:8px;border:1px solid rgba(88,232,255,.2);border-radius:7px;color:#74eaff;font-size:8px}.fd-fm-flow strong{font-size:10px;letter-spacing:.07em}.fd-fm-flow small{display:block;margin:6px 0 0 31px;color:#79727f;font-size:9px}.fd-fm-flow>i{text-align:center;color:#564f5d;font-style:normal}@media(max-width:900px){.fd-fm-grid{grid-template-columns:1fr}.fd-fm-hero{padding:20px}}`}</style>
+  </DashboardPageShell>;
 }
