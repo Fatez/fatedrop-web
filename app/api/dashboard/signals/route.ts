@@ -17,7 +17,10 @@ export async function GET() {
     .map((signal) => premium ? signal : {
       id: signal.id,
       state: signal.state,
-      title: "Premium signal detail",
+      kind: signal.kind,
+      intensity: signal.intensity,
+      confidence: null,
+      title: signal.intensity === "major" ? "Major network movement detected" : "Premium signal detail",
       retailer: null,
       detail: null,
       deliveredPricePence: null,
