@@ -1,16 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { saveNetworkMetricSnapshot, type NetworkEventListing, type NetworkMetricSnapshot, type NetworkSignal, type SignalLifecycle } from "@/lib/dashboard-storage";
+import { saveNetworkMetricSnapshot, type NetworkEventListing, type NetworkMetricSnapshot, type NetworkSignal, type SignalIntensity, type SignalKind, type SignalLifecycle } from "@/lib/dashboard-storage";
 import { processNetworkOpportunity, processRrpReferenceProduct } from "@/lib/fate-network-pipeline";
 import { parseNetworkOpportunity, parseRrpReferenceProduct } from "@/lib/network-ingest";
 
 export const runtime = "nodejs";
 
-const signalStates = new Set<SignalLifecycle>(["whisper", "manifested", "vanished", "echo"]);
+const lifecycleStates = new Set<SignalLifecycle>(["whisper", "manifested", "vanished", "echo"]);
+const signalKinds = new Set<SignalKind>(["whisper", "manifested", "vanished", "echo", "price_change", "launch_date_change", "queue", "security", "drop_pulse"]);
+const signalIntensities = new Set<SignalIntensity>(["subtle", "standard", "major"]);
 function text(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) || null : null; }
 function metric(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : null;
+}
+function confidence(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : null;
 }
 function authorized(request: Request) {
   const secret = process.env.FATEDROP_METRICS_INGEST_SECRET;
@@ -31,11 +38,17 @@ export async function POST(request: Request) {
     const recentSignals = Array.isArray(payload.recentSignals) ? payload.recentSignals.slice(0, 100).flatMap((raw): NetworkSignal[] => {
       if (!raw || typeof raw !== "object") return [];
       const item = raw as Record<string, unknown>;
-      const state = typeof item.state === "string" && signalStates.has(item.state as SignalLifecycle) ? item.state as SignalLifecycle : null;
+      const rawKind = typeof item.kind === "string" ? item.kind : item.state;
+      const kind = typeof rawKind === "string" && signalKinds.has(rawKind as SignalKind) ? rawKind as SignalKind : null;
+      const rawState = typeof item.state === "string" ? item.state : null;
+      const state = rawState && lifecycleStates.has(rawState as SignalLifecycle)
+        ? rawState as SignalLifecycle
+        : kind && lifecycleStates.has(kind as SignalLifecycle) ? kind as SignalLifecycle : "whisper";
+      const intensity = typeof item.intensity === "string" && signalIntensities.has(item.intensity as SignalIntensity) ? item.intensity as SignalIntensity : undefined;
       const title = text(item.title, 180);
-      if (!state || !title) return [];
+      if (!kind || !title) return [];
       const occurredInput = Number(item.occurredAt);
-      return [{ id: text(item.id, 160) || randomUUID(), state, title, retailer: text(item.retailer, 140), detail: text(item.detail, 240), deliveredPricePence: metric(item.deliveredPricePence), occurredAt: Number.isFinite(occurredInput) && occurredInput > 0 ? Math.floor(occurredInput) : measuredAt }];
+      return [{ id: text(item.id, 160) || randomUUID(), state, kind, intensity, confidence: confidence(item.confidence), title, retailer: text(item.retailer, 140), detail: text(item.detail, 240), deliveredPricePence: metric(item.deliveredPricePence), occurredAt: Number.isFinite(occurredInput) && occurredInput > 0 ? Math.floor(occurredInput) : measuredAt }];
     }) : [];
     const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.slice(0, 60).flatMap((raw): NetworkEventListing[] => {
       if (!raw || typeof raw !== "object") return [];
