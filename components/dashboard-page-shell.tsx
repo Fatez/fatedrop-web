@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
+import { serverNowSeconds } from "@/lib/server-time";
 
 export async function DashboardPageShell({ title, eyebrow, children }: { title: string; eyebrow?: string; children: ReactNode }) {
   const snapshot = await getCurrentSnapshot();
@@ -15,7 +16,7 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
 
   const premium = hasPremiumAccess(snapshot.membership);
   const plan = membershipLabel(snapshot.membership);
-  const now = Math.floor(Date.now() / 1000);
+  const now = serverNowSeconds();
   const trialDaysLeft = snapshot.membership.trialEndsAt ? Math.max(0, Math.ceil((snapshot.membership.trialEndsAt - now) / 86_400)) : null;
   const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET && process.env.STRIPE_PRICE_PLUS && process.env.STRIPE_PRICE_PRO);
   const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
