@@ -27,16 +27,16 @@ export async function upsertProductIdentity(product: NetworkProductIdentity) {
 
 export async function upsertNetworkProduct(product: NetworkProduct) {
   const sql = await fateDropPostgres();
-  await sql`INSERT INTO fatedrop_products (id,retailer_id,product_identity_id,retailer_sku,title,url,image_url,created_at,updated_at)
+  await sql`INSERT INTO fatedrop_catalogue_items (id,retailer_id,product_identity_id,retailer_sku,title,url,image_url,created_at,updated_at)
     VALUES (${product.id},${product.retailerId},${product.productIdentityId},${product.retailerSku},${product.title},${product.url},${product.imageUrl},${product.createdAt},${product.updatedAt})
     ON CONFLICT (id) DO UPDATE SET retailer_id=EXCLUDED.retailer_id,product_identity_id=EXCLUDED.product_identity_id,retailer_sku=EXCLUDED.retailer_sku,title=EXCLUDED.title,url=EXCLUDED.url,image_url=EXCLUDED.image_url,updated_at=EXCLUDED.updated_at`;
 }
 
 export async function upsertNetworkOffer(offer: NetworkOffer) {
   const sql = await fateDropPostgres();
-  await sql`INSERT INTO fatedrop_offers (id,product_id,retailer_id,location_id,product_identity_id,retailer_sku,title,url,channel,item_price_pence,mandatory_postage_pence,mandatory_fees_pence,delivery_known,stock_state,stock_quantity,observed_at)
+  await sql`INSERT INTO fatedrop_offers (id,catalogue_item_id,retailer_id,location_id,product_identity_id,retailer_sku,title,url,channel,item_price_pence,mandatory_postage_pence,mandatory_fees_pence,delivery_known,stock_state,stock_quantity,observed_at)
     VALUES (${offer.id},${offer.productId},${offer.retailerId},${offer.locationId},${offer.productIdentityId},${offer.retailerSku},${offer.title},${offer.url},${offer.channel},${offer.itemPricePence},${offer.mandatoryPostagePence},${offer.mandatoryFeesPence},${offer.deliveryKnown},${offer.stockState},${offer.stockQuantity},${offer.observedAt})
-    ON CONFLICT (id) DO UPDATE SET product_id=EXCLUDED.product_id,retailer_id=EXCLUDED.retailer_id,location_id=EXCLUDED.location_id,product_identity_id=EXCLUDED.product_identity_id,retailer_sku=EXCLUDED.retailer_sku,title=EXCLUDED.title,url=EXCLUDED.url,channel=EXCLUDED.channel,item_price_pence=EXCLUDED.item_price_pence,mandatory_postage_pence=EXCLUDED.mandatory_postage_pence,mandatory_fees_pence=EXCLUDED.mandatory_fees_pence,delivery_known=EXCLUDED.delivery_known,stock_state=EXCLUDED.stock_state,stock_quantity=EXCLUDED.stock_quantity,observed_at=EXCLUDED.observed_at`;
+    ON CONFLICT (id) DO UPDATE SET catalogue_item_id=EXCLUDED.catalogue_item_id,retailer_id=EXCLUDED.retailer_id,location_id=EXCLUDED.location_id,product_identity_id=EXCLUDED.product_identity_id,retailer_sku=EXCLUDED.retailer_sku,title=EXCLUDED.title,url=EXCLUDED.url,channel=EXCLUDED.channel,item_price_pence=EXCLUDED.item_price_pence,mandatory_postage_pence=EXCLUDED.mandatory_postage_pence,mandatory_fees_pence=EXCLUDED.mandatory_fees_pence,delivery_known=EXCLUDED.delivery_known,stock_state=EXCLUDED.stock_state,stock_quantity=EXCLUDED.stock_quantity,observed_at=EXCLUDED.observed_at`;
 }
 
 export async function saveInventoryObservation(inventory: NetworkInventoryObservation) {
