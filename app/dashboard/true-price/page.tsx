@@ -11,83 +11,26 @@ export default async function DashboardTruePricePage() {
   const identities = groupMatchingOffers(cobAndPip);
   const sealedIdentities = identities.filter((group) => group.identity.kind !== "other");
 
-  return (
-    <DashboardPageShell title="True Price" eyebrow="DELIVERED VALUE INTELLIGENCE">
-      <div className="fd-true-price-page">
-        <div className="fd-true-price-top-grid">
-          <section className="fd-dash-card fd-network-card fd-true-price-hero-card">
-            <div className="fd-dash-card-head"><span>TRUE PRICE</span><i className="live">● IDENTITY ENGINE ONLINE</i></div>
-            <div className="fd-network-message"><h1>Signal tells you when. True Price tells you whether to buy.</h1><p>FateDrop creates a shared identity for products before comparing offers. Retailers can call the same item different things; the engine reduces those titles into set, product type and edition so equivalent offers can meet on one comparison.</p></div>
-            <div className="fd-network-metrics"><div><strong>{cobAndPip.length}</strong><span>LIVE OFFERS</span><small>Cob & Pip catalogue</small></div><div><strong>{sealedIdentities.length}</strong><span>IDENTITIES</span><small>Comparable product groups detected</small></div><div><strong>£</strong><span>TRUE PRICE</span><small>Item + verified mandatory delivery</small></div></div>
-          </section>
+  return <DashboardPageShell title="True Price" eyebrow="FATEDROP DECISION ENGINE">
+    <div className="fd-tcg-price-page">
+      <section className="fd-tcg-hero">
+        <div className="fd-tcg-signal-lines" aria-hidden="true"><i/><i/><i/></div>
+        <div className="fd-tcg-copy"><span className="fd-tcg-kicker">DETECT · COMPARE · CONNECT</span><h1>Know the drop.<br/><em>Know the deal.</em></h1><p>One product. Every connected offer. FateDrop resolves the card product first, then exposes RRP, retailer price, delivery and the real cost of buying it.</p><div className="fd-tcg-pills"><span>RRP intelligence</span><span>Delivered cost</span><span>Network stock</span></div></div>
+        <div className="fd-tcg-card-stage" aria-label="FateDrop product identity visual"><div className="fd-tcg-card ghost ghost-a"/><div className="fd-tcg-card ghost ghost-b"/><div className="fd-tcg-card main"><div className="fd-card-top"><span>FATEDROP // IDENTITY</span><b>FD</b></div><div className="fd-card-art"><span>◇</span><i/></div><div className="fd-card-copy"><small>PRODUCT RESOLVED</small><strong>One identity.<br/>Every offer.</strong></div><div className="fd-card-foot"><span>TRUE PRICE</span><b>LIVE</b></div></div></div>
+        <div className="fd-tcg-stats"><div><strong>{cobAndPip.length}</strong><span>OFFERS INDEXED</span></div><div><strong>{sealedIdentities.length}</strong><span>PRODUCT IDENTITIES</span></div><div><strong>£ + %</strong><span>RRP DIFFERENCE</span></div></div>
+      </section>
 
-          <section className="fd-dash-card fd-true-price-hero-card fd-matching-rules-card">
-            <div className="fd-dash-card-head"><span>MATCHING RULES</span><small>Evidence-first comparison</small></div>
-            <div className="fd-network-message"><h1>Standard products stay separate from Pokémon Center editions.</h1><p>An ordinary Elite Trainer Box must never be falsely compared with a Pokémon Center-exclusive ETB just because the set name matches. FateDrop tracks edition and product type as part of identity, and leaves uncertain matches separate rather than fabricating a bargain.</p></div>
-            <div className="fd-matching-proof">
-              <span><b>01</b> Set identity</span>
-              <span><b>02</b> Product type</span>
-              <span><b>03</b> Edition check</span>
-            </div>
-          </section>
-        </div>
+      <section className="fd-tcg-explainer"><div><span>01</span><strong>IDENTIFY</strong><p>Set, format and edition are resolved before comparison.</p></div><div><span>02</span><strong>PRICE</strong><p>RRP, item price and mandatory delivery stay separate.</p></div><div><span>03</span><strong>DECIDE</strong><p>See the delivered premium before you leave FateDrop.</p></div></section>
 
-        <div className="fd-true-price-data-grid">
-          <section className="fd-dash-card fd-identity-index-card">
-            <div className="fd-dash-card-head"><span>PRODUCT IDENTITY INDEX</span><small>Ready for the next retailer feed</small></div>
-            <div className="fd-dashboard-list">
-              {sealedIdentities.slice(0, 12).map((group) => (
-                <article key={group.key}>
-                  <span className="fd-store-thumb">◇</span>
-                  <div><strong>{group.identity.setName || group.offers[0].title}</strong><small>{group.identity.kind.replaceAll("-", " ")}{group.identity.pokemonCenterEdition ? " · Pokémon Center edition" : " · standard edition"}</small></div>
-                  <aside><span>{group.offers.length} OFFER{group.offers.length === 1 ? "" : "S"}</span></aside>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <div className="fd-storefront-column">
-            <LiveStorefront products={cobAndPip} />
-          </div>
-        </div>
-
-        <section className="fd-dash-card fd-next-feed-card">
-          <div className="fd-dash-card-head"><span>NEXT FEED</span><small>Cross-retailer comparison</small></div>
-          <div className="fd-network-message"><h1>Identity engine → second catalogue → real comparison.</h1><p>The matcher is ready to receive another retailer catalogue. When a second retailer exposes the same standard product identity, FateDrop can group both offers, calculate verified delivered totals, compare RRP where available and send the buyer directly to whichever offer they choose.</p></div>
-        </section>
+      <div className="fd-tcg-workspace">
+        <section className="fd-dash-card fd-tcg-index"><div className="fd-dash-card-head"><span>PRODUCT BINDER</span><small>{sealedIdentities.length} identities resolved</small></div><h2>The network knows what it is before it compares who sells it.</h2><div className="fd-dashboard-list">{sealedIdentities.slice(0,12).map((group)=><article key={group.key}><span className="fd-tcg-mini-card">◇</span><div><strong>{group.identity.setName || group.offers[0].title}</strong><small>{group.identity.kind.replaceAll("-"," ")}{group.identity.pokemonCenterEdition ? " · Pokémon Center edition" : " · standard edition"}</small></div><aside><span>{group.offers.length} OFFER{group.offers.length===1?"":"S"}</span></aside></article>)}</div></section>
+        <div className="fd-tcg-storefront"><LiveStorefront products={cobAndPip}/></div>
       </div>
 
-      <style>{`
-        .fd-true-price-page{display:grid;gap:24px;padding-bottom:32px}
-        .fd-true-price-top-grid{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:24px;align-items:stretch}
-        .fd-true-price-top-grid>.fd-dash-card{height:100%;min-height:360px;display:flex;flex-direction:column}
-        .fd-true-price-hero-card .fd-network-message{flex:1}
-        .fd-true-price-hero-card .fd-network-message h1{font-size:clamp(2rem,2.5vw,3rem);line-height:1.02;letter-spacing:-.045em;margin-bottom:18px}
-        .fd-true-price-hero-card .fd-network-message p{font-size:15px;line-height:1.72;max-width:760px}
-        .fd-true-price-page .fd-dash-card-head span{font-size:12px;letter-spacing:.13em}
-        .fd-true-price-page .fd-dash-card-head small,.fd-true-price-page .fd-dash-card-head i{font-size:11px}
-        .fd-true-price-page .fd-network-metrics strong{font-size:clamp(2rem,2.8vw,3rem)}
-        .fd-true-price-page .fd-network-metrics span{font-size:10px}
-        .fd-true-price-page .fd-network-metrics small{font-size:11px;line-height:1.4}
-        .fd-matching-proof{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}
-        .fd-matching-proof span{min-height:64px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025);display:flex;align-items:center;gap:10px;color:#b7b0bf;font-size:12px;font-weight:700}
-        .fd-matching-proof b{color:#9d6dff;font-size:11px;letter-spacing:.08em}
-        .fd-true-price-data-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
-        .fd-identity-index-card,.fd-storefront-column>.fd-dash-card{margin-top:0!important}
-        .fd-identity-index-card{overflow:hidden}
-        .fd-true-price-page .fd-dashboard-list article{min-height:72px;padding-top:14px;padding-bottom:14px}
-        .fd-true-price-page .fd-dashboard-list article strong{font-size:14px;line-height:1.35}
-        .fd-true-price-page .fd-dashboard-list article small{font-size:11px;line-height:1.45;margin-top:4px}
-        .fd-true-price-page .fd-dashboard-list article aside span{font-size:10px}
-        .fd-storefront-column .fd-network-message h1{font-size:clamp(1.65rem,2vw,2.25rem);line-height:1.08;letter-spacing:-.035em}
-        .fd-storefront-column .fd-network-message p{font-size:14px;line-height:1.65}
-        .fd-storefront-column .fd-storefront-controls input,.fd-storefront-column .fd-storefront-controls button{font-size:12px}
-        .fd-next-feed-card{min-height:220px}
-        .fd-next-feed-card .fd-network-message h1{font-size:clamp(1.75rem,2.2vw,2.5rem);line-height:1.06;letter-spacing:-.04em}
-        .fd-next-feed-card .fd-network-message p{font-size:15px;line-height:1.7;max-width:980px}
-        @media(max-width:1180px){.fd-true-price-top-grid,.fd-true-price-data-grid{grid-template-columns:1fr}.fd-true-price-top-grid>.fd-dash-card{min-height:auto}.fd-storefront-column>.fd-dash-card{margin-top:0!important}}
-        @media(max-width:720px){.fd-true-price-page{gap:16px}.fd-true-price-top-grid,.fd-true-price-data-grid{gap:16px}.fd-true-price-hero-card .fd-network-message h1{font-size:1.8rem}.fd-matching-proof{grid-template-columns:1fr}.fd-true-price-page .fd-dashboard-list article strong{font-size:13px}.fd-true-price-page .fd-dashboard-list article small{font-size:10px}}
-      `}</style>
-    </DashboardPageShell>
-  );
+      <section className="fd-tcg-footer"><span>THE CORE LOOP</span><strong>Find it → understand it → watch it → buy when the signal is right.</strong><p>True Price is the decision layer between a FateDrop signal and the retailer checkout. As more catalogues connect, the same identity can resolve offers across majors and independents without pretending unlike products are equivalent.</p></section>
+    </div>
+    <style>{`
+      .fd-tcg-price-page{display:grid;gap:22px;padding-bottom:38px}.fd-tcg-hero{position:relative;min-height:500px;overflow:hidden;padding:42px;border:1px solid rgba(169,126,255,.2);border-radius:26px;background:radial-gradient(circle at 77% 36%,rgba(72,224,255,.13),transparent 23%),radial-gradient(circle at 88% 12%,rgba(210,82,255,.13),transparent 27%),radial-gradient(circle at 8% 100%,rgba(126,72,255,.13),transparent 30%),linear-gradient(145deg,#0b0912,#08080d 56%,#0b0813);box-shadow:inset 0 1px rgba(255,255,255,.05),0 30px 80px rgba(0,0,0,.28)}.fd-tcg-hero:after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(115deg,transparent 0 52px,rgba(255,255,255,.012) 53px 54px)}.fd-tcg-copy{position:relative;z-index:3;max-width:650px}.fd-tcg-kicker{color:#76eaff;font-size:10px;font-weight:900;letter-spacing:.22em}.fd-tcg-copy h1{margin:18px 0;font-size:clamp(3rem,5.2vw,5.8rem);line-height:.88;letter-spacing:-.065em}.fd-tcg-copy h1 em{font-style:normal;background:linear-gradient(90deg,#fff,#a7edff 38%,#c09bff 72%,#ff9fe8);-webkit-background-clip:text;color:transparent}.fd-tcg-copy p{max-width:600px;color:#aaa4b2;font-size:16px;line-height:1.7}.fd-tcg-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}.fd-tcg-pills span{padding:8px 11px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.035);color:#c1bbc8;font-size:9px;font-weight:800;letter-spacing:.07em}.fd-tcg-card-stage{position:absolute;z-index:2;right:7%;top:58px;width:260px;height:330px;perspective:1000px}.fd-tcg-card{position:absolute;width:210px;height:294px;border-radius:18px}.fd-tcg-card.ghost{border:1px solid rgba(255,255,255,.1);background:linear-gradient(145deg,rgba(157,109,255,.09),rgba(88,232,255,.03))}.ghost-a{transform:translate(48px,18px) rotate(10deg)}.ghost-b{transform:translate(22px,8px) rotate(4deg)}.fd-tcg-card.main{padding:14px;display:flex;flex-direction:column;border:1px solid rgba(150,232,255,.38);background:linear-gradient(145deg,rgba(16,15,28,.96),rgba(7,8,15,.98));box-shadow:-20px 30px 70px rgba(0,0,0,.45),0 0 42px rgba(126,92,255,.13);transform:rotate(-5deg)}.fd-tcg-card.main:before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 20%,rgba(102,237,255,.09) 40%,rgba(217,115,255,.13) 51%,transparent 67%);mix-blend-mode:screen}.fd-card-top,.fd-card-foot{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;font-size:7px;letter-spacing:.12em;color:#8f8998}.fd-card-top b{font-size:13px;color:#fff}.fd-card-art{position:relative;z-index:1;flex:1;margin:12px 0;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:radial-gradient(circle,rgba(88,232,255,.13),transparent 36%),linear-gradient(135deg,rgba(157,109,255,.12),rgba(4,5,10,.7))}.fd-card-art span{font-size:70px;color:#c5b2ff;text-shadow:0 0 35px rgba(112,229,255,.35)}.fd-card-art i{position:absolute;width:150%;height:1px;background:linear-gradient(90deg,transparent,#6deaff,transparent);transform:rotate(-28deg);box-shadow:0 0 20px #6deaff}.fd-card-copy{position:relative;z-index:1}.fd-card-copy small{color:#67e8fb;font-size:7px;letter-spacing:.15em}.fd-card-copy strong{display:block;margin:5px 0 12px;font-size:17px;line-height:1.05}.fd-card-foot b{color:#71e8ae}.fd-tcg-stats{position:absolute;z-index:3;left:42px;right:42px;bottom:32px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:650px}.fd-tcg-stats div{padding:15px 18px;border-left:1px solid rgba(255,255,255,.09)}.fd-tcg-stats div:first-child{border-left:0;padding-left:0}.fd-tcg-stats strong{display:block;font-size:23px}.fd-tcg-stats span{color:#77717f;font-size:8px;font-weight:850;letter-spacing:.13em}.fd-tcg-signal-lines i{position:absolute;right:-5%;width:44%;height:1px;background:linear-gradient(90deg,transparent,rgba(94,231,255,.28),transparent);transform:rotate(-18deg)}.fd-tcg-signal-lines i:nth-child(1){top:22%}.fd-tcg-signal-lines i:nth-child(2){top:45%;right:-2%}.fd-tcg-signal-lines i:nth-child(3){top:69%;right:-8%}.fd-tcg-explainer{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;overflow:hidden;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(255,255,255,.08)}.fd-tcg-explainer>div{padding:20px;background:#0b0a10}.fd-tcg-explainer span{color:#9d6dff;font-size:10px;font-weight:900}.fd-tcg-explainer strong{margin-left:9px;font-size:11px;letter-spacing:.1em}.fd-tcg-explainer p{margin:8px 0 0;color:#85808c;font-size:11px;line-height:1.5}.fd-tcg-workspace{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:22px;align-items:start}.fd-tcg-index{padding:28px;overflow:hidden}.fd-tcg-index h2{margin:18px 0 22px;max-width:520px;font-size:clamp(1.6rem,2vw,2.25rem);line-height:1.05;letter-spacing:-.04em}.fd-tcg-index .fd-dashboard-list article{min-height:76px}.fd-tcg-index .fd-dashboard-list strong{font-size:14px}.fd-tcg-index .fd-dashboard-list small{font-size:10px}.fd-tcg-mini-card{width:34px;height:47px;display:grid;place-items:center;border:1px solid rgba(154,126,255,.24);border-radius:5px;background:linear-gradient(145deg,rgba(157,109,255,.12),rgba(88,232,255,.05));color:#a6ecff}.fd-tcg-storefront>.fd-dash-card{margin-top:0!important}.fd-tcg-footer{padding:28px 32px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:linear-gradient(110deg,rgba(157,109,255,.055),rgba(88,232,255,.025))}.fd-tcg-footer span{color:#6ee9fb;font-size:9px;font-weight:900;letter-spacing:.17em}.fd-tcg-footer strong{display:block;margin:8px 0;font-size:clamp(1.45rem,2vw,2.1rem);letter-spacing:-.035em}.fd-tcg-footer p{max-width:980px;margin:0;color:#918b98;font-size:13px;line-height:1.65}@media(max-width:1180px){.fd-tcg-card-stage{opacity:.35;right:2%}.fd-tcg-copy{max-width:70%}.fd-tcg-workspace{grid-template-columns:1fr}}@media(max-width:760px){.fd-tcg-hero{min-height:600px;padding:26px}.fd-tcg-copy{max-width:100%}.fd-tcg-card-stage{top:300px;right:-50px;transform:scale(.75)}.fd-tcg-stats{left:26px;right:26px;bottom:24px;grid-template-columns:1fr}.fd-tcg-stats div{padding:7px 0;border-left:0}.fd-tcg-explainer{grid-template-columns:1fr}.fd-tcg-index{padding:20px}}
+    `}</style>
+  </DashboardPageShell>;
 }
