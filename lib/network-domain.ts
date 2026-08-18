@@ -40,8 +40,21 @@ export type NetworkProductIdentity = {
   rrpVerifiedAt: number | null;
 };
 
+export type NetworkProduct = {
+  id: string;
+  retailerId: string;
+  productIdentityId: string;
+  retailerSku: string | null;
+  title: string;
+  url: string;
+  imageUrl: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type NetworkOffer = {
   id: string;
+  productId: string | null;
   retailerId: string;
   locationId: string | null;
   productIdentityId: string;
@@ -55,6 +68,16 @@ export type NetworkOffer = {
   deliveryKnown: boolean;
   stockState: StockState;
   stockQuantity: number | null;
+  observedAt: number;
+};
+
+export type NetworkInventoryObservation = {
+  id: string;
+  offerId: string;
+  locationId: string | null;
+  sourceEventId: string | null;
+  stockState: StockState;
+  quantity: number | null;
   observedAt: number;
 };
 
