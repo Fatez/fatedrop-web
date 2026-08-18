@@ -1,0 +1,2856 @@
+diff --git a/.env.example b/.env.example
+index 9d974ad..5c3d84a 100644
+--- a/.env.example
++++ b/.env.example
+@@ -1,10 +1,34 @@
+-# Canonical public URL used for metadata, robots.txt and sitemap.xml.
++# Canonical public URL used for metadata, redirects, robots.txt and sitemap.xml.
+ NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ 
+-# Local development stores validated leads in an ignored NDJSON file.
++# Beta lead storage.
+ FATEDROP_LEAD_STORE=file
+ FATEDROP_LEAD_FILE=data/beta-leads.ndjson
+ 
+-# Hosted option: set FATEDROP_LEAD_STORE=postgres and provide a managed
+-# PostgreSQL connection string after running database/postgres.sql.
++# FateDrop ID/account storage. Local development can use the ignored JSON file;
++# hosted production should use PostgreSQL.
++FATEDROP_ACCOUNT_STORE=file
++FATEDROP_ACCOUNT_FILE=data/accounts.json
++
++# Hosted PostgreSQL: run database/postgres.sql, then set both stores to postgres.
++# FATEDROP_LEAD_STORE=postgres
++# FATEDROP_ACCOUNT_STORE=postgres
+ # DATABASE_URL=postgresql://user:password@host/database?sslmode=require
++
++# Stripe collector subscriptions. Create recurring GBP prices in Stripe first.
++# STRIPE_SECRET_KEY=sk_test_...
++# STRIPE_WEBHOOK_SECRET=whsec_...
++# STRIPE_PRICE_PLUS=price_...
++# STRIPE_PRICE_PRO=price_...
++# Set false for a no-card 14-day trial; missing payment method cancels at trial end.
++FATEDROP_TRIAL_REQUIRE_CARD=true
++
++# Discord account linking and Premium role sync.
++# Keep false until the server is ready to be advertised publicly.
++NEXT_PUBLIC_DISCORD_ENABLED=false
++# The OAuth redirect URI must be: <NEXT_PUBLIC_SITE_URL>/api/discord/callback
++# DISCORD_CLIENT_ID=...
++# DISCORD_CLIENT_SECRET=...
++# DISCORD_BOT_TOKEN=...
++# DISCORD_GUILD_ID=...
++# DISCORD_PREMIUM_ROLE_ID=...
+diff --git a/.gitignore b/.gitignore
+index 67acf94..d5a77f3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -46,3 +46,7 @@ next-env.d.ts
+ # local FateDrop lead storage
+ /data/beta-leads.ndjson
+ /data/beta-leads.json
++
++# local FateDrop account/session storage
++/data/accounts.json
++/data/accounts.json.*.tmp
+diff --git a/README.md b/README.md
+index 620152a..9876ba1 100644
+--- a/README.md
++++ b/README.md
+@@ -8,7 +8,10 @@ Standalone, maintainable source for the current FateDrop website. This project p
+ - React 19
+ - TypeScript
+ - Tailwind CSS 4 processing plus the existing handcrafted FateDrop stylesheet
+-- Next.js route handler for beta lead capture
++- Next.js route handlers for beta lead capture, FateDrop ID authentication, billing and Discord linking
++- FateDrop ID profiles with permanent member-since history
++- Collector membership entitlement with Stripe-ready 14-day trials
++- Discord OAuth + Premium-role sync foundation
+ - Local-file storage for development
+ - Optional managed PostgreSQL storage for hosted deployments
+ 
+@@ -27,7 +30,7 @@ npm run dev
+ 
+ Open `http://localhost:3000`.
+ 
+-The default example environment stores validated form submissions in `data/beta-leads.ndjson`. That file is ignored by Git and must not be committed.
++The default example environment stores validated form submissions in `data/beta-leads.ndjson` and development FateDrop IDs/sessions in `data/accounts.json`. Both are ignored by Git and must not be committed.
+ 
+ ## Quality checks
+ 
+@@ -44,21 +47,24 @@ app/                  Routes, layouts, metadata and API handlers
+ components/           Reusable FateDrop interface components
+ database/             PostgreSQL schema and retained Cloudflare D1 schema
+ docs/                 Lead-storage and Sites migration notes
+-lib/                  Analytics event helper, site data and storage adapter
++lib/                  Analytics, account/auth, membership, Stripe/Discord helpers and storage adapters
+ public/assets/        FateDrop artwork and current app reference images
+ tests/                Source-contract and storage tests
+ ```
+ 
+ ## Environment variables
+ 
+-| Variable | Purpose |
+-| --- | --- |
+-| `NEXT_PUBLIC_SITE_URL` | Canonical deployment URL used by metadata, robots and sitemap. |
+-| `FATEDROP_LEAD_STORE` | `file` for local development, `postgres` for managed hosted storage, or omitted/`disabled` to reject submissions honestly. |
+-| `FATEDROP_LEAD_FILE` | Local NDJSON path used by `file` mode. |
+-| `DATABASE_URL` | PostgreSQL connection string used only by `postgres` mode. |
++The safe template is documented in `.env.example`. Core groups are:
+ 
+-Never commit `.env.local`, database exports or the local lead file.
++| Group | Variables | Purpose |
++| --- | --- | --- |
++| Public URL | `NEXT_PUBLIC_SITE_URL` | Canonical deployment URL and OAuth/checkout redirects. |
++| Leads | `FATEDROP_LEAD_STORE`, `FATEDROP_LEAD_FILE` | Beta enquiry storage. |
++| Accounts | `FATEDROP_ACCOUNT_STORE`, `FATEDROP_ACCOUNT_FILE`, `DATABASE_URL` | FateDrop ID, sessions, membership and Discord-link storage. |
++| Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PLUS`, `STRIPE_PRICE_PRO`, `FATEDROP_TRIAL_REQUIRE_CARD` | Collector subscription checkout, trial and entitlement sync. |
++| Discord | `NEXT_PUBLIC_DISCORD_ENABLED`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_PREMIUM_ROLE_ID` | Public community launch gate, Discord identity link and Premium role automation. |
++
++Never commit `.env.local`, database exports, account files, session data or the local lead file.
+ 
+ ## Lead database setup
+ 
+@@ -68,9 +74,16 @@ For a hosted project:
+ 2. Run `database/postgres.sql` against it.
+ 3. Set `FATEDROP_LEAD_STORE=postgres`.
+ 4. Set `DATABASE_URL` as a protected hosting-provider environment variable.
+-5. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain.
++5. Set `FATEDROP_ACCOUNT_STORE=postgres` if FateDrop IDs are enabled.
++6. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain.
++
++Without configured hosted storage, write endpoints reject the operation rather than pretending data was saved.
++
++## FateDrop ID + membership
++
++See [docs/membership-foundation.md](docs/membership-foundation.md) for the account model, Stripe trial flow, Discord linking, production environment variables and app-entitlement handoff.
+ 
+-Without configured hosted storage, the form returns a `503` and explicitly says nothing was saved.
++See [docs/change-log.md](docs/change-log.md) for the working file-by-file change log, including the separately held Wear the Signal design patch.
+ 
+ ## GitHub
+ 
+diff --git a/app/account/login/page.tsx b/app/account/login/page.tsx
+new file mode 100644
+index 0000000..6246845
+--- /dev/null
++++ b/app/account/login/page.tsx
+@@ -0,0 +1,14 @@
++import type { Metadata } from "next";
++import { Suspense } from "react";
++import { redirect } from "next/navigation";
++import { AccountAuthForm } from "@/components/account-auth-form";
++import { FateSignalField } from "@/components/fate-signal-field";
++import { SiteShell } from "@/components/page-shell";
++import { getCurrentUser } from "@/lib/auth";
++
++export const metadata: Metadata = { title: "Sign in | FateDrop ID", description: "Sign in to your FateDrop collector identity.", robots: { index: false, follow: false } };
++
++export default async function LoginPage() {
++  if (await getCurrentUser()) redirect("/account");
++  return <SiteShell><section className="identity-gate section-shell"><FateSignalField variant="radar" className="identity-gate-field" /><div className="identity-gate-copy"><p className="eyebrow"><span />FateDrop ID</p><h1>Re-enter the network.</h1><p>Your profile, membership, Discord entitlement and future collector progression live behind one FateDrop identity.</p><div className="identity-gate-proof"><span>01 / One identity</span><span>02 / App-ready entitlement</span><span>03 / Discord-ready access</span></div></div><div className="identity-gate-panel"><small>SECURE NETWORK ENTRY</small><h2>Sign in</h2><Suspense fallback={<p>Preparing secure sign-in…</p>}><AccountAuthForm mode="login" /></Suspense></div></section></SiteShell>;
++}
+diff --git a/app/account/page.tsx b/app/account/page.tsx
+new file mode 100644
+index 0000000..00885ed
+--- /dev/null
++++ b/app/account/page.tsx
+@@ -0,0 +1,89 @@
++import type { Metadata } from "next";
++import Link from "next/link";
++import { redirect } from "next/navigation";
++import { AccountSignOut } from "@/components/account-signout";
++import { FateSignalField } from "@/components/fate-signal-field";
++import { DiscordSyncButton } from "@/components/discord-sync-button";
++import { DiscordUnlinkButton } from "@/components/discord-unlink-button";
++import { BillingPortalButton, StartMembershipButton } from "@/components/membership-actions";
++import { SiteShell } from "@/components/page-shell";
++import { ProfileEditor } from "@/components/profile-editor";
++import { getCurrentSnapshot } from "@/lib/auth";
++import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, formatMemberSince, hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
++
++export const metadata: Metadata = { title: "My FateDrop ID", description: "Your FateDrop profile, membership and connected network access.", robots: { index: false, follow: false } };
++
++function initials(name: string) {
++  return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
++}
++
++function dateLabel(timestamp: number | null) {
++  if (!timestamp) return null;
++  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" }).format(new Date(timestamp * 1000));
++}
++
++export default async function AccountPage({ searchParams }: { searchParams: Promise<{ billing?: string; discord?: string }> }) {
++  const loadedSnapshot = await getCurrentSnapshot();
++  if (!loadedSnapshot) redirect("/account/login?next=/account");
++  const snapshot = loadedSnapshot;
++  const params = await searchParams;
++  const premium = hasPremiumAccess(snapshot.membership);
++  const membership = membershipLabel(snapshot.membership);
++  const memberSince = formatMemberSince(snapshot.account.createdAt);
++  const age = networkAge(snapshot.account.createdAt);
++  const trialEnd = dateLabel(snapshot.membership.trialEndsAt);
++  const discordRoleSynced = Boolean(premium && snapshot.discord?.roleSyncedAt);
++
++  return (
++    <SiteShell>
++      <section className={`account-hero section-shell theme-${snapshot.account.profileTheme}`}>
++        <FateSignalField variant="radar" className="account-radar-field" />
++        <div className="account-hero-copy">
++          <p className="eyebrow"><span />Network identity</p>
++          <h1>Your place<br />inside FateDrop.</h1>
++          <p>A collector profile designed to become more valuable the longer you are part of the network.</p>
++          <AccountSignOut />
++        </div>
++        <article className="fate-id-card">
++          <div className="fate-id-top"><span>FATEDROP / NETWORK ID</span><i className={premium ? "live" : ""}>{premium ? "SIGNAL ACTIVE" : "FREE SIGNAL"}</i></div>
++          <div className="fate-id-person">
++            <div className="fate-avatar">{snapshot.account.avatarUrl ? <span className="fate-avatar-image" style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }} /> : <strong>{initials(snapshot.account.displayName)}</strong>}<span /></div>
++            <div><small>@{snapshot.account.username}</small><h2>{snapshot.account.displayName}</h2><p>{snapshot.account.fateId}</p></div>
++          </div>
++          <div className="fate-id-metrics"><div><span>MEMBER SINCE</span><strong>{memberSince}</strong></div><div><span>NETWORK AGE</span><strong>{age}</strong></div><div><span>MEMBERSHIP</span><strong>{membership}</strong></div></div>
++          <div className="fate-id-line"><i /><i /><i /><i /><i /></div>
++        </article>
++      </section>
++
++      {(params.billing === "success" || params.discord) ? <section className="account-notice section-shell" role="status">{params.billing === "success" ? <p><b>Stripe hand-off complete.</b> Your membership status will update as soon as the verified webhook lands.</p> : null}{params.discord === "linked" ? <p><b>Discord connected.</b> Premium role sync completed.</p> : null}{params.discord === "linked-free" ? <p><b>Discord connected.</b> The identity link is saved; the Premium role will stay inactive until you have Premium access.</p> : null}{params.discord === "join" ? <p><b>Discord connected.</b> Join the FateDrop server first, then reconnect/sync so the bot can apply your Premium role.</p> : null}{params.discord === "setup" ? <p><b>Discord linking is built but not configured yet.</b> Add the Discord app credentials when the server is ready.</p> : null}{params.discord && !["linked", "linked-free", "join", "setup"].includes(params.discord) ? <p><b>Discord link needs another attempt.</b> Your FateDrop account itself is unchanged.</p> : null}</section> : null}
++
++      <section className="account-grid section-shell">
++        <article className="account-panel membership-panel">
++          <div className="account-panel-head"><div><span>01 / MEMBERSHIP</span><h2>{membership}</h2></div><i className={premium ? "state-live" : "state-free"}>{snapshot.membership.status.toUpperCase()}</i></div>
++          <p>{premium ? "Premium entitlement is active for this FateDrop ID. This is the single access state the app and Discord integrations are built to consume." : "Your FateDrop ID is active on the free network. Upgrade when you want deeper stock intelligence and Premium community access."}</p>
++          {snapshot.membership.status === "trialing" && trialEnd ? <div className="membership-timing"><span>FREE TRIAL</span><strong>Runs until {trialEnd}</strong></div> : null}
++          <div className="membership-entitlements"><span className={premium ? "on" : "off"}>{premium ? "Premium entitlement ready for app sync" : "App Premium entitlement inactive"}</span><span className={discordRoleSynced ? "on" : "off"}>{discordRoleSynced ? "Premium Discord role synced" : premium ? "Discord role awaiting sync" : "Premium Discord role inactive"}</span><span className="on">FateDrop profile + loyalty age</span></div>
++          <div className="button-row">{snapshot.membership.stripeCustomerId ? <BillingPortalButton /> : <><StartMembershipButton tier="plus" label="Start Plus free trial" /><Link className="button button-secondary" href="/subscriptions#collectors">Compare plans</Link></>}</div>
++        </article>
++
++        <article className="account-panel discord-panel">
++          <div className="account-panel-head"><div><span>02 / COMMUNITY LINK</span><h2>Discord connection</h2></div><i className={snapshot.discord ? "state-live" : "state-free"}>{snapshot.discord ? "LINKED" : "READY"}</i></div>
++          {snapshot.discord ? <><div className="discord-identity"><span className="discord-mark">#</span><div><small>CONNECTED ACCOUNT</small><strong>{snapshot.discord.discordUsername}</strong></div></div><p>{discordRoleSynced ? "Your Discord identity is linked and the Premium role is synced." : premium ? "Your Discord identity is linked. The Premium role will sync once the server, bot and role are ready." : "Your Discord identity is linked. The Premium role remains inactive until this FateDrop ID has Premium access."}</p></> : <p>Link one Discord identity to this FateDrop ID. When Premium is active, the FateDrop bot can automatically grant the Premium server role.</p>}
++          <div className="button-row"><Link className="button button-primary" href="/api/discord/connect">{snapshot.discord ? "Reconnect Discord" : "Connect Discord"} <span>↗</span></Link>{DISCORD_COMMUNITY_OPEN ? <a className="button button-secondary" href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">Join FateDrop Discord</a> : <span className="button button-secondary disabled-link" aria-disabled="true">Discord opens soon</span>}{snapshot.discord ? <>{premium ? <DiscordSyncButton /> : null}<DiscordUnlinkButton /></> : null}</div>
++        </article>
++
++        <article className="account-panel profile-panel-wide">
++          <div className="account-panel-head"><div><span>03 / PROFILE</span><h2>Shape your network identity.</h2></div><i>EDITABLE</i></div>
++          <p>Keep it useful now: who you are, what you collect and how you want your FateDrop identity to feel. Reward progression can layer onto this later without rebuilding the account system.</p>
++          <ProfileEditor profile={{ displayName: snapshot.account.displayName, username: snapshot.account.username, bio: snapshot.account.bio, avatarUrl: snapshot.account.avatarUrl, primaryTcg: snapshot.account.primaryTcg, collectorStyle: snapshot.account.collectorStyle, region: snapshot.account.region, profileTheme: snapshot.account.profileTheme }} />
++        </article>
++
++        <article className="account-panel loyalty-panel">
++          <div className="account-panel-head"><div><span>04 / LOYALTY</span><h2>Time matters.</h2></div><i>FOUNDATION</i></div>
++          <div className="loyalty-orbit" aria-hidden="true"><span /><span /><span /><strong>{Math.max(1, Math.floor((Date.now() / 1000 - snapshot.account.createdAt) / 86400) + 1)}</strong><small>DAYS</small></div>
++          <p>Your join date is permanent account history. For now we simply surface membership age; later it can support genuine loyalty milestones without inventing an economy too early.</p>
++        </article>
++      </section>
++    </SiteShell>
++  );
++}
+diff --git a/app/account/register/page.tsx b/app/account/register/page.tsx
+new file mode 100644
+index 0000000..f660c81
+--- /dev/null
++++ b/app/account/register/page.tsx
+@@ -0,0 +1,14 @@
++import type { Metadata } from "next";
++import { Suspense } from "react";
++import { redirect } from "next/navigation";
++import { AccountAuthForm } from "@/components/account-auth-form";
++import { FateSignalField } from "@/components/fate-signal-field";
++import { SiteShell } from "@/components/page-shell";
++import { getCurrentUser } from "@/lib/auth";
++
++export const metadata: Metadata = { title: "Create your FateDrop ID", description: "Create your collector identity and join the FateDrop network.", robots: { index: false, follow: false } };
++
++export default async function RegisterPage() {
++  if (await getCurrentUser()) redirect("/account");
++  return <SiteShell><section className="identity-gate section-shell"><FateSignalField variant="signal" className="identity-gate-field" /><div className="identity-gate-copy"><p className="eyebrow"><span />Create your network identity</p><h1>Not just an account.<br /><em>Your FateDrop ID.</em></h1><p>Start with a profile and membership age. Later, the same identity can carry your app access, signals, badges and collector progression.</p><div className="identity-gate-proof"><span>01 / Unique FateDrop ID</span><span>02 / Member-since history</span><span>03 / Editable collector profile</span></div></div><div className="identity-gate-panel"><small>NETWORK REGISTRATION</small><h2>Create your ID</h2><Suspense fallback={<p>Preparing registration…</p>}><AccountAuthForm mode="register" /></Suspense><p className="identity-privacy-note">We only create the account after validation. Passwords are one-way hashed and never stored as readable text.</p></div></section></SiteShell>;
++}
+diff --git a/app/api/account/entitlement/route.ts b/app/api/account/entitlement/route.ts
+new file mode 100644
+index 0000000..01a1896
+--- /dev/null
++++ b/app/api/account/entitlement/route.ts
+@@ -0,0 +1,24 @@
++import { getCurrentSnapshot } from "@/lib/auth";
++import { AccountStorageUnavailableError } from "@/lib/account-storage";
++import { hasPremiumAccess } from "@/lib/membership";
++
++export async function GET() {
++  try {
++    const snapshot = await getCurrentSnapshot();
++    if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
++    return Response.json({
++      userId: snapshot.account.id,
++      fateId: snapshot.account.fateId,
++      tier: snapshot.membership.tier,
++      status: snapshot.membership.status,
++      premium: hasPremiumAccess(snapshot.membership),
++      trialEndsAt: snapshot.membership.trialEndsAt,
++      currentPeriodEnd: snapshot.membership.currentPeriodEnd,
++      cancelAtPeriodEnd: snapshot.membership.cancelAtPeriodEnd,
++      updatedAt: snapshot.membership.updatedAt,
++    });
++  } catch (error) {
++    if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
++    return Response.json({ error: "Entitlement could not be loaded." }, { status: 500 });
++  }
++}
+diff --git a/app/api/account/profile/route.ts b/app/api/account/profile/route.ts
+new file mode 100644
+index 0000000..4c98fe4
+--- /dev/null
++++ b/app/api/account/profile/route.ts
+@@ -0,0 +1,102 @@
++import { AccountConflictError, AccountStorageUnavailableError, updateAccountProfile } from "@/lib/account-storage";
++import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
++import { hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
++
++export const runtime = "nodejs";
++
++function publicSnapshot(snapshot: NonNullable<Awaited<ReturnType<typeof getCurrentSnapshot>>>) {
++  return {
++    profile: {
++      fateId: snapshot.account.fateId,
++      email: snapshot.account.email,
++      displayName: snapshot.account.displayName,
++      username: snapshot.account.username,
++      bio: snapshot.account.bio,
++      avatarUrl: snapshot.account.avatarUrl,
++      primaryTcg: snapshot.account.primaryTcg,
++      collectorStyle: snapshot.account.collectorStyle,
++      region: snapshot.account.region,
++      profileTheme: snapshot.account.profileTheme,
++      createdAt: snapshot.account.createdAt,
++      networkAge: networkAge(snapshot.account.createdAt),
++    },
++    membership: {
++      tier: snapshot.membership.tier,
++      status: snapshot.membership.status,
++      label: membershipLabel(snapshot.membership),
++      premium: hasPremiumAccess(snapshot.membership),
++      trialEndsAt: snapshot.membership.trialEndsAt,
++      currentPeriodEnd: snapshot.membership.currentPeriodEnd,
++      cancelAtPeriodEnd: snapshot.membership.cancelAtPeriodEnd,
++    },
++    discord: snapshot.discord ? {
++      username: snapshot.discord.discordUsername,
++      avatar: snapshot.discord.discordAvatar,
++      connectedAt: snapshot.discord.connectedAt,
++      roleSyncedAt: snapshot.discord.roleSyncedAt,
++    } : null,
++  };
++}
++
++export async function GET() {
++  try {
++    const snapshot = await getCurrentSnapshot();
++    if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
++    return Response.json(publicSnapshot(snapshot));
++  } catch (error) {
++    if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
++    return Response.json({ error: "Account could not be loaded." }, { status: 500 });
++  }
++}
++
++export async function PATCH(request: Request) {
++  try {
++    assertSameOrigin(request);
++    const snapshot = await getCurrentSnapshot();
++    if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
++    const payload = await request.json() as Record<string, unknown>;
++
++    const displayName = typeof payload.displayName === "string" ? payload.displayName.trim().slice(0, 60) : snapshot.account.displayName;
++    const username = typeof payload.username === "string" ? payload.username.trim().toLowerCase().slice(0, 24) : snapshot.account.username;
++    const bio = typeof payload.bio === "string" ? payload.bio.trim().slice(0, 220) : (snapshot.account.bio ?? "");
++    const avatarUrl = typeof payload.avatarUrl === "string" ? payload.avatarUrl.trim().slice(0, 500) : (snapshot.account.avatarUrl ?? "");
++    let normalizedAvatarUrl = avatarUrl;
++    const primaryTcg = typeof payload.primaryTcg === "string" ? payload.primaryTcg.trim().slice(0, 80) : (snapshot.account.primaryTcg ?? "");
++    const collectorStyle = typeof payload.collectorStyle === "string" ? payload.collectorStyle.trim().slice(0, 80) : (snapshot.account.collectorStyle ?? "");
++    const region = typeof payload.region === "string" ? payload.region.trim().slice(0, 80) : (snapshot.account.region ?? "");
++    const profileTheme = typeof payload.profileTheme === "string" && ["signal", "cyan", "violet", "magenta"].includes(payload.profileTheme) ? payload.profileTheme as "signal" | "cyan" | "violet" | "magenta" : snapshot.account.profileTheme;
++
++    const fields: Record<string, string> = {};
++    if (displayName.length < 2) fields.displayName = "Use at least 2 characters.";
++    if (!/^[a-z0-9_]{3,24}$/.test(username)) fields.username = "Use 3–24 lowercase letters, numbers or underscores.";
++    if (avatarUrl) {
++      try {
++        const parsed = new URL(avatarUrl);
++        if (parsed.protocol !== "https:") fields.avatarUrl = "Use an https:// image address.";
++        else normalizedAvatarUrl = parsed.toString();
++      } catch {
++        fields.avatarUrl = "Use a complete https:// image address.";
++      }
++    }
++    if (Object.keys(fields).length) return Response.json({ error: "Check the highlighted fields.", fields }, { status: 400 });
++
++    await updateAccountProfile(snapshot.account.id, {
++      displayName,
++      username,
++      bio: bio || null,
++      avatarUrl: normalizedAvatarUrl || null,
++      primaryTcg: primaryTcg || null,
++      collectorStyle: collectorStyle || null,
++      region: region || null,
++      profileTheme,
++    });
++    const updated = await getCurrentSnapshot();
++    if (!updated) return Response.json({ error: "Account could not be reloaded." }, { status: 500 });
++    return Response.json(publicSnapshot(updated));
++  } catch (error) {
++    if (error instanceof AccountConflictError) return Response.json({ error: error.message, fields: { username: error.message } }, { status: 409 });
++    if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: "Profile could not be updated." }, { status: 500 });
++  }
++}
+diff --git a/app/api/auth/login/route.ts b/app/api/auth/login/route.ts
+new file mode 100644
+index 0000000..8fbeafa
+--- /dev/null
++++ b/app/api/auth/login/route.ts
+@@ -0,0 +1,22 @@
++import { AccountStorageUnavailableError, findAccountByEmail } from "@/lib/account-storage";
++import { assertSameOrigin, startSession, verifyPassword } from "@/lib/auth";
++
++export const runtime = "nodejs";
++
++export async function POST(request: Request) {
++  try {
++    assertSameOrigin(request);
++    const payload = await request.json() as Record<string, unknown>;
++    const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase().slice(0, 254) : "";
++    const password = typeof payload.password === "string" ? payload.password : "";
++    const account = email ? await findAccountByEmail(email) : null;
++    const valid = account ? await verifyPassword(password, account.passwordHash) : false;
++    if (!account || !valid) return Response.json({ error: "Email or password is incorrect." }, { status: 401 });
++    await startSession(account.id);
++    return Response.json({ authenticated: true }, { status: 200 });
++  } catch (error) {
++    if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: "Sign-in could not be completed." }, { status: 500 });
++  }
++}
+diff --git a/app/api/auth/logout/route.ts b/app/api/auth/logout/route.ts
+new file mode 100644
+index 0000000..a9dca15
+--- /dev/null
++++ b/app/api/auth/logout/route.ts
+@@ -0,0 +1,14 @@
++import { assertSameOrigin, endSession } from "@/lib/auth";
++
++export const runtime = "nodejs";
++
++export async function POST(request: Request) {
++  try {
++    assertSameOrigin(request);
++    await endSession();
++    return Response.json({ signedOut: true });
++  } catch (error) {
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: "Sign-out could not be completed." }, { status: 500 });
++  }
++}
+diff --git a/app/api/auth/register/route.ts b/app/api/auth/register/route.ts
+new file mode 100644
+index 0000000..55ed5c4
+--- /dev/null
++++ b/app/api/auth/register/route.ts
+@@ -0,0 +1,76 @@
++import { randomBytes } from "node:crypto";
++import { AccountConflictError, AccountStorageUnavailableError, createAccount, findAccountByUsername, type AccountRecord } from "@/lib/account-storage";
++import { assertSameOrigin, hashPassword, startSession } from "@/lib/auth";
++
++export const runtime = "nodejs";
++
++function clean(value: unknown, max: number) {
++  return typeof value === "string" ? value.trim().slice(0, max) : "";
++}
++
++function validEmail(value: string) {
++  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
++}
++
++function slugName(value: string) {
++  return value
++    .toLowerCase()
++    .normalize("NFKD")
++    .replace(/[^a-z0-9]+/g, "_")
++    .replace(/^_+|_+$/g, "")
++    .slice(0, 18) || "collector";
++}
++
++async function uniqueUsername(displayName: string) {
++  const base = slugName(displayName);
++  for (let attempt = 0; attempt < 8; attempt += 1) {
++    const suffix = randomBytes(2).toString("hex");
++    const candidate = `${base}_${suffix}`.slice(0, 24);
++    if (!(await findAccountByUsername(candidate))) return candidate;
++  }
++  return `collector_${randomBytes(5).toString("hex")}`.slice(0, 24);
++}
++
++export async function POST(request: Request) {
++  try {
++    assertSameOrigin(request);
++    const payload = await request.json() as Record<string, unknown>;
++    const displayName = clean(payload.displayName, 60);
++    const email = clean(payload.email, 254).toLowerCase();
++    const password = typeof payload.password === "string" ? payload.password : "";
++
++    const fields: Record<string, string> = {};
++    if (displayName.length < 2) fields.displayName = "Use at least 2 characters.";
++    if (!validEmail(email)) fields.email = "Enter a valid email address.";
++    if (password.length < 10) fields.password = "Use at least 10 characters.";
++    if (password.length > 200) fields.password = "Password is longer than expected.";
++    if (Object.keys(fields).length) return Response.json({ error: "Check the highlighted fields.", fields }, { status: 400 });
++
++    const now = Math.floor(Date.now() / 1000);
++    const account: AccountRecord = {
++      id: crypto.randomUUID(),
++      fateId: `FD-${randomBytes(5).toString("hex").toUpperCase()}`,
++      email,
++      passwordHash: await hashPassword(password),
++      displayName,
++      username: await uniqueUsername(displayName),
++      bio: null,
++      avatarUrl: null,
++      primaryTcg: "Pokémon TCG",
++      collectorStyle: null,
++      region: null,
++      profileTheme: "signal",
++      createdAt: now,
++      updatedAt: now,
++    };
++
++    await createAccount(account);
++    await startSession(account.id);
++    return Response.json({ created: true, fateId: account.fateId }, { status: 201 });
++  } catch (error) {
++    if (error instanceof AccountConflictError) return Response.json({ error: error.message }, { status: 409 });
++    if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: "Your FateDrop ID could not be created. Please try again." }, { status: 500 });
++  }
++}
+diff --git a/app/api/billing/checkout/route.ts b/app/api/billing/checkout/route.ts
+new file mode 100644
+index 0000000..9f50d3f
+--- /dev/null
++++ b/app/api/billing/checkout/route.ts
+@@ -0,0 +1,31 @@
++import { BillingUnavailableError, createCheckoutSession } from "@/lib/billing";
++import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
++import { hasPremiumAccess } from "@/lib/membership";
++
++export const runtime = "nodejs";
++
++export async function POST(request: Request) {
++  try {
++    assertSameOrigin(request);
++    const snapshot = await getCurrentSnapshot();
++    if (!snapshot) return Response.json({ error: "Create or sign in to your FateDrop ID first." }, { status: 401 });
++    const payload = await request.json() as { tier?: unknown };
++    const tier = payload.tier === "plus" || payload.tier === "pro" ? payload.tier : null;
++    if (!tier) return Response.json({ error: "Choose a valid membership tier." }, { status: 400 });
++    if (hasPremiumAccess(snapshot.membership)) return Response.json({ error: "This FateDrop ID already has Premium access. Use Manage billing from your profile to change the subscription." }, { status: 409 });
++    const session = await createCheckoutSession({
++      userId: snapshot.account.id,
++      email: snapshot.account.email,
++      fateId: snapshot.account.fateId,
++      tier,
++      existingCustomerId: snapshot.membership.stripeCustomerId,
++      origin: new URL(request.url).origin,
++    });
++    if (typeof session.url !== "string") return Response.json({ error: "Stripe did not return a checkout address." }, { status: 502 });
++    return Response.json({ url: session.url });
++  } catch (error) {
++    if (error instanceof BillingUnavailableError) return Response.json({ error: "Billing is prepared but Stripe has not been connected yet." }, { status: 503 });
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: error instanceof Error ? error.message : "Checkout could not be started." }, { status: 500 });
++  }
++}
+diff --git a/app/api/billing/portal/route.ts b/app/api/billing/portal/route.ts
+new file mode 100644
+index 0000000..b0df023
+--- /dev/null
++++ b/app/api/billing/portal/route.ts
+@@ -0,0 +1,20 @@
++import { BillingUnavailableError, createBillingPortalSession } from "@/lib/billing";
++import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
++
++export const runtime = "nodejs";
++
++export async function POST(request: Request) {
++  try {
++    assertSameOrigin(request);
++    const snapshot = await getCurrentSnapshot();
++    if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
++    if (!snapshot.membership.stripeCustomerId) return Response.json({ error: "No Stripe billing profile is linked to this FateDrop ID yet." }, { status: 400 });
++    const session = await createBillingPortalSession(snapshot.membership.stripeCustomerId, new URL(request.url).origin);
++    if (typeof session.url !== "string") return Response.json({ error: "Stripe did not return a portal address." }, { status: 502 });
++    return Response.json({ url: session.url });
++  } catch (error) {
++    if (error instanceof BillingUnavailableError) return Response.json({ error: "Billing is prepared but Stripe has not been connected yet." }, { status: 503 });
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: "Billing portal could not be opened." }, { status: 500 });
++  }
++}
+diff --git a/app/api/billing/webhook/route.ts b/app/api/billing/webhook/route.ts
+new file mode 100644
+index 0000000..dd6d5fc
+--- /dev/null
++++ b/app/api/billing/webhook/route.ts
+@@ -0,0 +1,66 @@
++import { BillingUnavailableError, parseStripeSubscription, tierForPriceId, verifyStripeWebhook } from "@/lib/billing";
++import { findUserIdByStripeCustomer, getAccountSnapshot, updateMembership } from "@/lib/account-storage";
++import { syncPremiumDiscordRole } from "@/lib/discord";
++
++export const runtime = "nodejs";
++
++function membershipStatus(status: string) {
++  if (["trialing", "active", "past_due", "paused", "canceled"].includes(status)) return status as "trialing" | "active" | "past_due" | "paused" | "canceled";
++  if (status === "unpaid" || status === "incomplete" || status === "incomplete_expired") return "past_due" as const;
++  return "canceled" as const;
++}
++
++async function syncUser(userId: string) {
++  const snapshot = await getAccountSnapshot(userId);
++  if (snapshot?.discord) await syncPremiumDiscordRole(snapshot.discord, snapshot.membership);
++}
++
++export async function POST(request: Request) {
++  try {
++    const raw = await request.text();
++    if (!verifyStripeWebhook(raw, request.headers.get("stripe-signature"))) return new Response("Invalid signature", { status: 400 });
++    const event = JSON.parse(raw) as { type?: string; data?: { object?: unknown } };
++    const object = event.data?.object;
++
++    if (event.type === "checkout.session.completed" && object && typeof object === "object") {
++      const session = object as Record<string, unknown>;
++      const metadata = session.metadata && typeof session.metadata === "object" ? session.metadata as Record<string, unknown> : {};
++      const userId = typeof session.client_reference_id === "string" ? session.client_reference_id : (typeof metadata.fatedrop_user_id === "string" ? metadata.fatedrop_user_id : null);
++      const customerId = typeof session.customer === "string" ? session.customer : null;
++      const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
++      const tier = metadata.fatedrop_tier === "pro" ? "pro" : metadata.fatedrop_tier === "plus" ? "plus" : undefined;
++      if (userId) {
++        await updateMembership(userId, { stripeCustomerId: customerId, stripeSubscriptionId: subscriptionId, ...(tier ? { tier } : {}) });
++        await syncUser(userId);
++      }
++    }
++
++    if (event.type?.startsWith("customer.subscription.")) {
++      const subscription = parseStripeSubscription(object);
++      if (subscription) {
++        const metadataUserId = subscription.metadata?.fatedrop_user_id || null;
++        const userId = metadataUserId || await findUserIdByStripeCustomer(subscription.customer);
++        if (userId) {
++          const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
++          await updateMembership(userId, {
++            tier: tierForPriceId(priceId),
++            status: event.type === "customer.subscription.deleted" ? "canceled" : membershipStatus(subscription.status),
++            stripeCustomerId: subscription.customer,
++            stripeSubscriptionId: subscription.id,
++            stripePriceId: priceId,
++            trialStartedAt: subscription.trial_start ?? null,
++            trialEndsAt: subscription.trial_end ?? null,
++            currentPeriodEnd: subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end ?? null,
++            cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
++          });
++          await syncUser(userId);
++        }
++      }
++    }
++
++    return Response.json({ received: true });
++  } catch (error) {
++    if (error instanceof BillingUnavailableError) return new Response("Billing not configured", { status: 503 });
++    return new Response("Webhook processing failed", { status: 500 });
++  }
++}
+diff --git a/app/api/discord/callback/route.ts b/app/api/discord/callback/route.ts
+new file mode 100644
+index 0000000..f0bc777
+--- /dev/null
++++ b/app/api/discord/callback/route.ts
+@@ -0,0 +1,34 @@
++import { saveDiscordLink } from "@/lib/account-storage";
++import { getCurrentSnapshot } from "@/lib/auth";
++import { exchangeDiscordCode, fetchDiscordIdentity, syncPremiumDiscordRole, validateDiscordState } from "@/lib/discord";
++import { hasPremiumAccess } from "@/lib/membership";
++
++export const runtime = "nodejs";
++
++export async function GET(request: Request) {
++  const url = new URL(request.url);
++  const snapshot = await getCurrentSnapshot();
++  if (!snapshot) return Response.redirect(new URL("/account/login?next=/account", request.url));
++  if (!(await validateDiscordState(url.searchParams.get("state")))) return Response.redirect(new URL("/account?discord=state", request.url));
++  const code = url.searchParams.get("code");
++  if (!code) return Response.redirect(new URL("/account?discord=cancelled", request.url));
++
++  try {
++    const token = await exchangeDiscordCode(code, url.origin);
++    const identity = await fetchDiscordIdentity(token.access_token);
++    const link = await saveDiscordLink({
++      userId: snapshot.account.id,
++      discordUserId: identity.id,
++      discordUsername: identity.username,
++      discordAvatar: identity.avatar,
++      connectedAt: Math.floor(Date.now() / 1000),
++      roleSyncedAt: null,
++    });
++    if (!hasPremiumAccess(snapshot.membership)) return Response.redirect(new URL("/account?discord=linked-free", request.url));
++    const role = await syncPremiumDiscordRole(link, snapshot.membership);
++    const result = role.configured && !role.memberFound ? "join" : role.synced ? "linked" : "linked-no-role";
++    return Response.redirect(new URL(`/account?discord=${result}`, request.url));
++  } catch {
++    return Response.redirect(new URL("/account?discord=error", request.url));
++  }
++}
+diff --git a/app/api/discord/connect/route.ts b/app/api/discord/connect/route.ts
+new file mode 100644
+index 0000000..4d951e3
+--- /dev/null
++++ b/app/api/discord/connect/route.ts
+@@ -0,0 +1,16 @@
++import { getCurrentUser } from "@/lib/auth";
++import { buildDiscordAuthorizeUrl, DiscordUnavailableError } from "@/lib/discord";
++
++export const runtime = "nodejs";
++
++export async function GET(request: Request) {
++  const user = await getCurrentUser();
++  if (!user) return Response.redirect(new URL("/account/login?next=/account", request.url));
++  try {
++    const url = await buildDiscordAuthorizeUrl(new URL(request.url).origin);
++    return Response.redirect(url);
++  } catch (error) {
++    if (error instanceof DiscordUnavailableError) return Response.redirect(new URL("/account?discord=setup", request.url));
++    return Response.redirect(new URL("/account?discord=error", request.url));
++  }
++}
+diff --git a/app/api/discord/link/route.ts b/app/api/discord/link/route.ts
+new file mode 100644
+index 0000000..c6d3f3e
+--- /dev/null
++++ b/app/api/discord/link/route.ts
+@@ -0,0 +1,26 @@
++import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
++import { AccountStorageUnavailableError, removeDiscordLink } from "@/lib/account-storage";
++import { syncPremiumDiscordRole } from "@/lib/discord";
++
++export async function DELETE(request: Request) {
++  try {
++    assertSameOrigin(request);
++    const snapshot = await getCurrentSnapshot();
++    if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
++    if (!snapshot.discord) return Response.json({ ok: true });
++
++    // Remove any Premium role before forgetting the Discord identity. If Discord
++    // is not configured or the user is not in the server, unlinking still succeeds.
++    await syncPremiumDiscordRole(snapshot.discord, {
++      ...snapshot.membership,
++      tier: "free",
++      status: "free",
++    }).catch(() => undefined);
++    await removeDiscordLink(snapshot.account.id);
++    return Response.json({ ok: true });
++  } catch (error) {
++    if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: "Discord link could not be removed." }, { status: 500 });
++  }
++}
+diff --git a/app/api/discord/sync/route.ts b/app/api/discord/sync/route.ts
+new file mode 100644
+index 0000000..aa12a9a
+--- /dev/null
++++ b/app/api/discord/sync/route.ts
+@@ -0,0 +1,23 @@
++import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
++import { syncPremiumDiscordRole } from "@/lib/discord";
++import { hasPremiumAccess } from "@/lib/membership";
++
++export const runtime = "nodejs";
++
++export async function POST(request: Request) {
++  try {
++    assertSameOrigin(request);
++    const snapshot = await getCurrentSnapshot();
++    if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
++    if (!snapshot.discord) return Response.json({ error: "Connect Discord to this FateDrop ID first." }, { status: 400 });
++    if (!hasPremiumAccess(snapshot.membership)) return Response.json({ error: "Premium membership is required before the Discord Premium role can be activated." }, { status: 409 });
++    const result = await syncPremiumDiscordRole(snapshot.discord, snapshot.membership);
++    if (!result.configured) return Response.json({ error: "Discord role automation is built but the bot credentials are not configured yet." }, { status: 503 });
++    if (!result.memberFound) return Response.json({ error: "Join the FateDrop Discord server first, then sync again." }, { status: 409 });
++    if (!result.synced) return Response.json({ error: "Discord could not update the role. Check the bot role hierarchy and Manage Roles permission." }, { status: 502 });
++    return Response.json({ synced: true });
++  } catch (error) {
++    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
++    return Response.json({ error: "Discord role sync could not be completed." }, { status: 500 });
++  }
++}
+diff --git a/app/collectors/page.tsx b/app/collectors/page.tsx
+index 1e8ab0c..4fde8bc 100644
+--- a/app/collectors/page.tsx
++++ b/app/collectors/page.tsx
+@@ -42,7 +42,7 @@ export default function CollectorsPage() {
+       </section>
+       <section className="collector-subscription section-shell">
+         <div><p className="eyebrow"><span />B2C subscription model</p><h2>Use the market for free. Subscribe for deeper intelligence.</h2><p>Basic discovery, shops, events and direct retailer purchasing remain available free. Proposed Plus and Pro tiers add more specific alerts, saved searches, lifecycle intelligence and collection tools.</p></div>
+-        <div className="subscription-summary"><article><span>FateDrop Plus</span><strong>£4.99 / month</strong><p>Product alerts, lifecycle notifications, Universal Wishlist, FateFind, True Price and Local Radar alerts.</p></article><article><span>FateDrop Pro</span><strong>£7.99 / month</strong><p>Advanced lifecycle, collection, basket, event and future multi-TCG tools as infrastructure supports them.</p></article><small>Provisional founding-member pricing · no checkout active</small><Link className="button button-secondary" href="/subscriptions#collectors">Compare collector plans <span>↗</span></Link></div>
++        <div className="subscription-summary"><article><span>FateDrop Plus</span><strong>£4.99 / month</strong><p>Product alerts, lifecycle notifications, Universal Wishlist, FateFind, True Price and Local Radar alerts.</p></article><article><span>FateDrop Pro</span><strong>£7.99 / month</strong><p>Advanced lifecycle, collection, basket, event and future multi-TCG tools as infrastructure supports them.</p></article><small>14-day collector trial flow prepared · Stripe connection required for live checkout</small><Link className="button button-secondary" href="/subscriptions#collectors">Compare collector plans <span>↗</span></Link></div>
+       </section>
+       <section className="content-section section-shell" id="collector-tools">
+         <SectionHeading eyebrow="Collector tools" title="Everything useful. Nothing noisy." body="The beta focuses on practical discovery tools that reduce friction without taking the collector away from independent businesses." />
+diff --git a/app/cookies/page.tsx b/app/cookies/page.tsx
+index c681ef9..ec6b5ce 100644
+--- a/app/cookies/page.tsx
++++ b/app/cookies/page.tsx
+@@ -4,5 +4,5 @@ import { SiteShell } from "@/components/page-shell";
+ export const metadata: Metadata = { title: "Cookie Information | FateDrop", description: "Current FateDrop website cookie information." };
+ 
+ export default function CookiesPage() {
+-  return <SiteShell><article className="legal-shell section-shell"><p className="eyebrow"><span />Cookie information</p><h1>Cookies.</h1><div className="legal-placeholder"><strong>No optional analytics provider is currently configured.</strong><br />The current public marketing site does not intentionally set advertising or behavioural analytics cookies.</div><h2>Essential technology</h2><p>The hosting platform may use strictly necessary security or delivery mechanisms required to serve the website. These are not used by FateDrop to build advertising profiles.</p><h2>When this changes</h2><p>If analytics, embedded services or preference tools are connected later, this page and any required consent controls must be updated before those technologies are enabled.</p></article></SiteShell>;
++  return <SiteShell><article className="legal-shell section-shell"><p className="eyebrow"><span />Cookie information</p><h1>Cookies.</h1><div className="legal-placeholder"><strong>No optional advertising or behavioural analytics cookies are intentionally configured.</strong><br />FateDrop ID adds one strictly necessary sign-in cookie when you authenticate.</div><h2>FateDrop session cookie</h2><p>The <code>fd_session</code> cookie keeps a signed-in FateDrop ID connected to its server-side session. It is configured as HttpOnly, SameSite=Lax and Secure in production, and it is not available to normal browser JavaScript.</p><h2>Payments and connected services</h2><p>If you choose to start Stripe checkout or connect Discord, those third-party pages may use their own essential technology under their respective policies. FateDrop should update consent controls if optional analytics, advertising or preference technologies are introduced later.</p><h2>When this changes</h2><p>This page and any required consent interface must be updated before optional tracking technology is enabled.</p></article></SiteShell>;
+ }
+diff --git a/app/globals.css b/app/globals.css
+index ff7a854..90a1c8a 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -958,3 +958,222 @@ button, a { -webkit-tap-highlight-color: transparent; }
+   .button::after { display: none; }
+   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+ }
++
++/* FateDrop ID + membership foundation */
++.account-nav-link { color:#e4dff0 !important; }
++.account-nav-link::before { content:""; width:5px; height:5px; margin-right:7px; display:inline-block; vertical-align:1px; border-radius:50%; background:linear-gradient(135deg,var(--cyan),var(--violet)); box-shadow:0 0 12px rgba(88,232,255,.45); }
++.identity-gate { position:relative; min-height:100svh; padding:150px 0 90px; display:grid; grid-template-columns:1.05fr .72fr; align-items:center; gap:90px; overflow:hidden; }
++.identity-gate::before { content:""; position:absolute; z-index:-2; inset:80px -25vw 0 22%; background:radial-gradient(circle at 60% 46%, rgba(88,232,255,.09), transparent 24%), radial-gradient(circle at 72% 50%, rgba(157,109,255,.16), transparent 43%); filter:blur(4px); }
++.identity-gate-field { z-index:-1; inset:80px -18vw 5% 22%; opacity:.65; mask-image:linear-gradient(90deg,transparent,black 25%,black 82%,transparent); }
++.identity-gate-copy { position:relative; z-index:2; }
++.identity-gate-copy h1 { max-width:750px; margin:0; font-size:clamp(4rem,7.5vw,7rem); line-height:.87; letter-spacing:-.07em; }
++.identity-gate-copy h1 em { color:transparent; background:linear-gradient(100deg,#fff 8%,#9befff 42%,#9d6dff 76%,#efb0ff); background-clip:text; font-style:normal; }
++.identity-gate-copy > p:not(.eyebrow) { max-width:610px; margin:30px 0 0; color:var(--muted); font-size:16px; line-height:1.75; }
++.identity-gate-proof { margin-top:46px; display:grid; grid-template-columns:repeat(3,1fr); gap:1px; border:1px solid var(--line); border-radius:18px; overflow:hidden; background:var(--line); }
++.identity-gate-proof span { min-height:78px; padding:18px; display:flex; align-items:flex-end; color:#9e98aa; background:rgba(7,6,11,.85); font-size:9px; font-weight:760; letter-spacing:.09em; text-transform:uppercase; }
++.identity-gate-panel { position:relative; z-index:3; padding:34px; border:1px solid rgba(158,119,255,.22); border-radius:28px; background:radial-gradient(circle at 95% 0%, rgba(88,232,255,.08), transparent 30%), linear-gradient(145deg,rgba(20,17,31,.94),rgba(9,8,14,.96)); box-shadow:0 40px 110px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.035); }
++.identity-gate-panel::before { content:""; position:absolute; inset:14px; border:1px solid rgba(255,255,255,.04); border-radius:19px; pointer-events:none; }
++.identity-gate-panel > small { color:var(--cyan); font-size:8px; font-weight:800; letter-spacing:.16em; }
++.identity-gate-panel h2 { margin:16px 0 30px; font-size:2.55rem; letter-spacing:-.05em; }
++.identity-auth-form { position:relative; display:grid; gap:17px; }
++.identity-auth-form label, .profile-editor label { display:grid; gap:8px; }
++.identity-auth-form label > span, .profile-editor label > span { color:#8f8998; font-size:9px; font-weight:740; letter-spacing:.08em; text-transform:uppercase; }
++.identity-auth-form input, .profile-editor input, .profile-editor textarea, .profile-editor select { width:100%; min-height:50px; padding:0 14px; border:1px solid rgba(255,255,255,.1); border-radius:12px; outline:none; color:#f5f3f8; background:rgba(255,255,255,.035); transition:border-color .2s ease, box-shadow .2s ease, background .2s ease; }
++.profile-editor textarea { min-height:112px; padding-block:13px; resize:vertical; line-height:1.55; }
++.identity-auth-form input:focus, .profile-editor input:focus, .profile-editor textarea:focus, .profile-editor select:focus { border-color:rgba(88,232,255,.42); background:rgba(88,232,255,.035); box-shadow:0 0 0 3px rgba(88,232,255,.045); }
++.profile-editor select { appearance:auto; }
++.field-error, .action-error { color:#ff9ea9; font-size:9px; line-height:1.4; }
++.identity-form-status { margin:0; font-size:10px; line-height:1.5; }
++.identity-form-status.error, .profile-editor-actions .error { color:#ff9ea9; }
++.profile-editor-actions .success { color:var(--green); }
++.identity-auth-form .button { margin-top:3px; width:100%; }
++.identity-auth-switch { margin:4px 0 0; color:#77717f; font-size:10px; text-align:center; }
++.identity-auth-switch a { color:var(--cyan); }
++.identity-privacy-note { margin:20px 0 0; color:#696472; font-size:8px; line-height:1.55; }
++
++.account-hero { position:relative; min-height:720px; padding:155px 0 90px; display:grid; grid-template-columns:.72fr 1.08fr; align-items:center; gap:80px; overflow:hidden; }
++.account-hero::before { content:""; position:absolute; z-index:-2; inset:78px -20vw 0 28%; background:radial-gradient(circle at 68% 48%, rgba(88,232,255,.1), transparent 23%), radial-gradient(circle at 61% 44%, rgba(157,109,255,.16), transparent 45%); }
++.account-radar-field { z-index:-1; inset:100px -10vw 2% 25%; opacity:.65; }
++.account-hero-copy { position:relative; z-index:2; }
++.account-hero-copy h1 { margin:0; max-width:570px; font-size:clamp(4rem,6.4vw,6.7rem); line-height:.87; letter-spacing:-.07em; }
++.account-hero-copy > p:not(.eyebrow) { max-width:500px; margin:27px 0; color:var(--muted); font-size:15px; line-height:1.72; }
++.account-signout { border:0; padding:0; background:none; cursor:pointer; }
++.fate-id-card { position:relative; min-height:430px; padding:30px; overflow:hidden; border:1px solid rgba(171,143,255,.28); border-radius:30px; background:linear-gradient(145deg,rgba(20,17,31,.96),rgba(8,7,13,.96) 72%), #0b0911; box-shadow:0 55px 130px rgba(0,0,0,.48), 0 0 70px rgba(88,232,255,.055), inset 0 1px rgba(255,255,255,.055); transform:perspective(1200px) rotateY(-3deg) rotateX(1deg); }
++.fate-id-card::before { content:""; position:absolute; inset:-45% 50% 10% -15%; background:linear-gradient(115deg,transparent,rgba(88,232,255,.08),rgba(157,109,255,.12),transparent); transform:rotate(-18deg); filter:blur(5px); }
++.fate-id-card::after { content:""; position:absolute; right:-90px; bottom:-105px; width:310px; aspect-ratio:1; border:1px solid rgba(88,232,255,.12); border-radius:50%; box-shadow:0 0 0 38px rgba(157,109,255,.025),0 0 0 78px rgba(88,232,255,.018); }
++.fate-id-top, .fate-id-person, .fate-id-metrics, .fate-id-line { position:relative; z-index:2; }
++.fate-id-top { display:flex; align-items:center; justify-content:space-between; color:#797382; font-size:8px; font-weight:800; letter-spacing:.15em; }
++.fate-id-top i { padding:7px 9px; border:1px solid rgba(255,255,255,.08); border-radius:999px; color:#8d8796; font-style:normal; background:rgba(255,255,255,.025); }
++.fate-id-top i.live { color:#9ff7bf; border-color:rgba(95,240,162,.2); box-shadow:0 0 20px rgba(95,240,162,.07); }
++.fate-id-person { margin-top:54px; display:flex; align-items:center; gap:22px; }
++.fate-avatar { position:relative; width:88px; height:88px; flex:0 0 88px; display:grid; place-items:center; overflow:hidden; border:1px solid rgba(88,232,255,.22); border-radius:27px; background:radial-gradient(circle at 30% 20%,rgba(88,232,255,.15),transparent 35%),linear-gradient(145deg,rgba(157,109,255,.17),rgba(255,255,255,.025)); box-shadow:0 0 35px rgba(88,232,255,.07); }
++.fate-avatar strong { font-size:25px; letter-spacing:-.05em; }
++.fate-avatar > span:not(.fate-avatar-image) { position:absolute; inset:-14px; border:1px solid rgba(157,109,255,.12); border-radius:32px; transform:rotate(12deg); }
++.fate-avatar-image { position:absolute; inset:0; background-position:center; background-size:cover; }
++.fate-id-person small { color:var(--cyan); font-size:9px; letter-spacing:.08em; }
++.fate-id-person h2 { margin:4px 0; font-size:2.25rem; line-height:1; letter-spacing:-.055em; }
++.fate-id-person p { margin:0; color:#817b8a; font:700 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.13em; }
++.fate-id-metrics { margin-top:54px; display:grid; grid-template-columns:1.1fr 1fr .9fr; gap:1px; border:1px solid rgba(255,255,255,.07); border-radius:16px; overflow:hidden; background:rgba(255,255,255,.07); }
++.fate-id-metrics div { min-height:83px; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; background:rgba(8,7,13,.88); }
++.fate-id-metrics span { color:#676170; font-size:7px; font-weight:800; letter-spacing:.12em; }
++.fate-id-metrics strong { margin-top:7px; color:#ddd9e4; font-size:10px; line-height:1.25; }
++.fate-id-line { margin-top:24px; height:24px; display:flex; align-items:center; gap:4px; }
++.fate-id-line::before { content:""; height:1px; flex:1; background:linear-gradient(90deg,rgba(88,232,255,.55),rgba(157,109,255,.25),transparent); }
++.fate-id-line i { width:4px; height:4px; border-radius:50%; background:var(--cyan); box-shadow:0 0 10px rgba(88,232,255,.5); }
++.fate-id-line i:nth-child(2n) { background:var(--violet); }
++.theme-cyan .fate-id-card { border-color:rgba(88,232,255,.34); }
++.theme-violet .fate-id-card { border-color:rgba(157,109,255,.42); }
++.theme-magenta .fate-id-card { border-color:rgba(229,133,255,.36); }
++
++.account-notice { margin-top:-36px; margin-bottom:35px; padding:16px 20px; border:1px solid rgba(88,232,255,.14); border-radius:15px; background:linear-gradient(90deg,rgba(88,232,255,.05),rgba(157,109,255,.035)); }
++.account-notice p { margin:0; color:#aba5b3; font-size:11px; line-height:1.55; }
++.account-notice b { color:#e9faff; }
++.account-grid { padding-bottom:120px; display:grid; grid-template-columns:1fr 1fr; gap:18px; }
++.account-panel { position:relative; min-height:390px; padding:30px; overflow:hidden; border:1px solid var(--line); border-radius:26px; background:radial-gradient(circle at 100% 0%,rgba(157,109,255,.055),transparent 35%),rgba(255,255,255,.018); box-shadow:inset 0 1px rgba(255,255,255,.025); }
++.account-panel::after { content:""; position:absolute; right:-16%; bottom:-50%; width:60%; height:70%; border-radius:50%; background:radial-gradient(ellipse,rgba(88,232,255,.055),transparent 70%); pointer-events:none; }
++.account-panel-head { position:relative; z-index:2; display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
++.account-panel-head span { color:#77717f; font-size:8px; font-weight:800; letter-spacing:.13em; }
++.account-panel-head h2 { margin:8px 0 0; font-size:2.1rem; line-height:1; letter-spacing:-.05em; }
++.account-panel-head > i { padding:7px 9px; border:1px solid rgba(255,255,255,.08); border-radius:999px; color:#807a88; font-size:7px; font-style:normal; font-weight:800; letter-spacing:.1em; }
++.account-panel-head > i.state-live { color:#a7f7c2; border-color:rgba(95,240,162,.18); }
++.account-panel-head > i.state-free { color:#c4b7da; border-color:rgba(157,109,255,.15); }
++.account-panel > p { position:relative; z-index:2; max-width:660px; margin:24px 0; color:#9993a2; font-size:12px; line-height:1.7; }
++.membership-timing { position:relative; z-index:2; margin:28px 0; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; border:1px solid rgba(88,232,255,.12); border-radius:14px; background:rgba(88,232,255,.035); }
++.membership-timing span { color:var(--cyan); font-size:8px; letter-spacing:.12em; }
++.membership-timing strong { font-size:11px; }
++.membership-entitlements { position:relative; z-index:2; margin:24px 0 28px; display:grid; gap:8px; }
++.membership-entitlements span { padding:11px 13px 11px 34px; position:relative; border:1px solid rgba(255,255,255,.07); border-radius:11px; color:#85808d; background:rgba(255,255,255,.018); font-size:9px; }
++.membership-entitlements span::before { content:""; position:absolute; left:13px; top:50%; width:7px; height:7px; border-radius:50%; transform:translateY(-50%); background:#4e4955; }
++.membership-entitlements span.on { color:#bdb8c6; }
++.membership-entitlements span.on::before { background:var(--green); box-shadow:0 0 12px rgba(95,240,162,.45); }
++.membership-panel .button-row, .discord-panel .button-row { position:relative; z-index:2; margin-top:auto; }
++.membership-action-wrap { display:grid; gap:7px; }
++.discord-identity { position:relative; z-index:2; margin:32px 0 10px; display:flex; align-items:center; gap:14px; }
++.discord-mark { width:48px; height:48px; display:grid; place-items:center; border:1px solid rgba(157,109,255,.2); border-radius:14px; color:#cbb8ff; background:rgba(88,101,242,.09); font-size:20px; font-weight:800; }
++.discord-identity div { display:grid; gap:4px; }
++.discord-identity small { color:#706a79; font-size:7px; letter-spacing:.12em; }
++.discord-identity strong { font-size:15px; }
++.profile-panel-wide { grid-column:1 / -1; min-height:auto; }
++.profile-editor { position:relative; z-index:2; margin-top:30px; padding-top:26px; border-top:1px solid rgba(255,255,255,.07); }
++.profile-editor-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
++.profile-editor label.full { grid-column:1 / -1; }
++.profile-editor label span em { color:#5e5965; font-style:normal; text-transform:none; letter-spacing:0; }
++.input-prefix { display:flex; align-items:center; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(255,255,255,.035); }
++.input-prefix:focus-within { border-color:rgba(88,232,255,.42); box-shadow:0 0 0 3px rgba(88,232,255,.045); }
++.input-prefix i { padding-left:13px; color:#706b79; font-style:normal; }
++.input-prefix input { border:0; background:transparent; box-shadow:none !important; }
++.profile-editor-actions { margin-top:20px; display:flex; align-items:center; gap:18px; }
++.profile-editor-actions p { margin:0; font-size:9px; }
++.loyalty-panel { min-height:390px; display:grid; grid-template-columns:1fr .75fr; grid-template-rows:auto 1fr; }
++.loyalty-panel .account-panel-head { grid-column:1 / -1; }
++.loyalty-panel > p { align-self:end; }
++.loyalty-orbit { position:relative; width:190px; height:190px; margin:auto; display:grid; place-items:center; align-self:center; justify-self:center; }
++.loyalty-orbit > span { position:absolute; inset:0; border:1px solid rgba(88,232,255,.12); border-radius:50%; animation:loyaltySpin 18s linear infinite; }
++.loyalty-orbit > span:nth-child(2) { inset:24px; border-color:rgba(157,109,255,.17); animation-direction:reverse; animation-duration:14s; }
++.loyalty-orbit > span:nth-child(3) { inset:48px; border-color:rgba(229,133,255,.12); animation-duration:10s; }
++.loyalty-orbit > span::after { content:""; position:absolute; top:-3px; left:50%; width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 14px rgba(88,232,255,.7); }
++.loyalty-orbit strong { margin-top:-8px; font-size:3.8rem; line-height:1; letter-spacing:-.07em; }
++.loyalty-orbit small { position:absolute; top:116px; color:#746e7d; font-size:7px; font-weight:800; letter-spacing:.18em; }
++@keyframes loyaltySpin { to{transform:rotate(360deg)} }
++
++.membership-flow { margin-top:34px; padding:18px; display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:12px; align-items:center; border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.018); }
++.membership-flow div { min-height:82px; padding:15px; display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; column-gap:13px; align-content:center; border:1px solid rgba(255,255,255,.055); border-radius:14px; background:rgba(7,6,11,.55); }
++.membership-flow div > span { grid-row:1 / span 2; width:31px; height:31px; display:grid; place-items:center; align-self:center; border:1px solid rgba(88,232,255,.15); border-radius:10px; color:var(--cyan); font-size:8px; }
++.membership-flow b { font-size:11px; }
++.membership-flow small { color:#746f7c; font-size:8px; }
++.membership-flow > i { color:#534e5a; font-style:normal; }
++.billing-warning.billing-ready { border-color:rgba(95,240,162,.18); background:linear-gradient(90deg,rgba(95,240,162,.035),rgba(88,232,255,.025)); }
++
++.identity-community-teaser { position:relative; min-height:620px; margin-top:70px; margin-bottom:120px; padding:78px; display:grid; grid-template-columns:.86fr 1.14fr; align-items:center; gap:70px; overflow:hidden; border:1px solid rgba(157,109,255,.15); border-radius:34px; background:linear-gradient(145deg,rgba(13,11,20,.95),rgba(6,6,10,.98)); box-shadow:inset 0 1px rgba(255,255,255,.025); }
++.identity-community-teaser::before { content:""; position:absolute; inset:0; background:linear-gradient(110deg,rgba(88,232,255,.025),transparent 35%,rgba(157,109,255,.05) 72%,transparent); pointer-events:none; }
++.identity-community-field { inset:-8% -10% -10% 33%; opacity:.55; }
++.identity-community-copy, .identity-card-preview { position:relative; z-index:2; }
++.identity-community-copy h2 { margin:0; font-size:clamp(3rem,5.2vw,5.2rem); line-height:.92; letter-spacing:-.06em; }
++.identity-community-copy > p:not(.eyebrow) { max-width:560px; margin:24px 0; color:var(--muted); font-size:14px; line-height:1.72; }
++.identity-community-steps { margin:32px 0; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
++.identity-community-steps span { min-height:55px; padding:12px; display:flex; align-items:center; gap:12px; border:1px solid rgba(255,255,255,.07); border-radius:12px; color:#9e98a7; background:rgba(255,255,255,.018); font-size:9px; }
++.identity-community-steps i { width:27px; height:27px; display:grid; place-items:center; border-radius:8px; color:var(--cyan); background:rgba(88,232,255,.05); font-style:normal; font-size:7px; }
++.identity-card-preview { min-height:370px; padding:28px; overflow:hidden; border:1px solid rgba(88,232,255,.2); border-radius:28px; background:radial-gradient(circle at 78% 32%,rgba(88,232,255,.08),transparent 25%),radial-gradient(circle at 20% 70%,rgba(157,109,255,.09),transparent 34%),rgba(10,9,16,.88); box-shadow:0 42px 90px rgba(0,0,0,.34); transform:rotate(2deg); }
++.identity-preview-head { display:flex; justify-content:space-between; color:#6e6876; font-size:7px; font-weight:800; letter-spacing:.14em; }
++.identity-preview-head i { color:#9debb9; font-style:normal; }
++.identity-preview-person { margin-top:60px; display:flex; align-items:center; gap:18px; }
++.identity-preview-person > b { width:72px; height:72px; display:grid; place-items:center; border:1px solid rgba(88,232,255,.2); border-radius:22px; background:linear-gradient(145deg,rgba(88,232,255,.08),rgba(157,109,255,.12)); font-size:21px; }
++.identity-preview-person div { display:grid; gap:4px; }
++.identity-preview-person small { color:var(--cyan); font-size:8px; }
++.identity-preview-person strong { font-size:1.8rem; letter-spacing:-.045em; }
++.identity-preview-person p { margin:0; color:#696371; font:700 8px/1 ui-monospace,SFMono-Regular,monospace; letter-spacing:.12em; }
++.identity-preview-meta { margin-top:55px; display:grid; grid-template-columns:repeat(3,1fr); border:1px solid rgba(255,255,255,.065); border-radius:14px; overflow:hidden; }
++.identity-preview-meta span { min-height:70px; padding:13px; display:flex; flex-direction:column; justify-content:flex-end; border-right:1px solid rgba(255,255,255,.06); }
++.identity-preview-meta span:last-child { border-right:0; }
++.identity-preview-meta small { color:#615b68; font-size:6px; letter-spacing:.11em; }
++.identity-preview-meta b { margin-top:6px; color:#aaa4b2; font-size:8px; }
++.identity-preview-rings { position:absolute; right:-70px; top:70px; width:250px; height:250px; opacity:.28; }
++.identity-preview-rings i { position:absolute; inset:0; border:1px solid rgba(88,232,255,.18); border-radius:50%; }
++.identity-preview-rings i:nth-child(2) { inset:32px; border-color:rgba(157,109,255,.21); }
++.identity-preview-rings i:nth-child(3) { inset:64px; border-color:rgba(229,133,255,.16); }
++
++@media (max-width: 1050px) {
++  .identity-gate { grid-template-columns:1fr; gap:55px; }
++  .identity-gate-copy { max-width:760px; }
++  .identity-gate-panel { max-width:680px; }
++  .account-hero { grid-template-columns:1fr; gap:44px; padding-bottom:70px; }
++  .account-hero-copy { max-width:620px; }
++  .fate-id-card { max-width:780px; }
++  .profile-editor-grid { grid-template-columns:1fr 1fr; }
++  .identity-community-teaser { padding:55px; grid-template-columns:1fr; }
++  .identity-card-preview { width:min(720px,100%); }
++}
++
++@media (max-width: 820px) {
++  .account-grid { grid-template-columns:1fr; }
++  .profile-panel-wide { grid-column:auto; }
++  .loyalty-panel { grid-template-columns:1fr; }
++  .loyalty-panel .account-panel-head { grid-column:auto; }
++  .loyalty-orbit { margin-block:20px; }
++  .membership-flow { grid-template-columns:1fr; }
++  .membership-flow > i { display:none; }
++  .profile-editor-grid { grid-template-columns:1fr; }
++  .profile-editor label.full { grid-column:auto; }
++}
++
++@media (max-width: 560px) {
++  .identity-gate { padding-top:130px; gap:38px; }
++  .identity-gate-copy h1 { font-size:3.7rem; }
++  .identity-gate-proof { grid-template-columns:1fr; }
++  .identity-gate-proof span { min-height:58px; }
++  .identity-gate-panel { padding:24px 20px; }
++  .account-hero { min-height:auto; padding-top:135px; }
++  .account-hero-copy h1 { font-size:3.75rem; }
++  .fate-id-card { min-height:440px; padding:22px 18px; transform:none; }
++  .fate-id-top { align-items:flex-start; gap:10px; }
++  .fate-id-person { margin-top:44px; }
++  .fate-avatar { width:72px; height:72px; flex-basis:72px; border-radius:22px; }
++  .fate-id-person h2 { font-size:1.65rem; }
++  .fate-id-metrics { margin-top:42px; grid-template-columns:1fr; }
++  .fate-id-metrics div { min-height:62px; }
++  .account-panel { min-height:auto; padding:24px 20px; }
++  .account-panel-head h2 { font-size:1.7rem; }
++  .membership-timing { align-items:flex-start; flex-direction:column; gap:6px; }
++  .profile-editor-actions { align-items:flex-start; flex-direction:column; }
++  .profile-editor-actions .button { width:100%; }
++  .identity-community-teaser { width:calc(100% - 20px); min-height:auto; margin-bottom:90px; padding:52px 20px 28px; border-radius:28px; }
++  .identity-community-copy h2 { font-size:3.2rem; }
++  .identity-community-steps { grid-template-columns:1fr; }
++  .identity-card-preview { min-height:385px; padding:22px 17px; transform:none; }
++  .identity-preview-person { margin-top:52px; }
++  .identity-preview-person > b { width:62px; height:62px; border-radius:19px; }
++  .identity-preview-person strong { font-size:1.35rem; }
++  .identity-preview-meta { grid-template-columns:1fr; }
++  .identity-preview-meta span { min-height:56px; border-right:0; border-bottom:1px solid rgba(255,255,255,.06); }
++  .identity-preview-meta span:last-child { border-bottom:0; }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .loyalty-orbit > span { animation:none !important; }
++  .fate-id-card, .identity-card-preview { transform:none !important; }
++}
++.action-success { color:var(--green); font-size:9px; }
++.disabled-link { opacity:.55; cursor:default; pointer-events:none; }
++.footer-links .footer-coming-soon { margin:0; color:#696371; font-size:11px; letter-spacing:0; text-transform:none; }
++.button-quiet { color:#8a8492; border-color:rgba(255,255,255,.07); background:transparent; }
++.button-quiet:hover { color:#d8d2df; border-color:rgba(255,255,255,.14); }
+diff --git a/app/page.tsx b/app/page.tsx
+index eb7e2d9..21508bf 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -8,6 +8,7 @@ import { FinalCta, SiteShell } from "@/components/page-shell";
+ import { StockLifecycle } from "@/components/stock-lifecycle";
+ import { WhyFateDrop } from "@/components/why-fatedrop";
+ import { FateSignalField } from "@/components/fate-signal-field";
++import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, TRIAL_DAYS } from "@/lib/membership";
+ 
+ export const metadata: Metadata = {
+   title: "FateDrop | UK TCG Discovery & Stock Intelligence",
+@@ -94,8 +95,14 @@ export default function Home() {
+       </section>
+ 
+       <section className="subscription-teaser section-shell">
+-        <div><p className="eyebrow"><span />Free and paid value</p><h2>Free discovery. Paid depth—when the infrastructure is ready.</h2><p>Free FateDrop covers useful product, retailer and event discovery. Provisional paid plans add deeper collector intelligence or broader retailer distribution, monitoring, analytics, promotions and event tools.</p><Link className="button button-secondary" href="/subscriptions">See Provisional Plans <span>↗</span></Link></div>
+-        <div className="subscription-summary"><article><span>Collectors</span><strong>£0 → £7.99</strong><p>Discovery first; lifecycle, FateFind, comparison and collection depth in paid tiers.</p></article><article><span>Retailers</span><strong>£0 → £24.99</strong><p>Organic discovery first; distribution, monitoring and insight in paid tiers.</p></article><small>Provisional founding-member pricing · no authentication, billing or checkout active</small></div>
++        <div><p className="eyebrow"><span />FateDrop membership</p><h2>One identity. One entitlement. More useful the longer you stay.</h2><p>Create a FateDrop ID for free, keep your permanent member-since history and start a {TRIAL_DAYS}-day collector trial when you want deeper stock intelligence. The same entitlement is designed to unlock the app and Premium Discord access.</p><div className="button-row"><Link className="button button-primary" href="/account/register">Create FateDrop ID <span>↗</span></Link><Link className="button button-secondary" href="/subscriptions">See Membership</Link></div></div>
++        <div className="subscription-summary"><article><span>Collectors</span><strong>£0 → £7.99</strong><p>Free identity and discovery; lifecycle, FateFind, comparison and collection depth in paid tiers.</p></article><article><span>Connected access</span><strong>WEB → APP → DISCORD</strong><p>One membership state designed to follow the collector across the FateDrop network.</p></article><small>Billing and Discord automation activate when production credentials are connected.</small></div>
++      </section>
++
++      <section className="identity-community-teaser section-shell">
++        <FateSignalField variant="radar" className="identity-community-field" />
++        <div className="identity-community-copy"><p className="eyebrow"><span />Your network identity</p><h2>Become part of the signal.</h2><p>Your FateDrop ID is more than login credentials. It carries your profile, membership age and—when Premium is active—the entitlement used by the app and Discord community layer.</p><div className="identity-community-steps"><span><i>01</i>Create your ID</span><span><i>02</i>Build your profile</span><span><i>03</i>Connect Discord</span><span><i>04</i>Keep your network age</span></div><div className="button-row"><Link className="button button-primary" href="/account">Open FateDrop ID <span>↗</span></Link>{DISCORD_COMMUNITY_OPEN ? <a className="button button-secondary" href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">Join the Discord</a> : <span className="button button-secondary disabled-link" aria-disabled="true">Discord opening soon</span>}</div></div>
++        <div className="identity-card-preview"><div className="identity-preview-head"><span>FATEDROP / NETWORK ID</span><i>SIGNAL READY</i></div><div className="identity-preview-person"><b>FD</b><div><small>@YOUR_HANDLE</small><strong>Collector identity</strong><p>FD-••••••••••</p></div></div><div className="identity-preview-meta"><span><small>MEMBER SINCE</small><b>DAY ONE</b></span><span><small>PROFILE</small><b>YOUR SIGNAL</b></span><span><small>ACCESS</small><b>ONE MEMBERSHIP</b></span></div><div className="identity-preview-rings"><i /><i /><i /></div></div>
+       </section>
+ 
+       <FutureExpansion />
+diff --git a/app/privacy/page.tsx b/app/privacy/page.tsx
+index ad63a6a..d623e84 100644
+--- a/app/privacy/page.tsx
++++ b/app/privacy/page.tsx
+@@ -3,7 +3,7 @@ import { SiteShell } from "@/components/page-shell";
+ 
+ export const metadata: Metadata = {
+   title: "Founding Beta Privacy Notice | FateDrop",
+-  description: "How FateDrop stores and uses collector, retailer and event-organiser founding-beta enquiries.",
++  description: "How FateDrop uses beta enquiries, FateDrop ID profiles, membership and connected Discord information.",
+ };
+ 
+ export default function PrivacyPage() {
+@@ -11,20 +11,24 @@ export default function PrivacyPage() {
+     <SiteShell>
+       <article className="legal-shell section-shell">
+         <p className="eyebrow"><span />Founding-beta privacy notice</p>
+-        <h1>Your enquiry data.</h1>
+-        <div className="legal-placeholder"><strong>Operational beta notice.</strong><br />The live join forms store genuine enquiries. A final legal review, formal data-controller details and a dedicated public privacy contact route remain required before scaled acquisition.</div>
+-        <h2>What FateDrop stores</h2>
+-        <p>The join form stores the details you deliberately provide for the selected collector, retailer/vendor or event-organiser journey. This can include your name, email, region, business or event details, catalogue information, preferences, message, contact consent and optional marketing consent.</p>
++        <h1>Your FateDrop data.</h1>
++        <div className="legal-placeholder"><strong>Operational beta notice.</strong><br />This page describes the current technical design, but a final UK legal review, formal data-controller details and a dedicated public privacy contact route are still required before scaled acquisition.</div>
++        <h2>FateDrop ID and profile</h2>
++        <p>If you create a FateDrop ID, FateDrop stores the email and profile information you deliberately provide, including your display name, network handle, optional bio, optional avatar URL, TCG interests, collector style and region. It also stores a generated FateDrop ID and timestamps so the service can show your genuine member-since history.</p>
++        <h2>Passwords and sessions</h2>
++        <p>Passwords are stored as one-way salted hashes rather than readable passwords. A strictly necessary session cookie is used to keep you signed in. Session records are time-limited and can be invalidated when you sign out.</p>
++        <h2>Membership and billing</h2>
++        <p>When Stripe billing is enabled, FateDrop stores only the identifiers and subscription state needed to connect a Stripe customer/subscription to your FateDrop ID, such as tier, status, trial dates and renewal/cancellation state. Payment-card details are handled by Stripe rather than stored in the FateDrop application database.</p>
++        <h2>Discord connection</h2>
++        <p>If you choose to connect Discord, FateDrop stores the Discord user ID, display name/avatar reference and connection/sync timestamps needed to associate that Discord identity with your FateDrop ID and automate an eligible Premium role. FateDrop does not need to retain the temporary Discord OAuth access token for this role-linking flow.</p>
++        <h2>Beta enquiries</h2>
++        <p>The join forms separately store the details you submit for a collector, retailer/vendor or event-organiser enquiry. This can include your name, email, region, business or event information, preferences, message, required contact consent and optional marketing consent.</p>
++        <h2>Where data is stored</h2>
++        <p>Local development uses ignored local files. Hosted production is designed to use a private managed PostgreSQL database configured through protected environment variables. There is no public account, lead-list or database-export endpoint.</p>
+         <h2>Why it is used</h2>
+-        <p>Required contact consent allows FateDrop to review and reply to your registration or enquiry. Optional marketing consent is separate and is not required to join. FateDrop does not sell beta-lead information.</p>
+-        <h2>Where it is stored</h2>
+-        <p>Valid submissions are stored in a private, Sites-managed Cloudflare D1 database. There is no public lead-list or export endpoint. The form does not deliberately record IP addresses, user-agent strings or browsing history.</p>
+-        <h2>How long it is kept</h2>
+-        <p>The working beta retention target is up to 12 months unless the record is needed for an active founding-partner conversation or is deleted earlier. This schedule must be confirmed during the final legal review.</p>
+-        <h2>Your choices and rights</h2>
+-        <p>You can leave optional marketing consent unticked. Once FateDrop replies, you can use that correspondence to ask for access, correction, withdrawal of marketing consent or deletion. A dedicated public privacy mailbox remains a genuine production blocker before larger-scale promotion.</p>
+-        <h2>Security and access</h2>
+-        <p>Database access should remain limited to authorised project owners who need it for beta follow-up. Personal information must not be copied into public analytics, testimonials, case studies or sales claims without a separate lawful basis and permission where required.</p>
++        <p>Account data is used to provide identity, profile, membership and connected-access features. Enquiry data is used to review and reply to the journey you selected. Optional marketing consent remains separate. FateDrop does not sell beta-lead or profile information.</p>
++        <h2>Retention and your rights</h2>
++        <p>Working retention periods must be confirmed in the final legal review. Before public scale, FateDrop also needs a dedicated contact route for access, correction, deletion, consent withdrawal and other applicable data-rights requests.</p>
+       </article>
+     </SiteShell>
+   );
+diff --git a/app/subscriptions/page.tsx b/app/subscriptions/page.tsx
+index 4fd8731..e57a4ca 100644
+--- a/app/subscriptions/page.tsx
++++ b/app/subscriptions/page.tsx
+@@ -1,27 +1,50 @@
+ import type { Metadata } from "next";
+ import Link from "next/link";
++import { StartMembershipButton } from "@/components/membership-actions";
+ import { PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
++import { getCurrentSnapshot } from "@/lib/auth";
++import { hasPremiumAccess, TRIAL_DAYS } from "@/lib/membership";
++import type { MembershipRecord } from "@/lib/account-storage";
+ import { siteConfig } from "@/lib/site-data";
+ 
+ export const metadata: Metadata = {
+-  title: "FateDrop Subscriptions | Collector & Retailer Plans",
+-  description: "Explore provisional FateDrop founding-member subscriptions for collectors and independent TCG retailers.",
++  title: "FateDrop Membership | Collector & Retailer Plans",
++  description: "Explore FateDrop collector memberships, free trials and independent-retailer plans.",
+ };
+ 
+-function PlanGrid({ plans, role }: { plans: typeof siteConfig.collectorPlans | typeof siteConfig.retailerPlans; role: "collector" | "business" }) {
+-  return <div className="plan-grid">{plans.map((plan) => <article className={"plan-card" + ("featured" in plan && plan.featured ? " featured" : "")} key={plan.name}>{"featured" in plan && plan.featured ? <span className="price-badge">Founding fit</span> : null}<p>{plan.name}</p><h3>{plan.price}</h3>{"secondaryPrice" in plan && plan.secondaryPrice ? <small>{plan.secondaryPrice}</small> : <small>Provisional founding-member pricing</small>}<ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul><Link href={`/join?type=${role}`}>{role === "collector" ? "Join the Collector Beta" : "Connect Your Catalogue"} <b>↗</b></Link></article>)}</div>;
++export const dynamic = "force-dynamic";
++
++type CollectorPlan = (typeof siteConfig.collectorPlans)[number];
++type RetailerPlan = (typeof siteConfig.retailerPlans)[number];
++
++function CollectorPlanGrid({ plans, signedIn, membership }: { plans: readonly CollectorPlan[]; signedIn: boolean; membership: MembershipRecord | null }) {
++  return <div className="plan-grid">{plans.map((plan) => {
++    const tier = plan.name === "FateDrop Plus" ? "plus" : plan.name === "FateDrop Pro" ? "pro" : null;
++    const currentPremiumPlan = Boolean(tier && membership && hasPremiumAccess(membership) && membership.tier === tier);
++    return <article className={`plan-card${"featured" in plan && plan.featured ? " featured" : ""}`} key={plan.name}>{"featured" in plan && plan.featured ? <span className="price-badge">Best starting point</span> : null}<p>{plan.name}</p><h3>{plan.price}</h3><small>{tier ? `${TRIAL_DAYS}-day free trial before recurring billing` : "Stay in the network for free"}</small><ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>{tier ? currentPremiumPlan ? <Link href="/account">Current membership · manage <b>↗</b></Link> : signedIn && membership && hasPremiumAccess(membership) ? <Link href="/account">Manage current Premium plan <b>↗</b></Link> : signedIn ? <StartMembershipButton tier={tier} label={`Start ${plan.name.replace("FateDrop ", "")} free trial`} /> : <Link href="/account/register?next=%2Fsubscriptions%23collectors">Create FateDrop ID to start <b>↗</b></Link> : signedIn ? <Link href="/account">Your free FateDrop ID <b>↗</b></Link> : <Link href="/account/register">Create your FateDrop ID <b>↗</b></Link>}</article>;
++  })}</div>;
+ }
+ 
+-export default function SubscriptionsPage() {
++function RetailerPlanGrid({ plans }: { plans: readonly RetailerPlan[] }) {
++  return <div className="plan-grid">{plans.map((plan) => <article className={`plan-card${"featured" in plan && plan.featured ? " featured" : ""}`} key={plan.name}>{"featured" in plan && plan.featured ? <span className="price-badge">Founding fit</span> : null}<p>{plan.name}</p><h3>{plan.price}</h3>{"secondaryPrice" in plan && plan.secondaryPrice ? <small>{plan.secondaryPrice}</small> : <small>Retailer billing remains founding-beta onboarding</small>}<ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul><Link href="/join?type=business">Connect your catalogue <b>↗</b></Link></article>)}</div>;
++}
++
++export default async function SubscriptionsPage() {
++  let snapshot: Awaited<ReturnType<typeof getCurrentSnapshot>> = null;
++  try { snapshot = await getCurrentSnapshot(); } catch { snapshot = null; }
++  const signedIn = Boolean(snapshot);
++  const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_PLUS && process.env.STRIPE_PRICE_PRO && process.env.STRIPE_WEBHOOK_SECRET);
++
+   return (
+     <SiteShell>
+-      <PageHero eyebrow="Provisional founding-member pricing" title="A subscription model built around useful outcomes." description="Collectors can pay for deeper stock intelligence. Retailers can pay for wider catalogue distribution and demand insight. The sale still belongs to the retailer.">
+-        <div className="button-row"><Link className="button button-primary" href="#collectors">Collector plans <span>↓</span></Link><Link className="button button-secondary" href="#retailers">Retailer plans</Link></div>
++      <PageHero eyebrow="One membership across the network" title="Your FateDrop ID follows you." description="Start free, then unlock deeper stock intelligence through one collector membership designed to carry across the website, app and Premium Discord access.">
++        <div className="button-row"><Link className="button button-primary" href="#collectors">Collector membership <span>↓</span></Link><Link className="button button-secondary" href="/account">My FateDrop ID</Link></div>
+       </PageHero>
+-      <section className="billing-warning section-shell" role="status"><span>Billing status</span><p>No payment collection is active. Authentication, subscription management, billing terms and payment processing must be connected before any paid plan can be purchased.</p></section>
+-      <section className="plan-section section-shell" id="collectors"><SectionHeading eyebrow="B2C subscriptions" title="Free discovery. Premium stock intelligence." body="FateDrop remains useful for free, while proposed paid tiers add more specific alerts, saved searches, lifecycle intelligence and collection tools." /><PlanGrid plans={siteConfig.collectorPlans} role="collector" /></section>
+-      <section className="plan-section section-shell" id="retailers"><SectionHeading eyebrow="B2B subscriptions" title="Connect once. Be discovered across the network." body="Retailer plans are proposed around catalogue reach, monitoring, storefronts, analytics, events and privacy-conscious demand intelligence." /><PlanGrid plans={siteConfig.retailerPlans} role="business" /></section>
+-      <section className="content-section section-shell"><div className="quote-band"><p className="eyebrow"><span />B2B2C</p><blockquote>The retailer keeps the checkout. FateDrop brings the search.</blockquote><p>Qualified outbound traffic is not the same as a confirmed sale. Conversion reporting will only be claimed when proper attribution exists.</p><div className="button-row" style={{ marginTop: 30 }}><Link className="button button-primary" href="/join?type=collector">Join as a collector <span>↗</span></Link><Link className="button button-secondary" href="/join?type=business">Connect your catalogue</Link></div></div></section>
++      <section className={`billing-warning section-shell${stripeReady ? " billing-ready" : ""}`} role="status"><span>{stripeReady ? "TRIAL READY" : "BILLING FOUNDATION"}</span><p>{stripeReady ? `${TRIAL_DAYS}-day collector trials are connected to Stripe. Membership events update the FateDrop entitlement used by account and Discord access.` : `The ${TRIAL_DAYS}-day trial, checkout, customer portal and subscription webhook flow are built. Checkout remains disabled until the Stripe account, prices and webhook secret are added.`}</p></section>
++      <section className="membership-flow section-shell"><div><span>01</span><b>Create FateDrop ID</b><small>Your permanent network identity.</small></div><i>→</i><div><span>02</span><b>Start free trial</b><small>One collector membership.</small></div><i>→</i><div><span>03</span><b>Entitlement activates</b><small>App + Premium Discord ready.</small></div></section>
++      <section className="plan-section section-shell" id="collectors"><SectionHeading eyebrow="Collector membership" title="Free discovery. Premium signal depth." body={`Every collector starts with a FateDrop ID and permanent member-since history. Plus and Pro are designed around a ${TRIAL_DAYS}-day trial so people can experience the network before deciding.`} /><CollectorPlanGrid plans={siteConfig.collectorPlans} signedIn={signedIn} membership={snapshot?.membership ?? null} /></section>
++      <section className="plan-section section-shell" id="retailers"><SectionHeading eyebrow="Retailer membership" title="Connect once. Be discovered across the network." body="Retailer plans remain a guided founding-beta onboarding while catalogue integrations and attribution mature. The retailer still owns the customer and checkout." /><RetailerPlanGrid plans={siteConfig.retailerPlans} /></section>
++      <section className="content-section section-shell"><div className="quote-band"><p className="eyebrow"><span />One FateDrop membership</p><blockquote>One identity. One entitlement. Website, app and community connected.</blockquote><p>Billing does not create three separate memberships. FateDrop is structured around one entitlement state that the app, Discord and FateDrop Cloud can consume as those integrations are connected.</p><div className="button-row" style={{ marginTop: 30 }}><Link className="button button-primary" href="/account/register">Create your FateDrop ID <span>↗</span></Link><Link className="button button-secondary" href="/account">Open my profile</Link></div></div></section>
+     </SiteShell>
+   );
+ }
+diff --git a/app/terms/page.tsx b/app/terms/page.tsx
+index 135a239..a3effa7 100644
+--- a/app/terms/page.tsx
++++ b/app/terms/page.tsx
+@@ -1,9 +1,8 @@
+ import type { Metadata } from "next";
+ import { SiteShell } from "@/components/page-shell";
+ 
+-export const metadata: Metadata = { title: "Terms Placeholder | FateDrop", description: "FateDrop terms and conditions placeholder." };
++export const metadata: Metadata = { title: "Terms Placeholder | FateDrop", description: "FateDrop founding-beta terms placeholder." };
+ 
+ export default function TermsPage() {
+-  return <SiteShell><article className="legal-shell section-shell"><p className="eyebrow"><span />Legal placeholder</p><h1>Terms.</h1><div className="legal-placeholder"><strong>Terms not yet published.</strong><br />This page is not a contract or final legal text. Proper terms should be reviewed and supplied before the service opens publicly.</div><h2>Important product context</h2><p>FateDrop is a discovery network. Product availability and pricing can change, and purchases are completed with the independent retailer rather than FateDrop.</p><h2>Before launch</h2><p>Final terms should cover eligibility, acceptable use, retailer responsibilities, availability data, intellectual property, liability, account closure and governing law.</p></article></SiteShell>;
++  return <SiteShell><article className="legal-shell section-shell"><p className="eyebrow"><span />Founding-beta legal placeholder</p><h1>Terms.</h1><div className="legal-placeholder"><strong>Final terms are not yet published.</strong><br />The account and subscription infrastructure can be tested, but proper consumer subscription terms and legal review are required before public paid launch.</div><h2>FateDrop ID</h2><p>Users are responsible for keeping account credentials secure and for using accurate, lawful profile information. FateDrop may need rules covering misuse, automated abuse, impersonation and account closure before public launch.</p><h2>Collector membership</h2><p>Paid collector membership is designed to provide access to specified FateDrop features while the subscription or eligible trial is active. Final terms must explain trial conversion, price, renewal, cancellation, refund rights and what happens when a payment fails or a subscription ends.</p><h2>Discord and app access</h2><p>Connected Discord roles and application entitlements are benefits of the relevant FateDrop membership, not separate purchases. Availability can depend on the connected service and correct account linking.</p><h2>Retailer purchases</h2><p>FateDrop is a discovery network. Product availability and pricing can change, and purchases are completed with the independent retailer rather than FateDrop unless a future feature explicitly says otherwise.</p><h2>Before paid launch</h2><p>Final terms should cover eligibility, acceptable use, subscription billing, trial rules, cancellation rights, retailer responsibilities, availability data, intellectual property, liability, account closure, dispute handling and governing law.</p></article></SiteShell>;
+ }
+-
+diff --git a/components/account-auth-form.tsx b/components/account-auth-form.tsx
+new file mode 100644
+index 0000000..741cdfa
+--- /dev/null
++++ b/components/account-auth-form.tsx
+@@ -0,0 +1,77 @@
++"use client";
++
++import Link from "next/link";
++import { FormEvent, useState } from "react";
++import { useRouter, useSearchParams } from "next/navigation";
++
++type Mode = "register" | "login";
++
++export function AccountAuthForm({ mode }: { mode: Mode }) {
++  const router = useRouter();
++  const search = useSearchParams();
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState("");
++  const [fields, setFields] = useState<Record<string, string>>({});
++
++  async function submit(event: FormEvent<HTMLFormElement>) {
++    event.preventDefault();
++    setBusy(true);
++    setError("");
++    setFields({});
++    const data = new FormData(event.currentTarget);
++    const body = mode === "register"
++      ? { displayName: data.get("displayName"), email: data.get("email"), password: data.get("password") }
++      : { email: data.get("email"), password: data.get("password") };
++
++    try {
++      const response = await fetch(`/api/auth/${mode}`, {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify(body),
++      });
++      const result = await response.json() as { error?: string; fields?: Record<string, string> };
++      if (!response.ok) {
++        setError(result.error || "That did not work. Please try again.");
++        setFields(result.fields || {});
++        return;
++      }
++      const next = search.get("next");
++      const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/account";
++      router.push(safeNext);
++      router.refresh();
++    } catch {
++      setError("FateDrop could not reach the account service.");
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return (
++    <form className="identity-auth-form" onSubmit={submit} noValidate>
++      {mode === "register" ? (
++        <label>
++          <span>Display name</span>
++          <input name="displayName" autoComplete="name" placeholder="How you appear in FateDrop" aria-invalid={Boolean(fields.displayName)} />
++          {fields.displayName ? <small className="field-error">{fields.displayName}</small> : null}
++        </label>
++      ) : null}
++      <label>
++        <span>Email</span>
++        <input name="email" type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(fields.email)} />
++        {fields.email ? <small className="field-error">{fields.email}</small> : null}
++      </label>
++      <label>
++        <span>Password</span>
++        <input name="password" type="password" autoComplete={mode === "register" ? "new-password" : "current-password"} placeholder={mode === "register" ? "10+ characters" : "Your password"} aria-invalid={Boolean(fields.password)} />
++        {fields.password ? <small className="field-error">{fields.password}</small> : null}
++      </label>
++      {error ? <p className="identity-form-status error" role="alert">{error}</p> : null}
++      <button className="button button-primary" type="submit" disabled={busy}>
++        {busy ? "Connecting…" : mode === "register" ? "Create my FateDrop ID" : "Enter the network"} <span>↗</span>
++      </button>
++      <p className="identity-auth-switch">
++        {mode === "register" ? <>Already have a FateDrop ID? <Link href="/account/login">Sign in</Link>.</> : <>New to FateDrop? <Link href="/account/register">Create your ID</Link>.</>}
++      </p>
++    </form>
++  );
++}
+diff --git a/components/account-signout.tsx b/components/account-signout.tsx
+new file mode 100644
+index 0000000..3ee24c7
+--- /dev/null
++++ b/components/account-signout.tsx
+@@ -0,0 +1,16 @@
++"use client";
++
++import { useRouter } from "next/navigation";
++import { useState } from "react";
++
++export function AccountSignOut() {
++  const router = useRouter();
++  const [busy, setBusy] = useState(false);
++  async function signOut() {
++    setBusy(true);
++    await fetch("/api/auth/logout", { method: "POST" });
++    router.push("/");
++    router.refresh();
++  }
++  return <button className="text-link account-signout" type="button" onClick={signOut} disabled={busy}>{busy ? "Disconnecting…" : "Sign out"} <span>→</span></button>;
++}
+diff --git a/components/discord-sync-button.tsx b/components/discord-sync-button.tsx
+new file mode 100644
+index 0000000..6b31ffc
+--- /dev/null
++++ b/components/discord-sync-button.tsx
+@@ -0,0 +1,24 @@
++"use client";
++
++import { useState } from "react";
++
++export function DiscordSyncButton() {
++  const [busy, setBusy] = useState(false);
++  const [message, setMessage] = useState("");
++
++  async function sync() {
++    setBusy(true);
++    setMessage("");
++    try {
++      const response = await fetch("/api/discord/sync", { method: "POST" });
++      const result = await response.json() as { synced?: boolean; error?: string };
++      setMessage(response.ok && result.synced ? "Premium role synced." : result.error || "Role sync failed.");
++    } catch {
++      setMessage("FateDrop could not reach Discord sync.");
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return <div className="membership-action-wrap"><button className="button button-secondary" type="button" onClick={sync} disabled={busy}>{busy ? "Syncing…" : "Sync Discord role"}</button>{message ? <small className={message === "Premium role synced." ? "action-success" : "action-error"}>{message}</small> : null}</div>;
++}
+diff --git a/components/discord-unlink-button.tsx b/components/discord-unlink-button.tsx
+new file mode 100644
+index 0000000..817ad2f
+--- /dev/null
++++ b/components/discord-unlink-button.tsx
+@@ -0,0 +1,30 @@
++"use client";
++
++import { useState } from "react";
++import { useRouter } from "next/navigation";
++
++export function DiscordUnlinkButton() {
++  const router = useRouter();
++  const [busy, setBusy] = useState(false);
++  const [message, setMessage] = useState("");
++
++  async function unlink() {
++    setBusy(true);
++    setMessage("");
++    try {
++      const response = await fetch("/api/discord/link", { method: "DELETE" });
++      const result = await response.json() as { ok?: boolean; error?: string };
++      if (!response.ok) {
++        setMessage(result.error || "Discord could not be unlinked.");
++        return;
++      }
++      router.refresh();
++    } catch {
++      setMessage("FateDrop could not update the Discord link.");
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return <div className="membership-action-wrap"><button className="button button-quiet" type="button" onClick={unlink} disabled={busy}>{busy ? "Unlinking…" : "Unlink Discord"}</button>{message ? <small className="action-error">{message}</small> : null}</div>;
++}
+diff --git a/components/footer.tsx b/components/footer.tsx
+index 78bc952..c8af310 100644
+--- a/components/footer.tsx
++++ b/components/footer.tsx
+@@ -1,6 +1,7 @@
+ import Link from "next/link";
+ import { BrandMark } from "./brand-mark";
+ import { siteConfig } from "@/lib/site-data";
++import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL } from "@/lib/membership";
+ 
+ export function Footer() {
+   return (
+@@ -17,6 +18,7 @@ export function Footer() {
+               <Link href={item.href} key={item.href}>{item.label}</Link>
+             ))}
+             <Link href="/subscriptions">Subscriptions</Link>
++            <Link href="/account">My FateDrop ID</Link>
+             <Link href="/about">About</Link>
+           </div>
+           <div>
+@@ -25,6 +27,7 @@ export function Footer() {
+             <Link href="/join?type=business">Business enquiry</Link>
+             <Link href="/join?type=event">List an event</Link>
+             <Link href="/join?type=collector">Free Drops list</Link>
++            {DISCORD_COMMUNITY_OPEN ? <a href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">FateDrop Discord</a> : <span className="footer-coming-soon">Discord · opening soon</span>}
+           </div>
+           <div>
+             <span>Legal</span>
+diff --git a/components/membership-actions.tsx b/components/membership-actions.tsx
+new file mode 100644
+index 0000000..c3ee4bf
+--- /dev/null
++++ b/components/membership-actions.tsx
+@@ -0,0 +1,58 @@
++"use client";
++
++import { useState } from "react";
++import type { MembershipTier } from "@/lib/account-storage";
++
++export function StartMembershipButton({ tier, label }: { tier: Exclude<MembershipTier, "free">; label: string }) {
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState("");
++
++  async function start() {
++    setBusy(true);
++    setError("");
++    try {
++      const response = await fetch("/api/billing/checkout", {
++        method: "POST",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify({ tier }),
++      });
++      const result = await response.json() as { url?: string; error?: string };
++      if (!response.ok || !result.url) {
++        setError(result.error || "Checkout could not be started.");
++        return;
++      }
++      window.location.assign(result.url);
++    } catch {
++      setError("FateDrop could not reach billing.");
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return <div className="membership-action-wrap"><button className="button button-primary" type="button" onClick={start} disabled={busy}>{busy ? "Opening Stripe…" : label} <span>↗</span></button>{error ? <small className="action-error">{error}</small> : null}</div>;
++}
++
++export function BillingPortalButton() {
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState("");
++
++  async function openPortal() {
++    setBusy(true);
++    setError("");
++    try {
++      const response = await fetch("/api/billing/portal", { method: "POST" });
++      const result = await response.json() as { url?: string; error?: string };
++      if (!response.ok || !result.url) {
++        setError(result.error || "Billing portal could not be opened.");
++        return;
++      }
++      window.location.assign(result.url);
++    } catch {
++      setError("FateDrop could not reach billing.");
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return <div className="membership-action-wrap"><button className="button button-secondary" type="button" onClick={openPortal} disabled={busy}>{busy ? "Opening…" : "Manage billing"}</button>{error ? <small className="action-error">{error}</small> : null}</div>;
++}
+diff --git a/components/nav.tsx b/components/nav.tsx
+index 4bcbaa7..bc8f593 100644
+--- a/components/nav.tsx
++++ b/components/nav.tsx
+@@ -26,6 +26,13 @@ export function Nav() {
+               {item.label}
+             </Link>
+           ))}
++          <Link
++            className={pathname.startsWith("/account") ? "active account-nav-link" : "account-nav-link"}
++            href="/account"
++            onClick={() => setOpen(false)}
++          >
++            FateDrop ID
++          </Link>
+           <Link
+             className="button button-small button-primary nav-cta"
+             href="/join"
+diff --git a/components/profile-editor.tsx b/components/profile-editor.tsx
+new file mode 100644
+index 0000000..8fa788b
+--- /dev/null
++++ b/components/profile-editor.tsx
+@@ -0,0 +1,69 @@
++"use client";
++
++import { FormEvent, useState } from "react";
++import { useRouter } from "next/navigation";
++
++type Profile = {
++  displayName: string;
++  username: string;
++  bio: string | null;
++  avatarUrl: string | null;
++  primaryTcg: string | null;
++  collectorStyle: string | null;
++  region: string | null;
++  profileTheme: "signal" | "cyan" | "violet" | "magenta";
++};
++
++export function ProfileEditor({ profile }: { profile: Profile }) {
++  const router = useRouter();
++  const [busy, setBusy] = useState(false);
++  const [message, setMessage] = useState("");
++  const [fields, setFields] = useState<Record<string, string>>({});
++
++  async function submit(event: FormEvent<HTMLFormElement>) {
++    event.preventDefault();
++    setBusy(true);
++    setMessage("");
++    setFields({});
++    const form = new FormData(event.currentTarget);
++    const body = Object.fromEntries(form.entries());
++    try {
++      const response = await fetch("/api/account/profile", {
++        method: "PATCH",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify(body),
++      });
++      const result = await response.json() as { error?: string; fields?: Record<string, string> };
++      if (!response.ok) {
++        setMessage(result.error || "Profile could not be updated.");
++        setFields(result.fields || {});
++        return;
++      }
++      setMessage("Profile synced to your FateDrop ID.");
++      router.refresh();
++    } catch {
++      setMessage("FateDrop could not reach the profile service.");
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return (
++    <form className="profile-editor" onSubmit={submit}>
++      <div className="profile-editor-grid">
++        <label><span>Display name</span><input name="displayName" defaultValue={profile.displayName} />{fields.displayName ? <small className="field-error">{fields.displayName}</small> : null}</label>
++        <label><span>Network handle</span><div className="input-prefix"><i>@</i><input name="username" defaultValue={profile.username} /></div>{fields.username ? <small className="field-error">{fields.username}</small> : null}</label>
++        <label><span>Primary TCG</span><input name="primaryTcg" defaultValue={profile.primaryTcg ?? ""} placeholder="Pokémon TCG" /></label>
++        <label><span>Collector style</span><select name="collectorStyle" defaultValue={profile.collectorStyle ?? ""}><option value="">Choose later</option><option>Sealed collector</option><option>Singles collector</option><option>Player</option><option>Set completer</option><option>Graded collector</option><option>Vendor / trader</option><option>Bit of everything</option></select></label>
++        <label><span>Region</span><input name="region" defaultValue={profile.region ?? ""} placeholder="Kent, London, North West…" /></label>
++        <label><span>Signal colour</span><select name="profileTheme" defaultValue={profile.profileTheme}><option value="signal">Signal / violet-cyan</option><option value="cyan">Icy cyan</option><option value="violet">Electric violet</option><option value="magenta">Spectral magenta</option></select></label>
++        <label className="full"><span>Avatar image URL <em>optional for now</em></span><input name="avatarUrl" defaultValue={profile.avatarUrl ?? ""} placeholder="https://…" />{fields.avatarUrl ? <small className="field-error">{fields.avatarUrl}</small> : null}</label>
++        <label className="full"><span>Network bio</span><textarea name="bio" defaultValue={profile.bio ?? ""} maxLength={220} placeholder="What do you collect? What are you hunting?" /></label>
++      </div>
++      <div className="profile-editor-actions">
++        <button className="button button-primary" type="submit" disabled={busy}>{busy ? "Syncing…" : "Save profile"} <span>↗</span></button>
++        {message ? <p className={message.startsWith("Profile synced") ? "success" : "error"} role="status">{message}</p> : null}
++      </div>
++    </form>
++  );
++}
+diff --git a/database/postgres.sql b/database/postgres.sql
+index d45ade8..5edf21c 100644
+--- a/database/postgres.sql
++++ b/database/postgres.sql
+@@ -28,3 +28,53 @@ CREATE TABLE IF NOT EXISTS beta_leads (
+ 
+ CREATE UNIQUE INDEX IF NOT EXISTS beta_leads_role_email_unique
+   ON beta_leads (role, email);
++
++-- FateDrop identity + membership foundation.
++CREATE TABLE IF NOT EXISTS fatedrop_users (
++  id text PRIMARY KEY,
++  fate_id text NOT NULL UNIQUE,
++  email text NOT NULL UNIQUE,
++  password_hash text NOT NULL,
++  display_name text NOT NULL,
++  username text NOT NULL UNIQUE,
++  bio text,
++  avatar_url text,
++  primary_tcg text,
++  collector_style text,
++  region text,
++  profile_theme text NOT NULL DEFAULT 'signal' CHECK (profile_theme IN ('signal', 'cyan', 'violet', 'magenta')),
++  created_at bigint NOT NULL,
++  updated_at bigint NOT NULL
++);
++
++CREATE TABLE IF NOT EXISTS fatedrop_sessions (
++  token_hash text PRIMARY KEY,
++  user_id text NOT NULL REFERENCES fatedrop_users(id) ON DELETE CASCADE,
++  created_at bigint NOT NULL,
++  expires_at bigint NOT NULL
++);
++CREATE INDEX IF NOT EXISTS fatedrop_sessions_user_idx ON fatedrop_sessions (user_id);
++CREATE INDEX IF NOT EXISTS fatedrop_sessions_expiry_idx ON fatedrop_sessions (expires_at);
++
++CREATE TABLE IF NOT EXISTS fatedrop_memberships (
++  user_id text PRIMARY KEY REFERENCES fatedrop_users(id) ON DELETE CASCADE,
++  tier text NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'plus', 'pro')),
++  status text NOT NULL DEFAULT 'free' CHECK (status IN ('free', 'trialing', 'active', 'past_due', 'paused', 'canceled')),
++  stripe_customer_id text UNIQUE,
++  stripe_subscription_id text UNIQUE,
++  stripe_price_id text,
++  trial_started_at bigint,
++  trial_ends_at bigint,
++  current_period_end bigint,
++  cancel_at_period_end boolean NOT NULL DEFAULT false,
++  updated_at bigint NOT NULL
++);
++
++CREATE TABLE IF NOT EXISTS fatedrop_discord_links (
++  user_id text PRIMARY KEY REFERENCES fatedrop_users(id) ON DELETE CASCADE,
++  discord_user_id text NOT NULL UNIQUE,
++  discord_username text NOT NULL,
++  discord_avatar text,
++  connected_at bigint NOT NULL,
++  role_synced_at bigint
++);
+diff --git a/docs/change-log.md b/docs/change-log.md
+new file mode 100644
+index 0000000..9266afa
+--- /dev/null
++++ b/docs/change-log.md
+@@ -0,0 +1,105 @@
++# FateDrop Working Change Log
++
++This file exists so design and product work can be reviewed as a batch before deployment.
++
++## Baseline already applied: visual identity pass
++
++Files touched by the abstract FateDrop visual pass:
++
++- `app/page.tsx`
++- `app/businesses/page.tsx`
++- `app/collectors/page.tsx`
++- `app/events/page.tsx`
++- `app/globals.css`
++- `components/fate-signal-field.tsx`
++- `components/page-shell.tsx`
++- `components/signal-icon.tsx`
++- `components/stock-lifecycle.tsx`
++
++## Held separately: Wear the Signal improvement
++
++The previously prepared merch patch is deliberately **not folded into this account/membership pass yet** so the wider website review can decide the final merch direction first.
++
++Held patch would touch:
++
++- `app/page.tsx`
++- `app/globals.css`
++
++## Current account / membership pass
++
++### New files
++
++- `app/account/page.tsx`
++- `app/account/login/page.tsx`
++- `app/account/register/page.tsx`
++- `app/api/account/entitlement/route.ts`
++- `app/api/account/profile/route.ts`
++- `app/api/auth/login/route.ts`
++- `app/api/auth/logout/route.ts`
++- `app/api/auth/register/route.ts`
++- `app/api/billing/checkout/route.ts`
++- `app/api/billing/portal/route.ts`
++- `app/api/billing/webhook/route.ts`
++- `app/api/discord/callback/route.ts`
++- `app/api/discord/link/route.ts`
++- `app/api/discord/connect/route.ts`
++- `app/api/discord/sync/route.ts`
++- `components/account-auth-form.tsx`
++- `components/account-signout.tsx`
++- `components/discord-sync-button.tsx`
++- `components/discord-unlink-button.tsx`
++- `components/membership-actions.tsx`
++- `components/profile-editor.tsx`
++- `lib/account-storage.ts`
++- `lib/auth.ts`
++- `lib/billing.ts`
++- `lib/discord.ts`
++- `lib/membership.ts`
++- `docs/membership-foundation.md`
++- `tests/account-foundation.test.mjs`
++
++### Existing files modified
++
++- `.env.example`
++- `.gitignore`
++- `app/cookies/page.tsx`
++- `app/collectors/page.tsx`
++- `app/globals.css`
++- `app/page.tsx`
++- `app/privacy/page.tsx`
++- `app/subscriptions/page.tsx`
++- `app/terms/page.tsx`
++- `components/footer.tsx`
++- `components/nav.tsx`
++- `database/postgres.sql`
++- `README.md`
++
++### Product behaviour added
++
++- FateDrop ID registration/login/logout.
++- Editable collector profile.
++- Permanent Member Since and Network Age.
++- Free / Plus / Pro membership model.
++- 14-day collector trial path.
++- Stripe Checkout + customer portal foundation.
++- Stripe webhook membership sync.
++- Discord permanent invite link.
++- Discord identity linking.
++- Discord Premium role automation and manual resync.
++- Discord public launch gate via `NEXT_PUBLIC_DISCORD_ENABLED`; invite is wired but hidden until ready.
++- Homepage membership/network-identity teaser.
++- Subscription page rewritten around one cross-product membership.
++- Privacy/cookie/terms placeholders updated to reflect account, Stripe and Discord architecture.
++
++### Explicitly not included
++
++- XP.
++- Coins/tokens.
++- Reward marketplace.
++- Level system.
++- Achievement economy.
++- Public profile directory.
++- Direct avatar uploads/file hosting.
++- Live Stripe credentials or products.
++- Live Discord credentials or bot installation.
++- Mobile-app authentication wiring.
+diff --git a/docs/membership-foundation.md b/docs/membership-foundation.md
+new file mode 100644
+index 0000000..3ae6e50
+--- /dev/null
++++ b/docs/membership-foundation.md
+@@ -0,0 +1,165 @@
++# FateDrop ID, Membership and Discord Foundation
++
++This document tracks the account/membership work added after the initial visual-identity pass.
++
++## What exists now
++
++### FateDrop ID
++
++- Email/password registration and login.
++- Passwords use salted `scrypt` hashes; readable passwords are never stored.
++- HttpOnly `fd_session` cookie backed by a server-side session record.
++- Generated network ID such as `FD-7A91C4E2F0`.
++- Editable display name, network handle, bio, avatar URL, primary TCG, collector style, region and visual signal theme.
++- Permanent `created_at` timestamp used for Member Since and Network Age.
++- No XP, coins, reward points or reward economy has been introduced.
++
++### Collector membership
++
++Membership state is stored separately from the profile so the same entitlement can eventually be consumed by the website, FateDrop app and Discord bot.
++
++Supported tiers:
++
++- `free`
++- `plus`
++- `pro`
++
++Supported states:
++
++- `free`
++- `trialing`
++- `active`
++- `past_due`
++- `paused`
++- `canceled`
++
++The website considers Plus/Pro `trialing` or `active` memberships Premium-entitled.
++
++### Stripe
++
++The source includes:
++
++- Hosted subscription Checkout Session creation.
++- 14-day collector trial.
++- Optional card-required or no-card trial configuration.
++- Stripe customer portal hand-off.
++- Signed webhook verification.
++- Subscription status updates into the FateDrop membership record.
++- Automatic Discord role resync after membership changes.
++
++Checkout does not become live until the Stripe environment variables and Price IDs are supplied.
++
++Required production variables:
++
++```text
++STRIPE_SECRET_KEY
++STRIPE_WEBHOOK_SECRET
++STRIPE_PRICE_PLUS
++STRIPE_PRICE_PRO
++FATEDROP_TRIAL_REQUIRE_CARD=true|false
++```
++
++Webhook URL:
++
++```text
++https://YOUR-DOMAIN/api/billing/webhook
++```
++
++Recommended subscription events include `checkout.session.completed` and `customer.subscription.*` state changes.
++
++Official Stripe references used for this implementation:
++
++- https://docs.stripe.com/payments/checkout/free-trials
++- https://docs.stripe.com/billing/subscriptions/webhooks
++- https://docs.stripe.com/api/checkout/sessions/create
++
++### Discord
++
++Permanent community invite:
++
++```text
++https://discord.gg/QK9ahpYSFk
++```
++
++The source includes:
++
++- Discord OAuth2 code flow using the `identify` scope.
++- A state cookie to protect the OAuth callback.
++- Storage of Discord user ID/name/avatar reference only; the temporary OAuth access token is not retained.
++- Premium role assignment/removal using a Discord bot with Manage Roles permission.
++- Manual `Sync Discord role` action for users who connect their identity before joining the server.
++- Webhook-driven role resync when Stripe membership changes.
++
++Required production variables:
++
++```text
++NEXT_PUBLIC_DISCORD_ENABLED=true
++DISCORD_CLIENT_ID
++DISCORD_CLIENT_SECRET
++DISCORD_BOT_TOKEN
++DISCORD_GUILD_ID
++DISCORD_PREMIUM_ROLE_ID
++```
++
++Keep `NEXT_PUBLIC_DISCORD_ENABLED=false` until the server is ready to be advertised publicly. OAuth/bot setup can be completed before that switch is enabled.
++
++OAuth redirect URI:
++
++```text
++https://YOUR-DOMAIN/api/discord/callback
++```
++
++The bot's role must sit above the FateDrop Premium role in Discord's role hierarchy.
++
++Official Discord references used for this implementation:
++
++- https://docs.discord.com/developers/topics/oauth2
++- https://docs.discord.com/developers/resources/guild#add-guild-member-role
++
++## Storage
++
++Development defaults to:
++
++```text
++FATEDROP_ACCOUNT_STORE=file
++FATEDROP_ACCOUNT_FILE=data/accounts.json
++```
++
++The file is Git-ignored.
++
++Production should use:
++
++```text
++FATEDROP_ACCOUNT_STORE=postgres
++DATABASE_URL=...
++```
++
++Run `database/postgres.sql` before enabling production account registration.
++
++## App access
++
++The website now has a single membership entitlement model suitable for app access, plus an authenticated `GET /api/account/entitlement` endpoint for the current web session. The mobile app still needs to authenticate against the same account service or FateDrop Cloud and consume this entitlement. Do not duplicate Premium state inside the app as a separate source of truth.
++
++Recommended next integration contract:
++
++1. FateDrop ID authenticates with FateDrop Cloud.
++2. Cloud resolves the same `user_id`/FateDrop ID.
++3. Cloud returns current tier/status and `premium=true|false`.
++4. Mobile features gate on that entitlement.
++5. Stripe remains the billing source; Cloud remains the product-access source.
++
++## Public-launch blockers
++
++- Add email verification and password-reset delivery through the chosen transactional email provider.
++
++Before taking real payments at scale:
++
++- Complete the final privacy/terms legal review.
++- Set the data-controller and privacy contact details.
++- Configure production PostgreSQL and backups.
++- Add production-grade auth rate limiting / abuse monitoring.
++- Configure Stripe products, prices, customer portal and webhook destination.
++- Decide whether the 14-day trial requires a payment card.
++- Configure Discord application, bot, guild and Premium role.
++- Test cancellation, failed payment, trial expiry, Discord join-after-link and role removal paths.
++- Connect the mobile app to the same entitlement source.
+diff --git a/lib/account-storage.ts b/lib/account-storage.ts
+new file mode 100644
+index 0000000..076e1ea
+--- /dev/null
++++ b/lib/account-storage.ts
+@@ -0,0 +1,513 @@
++import type { NeonQueryFunction } from "@neondatabase/serverless";
++
++export type MembershipTier = "free" | "plus" | "pro";
++export type MembershipStatus = "free" | "trialing" | "active" | "past_due" | "paused" | "canceled";
++export type ProfileTheme = "signal" | "cyan" | "violet" | "magenta";
++
++export type AccountRecord = {
++  id: string;
++  fateId: string;
++  email: string;
++  passwordHash: string;
++  displayName: string;
++  username: string;
++  bio: string | null;
++  avatarUrl: string | null;
++  primaryTcg: string | null;
++  collectorStyle: string | null;
++  region: string | null;
++  profileTheme: ProfileTheme;
++  createdAt: number;
++  updatedAt: number;
++};
++
++export type MembershipRecord = {
++  userId: string;
++  tier: MembershipTier;
++  status: MembershipStatus;
++  stripeCustomerId: string | null;
++  stripeSubscriptionId: string | null;
++  stripePriceId: string | null;
++  trialStartedAt: number | null;
++  trialEndsAt: number | null;
++  currentPeriodEnd: number | null;
++  cancelAtPeriodEnd: boolean;
++  updatedAt: number;
++};
++
++export type DiscordLinkRecord = {
++  userId: string;
++  discordUserId: string;
++  discordUsername: string;
++  discordAvatar: string | null;
++  connectedAt: number;
++  roleSyncedAt: number | null;
++};
++
++export type AccountSnapshot = {
++  account: AccountRecord;
++  membership: MembershipRecord;
++  discord: DiscordLinkRecord | null;
++};
++
++export class AccountStorageUnavailableError extends Error {
++  constructor(message = "Account storage is not configured.") {
++    super(message);
++    this.name = "AccountStorageUnavailableError";
++  }
++}
++
++export class AccountConflictError extends Error {
++  constructor(message: string) {
++    super(message);
++    this.name = "AccountConflictError";
++  }
++}
++
++type SessionRecord = {
++  tokenHash: string;
++  userId: string;
++  createdAt: number;
++  expiresAt: number;
++};
++
++type FileState = {
++  version: 1;
++  accounts: AccountRecord[];
++  memberships: MembershipRecord[];
++  sessions: SessionRecord[];
++  discordLinks: DiscordLinkRecord[];
++};
++
++const emptyState = (): FileState => ({
++  version: 1,
++  accounts: [],
++  memberships: [],
++  sessions: [],
++  discordLinks: [],
++});
++
++let fileQueue: Promise<unknown> = Promise.resolve();
++
++function storageMode() {
++  return process.env.FATEDROP_ACCOUNT_STORE ?? (process.env.NODE_ENV === "development" ? "file" : "disabled");
++}
++
++function defaultMembership(userId: string, now = Math.floor(Date.now() / 1000)): MembershipRecord {
++  return {
++    userId,
++    tier: "free",
++    status: "free",
++    stripeCustomerId: null,
++    stripeSubscriptionId: null,
++    stripePriceId: null,
++    trialStartedAt: null,
++    trialEndsAt: null,
++    currentPeriodEnd: null,
++    cancelAtPeriodEnd: false,
++    updatedAt: now,
++  };
++}
++
++export async function createAccount(account: AccountRecord) {
++  const membership = defaultMembership(account.id, account.createdAt);
++  const mode = storageMode();
++  if (mode === "postgres") return createAccountPostgres(account, membership);
++  if (mode === "file") {
++    return withFileWrite(async (state) => {
++      if (state.accounts.some((item) => item.email === account.email)) throw new AccountConflictError("An account already exists for that email address.");
++      if (state.accounts.some((item) => item.username === account.username)) throw new AccountConflictError("That username is already in use.");
++      if (state.accounts.some((item) => item.fateId === account.fateId)) throw new AccountConflictError("That FateDrop ID is already in use.");
++      state.accounts.push(account);
++      state.memberships.push(membership);
++      return { account, membership, discord: null } satisfies AccountSnapshot;
++    });
++  }
++  throwUnavailable();
++}
++
++export async function findAccountByEmail(email: string) {
++  const mode = storageMode();
++  if (mode === "postgres") return findAccountPostgres("email", email);
++  if (mode === "file") {
++    const state = await readFileState();
++    return state.accounts.find((item) => item.email === email) ?? null;
++  }
++  throwUnavailable();
++}
++
++export async function findAccountByUsername(username: string) {
++  const mode = storageMode();
++  if (mode === "postgres") return findAccountPostgres("username", username);
++  if (mode === "file") {
++    const state = await readFileState();
++    return state.accounts.find((item) => item.username === username) ?? null;
++  }
++  throwUnavailable();
++}
++
++export async function getAccountSnapshot(userId: string): Promise<AccountSnapshot | null> {
++  const mode = storageMode();
++  if (mode === "postgres") return getSnapshotPostgres(userId);
++  if (mode === "file") {
++    const state = await readFileState();
++    const account = state.accounts.find((item) => item.id === userId);
++    if (!account) return null;
++    return {
++      account,
++      membership: state.memberships.find((item) => item.userId === userId) ?? defaultMembership(userId),
++      discord: state.discordLinks.find((item) => item.userId === userId) ?? null,
++    };
++  }
++  throwUnavailable();
++}
++
++export async function updateAccountProfile(userId: string, updates: Partial<Pick<AccountRecord, "displayName" | "username" | "bio" | "avatarUrl" | "primaryTcg" | "collectorStyle" | "region" | "profileTheme">>) {
++  const mode = storageMode();
++  if (mode === "postgres") return updateProfilePostgres(userId, updates);
++  if (mode === "file") {
++    return withFileWrite(async (state) => {
++      const index = state.accounts.findIndex((item) => item.id === userId);
++      if (index < 0) return null;
++      const current = state.accounts[index];
++      const username = updates.username ?? current.username;
++      if (state.accounts.some((item) => item.id !== userId && item.username === username)) throw new AccountConflictError("That username is already in use.");
++      const account = { ...current, ...updates, updatedAt: Math.floor(Date.now() / 1000) };
++      state.accounts[index] = account;
++      return account;
++    });
++  }
++  throwUnavailable();
++}
++
++export async function createSession(tokenHash: string, userId: string, expiresAt: number) {
++  const createdAt = Math.floor(Date.now() / 1000);
++  const mode = storageMode();
++  if (mode === "postgres") {
++    const sql = await postgres();
++    await sql`DELETE FROM fatedrop_sessions WHERE expires_at <= ${createdAt}`;
++    await sql`INSERT INTO fatedrop_sessions (token_hash, user_id, created_at, expires_at) VALUES (${tokenHash}, ${userId}, ${createdAt}, ${expiresAt})`;
++    return;
++  }
++  if (mode === "file") {
++    await withFileWrite(async (state) => {
++      state.sessions = state.sessions.filter((item) => item.expiresAt > createdAt && item.tokenHash !== tokenHash);
++      state.sessions.push({ tokenHash, userId, createdAt, expiresAt });
++    });
++    return;
++  }
++  throwUnavailable();
++}
++
++export async function findSessionUser(tokenHash: string) {
++  const now = Math.floor(Date.now() / 1000);
++  const mode = storageMode();
++  if (mode === "postgres") {
++    const sql = await postgres();
++    const rows = await sql`
++      SELECT u.* FROM fatedrop_sessions s
++      JOIN fatedrop_users u ON u.id = s.user_id
++      WHERE s.token_hash = ${tokenHash} AND s.expires_at > ${now}
++      LIMIT 1
++    `;
++    return rows[0] ? mapAccount(rows[0] as Record<string, unknown>) : null;
++  }
++  if (mode === "file") {
++    const state = await readFileState();
++    const session = state.sessions.find((item) => item.tokenHash === tokenHash && item.expiresAt > now);
++    if (!session) return null;
++    return state.accounts.find((item) => item.id === session.userId) ?? null;
++  }
++  throwUnavailable();
++}
++
++export async function deleteSession(tokenHash: string) {
++  const mode = storageMode();
++  if (mode === "postgres") {
++    const sql = await postgres();
++    await sql`DELETE FROM fatedrop_sessions WHERE token_hash = ${tokenHash}`;
++    return;
++  }
++  if (mode === "file") {
++    await withFileWrite(async (state) => {
++      state.sessions = state.sessions.filter((item) => item.tokenHash !== tokenHash);
++    });
++    return;
++  }
++  throwUnavailable();
++}
++
++export async function updateMembership(userId: string, updates: Partial<Omit<MembershipRecord, "userId">>) {
++  const mode = storageMode();
++  if (mode === "postgres") return updateMembershipPostgres(userId, updates);
++  if (mode === "file") {
++    return withFileWrite(async (state) => {
++      const index = state.memberships.findIndex((item) => item.userId === userId);
++      const current = index >= 0 ? state.memberships[index] : defaultMembership(userId);
++      const membership = { ...current, ...updates, userId, updatedAt: Math.floor(Date.now() / 1000) };
++      if (index >= 0) state.memberships[index] = membership;
++      else state.memberships.push(membership);
++      return membership;
++    });
++  }
++  throwUnavailable();
++}
++
++export async function findUserIdByStripeCustomer(stripeCustomerId: string) {
++  const mode = storageMode();
++  if (mode === "postgres") {
++    const sql = await postgres();
++    const rows = await sql`SELECT user_id FROM fatedrop_memberships WHERE stripe_customer_id = ${stripeCustomerId} LIMIT 1`;
++    return rows[0]?.user_id ? String(rows[0].user_id) : null;
++  }
++  if (mode === "file") {
++    const state = await readFileState();
++    return state.memberships.find((item) => item.stripeCustomerId === stripeCustomerId)?.userId ?? null;
++  }
++  throwUnavailable();
++}
++
++export async function saveDiscordLink(link: DiscordLinkRecord) {
++  const mode = storageMode();
++  if (mode === "postgres") {
++    const sql = await postgres();
++    try {
++      await sql`
++        INSERT INTO fatedrop_discord_links (user_id, discord_user_id, discord_username, discord_avatar, connected_at, role_synced_at)
++        VALUES (${link.userId}, ${link.discordUserId}, ${link.discordUsername}, ${link.discordAvatar}, ${link.connectedAt}, ${link.roleSyncedAt})
++        ON CONFLICT (user_id) DO UPDATE SET
++          discord_user_id = EXCLUDED.discord_user_id,
++          discord_username = EXCLUDED.discord_username,
++          discord_avatar = EXCLUDED.discord_avatar,
++          connected_at = EXCLUDED.connected_at,
++          role_synced_at = EXCLUDED.role_synced_at
++      `;
++      return link;
++    } catch (error) {
++      if (isPostgresDuplicate(error)) throw new AccountConflictError("That Discord account is already linked to another FateDrop ID.");
++      throw error;
++    }
++  }
++  if (mode === "file") {
++    return withFileWrite(async (state) => {
++      const duplicate = state.discordLinks.find((item) => item.discordUserId === link.discordUserId && item.userId !== link.userId);
++      if (duplicate) throw new AccountConflictError("That Discord account is already linked to another FateDrop ID.");
++      state.discordLinks = state.discordLinks.filter((item) => item.userId !== link.userId);
++      state.discordLinks.push(link);
++      return link;
++    });
++  }
++  throwUnavailable();
++}
++
++export async function removeDiscordLink(userId: string) {
++  const mode = storageMode();
++  if (mode === "postgres") {
++    const sql = await postgres();
++    await sql`DELETE FROM fatedrop_discord_links WHERE user_id = ${userId}`;
++    return;
++  }
++  if (mode === "file") {
++    await withFileWrite(async (state) => {
++      state.discordLinks = state.discordLinks.filter((item) => item.userId !== userId);
++    });
++    return;
++  }
++  throwUnavailable();
++}
++
++export async function updateDiscordRoleSync(userId: string, roleSyncedAt: number | null) {
++  const mode = storageMode();
++  if (mode === "postgres") {
++    const sql = await postgres();
++    await sql`UPDATE fatedrop_discord_links SET role_synced_at = ${roleSyncedAt} WHERE user_id = ${userId}`;
++    return;
++  }
++  if (mode === "file") {
++    await withFileWrite(async (state) => {
++      const link = state.discordLinks.find((item) => item.userId === userId);
++      if (link) link.roleSyncedAt = roleSyncedAt;
++    });
++    return;
++  }
++  throwUnavailable();
++}
++
++async function createAccountPostgres(account: AccountRecord, membership: MembershipRecord) {
++  const sql = await postgres();
++  try {
++    await sql`
++      WITH inserted_user AS (
++        INSERT INTO fatedrop_users (
++          id, fate_id, email, password_hash, display_name, username, bio, avatar_url,
++          primary_tcg, collector_style, region, profile_theme, created_at, updated_at
++        ) VALUES (
++          ${account.id}, ${account.fateId}, ${account.email}, ${account.passwordHash}, ${account.displayName},
++          ${account.username}, ${account.bio}, ${account.avatarUrl}, ${account.primaryTcg}, ${account.collectorStyle},
++          ${account.region}, ${account.profileTheme}, ${account.createdAt}, ${account.updatedAt}
++        )
++        RETURNING id
++      )
++      INSERT INTO fatedrop_memberships (
++        user_id, tier, status, stripe_customer_id, stripe_subscription_id, stripe_price_id,
++        trial_started_at, trial_ends_at, current_period_end, cancel_at_period_end, updated_at
++      )
++      SELECT
++        id, ${membership.tier}, ${membership.status}, ${membership.stripeCustomerId},
++        ${membership.stripeSubscriptionId}, ${membership.stripePriceId}, ${membership.trialStartedAt},
++        ${membership.trialEndsAt}, ${membership.currentPeriodEnd}, ${membership.cancelAtPeriodEnd}, ${membership.updatedAt}
++      FROM inserted_user
++    `;
++    return { account, membership, discord: null } satisfies AccountSnapshot;
++  } catch (error) {
++    if (isPostgresDuplicate(error)) throw new AccountConflictError("That email address, username or FateDrop ID is already registered.");
++    throw error;
++  }
++}
++
++async function findAccountPostgres(field: "email" | "username", value: string) {
++  const sql = await postgres();
++  const rows = field === "email"
++    ? await sql`SELECT * FROM fatedrop_users WHERE email = ${value} LIMIT 1`
++    : await sql`SELECT * FROM fatedrop_users WHERE username = ${value} LIMIT 1`;
++  return rows[0] ? mapAccount(rows[0] as Record<string, unknown>) : null;
++}
++
++async function getSnapshotPostgres(userId: string): Promise<AccountSnapshot | null> {
++  const sql = await postgres();
++  const users = await sql`SELECT * FROM fatedrop_users WHERE id = ${userId} LIMIT 1`;
++  if (!users[0]) return null;
++  const memberships = await sql`SELECT * FROM fatedrop_memberships WHERE user_id = ${userId} LIMIT 1`;
++  const discordRows = await sql`SELECT * FROM fatedrop_discord_links WHERE user_id = ${userId} LIMIT 1`;
++  return {
++    account: mapAccount(users[0] as Record<string, unknown>),
++    membership: memberships[0] ? mapMembership(memberships[0] as Record<string, unknown>) : defaultMembership(userId),
++    discord: discordRows[0] ? mapDiscord(discordRows[0] as Record<string, unknown>) : null,
++  };
++}
++
++async function updateProfilePostgres(userId: string, updates: Partial<Pick<AccountRecord, "displayName" | "username" | "bio" | "avatarUrl" | "primaryTcg" | "collectorStyle" | "region" | "profileTheme">>) {
++  const snapshot = await getSnapshotPostgres(userId);
++  if (!snapshot) return null;
++  const account = { ...snapshot.account, ...updates, updatedAt: Math.floor(Date.now() / 1000) };
++  const sql = await postgres();
++  try {
++    const rows = await sql`
++      UPDATE fatedrop_users SET
++        display_name = ${account.displayName}, username = ${account.username}, bio = ${account.bio},
++        avatar_url = ${account.avatarUrl}, primary_tcg = ${account.primaryTcg}, collector_style = ${account.collectorStyle},
++        region = ${account.region}, profile_theme = ${account.profileTheme}, updated_at = ${account.updatedAt}
++      WHERE id = ${userId}
++      RETURNING *
++    `;
++    return rows[0] ? mapAccount(rows[0] as Record<string, unknown>) : null;
++  } catch (error) {
++    if (isPostgresDuplicate(error)) throw new AccountConflictError("That username is already in use.");
++    throw error;
++  }
++}
++
++async function updateMembershipPostgres(userId: string, updates: Partial<Omit<MembershipRecord, "userId">>) {
++  const snapshot = await getSnapshotPostgres(userId);
++  const current = snapshot?.membership ?? defaultMembership(userId);
++  const membership = { ...current, ...updates, userId, updatedAt: Math.floor(Date.now() / 1000) };
++  const sql = await postgres();
++  const rows = await sql`
++    INSERT INTO fatedrop_memberships (
++      user_id, tier, status, stripe_customer_id, stripe_subscription_id, stripe_price_id,
++      trial_started_at, trial_ends_at, current_period_end, cancel_at_period_end, updated_at
++    ) VALUES (
++      ${membership.userId}, ${membership.tier}, ${membership.status}, ${membership.stripeCustomerId},
++      ${membership.stripeSubscriptionId}, ${membership.stripePriceId}, ${membership.trialStartedAt},
++      ${membership.trialEndsAt}, ${membership.currentPeriodEnd}, ${membership.cancelAtPeriodEnd}, ${membership.updatedAt}
++    )
++    ON CONFLICT (user_id) DO UPDATE SET
++      tier = EXCLUDED.tier, status = EXCLUDED.status, stripe_customer_id = EXCLUDED.stripe_customer_id,
++      stripe_subscription_id = EXCLUDED.stripe_subscription_id, stripe_price_id = EXCLUDED.stripe_price_id,
++      trial_started_at = EXCLUDED.trial_started_at, trial_ends_at = EXCLUDED.trial_ends_at,
++      current_period_end = EXCLUDED.current_period_end, cancel_at_period_end = EXCLUDED.cancel_at_period_end,
++      updated_at = EXCLUDED.updated_at
++    RETURNING *
++  `;
++  if (!rows[0]) throw new AccountStorageUnavailableError("Membership record could not be written.");
++  return mapMembership(rows[0] as Record<string, unknown>);
++}
++
++async function postgres(): Promise<NeonQueryFunction<false, false>> {
++  const connectionString = process.env.DATABASE_URL;
++  if (!connectionString) throw new AccountStorageUnavailableError("DATABASE_URL is required for PostgreSQL account storage.");
++  const { neon } = await import("@neondatabase/serverless");
++  return neon(connectionString);
++}
++
++async function withFileWrite<T>(operation: (state: FileState) => Promise<T> | T): Promise<T> {
++  const run = fileQueue.then(async () => {
++    const state = await readFileState();
++    const result = await operation(state);
++    await writeFileState(state);
++    return result;
++  });
++  fileQueue = run.catch(() => undefined);
++  return run;
++}
++
++async function readFileState(): Promise<FileState> {
++  const [{ readFile }, path] = await Promise.all([import("node:fs/promises"), import("node:path")]);
++  const filePath = path.resolve(process.cwd(), process.env.FATEDROP_ACCOUNT_FILE ?? "data/accounts.json");
++  try {
++    const parsed = JSON.parse(await readFile(filePath, "utf8")) as Partial<FileState>;
++    return {
++      version: 1,
++      accounts: Array.isArray(parsed.accounts) ? parsed.accounts : [],
++      memberships: Array.isArray(parsed.memberships) ? parsed.memberships : [],
++      sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
++      discordLinks: Array.isArray(parsed.discordLinks) ? parsed.discordLinks : [],
++    };
++  } catch (error) {
++    if (isMissingFile(error)) return emptyState();
++    throw error;
++  }
++}
++
++async function writeFileState(state: FileState) {
++  const [{ mkdir, writeFile, rename }, path] = await Promise.all([import("node:fs/promises"), import("node:path")]);
++  const filePath = path.resolve(process.cwd(), process.env.FATEDROP_ACCOUNT_FILE ?? "data/accounts.json");
++  const tempPath = `${filePath}.${process.pid}.tmp`;
++  await mkdir(path.dirname(filePath), { recursive: true });
++  await writeFile(tempPath, `${JSON.stringify(state, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
++  await rename(tempPath, filePath);
++}
++
++function throwUnavailable(): never {
++  throw new AccountStorageUnavailableError("Set FATEDROP_ACCOUNT_STORE to file for local development or postgres for hosted account storage.");
++}
++
++function mapAccount(row: Record<string, unknown>): AccountRecord {
++  return {
++    id: String(row.id), fateId: String(row.fate_id), email: String(row.email), passwordHash: String(row.password_hash),
++    displayName: String(row.display_name), username: String(row.username), bio: nullableString(row.bio), avatarUrl: nullableString(row.avatar_url),
++    primaryTcg: nullableString(row.primary_tcg), collectorStyle: nullableString(row.collector_style), region: nullableString(row.region),
++    profileTheme: (String(row.profile_theme ?? "signal") as ProfileTheme), createdAt: Number(row.created_at), updatedAt: Number(row.updated_at),
++  };
++}
++
++function mapMembership(row: Record<string, unknown>): MembershipRecord {
++  return {
++    userId: String(row.user_id), tier: String(row.tier) as MembershipTier, status: String(row.status) as MembershipStatus,
++    stripeCustomerId: nullableString(row.stripe_customer_id), stripeSubscriptionId: nullableString(row.stripe_subscription_id),
++    stripePriceId: nullableString(row.stripe_price_id), trialStartedAt: nullableNumber(row.trial_started_at), trialEndsAt: nullableNumber(row.trial_ends_at),
++    currentPeriodEnd: nullableNumber(row.current_period_end), cancelAtPeriodEnd: Boolean(row.cancel_at_period_end), updatedAt: Number(row.updated_at),
++  };
++}
++
++function mapDiscord(row: Record<string, unknown>): DiscordLinkRecord {
++  return {
++    userId: String(row.user_id), discordUserId: String(row.discord_user_id), discordUsername: String(row.discord_username),
++    discordAvatar: nullableString(row.discord_avatar), connectedAt: Number(row.connected_at), roleSyncedAt: nullableNumber(row.role_synced_at),
++  };
++}
++
++function nullableString(value: unknown) { return value === null || value === undefined ? null : String(value); }
++function nullableNumber(value: unknown) { return value === null || value === undefined ? null : Number(value); }
++function isMissingFile(error: unknown) { return Boolean(error && typeof error === "object" && "code" in error && error.code === "ENOENT"); }
++function isPostgresDuplicate(error: unknown) { return Boolean(error && typeof error === "object" && "code" in error && error.code === "23505"); }
+diff --git a/lib/auth.ts b/lib/auth.ts
+new file mode 100644
+index 0000000..5704ac6
+--- /dev/null
++++ b/lib/auth.ts
+@@ -0,0 +1,67 @@
++import { cookies } from "next/headers";
++import { createHash, randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
++import { promisify } from "node:util";
++import { createSession, deleteSession, findSessionUser, getAccountSnapshot } from "./account-storage";
++
++const scrypt = promisify(nodeScrypt);
++const COOKIE_NAME = "fd_session";
++const SESSION_SECONDS = 60 * 60 * 24 * 30;
++
++export async function hashPassword(password: string) {
++  const salt = randomBytes(16);
++  const derived = (await scrypt(password, salt, 64)) as Buffer;
++  return `scrypt$${salt.toString("base64url")}$${derived.toString("base64url")}`;
++}
++
++export async function verifyPassword(password: string, stored: string) {
++  const [algorithm, saltValue, hashValue] = stored.split("$");
++  if (algorithm !== "scrypt" || !saltValue || !hashValue) return false;
++  const salt = Buffer.from(saltValue, "base64url");
++  const expected = Buffer.from(hashValue, "base64url");
++  const actual = (await scrypt(password, salt, expected.length)) as Buffer;
++  return actual.length === expected.length && timingSafeEqual(actual, expected);
++}
++
++export async function startSession(userId: string) {
++  const token = randomBytes(32).toString("base64url");
++  const tokenHash = hashSessionToken(token);
++  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_SECONDS;
++  await createSession(tokenHash, userId, expiresAt);
++  const jar = await cookies();
++  jar.set(COOKIE_NAME, token, {
++    httpOnly: true,
++    sameSite: "lax",
++    secure: process.env.NODE_ENV === "production",
++    path: "/",
++    maxAge: SESSION_SECONDS,
++  });
++}
++
++export async function endSession() {
++  const jar = await cookies();
++  const token = jar.get(COOKIE_NAME)?.value;
++  if (token) await deleteSession(hashSessionToken(token));
++  jar.delete(COOKIE_NAME);
++}
++
++export async function getCurrentUser() {
++  const jar = await cookies();
++  const token = jar.get(COOKIE_NAME)?.value;
++  if (!token) return null;
++  return findSessionUser(hashSessionToken(token));
++}
++
++export async function getCurrentSnapshot() {
++  const account = await getCurrentUser();
++  if (!account) return null;
++  return getAccountSnapshot(account.id);
++}
++
++export function assertSameOrigin(request: Request) {
++  const origin = request.headers.get("origin");
++  if (origin && origin !== new URL(request.url).origin) throw new Error("CROSS_ORIGIN");
++}
++
++function hashSessionToken(token: string) {
++  return createHash("sha256").update(token).digest("hex");
++}
+diff --git a/lib/billing.ts b/lib/billing.ts
+new file mode 100644
+index 0000000..bea08ea
+--- /dev/null
++++ b/lib/billing.ts
+@@ -0,0 +1,134 @@
++import { createHmac, timingSafeEqual } from "node:crypto";
++import type { MembershipTier } from "./account-storage";
++import { TRIAL_DAYS } from "./membership";
++
++const STRIPE_API = "https://api.stripe.com/v1";
++
++type StripeJson = Record<string, unknown>;
++
++export class BillingUnavailableError extends Error {
++  constructor(message = "Billing is not configured yet.") {
++    super(message);
++    this.name = "BillingUnavailableError";
++  }
++}
++
++export function priceIdForTier(tier: MembershipTier) {
++  if (tier === "plus") return process.env.STRIPE_PRICE_PLUS ?? null;
++  if (tier === "pro") return process.env.STRIPE_PRICE_PRO ?? null;
++  return null;
++}
++
++export function tierForPriceId(priceId: string | null | undefined): MembershipTier {
++  if (priceId && priceId === process.env.STRIPE_PRICE_PRO) return "pro";
++  if (priceId && priceId === process.env.STRIPE_PRICE_PLUS) return "plus";
++  return "free";
++}
++
++export async function createCheckoutSession(input: {
++  userId: string;
++  email: string;
++  fateId: string;
++  tier: Exclude<MembershipTier, "free">;
++  existingCustomerId?: string | null;
++  origin: string;
++}) {
++  const priceId = priceIdForTier(input.tier);
++  if (!priceId) throw new BillingUnavailableError(`Stripe price for ${input.tier} is not configured.`);
++
++  const body = new URLSearchParams();
++  body.set("mode", "subscription");
++  body.set("success_url", `${input.origin}/account?billing=success`);
++  body.set("cancel_url", `${input.origin}/subscriptions?billing=cancelled`);
++  body.set("client_reference_id", input.userId);
++  body.set("line_items[0][price]", priceId);
++  body.set("line_items[0][quantity]", "1");
++  body.set("subscription_data[trial_period_days]", String(TRIAL_DAYS));
++  if ((process.env.FATEDROP_TRIAL_REQUIRE_CARD ?? "true") === "false") {
++    body.set("payment_method_collection", "if_required");
++    body.set("subscription_data[trial_settings][end_behavior][missing_payment_method]", "cancel");
++  }
++  body.set("subscription_data[metadata][fatedrop_user_id]", input.userId);
++  body.set("subscription_data[metadata][fatedrop_fate_id]", input.fateId);
++  body.set("metadata[fatedrop_user_id]", input.userId);
++  body.set("metadata[fatedrop_tier]", input.tier);
++  body.set("allow_promotion_codes", "true");
++  if (input.existingCustomerId) body.set("customer", input.existingCustomerId);
++  else body.set("customer_email", input.email);
++
++  return stripeRequest("/checkout/sessions", body);
++}
++
++export async function createBillingPortalSession(customerId: string, origin: string) {
++  const body = new URLSearchParams();
++  body.set("customer", customerId);
++  body.set("return_url", `${origin}/account`);
++  return stripeRequest("/billing_portal/sessions", body);
++}
++
++async function stripeRequest(path: string, body: URLSearchParams) {
++  const secret = process.env.STRIPE_SECRET_KEY;
++  if (!secret) throw new BillingUnavailableError("STRIPE_SECRET_KEY is not configured.");
++  const response = await fetch(`${STRIPE_API}${path}`, {
++    method: "POST",
++    headers: {
++      Authorization: `Basic ${Buffer.from(`${secret}:`).toString("base64")}`,
++      "Content-Type": "application/x-www-form-urlencoded",
++    },
++    body,
++    cache: "no-store",
++  });
++  const payload = (await response.json()) as StripeJson;
++  if (!response.ok) {
++    const nested = payload.error && typeof payload.error === "object" ? payload.error as Record<string, unknown> : null;
++    const message = nested?.message ? String(nested.message) : "Stripe rejected the billing request.";
++    throw new Error(message);
++  }
++  return payload;
++}
++
++export function verifyStripeWebhook(payload: string, signatureHeader: string | null) {
++  const secret = process.env.STRIPE_WEBHOOK_SECRET;
++  if (!secret) throw new BillingUnavailableError("STRIPE_WEBHOOK_SECRET is not configured.");
++  if (!signatureHeader) return false;
++
++  const parts = signatureHeader.split(",");
++  const timestamp = parts.find((part) => part.startsWith("t="))?.slice(2);
++  const signatures = parts.filter((part) => part.startsWith("v1=")).map((part) => part.slice(3));
++  if (!timestamp || signatures.length === 0) return false;
++
++  const parsed = Number(timestamp);
++  if (!Number.isFinite(parsed) || Math.abs(Math.floor(Date.now() / 1000) - parsed) > 300) return false;
++
++  const expected = createHmac("sha256", secret).update(`${timestamp}.${payload}`).digest("hex");
++  const expectedBuffer = Buffer.from(expected, "hex");
++  return signatures.some((signature) => {
++    try {
++      const actual = Buffer.from(signature, "hex");
++      return actual.length === expectedBuffer.length && timingSafeEqual(actual, expectedBuffer);
++    } catch {
++      return false;
++    }
++  });
++}
++
++export type StripeSubscriptionShape = {
++  id: string;
++  customer: string;
++  status: string;
++  cancel_at_period_end?: boolean;
++  current_period_end?: number;
++  trial_start?: number | null;
++  trial_end?: number | null;
++  metadata?: Record<string, string>;
++  items?: { data?: Array<{ price?: { id?: string }; current_period_end?: number }> };
++};
++
++export function parseStripeSubscription(value: unknown): StripeSubscriptionShape | null {
++  if (!value || typeof value !== "object") return null;
++  const object = value as Record<string, unknown>;
++  if (typeof object.id !== "string") return null;
++  const customer = typeof object.customer === "string" ? object.customer : (object.customer && typeof object.customer === "object" && "id" in object.customer ? String((object.customer as Record<string, unknown>).id) : "");
++  if (!customer) return null;
++  return object as unknown as StripeSubscriptionShape;
++}
+diff --git a/lib/discord.ts b/lib/discord.ts
+new file mode 100644
+index 0000000..a5b55ea
+--- /dev/null
++++ b/lib/discord.ts
+@@ -0,0 +1,113 @@
++import { randomBytes } from "node:crypto";
++import { cookies } from "next/headers";
++import { updateDiscordRoleSync, type DiscordLinkRecord } from "./account-storage";
++import { DISCORD_INVITE_URL, hasPremiumAccess } from "./membership";
++import type { MembershipRecord } from "./account-storage";
++
++const DISCORD_API = "https://discord.com/api/v10";
++const OAUTH_STATE_COOKIE = "fd_discord_state";
++
++export class DiscordUnavailableError extends Error {
++  constructor(message = "Discord linking is not configured yet.") {
++    super(message);
++    this.name = "DiscordUnavailableError";
++  }
++}
++
++export async function buildDiscordAuthorizeUrl(origin: string) {
++  const clientId = process.env.DISCORD_CLIENT_ID;
++  if (!clientId) throw new DiscordUnavailableError("DISCORD_CLIENT_ID is not configured.");
++  const state = randomBytes(24).toString("base64url");
++  const jar = await cookies();
++  jar.set(OAUTH_STATE_COOKIE, state, {
++    httpOnly: true,
++    sameSite: "lax",
++    secure: process.env.NODE_ENV === "production",
++    path: "/",
++    maxAge: 600,
++  });
++  const params = new URLSearchParams({
++    client_id: clientId,
++    response_type: "code",
++    redirect_uri: `${origin}/api/discord/callback`,
++    scope: "identify",
++    state,
++    prompt: "consent",
++  });
++  return `https://discord.com/oauth2/authorize?${params.toString()}`;
++}
++
++export async function validateDiscordState(state: string | null) {
++  const jar = await cookies();
++  const expected = jar.get(OAUTH_STATE_COOKIE)?.value;
++  jar.delete(OAUTH_STATE_COOKIE);
++  return Boolean(state && expected && state === expected);
++}
++
++export async function exchangeDiscordCode(code: string, origin: string) {
++  const clientId = process.env.DISCORD_CLIENT_ID;
++  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
++  if (!clientId || !clientSecret) throw new DiscordUnavailableError("Discord OAuth credentials are not configured.");
++
++  const body = new URLSearchParams({
++    grant_type: "authorization_code",
++    code,
++    redirect_uri: `${origin}/api/discord/callback`,
++  });
++  const response = await fetch(`${DISCORD_API}/oauth2/token`, {
++    method: "POST",
++    headers: {
++      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
++      "Content-Type": "application/x-www-form-urlencoded",
++    },
++    body,
++    cache: "no-store",
++  });
++  if (!response.ok) throw new Error("Discord could not complete the account link.");
++  return response.json() as Promise<{ access_token: string; token_type: string }>;
++}
++
++export async function fetchDiscordIdentity(accessToken: string) {
++  const response = await fetch(`${DISCORD_API}/users/@me`, {
++    headers: { Authorization: `Bearer ${accessToken}` },
++    cache: "no-store",
++  });
++  if (!response.ok) throw new Error("Discord identity could not be read.");
++  const user = await response.json() as { id: string; username: string; global_name?: string | null; avatar?: string | null };
++  return {
++    id: user.id,
++    username: user.global_name || user.username,
++    avatar: user.avatar ?? null,
++  };
++}
++
++export async function syncPremiumDiscordRole(link: DiscordLinkRecord, membership: MembershipRecord) {
++  const botToken = process.env.DISCORD_BOT_TOKEN;
++  const guildId = process.env.DISCORD_GUILD_ID;
++  const roleId = process.env.DISCORD_PREMIUM_ROLE_ID;
++  if (!botToken || !guildId || !roleId) return { configured: false, synced: false, memberFound: false };
++
++  const method = hasPremiumAccess(membership) ? "PUT" : "DELETE";
++  const response = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${link.discordUserId}/roles/${roleId}`, {
++    method,
++    headers: {
++      Authorization: `Bot ${botToken}`,
++      "X-Audit-Log-Reason": "FateDrop membership sync",
++    },
++    cache: "no-store",
++  });
++
++  if (response.status === 404) {
++    await updateDiscordRoleSync(link.userId, null);
++    return { configured: true, synced: false, memberFound: false };
++  }
++  if (!response.ok && response.status !== 204) {
++    await updateDiscordRoleSync(link.userId, null);
++    return { configured: true, synced: false, memberFound: true };
++  }
++  const syncedAt = Math.floor(Date.now() / 1000);
++  await updateDiscordRoleSync(link.userId, syncedAt);
++  return { configured: true, synced: true, memberFound: true, syncedAt };
++}
++
++export { DISCORD_INVITE_URL };
+diff --git a/lib/membership.ts b/lib/membership.ts
+new file mode 100644
+index 0000000..f0a7969
+--- /dev/null
++++ b/lib/membership.ts
+@@ -0,0 +1,39 @@
++import type { MembershipRecord, MembershipTier } from "./account-storage";
++
++export const DISCORD_INVITE_URL = "https://discord.gg/QK9ahpYSFk";
++export const DISCORD_COMMUNITY_OPEN = process.env.NEXT_PUBLIC_DISCORD_ENABLED === "true";
++export const TRIAL_DAYS = 14;
++
++export function hasPremiumAccess(membership: MembershipRecord) {
++  return membership.tier !== "free" && (membership.status === "trialing" || membership.status === "active");
++}
++
++export function membershipLabel(membership: MembershipRecord) {
++  if (membership.status === "trialing") return `${tierLabel(membership.tier)} Trial`;
++  if (membership.status === "active") return tierLabel(membership.tier);
++  if (membership.status === "past_due") return `${tierLabel(membership.tier)} · payment issue`;
++  if (membership.status === "paused") return `${tierLabel(membership.tier)} · paused`;
++  return "Free Network Member";
++}
++
++export function tierLabel(tier: MembershipTier) {
++  if (tier === "plus") return "FateDrop Plus";
++  if (tier === "pro") return "FateDrop Pro";
++  return "Free";
++}
++
++export function networkAge(createdAt: number, now = Math.floor(Date.now() / 1000)) {
++  const days = Math.max(0, Math.floor((now - createdAt) / 86_400));
++  if (days < 1) return "Joined today";
++  if (days === 1) return "1 day in the network";
++  if (days < 30) return `${days} days in the network`;
++  const months = Math.floor(days / 30.4375);
++  if (months < 12) return `${months} ${months === 1 ? "month" : "months"} in the network`;
++  const years = Math.floor(months / 12);
++  const remainder = months % 12;
++  return remainder ? `${years}y ${remainder}m in the network` : `${years} ${years === 1 ? "year" : "years"} in the network`;
++}
++
++export function formatMemberSince(createdAt: number) {
++  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" }).format(new Date(createdAt * 1000));
++}
+diff --git a/tests/account-foundation.test.mjs b/tests/account-foundation.test.mjs
+new file mode 100644
+index 0000000..4e2dc22
+--- /dev/null
++++ b/tests/account-foundation.test.mjs
+@@ -0,0 +1,52 @@
++import assert from "node:assert/strict";
++import { mkdtemp, rm } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import path from "node:path";
++import test from "node:test";
++
++const tempDirectory = await mkdtemp(path.join(tmpdir(), "fatedrop-accounts-"));
++process.env.FATEDROP_ACCOUNT_STORE = "file";
++process.env.FATEDROP_ACCOUNT_FILE = path.join(tempDirectory, "accounts.json");
++
++const storage = await import("../lib/account-storage.ts");
++const membership = await import("../lib/membership.ts");
++
++test("FateDrop ID storage preserves profile, membership age and Discord link state", async () => {
++  const now = Math.floor(Date.now() / 1000) - (12 * 86_400);
++  const account = {
++    id: "test-user",
++    fateId: "FD-TEST000001",
++    email: "member@example.test",
++    passwordHash: "test-only-hash",
++    displayName: "Sample Collector",
++    username: "sample_collector",
++    bio: null,
++    avatarUrl: null,
++    primaryTcg: "Pokémon TCG",
++    collectorStyle: "Sealed collector",
++    region: "South East",
++    profileTheme: "signal",
++    createdAt: now,
++    updatedAt: now,
++  };
++
++  try {
++    let snapshot = await storage.createAccount(account);
++    assert.equal(snapshot.membership.status, "free");
++    assert.match(membership.networkAge(snapshot.account.createdAt), /12 days/);
++
++    await storage.updateMembership(account.id, { tier: "plus", status: "trialing", trialEndsAt: now + (14 * 86_400) });
++    snapshot = await storage.getAccountSnapshot(account.id);
++    assert.equal(membership.hasPremiumAccess(snapshot.membership), true);
++
++    await storage.saveDiscordLink({ userId: account.id, discordUserId: "discord-1", discordUsername: "SampleDiscord", discordAvatar: null, connectedAt: now, roleSyncedAt: null });
++    snapshot = await storage.getAccountSnapshot(account.id);
++    assert.equal(snapshot.discord.discordUsername, "SampleDiscord");
++
++    await storage.removeDiscordLink(account.id);
++    snapshot = await storage.getAccountSnapshot(account.id);
++    assert.equal(snapshot.discord, null);
++  } finally {
++    await rm(tempDirectory, { recursive: true, force: true });
++  }
++});
