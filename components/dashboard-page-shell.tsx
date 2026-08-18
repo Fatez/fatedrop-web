@@ -18,6 +18,8 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
   const now = Math.floor(Date.now() / 1000);
   const trialDaysLeft = snapshot.membership.trialEndsAt ? Math.max(0, Math.ceil((snapshot.membership.trialEndsAt - now) / 86_400)) : null;
   const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET && process.env.STRIPE_PRICE_PLUS && process.env.STRIPE_PRICE_PRO);
+  const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
+  const hasOpenSubscription = Boolean(snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
 
   return (
     <main className="fd-dashboard">
@@ -25,9 +27,9 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
         <div className="fd-dashboard-brand"><BrandMark /><small>One identity. Every drop.</small></div>
         <DashboardNav />
         <div className="fd-dashboard-trial-card">
-          <span>{premium ? plan : "14-Day Free Trial"}</span>
-          <p>{premium ? (snapshot.membership.status === "trialing" ? `${trialDaysLeft ?? 0} trial days remaining.` : "Premium entitlement active.") : "Unlock Premium signals, Discord access and deeper discovery."}</p>
-          {snapshot.membership.stripeCustomerId ? <BillingPortalButton /> : <StartMembershipButton tier="plus" label="Start free trial" />}
+          <span>{premium ? plan : trialEligible ? "14-Day Free Trial" : "Membership"}</span>
+          <p>{premium ? (snapshot.membership.status === "trialing" ? `${trialDaysLeft ?? 0} trial days remaining.` : "Premium entitlement active.") : trialEligible ? "Unlock Premium signals, Discord access and deeper discovery." : "Manage or restart your FateDrop membership."}</p>
+          {hasOpenSubscription ? <BillingPortalButton /> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"} />}
           <small>{stripeReady ? "Stripe billing ready" : "Stripe connection pending"}</small>
         </div>
         <div className="fd-dashboard-sidebar-art" aria-hidden="true" />
