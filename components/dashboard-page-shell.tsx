@@ -11,65 +11,20 @@ import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
 import { serverNowSeconds } from "@/lib/server-time";
 
 export async function DashboardPageShell({ title, eyebrow, children }: { title: string; eyebrow?: string; children: ReactNode }) {
-  const snapshot = await getCurrentSnapshot();
-  if (!snapshot) redirect(`/account/login?next=/dashboard`);
-
-  const premium = hasPremiumAccess(snapshot.membership);
-  const plan = membershipLabel(snapshot.membership);
-  const now = serverNowSeconds();
-  const trialDaysLeft = snapshot.membership.trialEndsAt ? Math.max(0, Math.ceil((snapshot.membership.trialEndsAt - now) / 86_400)) : null;
-  const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET && process.env.STRIPE_PRICE_PLUS && process.env.STRIPE_PRICE_PRO);
-  const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
-  const hasOpenSubscription = Boolean(snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
-
-  return (
-    <main className="fd-dashboard">
-      <aside className="fd-dashboard-sidebar">
-        <div className="fd-dashboard-brand"><BrandMark /><small>One identity. Every drop.</small></div>
-        <DashboardNav />
-        <div className="fd-dashboard-trial-card">
-          <span>{premium ? plan : trialEligible ? "14-Day Free Trial" : "Membership"}</span>
-          <p>{premium ? (snapshot.membership.status === "trialing" ? `${trialDaysLeft ?? 0} trial days remaining.` : "Premium entitlement active.") : trialEligible ? "Unlock Premium signals, Discord access and deeper discovery." : "Manage or restart your FateDrop membership."}</p>
-          {hasOpenSubscription ? <BillingPortalButton /> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"} />}
-          <small>{stripeReady ? "Stripe billing ready" : "Stripe connection pending"}</small>
-        </div>
-        <div className="fd-dashboard-sidebar-art" aria-hidden="true" />
-      </aside>
-
-      <section className="fd-dashboard-main">
-        <header className="fd-dashboard-topbar">
-          <div><span>{eyebrow || title.toUpperCase()}</span><p>{title}</p></div>
-          <form action="/dashboard/search" method="get" className="fd-dashboard-search fd-dashboard-search-upgraded">
-            <span className="fd-dashboard-search-icon" aria-hidden="true">⌕</span>
-            <label>
-              <small>SEARCH FATEDROP</small>
-              <input name="q" aria-label="Search FateDrop" placeholder="Products, sets, stores…" />
-            </label>
-            <button type="submit" aria-label="Run FateDrop search">→</button>
-          </form>
-          <div className="fd-dashboard-top-actions">
-            <Link href="/dashboard/profile" className="fd-dashboard-avatar-link" aria-label="Open FateDrop profile">
-              {snapshot.account.avatarUrl ? <span style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }} /> : <img src="/assets/fatedrop-logo-mark.png" alt="" />}
-            </Link>
-            <AccountSignOut />
-          </div>
-        </header>
-        {children}
-      </section>
-
-      <style>{`
-        .fd-dashboard-search-upgraded{position:relative;min-width:min(430px,38vw);min-height:58px;padding:7px 7px 7px 14px;display:grid;grid-template-columns:30px 1fr 42px;align-items:center;gap:8px;border:1px solid rgba(157,109,255,.3);border-radius:17px;background:radial-gradient(circle at 15% 0%,rgba(88,232,255,.08),transparent 45%),linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));box-shadow:0 12px 36px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.04);transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
-        .fd-dashboard-search-upgraded:focus-within{border-color:rgba(88,232,255,.58);box-shadow:0 0 0 3px rgba(88,232,255,.08),0 16px 42px rgba(49,31,93,.2);transform:translateY(-1px)}
-        .fd-dashboard-search-icon{font-size:24px;line-height:1;color:#b89cff;text-align:center;filter:drop-shadow(0 0 10px rgba(157,109,255,.25))}
-        .fd-dashboard-search-upgraded label{display:flex;min-width:0;flex-direction:column;gap:2px;cursor:text}
-        .fd-dashboard-search-upgraded label small{font-size:8px;font-weight:850;letter-spacing:.16em;color:#817b8d}
-        .fd-dashboard-search-upgraded input{width:100%;padding:0;border:0;outline:0;background:transparent;color:#fff;font-size:14px;font-weight:650;line-height:1.4}
-        .fd-dashboard-search-upgraded input::placeholder{color:#77717f;font-weight:520}
-        .fd-dashboard-search-upgraded button{width:42px;height:42px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:linear-gradient(135deg,#f5f6ff,#c8f8ff 58%,#b79dff);color:#09080d;font-size:19px;font-weight:900;cursor:pointer;box-shadow:0 8px 22px rgba(88,232,255,.11);transition:transform .2s ease,box-shadow .2s ease}
-        .fd-dashboard-search-upgraded button:hover{transform:translateX(2px);box-shadow:0 10px 28px rgba(88,232,255,.2)}
-        @media(max-width:980px){.fd-dashboard-search-upgraded{min-width:260px}.fd-dashboard-search-upgraded label small{display:none}}
-        @media(max-width:760px){.fd-dashboard-topbar{flex-wrap:wrap}.fd-dashboard-search-upgraded{order:3;width:100%;min-width:100%;margin-top:8px}}
-      `}</style>
-    </main>
-  );
+  const snapshot=await getCurrentSnapshot(); if(!snapshot) redirect(`/account/login?next=/dashboard`);
+  const premium=hasPremiumAccess(snapshot.membership),plan=membershipLabel(snapshot.membership),now=serverNowSeconds();
+  const trialDaysLeft=snapshot.membership.trialEndsAt?Math.max(0,Math.ceil((snapshot.membership.trialEndsAt-now)/86_400)):null;
+  const stripeReady=Boolean(process.env.STRIPE_SECRET_KEY&&process.env.STRIPE_WEBHOOK_SECRET&&process.env.STRIPE_PRICE_PLUS&&process.env.STRIPE_PRICE_PRO);
+  const trialEligible=!snapshot.membership.stripeCustomerId&&!snapshot.membership.trialStartedAt;
+  const hasOpenSubscription=Boolean(snapshot.membership.stripeSubscriptionId&&snapshot.membership.status!=="canceled");
+  return <main className="fd-dashboard fd-collector-dashboard">
+    <div className="fd-dashboard-atmosphere" aria-hidden="true"><i/><i/><i/><span/></div>
+    <aside className="fd-dashboard-sidebar"><div className="fd-dashboard-brand"><BrandMark/><small>Detect · Compare · Connect</small></div><DashboardNav/><div className="fd-dashboard-trial-card"><span>{premium?plan:trialEligible?"14-Day Free Trial":"Membership"}</span><p>{premium?(snapshot.membership.status==="trialing"?`${trialDaysLeft??0} trial days remaining.`:"Premium entitlement active."):trialEligible?"Unlock Premium signals, Discord access and deeper discovery.":"Manage or restart your FateDrop membership."}</p>{hasOpenSubscription?<BillingPortalButton/>:<StartMembershipButton tier="plus" label={trialEligible?"Start free trial":snapshot.membership.stripeCustomerId?"Restart Plus":"Choose Plus"}/>}<small>{stripeReady?"Stripe billing ready":"Stripe connection pending"}</small></div><div className="fd-dashboard-sidebar-art" aria-hidden="true"/></aside>
+    <section className="fd-dashboard-main"><header className="fd-dashboard-topbar"><div className="fd-dashboard-page-id"><span>{eyebrow||title.toUpperCase()}</span><p>{title}</p><small>FATEDROP // COLLECTOR NETWORK</small></div><form action="/dashboard/search" method="get" className="fd-dashboard-search fd-dashboard-search-upgraded"><span className="fd-dashboard-search-icon">⌕</span><label><small>SEARCH THE NETWORK</small><input name="q" aria-label="Search FateDrop" placeholder="Products, sets, stores…"/></label><button type="submit">→</button></form><div className="fd-dashboard-top-actions"><Link href="/dashboard/profile" className="fd-dashboard-avatar-link" aria-label="Open FateDrop profile">{snapshot.account.avatarUrl?<span style={{backgroundImage:`url("${snapshot.account.avatarUrl}")`}}/>:<img src="/assets/fatedrop-logo-mark.png" alt=""/>}</Link><AccountSignOut/></div></header><div className="fd-dashboard-content-frame">{children}</div></section>
+    <style>{`
+      .fd-collector-dashboard{position:relative;isolation:isolate;background:#07070b}.fd-dashboard-atmosphere{position:fixed;z-index:-1;inset:0;overflow:hidden;pointer-events:none}.fd-dashboard-atmosphere:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 82% 5%,rgba(157,109,255,.09),transparent 30%),radial-gradient(circle at 48% 90%,rgba(88,232,255,.045),transparent 34%)}.fd-dashboard-atmosphere i{position:absolute;width:48vw;height:1px;right:-9vw;background:linear-gradient(90deg,transparent,rgba(88,232,255,.13),rgba(157,109,255,.12),transparent);transform:rotate(-17deg)}.fd-dashboard-atmosphere i:nth-child(1){top:19%}.fd-dashboard-atmosphere i:nth-child(2){top:43%;right:-2vw}.fd-dashboard-atmosphere i:nth-child(3){top:72%;right:-14vw}.fd-dashboard-atmosphere span{position:absolute;right:7%;top:15%;width:180px;height:250px;border:1px solid rgba(157,109,255,.035);border-radius:18px;transform:rotate(13deg);box-shadow:-35px 25px 0 -1px rgba(88,232,255,.018),-70px 50px 0 -1px rgba(157,109,255,.018)}
+      .fd-collector-dashboard .fd-dashboard-sidebar{background:linear-gradient(180deg,rgba(10,9,15,.98),rgba(7,7,11,.96));border-right-color:rgba(157,109,255,.12)}.fd-collector-dashboard .fd-dashboard-brand small{color:#817a89;letter-spacing:.08em}.fd-dashboard-content-frame{position:relative}.fd-dashboard-content-frame:before{content:"";position:absolute;z-index:-1;left:0;right:0;top:-18px;height:170px;border-radius:28px;background:linear-gradient(110deg,rgba(157,109,255,.035),transparent 35%,rgba(88,232,255,.025));filter:blur(2px);pointer-events:none}.fd-dashboard-page-id{min-width:185px}.fd-dashboard-page-id>span{color:#78eaff!important;font-size:8px!important;font-weight:900!important;letter-spacing:.17em!important}.fd-dashboard-page-id>p{font-size:18px!important;font-weight:850!important;letter-spacing:-.035em!important}.fd-dashboard-page-id>small{display:block;margin-top:3px;color:#5f5a65;font-size:6px;font-weight:850;letter-spacing:.16em}.fd-collector-dashboard .fd-dash-card{border-color:rgba(255,255,255,.085);background:radial-gradient(circle at 100% 0%,rgba(157,109,255,.035),transparent 27%),linear-gradient(145deg,rgba(17,15,25,.88),rgba(10,9,15,.9));box-shadow:inset 0 1px rgba(255,255,255,.025),0 18px 55px rgba(0,0,0,.13)}.fd-collector-dashboard .fd-dash-card:hover{border-color:rgba(157,109,255,.14)}
+      .fd-dashboard-search-upgraded{position:relative;min-width:min(430px,38vw);min-height:58px;padding:7px 7px 7px 14px;display:grid;grid-template-columns:30px 1fr 42px;align-items:center;gap:8px;border:1px solid rgba(157,109,255,.3);border-radius:17px;background:radial-gradient(circle at 15% 0%,rgba(88,232,255,.08),transparent 45%),linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));box-shadow:0 12px 36px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.04);transition:.2s ease}.fd-dashboard-search-upgraded:focus-within{border-color:rgba(88,232,255,.58);box-shadow:0 0 0 3px rgba(88,232,255,.08),0 16px 42px rgba(49,31,93,.2);transform:translateY(-1px)}.fd-dashboard-search-icon{font-size:24px;color:#b89cff;text-align:center}.fd-dashboard-search-upgraded label{display:flex;min-width:0;flex-direction:column;gap:2px}.fd-dashboard-search-upgraded label small{font-size:8px;font-weight:850;letter-spacing:.16em;color:#817b8d}.fd-dashboard-search-upgraded input{width:100%;padding:0;border:0;outline:0;background:transparent;color:#fff;font-size:14px;font-weight:650}.fd-dashboard-search-upgraded input::placeholder{color:#77717f}.fd-dashboard-search-upgraded button{width:42px;height:42px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:linear-gradient(135deg,#f5f6ff,#c8f8ff 58%,#b79dff);color:#09080d;font-size:19px;font-weight:900;cursor:pointer}@media(max-width:980px){.fd-dashboard-search-upgraded{min-width:260px}.fd-dashboard-search-upgraded label small{display:none}}@media(max-width:760px){.fd-dashboard-topbar{flex-wrap:wrap}.fd-dashboard-search-upgraded{order:3;width:100%;min-width:100%;margin-top:8px}.fd-dashboard-page-id>small{display:none}}
+    `}</style>
+  </main>;
 }
