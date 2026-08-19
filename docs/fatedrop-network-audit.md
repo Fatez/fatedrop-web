@@ -4,179 +4,228 @@ _Date: 19 August 2026_
 
 Branch: `fatedrop-network-consistency-audit`
 
-Scope: `Fatez/fatedrop-web` with read-only comparison against `Fatez/Fatedrop-Cloud`. The mobile app repository is deliberately out of scope because it is being worked on separately.
+Scope: `Fatez/fatedrop-web` with read-only comparison against `Fatez/Fatedrop-Cloud`. The mobile app repository remains deliberately out of scope because it is being repaired and will be reconciled against `docs/fatedrop-product-truth.md` afterwards.
 
 ## Executive summary
 
-FateDrop already has a substantial working foundation, but rapid feature development has created several places where the public website, dashboard terminology and actual backend capability no longer describe the same product.
+The website has now moved from a collection of rapidly-added features toward one coherent FateDrop product model.
 
-The highest-risk issue is not visual consistency; it is **truth consistency**. A small number of hard-coded metrics and strong status labels currently make the website sound more final than the underlying implementation warrants. At the same time, some real backend capabilities (notably catalogue and True Price API endpoints) are under-described by older dashboard copy.
+The canonical authority is now **FateDrop Product Spec v1** in `docs/fatedrop-product-truth.md`.
 
-This pass prioritises evidence integrity, canonical naming, navigation hierarchy and Companion readiness without deleting working storage or rewriting the product.
+The highest-value changes in this branch are not cosmetic. They remove stale/fakeable proof, move Search and True Price toward canonical Cloud data, reconnect Search → Compare → FateFind, preserve FateMatch as the successful result, simplify public signal language, make Alerts personal rather than a duplicate global feed, separate Cloud retailer runtime state from storefront experiments, and create a stable renderer boundary for the real 3D Companion.
 
-## Audit findings
+## Resolved findings
 
-### P0 — hard-coded network proof is labelled as validated
+### RESOLVED — hard-coded network proof
 
-`lib/site-data.ts` contains fixed values for products tracked, products in stock, catalogue retailers and healthy monitors. `components/network-proof.tsx` renders those values as a “Validated beta snapshot”. `lib/dashboard.ts` also builds a published baseline from those fixed values.
+Old fixed catalogue/in-stock/retailer/monitor figures are no longer used as live proof.
 
-The Cloud Signal Engine already publishes current network metrics to the website metric ledger. Fixed numbers therefore create avoidable stale-data risk.
+Public network proof reads the latest persisted Cloud snapshot. If there is no measured snapshot, FateDrop says the measurement is unavailable instead of falling back to retired values.
 
-**Action:** replace public network proof with the latest persisted network snapshot. If no snapshot exists, show an explicit waiting/unavailable state rather than old numbers. Remove the dashboard numeric fallback.
+### RESOLVED — FateFind / FateMatch naming collision
 
-### P0 — FateFind / FateMatch / Watchlist naming collision
+The final product meaning is now:
 
-Current dashboard `/dashboard/watchlist` calls the saved-intent feature **FateMatch**, while older public copy calls saved searches **FateFind** and the current product brief reserves Watchlist/FateFind for wanted items/search intent. This makes “FateMatch” mean different things depending on surface.
+- **FateFind = the hunt the collector creates.**
+- **FateMatch = the successful observed result that satisfies a FateFind.**
+- **Universal Wishlist = a separate simple product save.**
 
-Current internal files/storage use `fate-match-*` names and should not be destructively migrated during a consistency pass.
+Existing `fate_match` storage/API/types are retained for compatibility. The public FateFind API now returns both new and legacy response keys so old clients are not broken merely for branding.
 
-**Action:** make public dashboard language FateFind / Watchlist while retaining legacy internal storage/type names. Reserve FateMatch publicly for future cross-retailer matching/comparison until a safe schema migration is deliberately designed.
+### RESOLVED — Search disconnected from the canonical network
 
-### P0 — Plus and Pro marketing exceeds the entitlement model
+Dashboard Search now uses the Signal Engine `/api/catalogue` endpoint and supports product-first grouping, availability/category/price filters, pagination, RRP context, known-delivery True Price context and direct hand-off to True Price or FateFind.
 
-`lib/entitlements.ts` currently has a Free set and one Premium set. Any active non-free tier receives the same Premium capabilities. Public plan copy, however, presents Plus and Pro as materially different feature envelopes.
+No sample results are substituted when Cloud has no result.
 
-**Action:** do not invent new gates. Make public wording clear that the higher-tier split is under product review while the current code enforces a shared Premium capability envelope.
+### RESOLVED — True Price depended on the storefront lab
 
-### P1 — Avatar terminology has already evolved into Companion
+The main dashboard True Price comparison now uses Signal Engine `/api/true-price` groups rather than treating the two direct Shopify storefront feeds as the network.
 
-The dashboard route and internal modules use `avatar`, while the page copy and alert/FateFind experiences already describe a companion. The product direction is now a persistent, customisable 3D FateDrop Companion with signal reactions and a floating droid/familiar.
+Unknown delivery remains structurally unknown and cannot masquerade as a delivered total.
 
-**Action:** move user-facing labels to **FateDrop Companion**. Keep internal route/module/storage names for compatibility. Describe final 3D renderer/animation as foundation/planned until real assets are integrated.
+The current Cloud `/api/true-price` group response does not yet expose all RRP fields available in `/api/catalogue`; adding full RRP provenance to the Cloud True Price response is a future Cloud enhancement rather than a reason to fabricate it on the website.
 
-### P1 — Search is a real route but absent from dashboard navigation
+### RESOLVED — public signal terminology was too complex
 
-`/dashboard/search` exists, but the dashboard navigation omits it. The route itself says live catalogue connection is still required, although the Signal Engine already exposes `/api/catalogue`.
+The public model is now deliberately simpler:
 
-**Action:** add Search to the dashboard hierarchy immediately. Keep the route honestly labelled FOUNDATION until its result rendering is wired to the canonical Cloud/API path.
+- **Echo** = meaningful early/precursor intelligence; not confirmed stock.
+- **Manifested** = confirmed meaningful availability/restock event.
+- **Vanished** = previously confirmed availability is lost.
+- **Whisper** = internal engine terminology only.
 
-### P1 — FateWindow is disproportionately prominent
+Internal queue/security/drop-pulse/whisper observations can map to public Echo. The Signal Engine's legacy `echo` lifecycle event currently means confirmed restock and therefore maps publicly to Manifested/restock confirmed.
 
-A working heuristic exists and the True Price experience can evaluate evidence into Buy Window / No Rush / Watch / Wait. The dashboard home and True Price page currently make FateWindow look like a central finished product pillar.
+The underlying storage schema is not destructively renamed.
 
-This feature was not part of the canonical product brief and its thresholds are product-policy choices rather than immutable facts.
+### RESOLVED — Alerts duplicated global network activity
 
-**Action:** preserve the implementation, label it **experimental beta**, reduce its prominence on the dashboard home and ensure wording is evidence context rather than purchase advice.
+Dashboard Alerts now focuses on the collector:
 
-### P1 — FateScore is described as validated without a verified backend score implementation
+- active FateFinds;
+- personal notification/hunt history;
+- delivery-channel readiness;
+- Premium monitoring access.
 
-Public Home/Trust/business FAQ copy describes FateScore as a validated beta trust model. This audit found principles and copy, but did not verify a production scoring engine in the inspected backend.
+Global network activity belongs on Home. Cross-platform per-signal preference persistence is not invented; the page explicitly leaves that for a shared account model that can serve web/app/Discord.
 
-**Action:** downgrade public status to foundation/planned evidence model. Preserve the important “no pay-to-trust” rule.
+### RESOLVED — Companion architecture was tied to the illustrated avatar
 
-### P1 — FateFair is stronger in marketing than implementation evidence supports
+Existing account loadout persistence remains intact.
 
-FateFair appears in trust/plan/roadmap copy, but this audit did not verify a production implementation.
+`lib/companion-contract.ts` and `components/companion-renderer.tsx` now create an explicit renderer/asset boundary for:
 
-**Action:** use PLANNED consistently.
+- current 2D fallback;
+- future GLB/WebGL character;
+- floating droid model;
+- reaction animation clips;
+- Echo / Manifested / Vanished / FateMatch / major activity reactions.
 
-### P1 — Public event surface and dashboard event surface disagree
+The final 3D assets are still not claimed as shipped.
 
-The public Events page deliberately uses clearly labelled demonstration entries. The dashboard contains a large static list of real-looking sourced UK events and calls them verified/sourced.
+### RESOLVED — retailer network and storefront lab were conflated
 
-Static source references can become stale, and the Cloud website publisher currently sends an empty `upcomingEvents` list.
+Static retailer metadata is now separated from Cloud runtime state.
 
-**Action:** keep dashboard event discovery as BETA / STATIC-SOURCED, surface a freshness/source warning and tell users to verify organiser details before travelling. Do not describe it as the live Cloud event feed.
+`lib/retailer-network.ts` overlays Signal Engine `/api/status` retailer health onto known retailer metadata. The dashboard retailer page clearly distinguishes:
 
-### P1 — website catalogue paths are split
+- canonical Cloud-monitored retailers;
+- experimental direct storefront feeds;
+- future/static registry candidates.
 
-The website directly reads two Shopify catalogues for current indie storefront/True Price experiences. The Cloud Signal Engine separately manages its canonical offer/product network and exposes `/api/catalogue` and `/api/true-price`.
+A healthy Cloud monitor is data-collection evidence, not a paid partnership or automatic FateDrop Verified badge.
 
-**Action:** document this as a transitional architecture. Avoid pretending the current two-store lab is the whole connected network. Longer term, converge website search/comparison onto Cloud canonical product/offer data rather than adding more one-off website adapters.
+### RESOLVED — Events had no canonical migration path
 
-### P1 — “app + Discord ready” wording can overstate cross-platform integration
+The existing sourced dashboard Events directory remains static/Beta because the Cloud publisher does not yet supply real event records.
 
-Membership code establishes a shared entitlement model and Discord foundations. The mobile app is being fixed in another workstream and was not verified here.
+A new `/api/events` endpoint now reads persisted Cloud `upcomingEvents`, providing the migration target for automated Fate Encounters ingestion once Cloud starts publishing those records.
 
-**Action:** say the entitlement is **designed for / intended to power** app and Premium Discord unless the deployed integration is independently verified.
+### RESOLVED — Plus/Pro marketing exceeded the entitlement implementation
 
-### P2 — unknown-delivery helper has a risky fallback shape
+Public copy now acknowledges that the current code has one shared Premium capability envelope. The final Plus-vs-Pro commercial split remains an owner decision rather than an invented entitlement difference.
 
-`calculateDeliveredPrice` currently returns `deliveredPence: pricePence` even when delivery is unknown, paired with `known: false`. `lib/true-price.ts` correctly converts this to a null delivered True Price, but the helper shape is easy to misuse elsewhere.
+### RESOLVED — FateWindow / FateScore / FateFair prominence
 
-**Action:** harden the helper so an unknown delivered price is structurally null, then update types/tests if safe.
+- FateWindow: **HOLD / experimental**.
+- FateScore: **PLANNED** until explainable evidence inputs exist.
+- FateFair: **PLANNED**.
 
-### P2 — static target scale is acceptable only because it is clearly labelled ambition
+None should compete with Search, True Price, RRP, FateFind, Alerts or Indies for launch prominence.
 
-100+ catalogues, ~90k offers and national coverage appear as target scale. Current `NetworkProof` explicitly says this is ambition, not achievement.
+### RESOLVED — baseline production hardening gaps
 
-**Action:** retain only with that explicit target label; never mix with measured network proof.
+The branch now includes:
+
+- constant-time Cloud→website ingest-secret comparison;
+- same-origin enforcement and bounded numeric validation on FateFind writes;
+- production security headers;
+- a route-level recovery error boundary;
+- private-surface crawler exclusions;
+- canonical site URL handling;
+- privacy copy for Companion and Local Radar;
+- a conservative launch checklist.
+
+A strict Content Security Policy has not been blindly added because the existing site uses substantial inline styles and applying a CSP without a nonce/hash migration could break production rendering.
 
 ## Actual Cloud capability verified in source
 
-The current Signal Engine source verifies these foundations:
+The inspected Signal Engine supports:
 
-- Pokémon-focused retailer configuration for Pokémon Center UK, Smyths UK and Chaos Cards;
-- product/offer/observation model with official-RRP provenance support;
-- lifecycle signal derivation for Whisper, Manifested, Vanished and Echo;
+- Pokémon Center UK, Smyths UK and Chaos Cards retailer configuration when enabled;
+- product / offer / observation persistence;
+- official-RRP provenance fields;
+- internal Whisper / Manifested / Vanished / Echo lifecycle derivation;
 - baseline signal suppression;
-- Discord signal dispatch integration;
+- Discord signal dispatch foundations;
 - network snapshot persistence;
-- public catalogue endpoint;
-- public True Price grouping endpoint;
-- website snapshot publishing with measured network metrics, recent signals, RRP references and opportunities;
-- website ingestion schema for queue/security/drop-pulse signal kinds;
-- upcoming-event schema, though the current Cloud publisher emits an empty event list.
+- public `/api/catalogue` search with filters/pagination;
+- public `/api/true-price` grouped offer comparison;
+- public `/api/status` including retailer runtime health;
+- website snapshot publishing with measured metrics/signals/RRP references/opportunities;
+- queue/security/drop-pulse website signal schema;
+- upcoming-event schema, although the current publisher does not yet populate real upcoming events.
 
-Configured retailers are not automatically equivalent to healthy live monitors. Public counts must come from measured state, not configuration files.
+Configured retailers are not automatically healthy monitors. Healthy monitors are not automatically verified/partner retailers.
 
-## Pokémon Center collector status
+## Transitional architecture that remains intentionally visible
 
-A separate browser-collector workstream has demonstrated a complete verified Pokémon Center catalogue rotation before ingest and is being validated outside `main`. The safety invariant is correct: incomplete catalogue walks do not replace the last verified Cloud state and no access-control bypass is attempted.
+### Direct Shopify storefront lab
 
-Do not describe that separate collector branch as merged production infrastructure until its deployment/merge state is verified.
+Cob & Pip and Wishlist Collectables remain direct website catalogue experiments. They are useful for developing the Indie storefront UX, but they are not the canonical network source.
 
-## Cloudflare / deployment audit
+The target architecture is:
 
-Repository configuration is structurally prepared for Cloudflare OpenNext:
+**Cloud owns product/offer/stock/RRP/True Price network truth. Retailer storefronts present participating retailer identity/catalogue data.**
 
-- `@opennextjs/cloudflare` build/preview/deploy scripts exist;
-- Wrangler targets worker `fatedrop-web` and `.open-next/worker.js`;
-- static assets are bound through the OpenNext assets directory;
-- observability is enabled;
-- GitHub Actions runs `npm run verify` for pull requests to `main`.
+Do not add dozens more one-off website catalogue integrations if the same feed can be onboarded into the canonical retailer/offer model.
 
-The live target is `https://fatedrop-web.fatedrop-web.workers.dev`.
+### Dashboard Home
 
-The audit environment could not reliably fetch the rendered Worker URL during the first pass, so visual/runtime verification of the deployed site remains a separate validation item. This is not evidence that the deployment is down.
+The data helper now maps the simplified public signal model, but some static Home copy may still contain older lifecycle wording. This is a remaining presentation cleanup item, not a data-model blocker.
 
-## Implementation plan for this branch
+### Universal Wishlist
 
-1. Replace hard-coded public network proof with latest persisted Cloud metrics.
-2. Remove hard-coded dashboard network baseline fallback.
-3. Add Search to dashboard navigation.
-4. Move public saved-intent naming from FateMatch to FateFind/Watchlist without touching legacy storage schema.
-5. Rename public Avatar labels to FateDrop Companion without changing persistence routes.
-6. Reconcile Local Radar copy with FateFind terminology.
-7. Reduce FateWindow to an experimental-beta layer rather than a primary dashboard promise.
-8. Downgrade FateScore/FateFair marketing statuses to match implementation evidence.
-9. Make membership/app/Discord wording configuration-aware and avoid implying a complete Plus-vs-Pro capability split.
-10. Add source/freshness caution to the static dashboard event directory.
-11. Run repository verification via pull-request CI; then inspect/fix failures.
-12. Run/record OpenNext build or preview where the available environment permits it.
+Product Spec v1 deliberately separates Wishlist from FateFind. The website does not yet have the final persistent cross-retailer Universal Wishlist implementation. Existing historical `wishlist_hit` activity is not equivalent to a full Wishlist product model.
 
-## Deferred owner/product decisions
+This should be built deliberately alongside the app reconciliation rather than disguised as complete in this branch.
 
-These should not block safe consistency work, but they need deliberate product approval before becoming contractual marketing promises:
+### Shared notification preferences
 
-- final Plus vs Pro feature gates and pricing;
-- whether FateWindow remains a named product feature and its final thresholds;
-- final FateScore evidence inputs and publication policy;
-- final FateMatch meaning and any migration from the legacy internal saved-intent naming;
-- final retailer paid-plan structure;
-- Companion progression/economy/cosmetic unlock model;
-- production Event Vendor Mode rules;
-- exact multi-TCG rollout order.
+The final account-level Echo / Manifested / price / push / web / Discord preference model is not yet persisted cross-platform. Alerts states this honestly.
 
-## Non-goals
+## Cloudflare / deployment readiness
 
-This branch will not:
+The repository uses Next.js + OpenNext Cloudflare. Validation gates include:
 
-- redesign FateDrop from scratch;
-- edit the mobile app repo;
+1. `npm run verify`
+   - ESLint
+   - TypeScript
+   - automated tests
+   - Next production build
+2. `npx opennextjs-cloudflare build`
+
+The live target remains `https://fatedrop-web.fatedrop-web.workers.dev`.
+
+No production deploy is performed by this audit branch.
+
+## Remaining owner/product decisions
+
+These should not be silently guessed in code:
+
+- final Plus vs Pro prices/capability split;
+- final FateScore evidence model/publication policy;
+- whether/when FateWindow returns from HOLD;
+- final Universal Wishlist cross-platform persistence/notification behaviour;
+- final retailer paid plans;
+- Companion cosmetic/progression economy;
+- Event Vendor Mode commercial rules;
+- exact multi-TCG rollout order;
+- final UK privacy/consumer/legal text;
+- production merge/deployment approval.
+
+## Remaining engineering work after this website pass
+
+The next shared web/app phase should cover:
+
+- persistent Universal Wishlist;
+- shared cross-platform alert preferences;
+- app reconciliation against Product Spec v1;
+- richer Cloud True Price/RRP response where needed;
+- production event ingestion;
+- bringing experimental Indie storefront feeds into canonical Cloud onboarding;
+- final 3D Companion assets/renderer integration;
+- production browser smoke test on the final deployed Worker/custom domain.
+
+## Non-goals / safety invariants
+
+This branch does not:
+
+- edit the mobile app repository;
 - delete user/business data;
-- rename persistent schemas merely for cosmetic consistency;
-- deploy production automatically;
+- deploy production;
 - expose secrets;
-- invent metrics, retailers, events, users or sales;
+- invent retailer partnerships or verification;
+- invent stock, RRP, delivery or network metrics;
 - bypass retailer access controls.
