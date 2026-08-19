@@ -5,7 +5,7 @@ import { StockLifecycle } from "@/components/stock-lifecycle";
 
 export const metadata: Metadata = {
   title: "Trust & Stock Signals | FateDrop",
-  description: "How FateDrop separates verification, measured evidence, stock transitions and planned price guidance.",
+  description: "How FateDrop separates verification, measured evidence, public Echo/Manifested/Vanished signals and planned price guidance.",
 };
 
 export default function TrustPage() {
@@ -19,13 +19,13 @@ export default function TrustPage() {
         <SectionHeading eyebrow="Three trust layers" title="Confidence should be earned in public." body="A verified business is not automatically a top performer, a sponsored placement is not a recommendation and missing evidence never becomes an invented score." />
         <div className="trust-grid standalone">
           <article><span>Evidence model · foundation</span><h3>Verification and performance stay separate.</h3><p>FateScore is a planned evidence-led retailer trust model, not a live public ranking. Until the scoring inputs and publication policy are implemented and validated, FateDrop should show the evidence it actually has rather than invent a score.</p></article>
-          <article><span>Drop Pulse · foundation</span><h3>A label needs an observed transition.</h3><p>Drop Pulse is an evidence-context layer, not a fifth lifecycle state. Labels such as just listed, recently restocked or price dropped need timestamps or catalogue history before they are shown.</p></article>
+          <article><span>Drop Pulse · foundation</span><h3>Activity needs observed movement.</h3><p>Drop Pulse is an evidence-context layer, not a lifecycle state. Labels such as high activity, just listed, recently restocked or price dropped need timestamps or catalogue history before they are shown.</p></article>
           <article><span>FateFair · planned</span><h3>Price guidance needs context.</h3><p>Future FateFair guidance is intended to consider comparable offers, condition, grade, delivery, history, freshness and sample size. It is not presented as live guidance today.</p></article>
         </div>
       </section>
 
       <section className="content-section section-shell" id="stock-lifecycle">
-        <div className="copy-stack lifecycle-page-copy"><p className="eyebrow"><span />From first signal to return</p><h2>Detect earlier catalogue signals—not only conventional in-stock events.</h2><p>Whisper may provide useful early context before a conventional public in-stock event. Signal timing and completeness depend on the catalogue data each retailer makes available; FateDrop does not claim to be guaranteed first or instant everywhere.</p><span className="status-chip validated">Evidence-backed beta lifecycle</span></div>
+        <div className="copy-stack lifecycle-page-copy"><p className="eyebrow"><span />From early movement to confirmed stock</p><h2>Echo when something is moving. Manifested when it is real.</h2><p>Echo is the public early-intelligence state for meaningful precursor movement such as catalogue, metadata, queue or security-condition changes. It does not guarantee that stock is imminent. Manifested marks confirmed meaningful availability or restock evidence, while Vanished records previously confirmed availability being lost. Whisper remains internal engine terminology.</p><span className="status-chip validated">Evidence-backed beta lifecycle</span></div>
         <StockLifecycle />
       </section>
 
