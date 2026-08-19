@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { saveNetworkMetricSnapshot, type NetworkEventListing, type NetworkMetricSnapshot, type NetworkSignal, type SignalIntensity, type SignalKind, type SignalLifecycle } from "@/lib/dashboard-storage";
 import { processNetworkOpportunity, processRrpReferenceProduct } from "@/lib/fate-network-pipeline";
 import { parseNetworkOpportunity, parseRrpReferenceProduct } from "@/lib/network-ingest";
@@ -21,7 +21,11 @@ function confidence(value: unknown) {
 }
 function authorized(request: Request) {
   const secret = process.env.FATEDROP_METRICS_INGEST_SECRET;
-  return Boolean(secret && request.headers.get("authorization") === `Bearer ${secret}`);
+  const authorization = request.headers.get("authorization") || "";
+  if (!secret || !authorization.startsWith("Bearer ")) return false;
+  const provided = Buffer.from(authorization.slice(7));
+  const expected = Buffer.from(secret);
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
 export async function POST(request: Request) {
