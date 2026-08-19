@@ -29,7 +29,7 @@ test("canonical dashboard language is Search, FateFind and FateDrop Companion", 
   assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'));
   assert.ok(fateFind.includes('title="FateFind"'));
   assert.ok(fateFind.includes("FateFind</b> is the hunt"));
-  assert.ok(fateFind.includes("FateMatch</b> is the result"));
+  assert.ok(fateFind.includes("successful result is a <b>FateMatch</b>"));
   assert.ok(companion.includes('title="FateDrop Companion"'));
 });
 
@@ -72,9 +72,20 @@ test("Companion has a versioned renderer boundary for future 3D assets", async (
   assert.ok(contract.includes('characterFormat: "glb"'));
   assert.ok(contract.includes("droidModelUrl"));
   assert.ok(contract.includes("companionReactionFromSignal"));
-  assert.ok(renderer.includes("fallback-2d"));
-  assert.ok(renderer.includes("webgl-3d"));
+  assert.ok(contract.includes('"fallback-2d"'));
+  assert.ok(contract.includes('"webgl-3d"'));
+  assert.ok(renderer.includes('mode === "webgl-3d"'));
   assert.ok(renderer.includes("AvatarPreview"));
+});
+
+test("FateFind API uses same-origin writes while keeping legacy client response compatibility", async () => {
+  const route = await source("app/api/fate-matches/route.ts");
+  assert.ok(route.includes("assertSameOrigin(request)"));
+  assert.ok(route.includes("fateFinds, matches: fateFinds"));
+  assert.ok(route.includes("fateFind: saved, match: saved"));
+  assert.ok(route.includes("max: 10_000_000"));
+  assert.ok(route.includes("max: 1000"));
+  assert.ok(route.includes("max: 250"));
 });
 
 test("trust and membership copy do not claim unimplemented finality", async () => {
