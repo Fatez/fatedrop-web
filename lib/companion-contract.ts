@@ -25,8 +25,8 @@ export type CompanionRenderRequest = {
 
 export const DEFAULT_COMPANION_ASSET_MANIFEST: CompanionAssetManifest = {
   version: COMPANION_SCHEMA_VERSION,
-  characterModelUrl: null,
-  characterFormat: null,
+  characterModelUrl: "/assets/companion/fatedrop-companion-v1.glb",
+  characterFormat: "glb",
   droidModelUrl: null,
   droidFormat: null,
   animationClips: {},
