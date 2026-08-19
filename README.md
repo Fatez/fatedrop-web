@@ -1,6 +1,6 @@
 # FateDrop Web
 
-Standalone, maintainable source for the current FateDrop website. This project preserves the existing pages, navigation, visual system, responsive behaviour, animations, assets, copy and interactive phone demonstration while replacing the ChatGPT Sites-specific build layer with a conventional Next.js application.
+Standalone, maintainable source for the FateDrop website and authenticated collector dashboard. The project preserves the established premium visual system while using a conventional Next.js application and Cloudflare/OpenNext deployment path.
 
 ## Stack
 
@@ -10,12 +10,24 @@ Standalone, maintainable source for the current FateDrop website. This project p
 - Tailwind CSS 4 processing plus the existing handcrafted FateDrop stylesheet
 - Next.js route handlers for beta lead capture, FateDrop ID authentication, billing and Discord linking
 - FateDrop ID profiles with permanent member-since history
+- FateDrop Companion account-loadout foundation
 - Collector membership entitlement with Stripe-ready 14-day trials
 - Discord OAuth + Premium-role sync foundation
 - Authenticated FateDrop dashboard with auditable personal/network metrics
+- Canonical network Search backed by the FateDrop Signal Engine catalogue API
+- Measured public network proof backed by persisted Cloud snapshots rather than hard-coded counters
 - Append-only activity, network-snapshot and Stripe webhook audit ledgers
 - Local-file storage for development
 - Optional managed PostgreSQL storage for hosted deployments
+
+## Product truth
+
+FateDrop evolves quickly, so marketing copy must not become the product specification by accident.
+
+- `docs/fatedrop-product-truth.md` is the canonical feature/status/wording reference.
+- `docs/fatedrop-network-audit.md` records the current cross-surface consistency audit and deferred product decisions.
+
+Features should be described as **LIVE**, **BETA**, **DEMO**, **FOUNDATION** or **PLANNED** according to the deployed evidence. Never substitute stale sample metrics or optimistic copy for measured state.
 
 ## Requirements
 
@@ -40,7 +52,7 @@ The default example environment stores validated form submissions in `data/beta-
 npm run verify
 ```
 
-This runs linting, TypeScript checking, source and lead-storage tests, and a full production build.
+This runs linting, TypeScript checking, source/storage tests and a full Next.js production build. Pull-request CI also runs an OpenNext Cloudflare build so Worker compatibility is checked before merge.
 
 ## Project structure
 
@@ -48,10 +60,10 @@ This runs linting, TypeScript checking, source and lead-storage tests, and a ful
 app/                  Routes, layouts, metadata and API handlers
 components/           Reusable FateDrop interface components
 database/             PostgreSQL schema and retained Cloudflare D1 schema
-docs/                 Lead-storage and Sites migration notes
-lib/                  Analytics, account/auth, membership, Stripe/Discord helpers and storage adapters
-public/assets/        FateDrop artwork and current app reference images
-tests/                Source-contract and storage tests
+docs/                 Product truth, audits, storage and migration notes
+lib/                  Network client, analytics, auth, membership and storage adapters
+public/assets/        FateDrop artwork and current Companion/app reference assets
+tests/                Product-truth, source-contract and storage tests
 ```
 
 ## Environment variables
@@ -60,7 +72,8 @@ The safe template is documented in `.env.example`. Core groups are:
 
 | Group | Variables | Purpose |
 | --- | --- | --- |
-| Public URL | `NEXT_PUBLIC_SITE_URL` | Canonical deployment URL and OAuth/checkout redirects. |
+| Public URL | `NEXT_PUBLIC_SITE_URL` | Canonical deployment URL and OAuth/checkout redirects. Production safely falls back to the current Worker URL until the custom domain becomes canonical. |
+| Signal Engine | `FATEDROP_SIGNAL_ENGINE_URL` | Canonical FateDrop Cloud base URL for server-side network Search. |
 | Leads | `FATEDROP_LEAD_STORE`, `FATEDROP_LEAD_FILE` | Beta enquiry storage. |
 | Accounts | `FATEDROP_ACCOUNT_STORE`, `FATEDROP_ACCOUNT_FILE`, `DATABASE_URL` | FateDrop ID, sessions, membership and Discord-link storage. |
 | Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PLUS`, `STRIPE_PRICE_PRO`, `FATEDROP_TRIAL_REQUIRE_CARD` | Collector subscription checkout, trial and entitlement sync. |
@@ -82,43 +95,52 @@ For a hosted project:
 
 Without configured hosted storage, write endpoints reject the operation rather than pretending data was saved.
 
+## FateDrop Cloud integration
+
+The website and Cloud backend have different responsibilities:
+
+- `Fatez/Fatedrop-Cloud` owns canonical retailer/product/offer observations, lifecycle signals and network snapshots.
+- `fatedrop-web` owns the public/product experience, account/dashboard surfaces and persisted website metric ledger.
+- Dashboard Search uses the Signal Engine `/api/catalogue` endpoint rather than a second search index.
+- Public network proof reads the latest persisted network snapshot; if no measured snapshot exists, it reports unavailable state instead of falling back to old numbers.
+- Existing direct Shopify storefront adapters are transitional laboratory integrations and should not be mistaken for the entire FateDrop network.
+
 ## FateDrop ID + membership
 
 See [docs/membership-foundation.md](docs/membership-foundation.md) for the account model, Stripe trial flow, Discord linking, production environment variables and app-entitlement handoff.
 
 See [docs/dashboard-metrics.md](docs/dashboard-metrics.md) for the exact source/calculation behind every dashboard metric, ingestion contracts and the no-fake-data rule.
 
-See [docs/change-log.md](docs/change-log.md) for the working file-by-file change log, including the separately held Wear the Signal design patch.
+See [docs/fatedrop-product-truth.md](docs/fatedrop-product-truth.md) for canonical terminology and feature status.
+
+See [docs/fatedrop-network-audit.md](docs/fatedrop-network-audit.md) for the current consistency audit.
+
+See [docs/change-log.md](docs/change-log.md) for the working file-by-file change log.
 
 ## GitHub
 
-```bash
-git init
-git add .
-git commit -m "Initial FateDrop website source"
-git branch -M main
-git remote add origin https://github.com/YOUR-ACCOUNT/fatedrop-web.git
-git push -u origin main
-```
-
-Review the staged files before the first commit—particularly environment files and anything under `data/`. Git is a marvellous servant and an extremely efficient accomplice.
+Changes intended for production should be developed on a branch and reviewed through a pull request. The verification workflow blocks silent regressions in linting, TypeScript, tests, Next.js production build and OpenNext build.
 
 ## Deploying
 
-### Vercel
-
-Import the GitHub repository as a Next.js project. Vercel detects the framework and uses `npm run build`; add the production environment variables before enabling the live forms.
-
-Official guide: <https://vercel.com/docs/frameworks/full-stack/nextjs>
-
 ### Cloudflare Workers
 
-Cloudflare supports existing Next.js projects through its current Next.js/OpenNext workflow. Run the adapter's production preview before publishing because the deployed runtime differs from local Node.js development.
+The current production target is `https://fatedrop-web.fatedrop-web.workers.dev` and the repository is configured for OpenNext/Cloudflare Workers.
 
-Official guide: <https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/>
+Useful local commands:
+
+```bash
+npm run preview
+npm run upload
+npm run deploy
+```
+
+`preview` is the safe runtime validation path. `upload` and `deploy` mutate Cloudflare and should only be run with explicit production authorisation.
+
+Set production secrets/variables in Cloudflare rather than committing them. `NEXT_PUBLIC_SITE_URL` should move to the final custom HTTPS domain when that domain becomes canonical.
 
 If reusing Cloudflare D1 rather than PostgreSQL, use `database/cloudflare-d1.sql` and add a D1 implementation to `lib/lead-storage.ts`. The former Sites-managed binding is not available outside that project.
 
 ## Migration details
 
-See [docs/sites-migration.md](docs/sites-migration.md) for the exact Sites-specific pieces removed or replaced. The existing public ChatGPT Sites deployment is not altered by this repository export.
+See [docs/sites-migration.md](docs/sites-migration.md) for the exact Sites-specific pieces removed or replaced. The historical Sites build is not treated as the canonical source of product truth.

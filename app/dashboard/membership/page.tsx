@@ -25,7 +25,7 @@ export default async function DashboardMembershipPage({ searchParams }: { search
   return (
     <DashboardPageShell title="Membership" eyebrow="BILLING + ACCESS">
       <div className="fd-dashboard-grid">
-        {params.billing === "success" ? <section className="fd-dash-card"><div className="fd-dash-card-head"><span>STRIPE CHECKOUT</span><i className="live">RETURNED</i></div><div className="fd-network-message"><h1>Checkout completed.</h1><p>Stripe will confirm the subscription through the signed webhook. Your membership and Discord entitlement update from that authoritative event.</p></div></section> : null}
+        {params.billing === "success" ? <section className="fd-dash-card"><div className="fd-dash-card-head"><span>STRIPE CHECKOUT</span><i className="live">RETURNED</i></div><div className="fd-network-message"><h1>Checkout completed.</h1><p>Stripe confirms the subscription through the signed webhook. FateDrop updates the authoritative membership record from that event; app and Discord should consume the same entitlement only when their integrations are connected.</p></div></section> : null}
         {params.billing === "cancelled" ? <section className="fd-dash-card"><div className="fd-dash-card-head"><span>STRIPE CHECKOUT</span><i className="pending">CANCELLED</i></div><div className="fd-network-message"><h1>No changes were made.</h1><p>You returned from Stripe without completing checkout.</p></div></section> : null}
 
         <section className="fd-dash-card fd-billing-card">
@@ -36,6 +36,8 @@ export default async function DashboardMembershipPage({ searchParams }: { search
             {hasOpenSubscription ? <BillingPortalButton /> : <><StartMembershipButton tier="plus" label={`${startLabel} Plus${trialEligible ? " trial" : ""}`} /><StartMembershipButton tier="pro" label={`${startLabel} Pro${trialEligible ? " trial" : ""}`} />{snapshot?.membership.stripeCustomerId ? <BillingPortalButton /> : null}</>}
           </div>
         </section>
+
+        <section className="fd-dash-card"><div className="fd-dash-card-head"><span>FOUNDING-BETA PLAN MODEL</span><i className="pending">FEATURE SPLIT UNDER REVIEW</i></div><div className="fd-network-message"><h2>Plus and Pro currently share one Premium capability foundation.</h2><p>The billing model can distinguish the two tiers, but the final capability split is not fully enforced in entitlement code yet. FateDrop will not invent higher-tier exclusives simply to make the pricing table look finished.</p></div></section>
 
         <section className="fd-dash-card">
           <div className="fd-dash-card-head"><span>STRIPE READINESS</span><i className={readiness.configured ? "live" : "pending"}>{readiness.configured ? "READY" : "SETUP REQUIRED"}</i></div>

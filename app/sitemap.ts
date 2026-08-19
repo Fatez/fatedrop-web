@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { canonicalSiteUrl } from "@/lib/site-url";
 
 const routes = ["", "/about", "/businesses", "/collectors", "/events", "/free-drops", "/join", "/merch", "/subscriptions", "/trust", "/privacy", "/terms", "/cookies"];
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const modified = new Date("2026-08-17T00:00:00.000Z");
+  const siteUrl = canonicalSiteUrl();
+  const modified = new Date("2026-08-19T00:00:00.000Z");
   return routes.map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: modified,

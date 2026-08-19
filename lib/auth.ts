@@ -22,13 +22,17 @@ export async function verifyPassword(password: string, stored: string) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-export async function startSession(userId: string) {
+async function createOpaqueSession(userId: string) {
   const token = randomBytes(32).toString("base64url");
-  const tokenHash = hashSessionToken(token);
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_SECONDS;
-  await createSession(tokenHash, userId, expiresAt);
+  await createSession(hashSessionToken(token), userId, expiresAt);
+  return { token, expiresAt };
+}
+
+export async function startSession(userId: string) {
+  const session = await createOpaqueSession(userId);
   const jar = await cookies();
-  jar.set(COOKIE_NAME, token, {
+  jar.set(COOKIE_NAME, session.token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -37,11 +41,21 @@ export async function startSession(userId: string) {
   });
 }
 
+// Mobile/API clients receive the opaque token once and must present it as a
+// Bearer token. Only its SHA-256 hash is stored in the sessions table.
+export async function startApiSession(userId: string) {
+  return createOpaqueSession(userId);
+}
+
 export async function endSession() {
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (token) await deleteSession(hashSessionToken(token));
   jar.delete(COOKIE_NAME);
+}
+
+export async function endApiSession(token: string) {
+  if (token) await deleteSession(hashSessionToken(token));
 }
 
 export async function getCurrentUser() {
@@ -57,11 +71,22 @@ export async function getCurrentSnapshot() {
   return getAccountSnapshot(account.id);
 }
 
+export async function getSnapshotForRequest(request: Request) {
+  const authorization = request.headers.get("authorization") || "";
+  const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
+  if (match?.[1]) {
+    const account = await findSessionUser(hashSessionToken(match[1]));
+    return account ? getAccountSnapshot(account.id) : null;
+  }
+  return getCurrentSnapshot();
+}
+
+export function bearerTokenFromRequest(request: Request) {
+  const authorization = request.headers.get("authorization") || "";
+  return authorization.match(/^Bearer\s+([^\s]+)$/i)?.[1] || null;
+}
+
 export function assertSameOrigin(request: Request) {
-  // Local/Codespaces development is already isolated from the production site.
-  // Skip the browser-origin guard here so reverse-proxy host rewriting cannot
-  // block legitimate form submissions while developing. Production keeps the
-  // full same-origin check below.
   if (process.env.NODE_ENV !== "production") return;
 
   const origin = request.headers.get("origin");
@@ -77,9 +102,6 @@ export function assertSameOrigin(request: Request) {
   const requestUrl = new URL(request.url);
   if (originUrl.origin === requestUrl.origin) return;
 
-  // Hosted development environments such as GitHub Codespaces terminate HTTPS
-  // at a reverse proxy. Next.js can therefore see an internal request URL even
-  // though the browser is correctly posting back to the public forwarded host.
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
   const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
   const effectiveHost = forwardedHost || request.headers.get("host");

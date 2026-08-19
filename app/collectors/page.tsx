@@ -7,7 +7,7 @@ import { SignalIcon, type SignalIconName } from "@/components/signal-icon";
 
 export const metadata: Metadata = {
   title: "For Collectors | FateDrop",
-  description: "Search independent TCG catalogues, follow live availability and discover local events with FateDrop.",
+  description: "Search participating TCG catalogues, compare True Price/RRP context, follow evidence-backed availability and discover independent retailers and events with FateDrop.",
 };
 
 export default function CollectorsPage() {
@@ -20,49 +20,50 @@ export default function CollectorsPage() {
         <div className="copy-stack">
           <p className="eyebrow"><span />One connected search</p>
           <h2>The hunt is fun. The fragmented search isn’t.</h2>
-          <p>Independent shops often carry exactly what collectors want, but finding that stock can mean searching site after site. FateDrop creates a single discovery layer, while every sale still belongs to the retailer.</p>
+          <p>Independent shops often carry exactly what collectors want, but finding that stock can mean searching site after site. FateDrop is building a single discovery layer, while every sale still belongs to the retailer.</p>
           <div className="point-list">
-            <div><span>01</span><p>Search participating retailer catalogues from one place.</p></div>
-            <div><span>02</span><p>See current availability and useful price context.</p></div>
-            <div><span>03</span><p>Continue directly to the independent retailer to buy.</p></div>
+            <div><span>01</span><p>Search participating retailer catalogues as sources connect.</p></div>
+            <div><span>02</span><p>See observed availability, RRP evidence and known delivered-cost context.</p></div>
+            <div><span>03</span><p>Continue directly to the retailer to confirm and buy.</p></div>
           </div>
         </div>
         <div className="insight-panel collector-radar-panel">
           <FateSignalField variant="radar" className="panel-signal-field" />
-          <small>DISCOVERY JOURNEY / LIVE BETA</small>
+          <small>DISCOVERY JOURNEY / BETA</small>
           <div className="collector-discovery-rail" aria-label="Collector discovery journey"><span>Search</span><i /><span>Compare</span><i /><span>Signal</span><i /><span>Retailer</span></div>
           <div className="search-journey">
             <div className="search-query">⌕ Search: premium collection</div>
-            <div className="journey-result"><span className="journey-thumb" /><div><b>Product match</b><small>Found across the network</small></div><span>In stock</span></div>
-            <div className="journey-result"><span className="journey-thumb" /><div><b>Independent option</b><small>Current catalogue listing</small></div><span>View</span></div>
+            <div className="journey-result"><span className="journey-thumb" /><div><b>Product match</b><small>Found across connected sources</small></div><span>Observed</span></div>
+            <div className="journey-result"><span className="journey-thumb" /><div><b>Independent option</b><small>Participating catalogue listing</small></div><span>View</span></div>
             <div className="journey-arrow" />
             <div className="journey-store"><small>BUY DIRECT</small><strong>Continue to the retailer</strong><p>The retailer keeps their brand, website and checkout.</p></div>
           </div>
         </div>
       </section>
       <section className="collector-subscription section-shell">
-        <div><p className="eyebrow"><span />B2C subscription model</p><h2>Use the market for free. Subscribe for deeper intelligence.</h2><p>Basic discovery, shops, events and direct retailer purchasing remain available free. Plus and Pro add more specific alerts, saved searches, lifecycle intelligence and collection tools; the final feature split will be reviewed before live launch.</p></div>
-        <div className="subscription-summary"><article><span>FateDrop Plus</span><strong>£4.99 / month</strong><p>Product alerts, lifecycle notifications, Universal Wishlist, FateFind, True Price and Local Radar alerts.</p></article><article><span>FateDrop Pro</span><strong>£14.99 / month</strong><p>Advanced collector intelligence and higher-tier tools. Final Plus versus Pro feature gates remain under product review.</p></article><small>14-day collector trial flow prepared · Stripe sandbox configured · production checkout remains off until live credentials are connected</small><Link className="button button-secondary" href="/subscriptions#collectors">Compare collector plans <span>↗</span></Link></div>
+        <div><p className="eyebrow"><span />Collector membership</p><h2>Use the network for free. Subscribe for deeper intelligence.</h2><p>Basic identity and discovery remain available free. Premium membership is designed for deeper signal detail, FateFind monitoring and connected-access features; Plus versus Pro feature gates are still being finalised during the founding beta.</p></div>
+        <div className="subscription-summary"><article><span>FateDrop Plus</span><strong>£4.99 / month</strong><p>Current Premium foundation for deeper signal detail, FateFind, True Price context and connected tools where enabled.</p></article><article><span>FateDrop Pro</span><strong>£14.99 / month</strong><p>Higher-tier product direction. Final features and enforcement remain under product review rather than being invented in marketing copy.</p></article><small>14-day collector trial foundation · production checkout only when Stripe credentials, prices and webhook are connected</small><Link className="button button-secondary" href="/subscriptions#collectors">Compare collector plans <span>↗</span></Link></div>
       </section>
       <section className="content-section section-shell" id="collector-tools">
-        <SectionHeading eyebrow="Collector tools" title="Everything useful. Nothing noisy." body="The beta focuses on practical discovery tools that reduce friction without taking the collector away from independent businesses." />
+        <SectionHeading eyebrow="Collector tools" title="Everything useful. Nothing noisy." body="FateDrop separates what is usable now from what is still being connected, so the product can grow without pretending every surface is finished." />
         <div className="feature-cards">
           {[
-            ["01", "Unified search", "Look across connected independent catalogues with one query.", "unified-search"],
-            ["02", "Universal Wishlist", "Save wanted products across connected retailers, including unavailable or sold-out products.", "wishlist"],
-            ["03", "Local Radar", "Discover retailers, vendors and events by location or postcode.", "local-radar"],
-            ["04", "True Price", "Compare product price, known postage and free-delivery thresholds; confirm the final total at checkout.", "true-price"],
-            ["05", "FateFind", "Build a wanted search using maximum price, condition, location, collection and preorder preferences.", "fatefind"],
-            ["06", "Drop Pulse", "Follow timestamp-supported labels such as just listed, recently restocked and price dropped.", "drop-pulse"],
-            ["07", "Events", "Plan visits using dates, venues, tickets and participating vendor information.", "events"],
-            ["08", "Event Vendor Mode", "Search clearly labelled temporary stock by product, vendor, stall, price and condition.", "event-vendor"],
-            ["09", "Direct retailer links", "Move from discovery to the seller’s own website and checkout.", "manifested"],
+            ["01", "Network Search · beta", "Search uses the canonical Signal Engine catalogue and groups observed retailer offers beneath product identities rather than creating another search silo.", "unified-search"],
+            ["02", "Universal Wishlist · foundation", "Save products separately from active hunts. Persistent web storage and API are staged behind the additive production database migration.", "wishlist"],
+            ["03", "Local Radar · beta", "Discover nearby TCG businesses through the configured Places provider while keeping external discovery separate from verified network stock.", "local-radar"],
+            ["04", "True Price · beta", "Compare item price, observed RRP provenance and known mandatory delivery; unknown delivery stays unknown and final checkout remains with the retailer.", "true-price"],
+            ["05", "FateFind · beta foundation", "Create structured wanted intent using product, price/RRP limits and online or local scope. A qualifying observed result becomes a FateMatch.", "fatefind"],
+            ["06", "Drop Pulse · contextual foundation", "Summarise timestamp-supported movement without turning weak evidence into manufactured urgency.", "drop-pulse"],
+            ["07", "Events · demo / sourced beta", "Public examples remain clearly demo data; sourced dashboard listings should always be checked with the organiser before travel.", "events"],
+            ["08", "Event Vendor Mode · hold", "Temporary event inventory search remains a later layer and stays separate from ordinary shop stock until real vendor usage justifies it.", "event-vendor"],
+            ["09", "FateDrop Companion · foundation", "Your account-level customisation and signal reactions are ready for the richer 3D character and floating signal droid layer as it integrates.", "manifested"],
+            ["10", "Direct retailer links", "Move from discovery to the seller’s own website and checkout to confirm final stock, price and fulfilment.", "manifested"],
           ].map(([number, title, body, icon]) => <article className="mini-feature" key={title}><div className="mini-feature-top"><span>{number}</span><SignalIcon name={icon as SignalIconName} /></div><h3>{title}</h3><p>{body}</p></article>)}
         </div>
       </section>
       <section className="content-section section-shell split-section">
         <div className="phone-frame" style={{ marginInline: "auto", transform: "rotate(-2deg)", width: 290, height: 600 }}><div className="phone-island" /><AppScreen screen="search" /></div>
-        <div className="copy-stack"><p className="eyebrow"><span />Free during beta</p><h2>Help shape the network you want to use.</h2><p>Early collectors get access to the growing discovery experience and a direct line into what FateDrop improves next. No inflated promises—just a useful product getting sharper.</p><Link className="button button-primary" href="/join?type=collector">Join FateDrop free <span>↗</span></Link></div>
+        <div className="copy-stack"><p className="eyebrow"><span />Founding beta</p><h2>Help shape the network you want to use.</h2><p>Early collectors get access to the growing discovery experience and a direct line into what FateDrop improves next. No inflated promises—just a useful product getting sharper.</p><Link className="button button-primary" href="/join?type=collector">Join FateDrop free <span>↗</span></Link></div>
       </section>
       <FinalCta />
     </SiteShell>

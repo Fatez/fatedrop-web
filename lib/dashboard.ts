@@ -1,12 +1,21 @@
 import type { AccountSnapshot } from "./account-storage";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal } from "./dashboard-storage";
-import { siteConfig } from "./site-data";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
 
 function startOfUtcDay(timestamp: number) {
   const date = new Date(timestamp * 1000);
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000;
+}
+
+export function publicSignalLabel(signal: NetworkSignal) {
+  const kind = signal.kind ?? signal.state;
+  if (kind === "queue" || kind === "security" || kind === "drop_pulse" || kind === "whisper") return "Echo";
+  if (kind === "manifested" || kind === "echo") return "Manifested";
+  if (kind === "vanished") return "Vanished";
+  if (kind === "price_change") return "Price change";
+  if (kind === "launch_date_change") return "Launch change";
+  return "Signal";
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
@@ -43,14 +52,20 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
   const favoriteStores = [...stores.values()].sort((a, b) => b.latestAt - a.latestAt).slice(0, 4);
   const watchlist = activity.filter((item) => item.type === "wishlist_hit").slice(0, 4);
   const personalRecent = activity.slice(0, 6);
-  const manifested = (network?.recentSignals ?? []).filter((signal) => signal.state === "manifested").slice(0, 4);
-  const whispers = (network?.recentSignals ?? []).filter((signal) => signal.state === "whisper" || signal.state === "echo").slice(0, 4);
+  const confirmed = (network?.recentSignals ?? []).filter((signal) => {
+    const kind = signal.kind ?? signal.state;
+    return kind === "manifested" || kind === "echo";
+  }).slice(0, 4);
+  const early = (network?.recentSignals ?? []).filter((signal) => {
+    const kind = signal.kind ?? signal.state;
+    return kind === "whisper" || kind === "queue" || kind === "security" || kind === "drop_pulse";
+  }).slice(0, 4);
 
   const publishedBaseline = {
-    productsTracked: Number(siteConfig.snapshot[0].value.replace(/,/g, "")),
-    inStock: Number(siteConfig.snapshot[1].value.replace(/,/g, "")),
-    catalogueRetailers: Number(siteConfig.snapshot[2].value),
-    healthyMonitors: Number(siteConfig.snapshot[3].value),
+    productsTracked: network?.metrics.productsTracked ?? null,
+    inStock: network?.metrics.inStock ?? null,
+    catalogueRetailers: network?.metrics.catalogueRetailers ?? null,
+    healthyMonitors: network?.metrics.healthyMonitors ?? null,
   };
 
   return {
@@ -58,6 +73,13 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     network,
     networkHistory: history,
     publishedBaseline,
+    publicSignalMetrics: {
+      echo: network?.metrics.whisper ?? null,
+      manifested: network?.metrics.manifested === null || network?.metrics.manifested === undefined
+        ? network?.metrics.echo ?? null
+        : (network.metrics.manifested ?? 0) + (network.metrics.echo ?? 0),
+      vanished: network?.metrics.vanished ?? null,
+    },
     personal: {
       signalsSeen,
       wishlistHits,
@@ -68,8 +90,8 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
       watchlist,
       recent: personalRecent,
     },
-    recentManifested: manifested,
-    echoWhispers: whispers,
+    recentManifested: confirmed,
+    echoWhispers: early,
     upcomingEvents: (network?.upcomingEvents ?? []).filter((item) => item.startsAt >= now - 86_400).sort((a, b) => a.startsAt - b.startsAt).slice(0, 3),
     provenance: [
       {
@@ -94,7 +116,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         label: "Network lifecycle metrics",
         source: network ? network.source : "Awaiting FateDrop Cloud metric feed",
         updatedAt: network?.measuredAt ?? null,
-        note: network ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle counters remain unavailable and the published beta catalogue snapshot is shown separately.",
+        note: network ? "Derived from the latest persisted network snapshot. Public labels map internal weak/precursor states to Echo and confirmed restocks to Manifested." : "Until a live feed is connected, lifecycle and catalogue counters remain unavailable rather than falling back to stale values.",
       },
     ],
   };
@@ -114,12 +136,15 @@ export function relativeTime(timestamp: number, now = Math.floor(Date.now() / 10
 }
 
 export function signalLabel(signal: NetworkSignal) {
-  return signal.state.charAt(0).toUpperCase() + signal.state.slice(1);
+  return publicSignalLabel(signal);
 }
 
 export function activityLabel(event: DashboardActivityEvent) {
-  if (event.type === "wishlist_hit") return "Wishlist hit";
+  if (event.type === "wishlist_hit") return "FateMatch";
   if (event.type === "store_tracked") return "Store tracked";
   if (event.type === "market_saving") return "True Price saving";
-  return event.signalState ? event.signalState.charAt(0).toUpperCase() + event.signalState.slice(1) : "Signal seen";
+  if (event.signalState === "whisper") return "Echo";
+  if (event.signalState === "echo" || event.signalState === "manifested") return "Manifested";
+  if (event.signalState === "vanished") return "Vanished";
+  return "Signal seen";
 }

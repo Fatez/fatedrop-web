@@ -1,9 +1,14 @@
 import type { MetadataRoute } from "next";
+import { canonicalSiteUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const siteUrl = canonicalSiteUrl();
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/"] },
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/api/", "/account", "/dashboard"],
+    },
     sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

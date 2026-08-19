@@ -17,10 +17,10 @@ const retailerFaq = [
   ["Can I review my catalogue before it becomes public?", "Yes. The founding-beta process includes storefront and catalogue-preview review before approved products become discoverable."],
   ["Can I remove my catalogue?", "Yes. A retailer can request removal. Automated self-service removal is not yet live, so the beta team handles the change and confirms it."],
   ["What analytics are currently available?", "Catalogue-health and outbound-interest foundations are being validated. Confirmed sales, conversion attribution and full retailer dashboards are not currently claimed."],
-  ["What is planned rather than live?", "Broader automated imports, advanced retailer analytics, privacy-conscious demand intelligence, promotions, Event Vendor Mode at production scale and billing remain active expansion or production-infrastructure work."],
+  ["What is planned rather than live?", "Broader automated imports, advanced retailer analytics, privacy-conscious demand intelligence, paid promotional tools, production Event Vendor Mode and retailer billing remain planned or foundation work."],
   ["Can online-only retailers participate?", "Yes. A physical shop is not required, but the business and website still need verification."],
   ["Can event vendors join?", "Yes. Vendors can submit the retailer enquiry and describe their event activity. Temporary event inventory remains clearly labelled and is not presented as ordinary shop stock."],
-  ["Does paying improve FateScore?", "No. Commercial plans or promotions cannot purchase a stronger trust score."],
+  ["Can paying improve FateDrop trust status?", "No. Commercial plans or promotions cannot purchase stronger verification or trust evidence. FateScore remains a planned evidence-led model rather than a paid ranking."],
   ["How does FateDrop protect collector and retailer data?", "The beta collects only the information needed for an enquiry. Lead records are private, marketing consent is separate, and planned demand insight is aggregated rather than an individual-behaviour feed for retailers."],
 ] as const;
 
@@ -49,24 +49,24 @@ export default function BusinessesPage() {
             "Products are mapped into the FateDrop network.",
             "The retailer reviews its storefront and catalogue preview.",
             "Approved products become discoverable.",
-            "The retailer receives available referral and catalogue-health insight.",
+            "The retailer receives whatever referral and catalogue-health insight is genuinely available.",
           ].map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, "0")}</span>{item}</li>)}
         </ol>
       </section>
       <NetworkProof foundingInvite={false} />
       <section className="content-section section-shell">
-        <SectionHeading eyebrow="Retailer journey" title="More relevant visibility. More qualified traffic. Better demand insight." body="Connect the catalogue you already operate, become discoverable in relevant journeys and learn what collectors want but cannot currently find." />
+        <SectionHeading eyebrow="Retailer journey" title="More relevant visibility. More qualified traffic. Better demand insight." body="Connect the catalogue you already operate, become discoverable in relevant journeys and build toward evidence-backed insight into what collectors want but cannot currently find." />
         <div className="feature-cards">
           {[
-            ["01", "Connect or import", "Start with Shopify, WooCommerce, CSV or another structured-feed foundation.", "wishlist"],
+            ["01", "Connect or import", "Start with Shopify, WooCommerce, CSV or another structured-feed foundation agreed during onboarding.", "wishlist"],
             ["02", "Verified storefront", "Present business details and catalogue visibility without flattening your identity.", "fatescore"],
-            ["03", "Relevant search", "Appear when collectors search for products your catalogue currently holds.", "unified-search"],
+            ["03", "Relevant search", "Appear when collectors search for products your connected catalogue currently holds.", "unified-search"],
             ["04", "Direct journeys", "Send buyers to your own product pages and checkout. Referral measurement is being validated; clicks are never presented as invented sales.", "manifested"],
-            ["05", "Events + releases", "Promote events, preorders and releases with clearly labelled information.", "events"],
-            ["06", "Demand insight", "Understand available product interest and aggregated searches that find no matching stock.", "fatefind"],
-            ["07", "Catalogue health", "Identify stale data, broken links and catalogue changes that need attention.", "fatescore"],
-            ["08", "Stock arrivals", "Observe relevant catalogue arrivals and availability transitions.", "drop-pulse"],
-            ["09", "Retailer analytics · active expansion", "Build toward search-visibility and outbound-referral reporting without claiming unverified conversion.", "local-radar"],
+            ["05", "Events + releases", "Promote events, preorders and releases only where the relevant information is connected and clearly labelled.", "events"],
+            ["06", "Demand insight · planned", "Build toward aggregated interest and unmet-search insight without exposing individual collector behaviour.", "fatefind"],
+            ["07", "Catalogue health · foundation", "Build toward identifying stale data, broken links and catalogue changes that need attention.", "fatescore"],
+            ["08", "Stock arrivals", "Observe relevant catalogue arrivals and evidence-backed availability transitions from connected sources.", "drop-pulse"],
+            ["09", "Retailer analytics · planned", "Build toward search-visibility and outbound-referral reporting without claiming unverified conversion.", "local-radar"],
           ].map(([number, title, body, icon]) => <article className="mini-feature" key={title}><div className="mini-feature-top"><span>{number}</span><SignalIcon name={icon as SignalIconName} /></div><h3>{title}</h3><p>{body}</p></article>)}
         </div>
       </section>
@@ -74,11 +74,11 @@ export default function BusinessesPage() {
         <div className="quote-band"><blockquote>Connect what you already stock to the collectors already looking.</blockquote><p>Tell us which ecommerce platform you use and how your catalogue is structured. We’ll discuss the right beta route rather than pretending every setup is identical.</p><Link className="button button-primary" href="/join?type=business" style={{ marginTop: 30 }}>Request a partner demo <span>↗</span></Link></div>
       </section>
       <section className="demand-section section-shell">
-        <div className="demand-copy"><p className="eyebrow"><span />Demand intelligence · active expansion</p><h2>Know what collectors want before deciding what to stock.</h2><p>Future aggregated, privacy-conscious insight can show where network demand is not being met—without exposing an individual collector’s behaviour to a retailer.</p><Link className="text-link" href="/subscriptions#retailers">See proposed retailer plans <span>→</span></Link></div>
+        <div className="demand-copy"><p className="eyebrow"><span />Demand intelligence · planned</p><h2>Build toward knowing what collectors want before deciding what to stock.</h2><p>Future aggregated, privacy-conscious insight can show where network demand is not being met—without exposing an individual collector’s behaviour to a retailer.</p><Link className="text-link" href="/subscriptions#retailers">See proposed retailer plans <span>→</span></Link></div>
         <div className="demand-signals">{["Frequently searched products", "Wishlist demand", "FateFind requests", "Unavailable network products", "Regional interest", "Missed purchase opportunities", "Release interest", "Event demand"].map((item, index) => <span key={item}><i>{String(index + 1).padStart(2, "0")}</i>{item}<b>Future aggregated insight</b></span>)}</div>
       </section>
       <section className="retailer-faq section-shell" id="retailer-faq">
-        <div className="retailer-faq-head"><p className="eyebrow"><span />Retailer FAQ</p><h2>Straight answers before catalogue access.</h2><p>Validated beta, active expansion and production infrastructure are kept separate. If something is not live, the answer says so.</p></div>
+        <div className="retailer-faq-head"><p className="eyebrow"><span />Retailer FAQ</p><h2>Straight answers before catalogue access.</h2><p>Beta, foundation, demo and planned capability are kept separate. If something is not live, the answer says so.</p></div>
         <div className="faq-list">{retailerFaq.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div>
       </section>
       <section className="pricing-section section-shell">
