@@ -28,19 +28,23 @@ test("canonical dashboard language is Search, FateFind and FateDrop Companion", 
   assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'));
   assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'));
   assert.ok(fateFind.includes('title="FateFind"'));
-  assert.ok(fateFind.includes("Existing internal FateMatch storage names are retained for compatibility"));
+  assert.ok(fateFind.includes("FateFind</b> is the hunt"));
+  assert.ok(fateFind.includes("FateMatch</b> is the result"));
   assert.ok(companion.includes('title="FateDrop Companion"'));
-  assert.ok(companion.includes("richer 3D renderer"));
 });
 
-test("dashboard Search is connected to the canonical Signal Engine client", async () => {
-  const [page, client] = await Promise.all([
+test("dashboard Search and True Price use the canonical Signal Engine", async () => {
+  const [search, truePrice, client] = await Promise.all([
     source("app/dashboard/search/page.tsx"),
+    source("app/dashboard/true-price/page.tsx"),
     source("lib/signal-engine-client.ts"),
   ]);
-  assert.ok(page.includes("searchSignalCatalogue"));
-  assert.ok(page.includes("CLOUD CONNECTED"));
+  assert.ok(search.includes("searchSignalCatalogue"));
+  assert.ok(search.includes("CREATE FATEFIND"));
+  assert.ok(truePrice.includes("searchSignalTruePrice"));
+  assert.ok(truePrice.includes("same canonical offer network"));
   assert.ok(client.includes('"/api/catalogue"'));
+  assert.ok(client.includes('"/api/true-price"'));
   assert.ok(client.includes("FATEDROP_SIGNAL_ENGINE_URL"));
 });
 
@@ -49,6 +53,28 @@ test("unknown delivery can never masquerade as a delivered total", async () => {
   const truePrice = await source("lib/true-price.ts");
   assert.ok(catalogue.includes("return { deliveredPence: null, deliveryPence: null, known: false as const }"));
   assert.ok(truePrice.includes("deliveredTruePricePence = input.deliveryKnown && input.mandatoryPostagePence !== null"));
+});
+
+test("public signal labels simplify Whisper and legacy restock Echo", async () => {
+  const dashboard = await source("lib/dashboard.ts");
+  assert.ok(dashboard.includes('kind === "queue" || kind === "security" || kind === "drop_pulse" || kind === "whisper"'));
+  assert.ok(dashboard.includes('return "Echo"'));
+  assert.ok(dashboard.includes('kind === "manifested" || kind === "echo"'));
+  assert.ok(dashboard.includes('return "Manifested"'));
+});
+
+test("Companion has a versioned renderer boundary for future 3D assets", async () => {
+  const [contract, renderer] = await Promise.all([
+    source("lib/companion-contract.ts"),
+    source("components/companion-renderer.tsx"),
+  ]);
+  assert.ok(contract.includes("COMPANION_SCHEMA_VERSION"));
+  assert.ok(contract.includes('characterFormat: "glb"'));
+  assert.ok(contract.includes("droidModelUrl"));
+  assert.ok(contract.includes("companionReactionFromSignal"));
+  assert.ok(renderer.includes("fallback-2d"));
+  assert.ok(renderer.includes("webgl-3d"));
+  assert.ok(renderer.includes("AvatarPreview"));
 });
 
 test("trust and membership copy do not claim unimplemented finality", async () => {
@@ -76,12 +102,15 @@ test("Cloud metric ingestion uses constant-time secret comparison", async () => 
   assert.ok(route.includes('authorization.startsWith("Bearer ")'));
 });
 
-test("product truth and audit documents remain part of the repository", async () => {
+test("Product Spec v1 remains the repository authority", async () => {
   const [truth, audit] = await Promise.all([
     source("docs/fatedrop-product-truth.md"),
     source("docs/fatedrop-network-audit.md"),
   ]);
-  for (const status of ["LIVE", "BETA", "DEMO", "FOUNDATION", "PLANNED"]) assert.ok(truth.includes(`**${status}**`) || truth.includes(`**${status}`));
-  assert.ok(truth.includes("Canonical signal lifecycle"));
+  for (const status of ["LIVE", "BETA", "DEMO", "FOUNDATION", "HOLD", "PLANNED"]) assert.ok(truth.includes(`**${status}**`) || truth.includes(`**${status}`));
+  assert.ok(truth.includes("FateDrop Product Spec v1"));
+  assert.ok(truth.includes("FateFind is the hunt"));
+  assert.ok(truth.includes("FateMatch is the successful result"));
+  assert.ok(truth.includes("Whisper — internal"));
   assert.ok(audit.includes("FateFind / FateMatch / Watchlist naming collision"));
 });
