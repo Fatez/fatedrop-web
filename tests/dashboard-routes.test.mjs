@@ -43,8 +43,9 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes('href="/dashboard/search"'));
 });
 
-test("FateDrop Companion uses a shared illustrated rig with a 3D renderer boundary", () => {
+test("FateDrop Companion preserves account loadout while shipping the live 3D layer", () => {
   const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
+  const stage = fs.readFileSync("components/companion-3d-stage.tsx", "utf8");
   const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
   const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
   const layered = fs.readFileSync("components/avatar-layered-character.tsx", "utf8");
@@ -57,7 +58,14 @@ test("FateDrop Companion uses a shared illustrated rig with a 3D renderer bounda
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
   assert.ok(page.includes("FateDrop Companion"));
-  assert.ok(page.includes("3D READY FOUNDATION"));
+  assert.ok(page.includes("<Companion3DStage"));
+  assert.ok(page.includes("<AvatarBuilder"));
+  assert.ok(page.includes("APP + WEB"));
+  assert.ok(stage.includes("LIVE 3D COMPANION"));
+  assert.ok(stage.includes("Signal Scout"));
+  assert.ok(stage.includes("Signal Warden"));
+  assert.ok(stage.includes("Signal Droid"));
+  for (const reaction of ["watching", "echo", "manifested", "vanished", "fatematch", "major"]) assert.ok(stage.includes(reaction));
   assert.ok(builder.includes("SAVE AVATAR"));
   for (const category of ["skin", "hair", "face", "eyes", "outfit", "headwear", "accessory", "gear", "companion", "aura", "background"]) assert.ok(builder.includes(`${category}:`));
   assert.ok(loadout.includes("AVATAR_SKINS"));
