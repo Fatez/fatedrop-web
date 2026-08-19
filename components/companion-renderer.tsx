@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useEffect, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { AvatarPreview, type AvatarMood } from "@/components/avatar-preview";
 import {
   DEFAULT_COMPANION_ASSET_MANIFEST,
@@ -84,6 +84,7 @@ function ensureModelViewerRuntime() {
 export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_MANIFEST }: { request: CompanionRenderRequest; manifest?: CompanionAssetManifest }) {
   const mode = request.mode ?? companionRendererMode(manifest);
   const wants3d = mode === "webgl-3d" && Boolean(manifest.characterModelUrl);
+  const modelViewerRef = useRef<HTMLElement | null>(null);
   const [loadedModelUrl, setLoadedModelUrl] = useState<string | null>(null);
   const [failedModelUrl, setFailedModelUrl] = useState<string | null>(null);
   const modelLoaded = Boolean(manifest.characterModelUrl && loadedModelUrl === manifest.characterModelUrl);
@@ -101,6 +102,28 @@ export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_
     };
   }, [wants3d, manifest.characterModelUrl]);
 
+  useEffect(() => {
+    const modelUrl = manifest.characterModelUrl;
+    const viewer = modelViewerRef.current;
+    if (!wants3d || !modelUrl || !viewer) return;
+
+    const handleLoad = () => {
+      setLoadedModelUrl(modelUrl);
+      setFailedModelUrl(null);
+    };
+    const handleError = () => setFailedModelUrl(modelUrl);
+
+    viewer.addEventListener("load", handleLoad);
+    viewer.addEventListener("error", handleError);
+
+    if ((viewer as HTMLElement & { loaded?: boolean }).loaded) handleLoad();
+
+    return () => {
+      viewer.removeEventListener("load", handleLoad);
+      viewer.removeEventListener("error", handleError);
+    };
+  }, [wants3d, manifest.characterModelUrl]);
+
   if (!wants3d) {
     return <AvatarPreview loadout={request.loadout} mood={fallbackMood(request.reaction)} compact={request.compact} label={request.label ?? "FateDrop Companion"}/>;
   }
@@ -109,6 +132,7 @@ export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_
   const label = request.label ?? "FateDrop Companion";
   const modelViewerProps: Record<string, unknown> = {
     key: manifest.characterModelUrl,
+    ref: modelViewerRef,
     src: manifest.characterModelUrl ?? undefined,
     alt: label,
     className: "fd-companion-model-viewer",
@@ -130,11 +154,6 @@ export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_
     "camera-controls": request.compact ? undefined : true,
     "disable-zoom": request.compact ? true : undefined,
     "touch-action": "pan-y",
-    onLoad: () => {
-      setLoadedModelUrl(manifest.characterModelUrl);
-      setFailedModelUrl(null);
-    },
-    onError: () => setFailedModelUrl(manifest.characterModelUrl),
   };
 
   return <div className="fd-companion-3d-stage" data-compact={request.compact ? "true" : "false"} data-ready={modelLoaded && !runtimeFailed ? "true" : "false"} data-reaction={request.reaction} aria-label={label}>
@@ -150,7 +169,8 @@ export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_
       .fd-companion-3d-stage[data-compact="true"]{aspect-ratio:1/1;min-height:180px;border-radius:15px}
       .fd-companion-3d-stage:before{content:"";position:absolute;z-index:0;left:50%;bottom:-22%;width:72%;aspect-ratio:1;border:1px solid rgba(112,233,251,.11);border-radius:50%;transform:translateX(-50%) rotateX(67deg);box-shadow:0 0 0 28px rgba(154,104,255,.025),0 0 55px rgba(95,224,255,.07)}
       .fd-companion-3d-grid{position:absolute;z-index:0;inset:47% -15% -25%;opacity:.13;background-image:linear-gradient(rgba(124,220,255,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(124,220,255,.18) 1px,transparent 1px);background-size:28px 28px;transform:perspective(360px) rotateX(61deg);transform-origin:center top;mask-image:linear-gradient(to bottom,rgba(0,0,0,.85),transparent 78%)}
-      .fd-companion-3d-fallback{position:absolute;z-index:1;inset:0;display:grid;place-items:center;transition:opacity .38s ease,transform .45s ease;transform:scale(1);opacity:1}
+      .fd-companion-3d-fallback{position:absolute;z-index:1;inset:0;display:grid;place-items:stretch;transition:opacity .38s ease,transform .45s ease;transform:scale(1);opacity:1}
+      .fd-companion-3d-fallback>.fd-avatar-stage{width:100%;height:100%;min-height:100%;border:0;border-radius:0;background:transparent;box-shadow:none}
       .fd-companion-3d-stage[data-ready="true"] .fd-companion-3d-fallback{opacity:0;transform:scale(1.025);pointer-events:none}
       .fd-companion-model-viewer{position:absolute;z-index:2;inset:0;width:100%;height:100%;display:block;opacity:0;background:transparent;--poster-color:transparent;transition:opacity .45s ease;filter:drop-shadow(0 24px 22px rgba(0,0,0,.36))}
       .fd-companion-3d-stage[data-ready="true"] .fd-companion-model-viewer{opacity:1}
@@ -158,7 +178,7 @@ export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_
       .fd-companion-3d-stage[data-reaction="echo"] .fd-companion-3d-aura,.fd-companion-3d-stage[data-reaction="fatematch"] .fd-companion-3d-aura{background:radial-gradient(circle,rgba(91,235,255,.18),rgba(133,104,255,.07) 45%,transparent 72%)}
       .fd-companion-3d-stage[data-reaction="manifested"] .fd-companion-3d-aura{background:radial-gradient(circle,rgba(93,244,183,.17),rgba(106,220,255,.06) 48%,transparent 72%)}
       .fd-companion-3d-stage[data-reaction="major"] .fd-companion-3d-aura{background:radial-gradient(circle,rgba(202,109,255,.23),rgba(91,235,255,.09) 47%,transparent 73%)}
-      .fd-companion-3d-badge{position:absolute;z-index:5;left:14px;bottom:14px;display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(112,233,251,.13);border-radius:999px;background:rgba(5,8,12,.64);backdrop-filter:blur(14px);color:#8e8795;font-size:6px;font-weight:900;letter-spacing:.12em;pointer-events:none}
+      .fd-companion-3d-badge{position:absolute;z-index:5;left:14px;top:14px;display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(112,233,251,.13);border-radius:999px;background:rgba(5,8,12,.64);backdrop-filter:blur(14px);color:#8e8795;font-size:6px;font-weight:900;letter-spacing:.12em;pointer-events:none}
       .fd-companion-3d-badge i{width:5px;height:5px;border-radius:50%;background:#71eaff;box-shadow:0 0 10px rgba(113,234,255,.72)}
       .fd-companion-3d-stage[data-ready="true"] .fd-companion-3d-badge{color:#b9f6ff;border-color:rgba(112,233,251,.24)}
       @media(max-width:560px){.fd-companion-3d-stage{min-height:280px;border-radius:17px}.fd-companion-3d-stage[data-compact="true"]{min-height:150px}}
