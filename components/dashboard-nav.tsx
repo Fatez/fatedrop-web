@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const groups = [
   { label: "DISCOVER", items: [["▦", "Home", "/dashboard"], ["⌕", "Search", "/dashboard/search"], ["⇄", "True Price", "/dashboard/true-price"], ["⌂", "Indie Stores", "/dashboard/stores"]] },
-  { label: "TRACK", items: [["◉", "Alerts", "/dashboard/alerts"], ["♡", "FateFind", "/dashboard/watchlist"]] },
+  { label: "TRACK", items: [["◉", "Alerts", "/dashboard/alerts"], ["♡", "FateFind", "/dashboard/watchlist"], ["☆", "Wishlist", "/dashboard/wishlist"], ["≋", "Preferences", "/dashboard/notifications"]] },
   { label: "NETWORK", items: [["□", "Events", "/dashboard/events"], ["⌖", "Local Radar", "/dashboard/local-radar"], ["◌", "Discord", "/dashboard/discord"]] },
   { label: "ACCOUNT", items: [["◎", "My FateDrop ID", "/dashboard/profile"], ["◇", "Companion", "/dashboard/avatar"], ["♛", "Membership", "/dashboard/membership"]] },
 ] as const;
