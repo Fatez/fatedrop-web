@@ -27,6 +27,39 @@ export type SignalCatalogueResponse = {
   updatedAt: string;
 };
 
+export type SignalTruePriceOffer = {
+  id: string;
+  retailerId: string;
+  retailerName: string;
+  title: string;
+  priceGbp?: number;
+  shippingGbp?: number;
+  totalDeliveredGbp?: number;
+  deliveryKnown: boolean;
+  collectionAvailable: boolean;
+  productUrl: string;
+  imageUrl?: string | null;
+  lastCheckedAt?: string;
+  stockStatus: "IN_STOCK" | "PREORDER" | "OUT_OF_STOCK" | "UNKNOWN";
+  isLowestKnownDelivered: boolean;
+};
+
+export type SignalTruePriceGroup = {
+  id: string;
+  title: string;
+  category: string;
+  matchingConfidence: number;
+  retailerCount: number;
+  offers: SignalTruePriceOffer[];
+};
+
+export type SignalTruePriceResponse = {
+  success: boolean;
+  count: number;
+  groups: SignalTruePriceGroup[];
+  disclaimer: string;
+};
+
 export type SignalEngineStatus = {
   success: boolean;
   monitor?: {
@@ -58,13 +91,33 @@ async function signalFetch<T>(pathname: string, params?: URLSearchParams): Promi
   }
 }
 
-export async function searchSignalCatalogue(query: string, options: { inStock?: boolean; limit?: number; sort?: "price" | "title" } = {}) {
+export async function searchSignalCatalogue(query: string, options: {
+  inStock?: boolean;
+  limit?: number;
+  sort?: "price" | "title";
+  retailer?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  cursor?: string;
+} = {}) {
   const clean = query.trim();
   if (clean.length < 2) return null;
   const params = new URLSearchParams({ q: clean, limit: String(Math.min(Math.max(options.limit ?? 50, 1), 100)) });
   if (options.inStock) params.set("inStock", "true");
   if (options.sort) params.set("sort", options.sort);
+  if (options.retailer) params.set("retailer", options.retailer);
+  if (options.category) params.set("category", options.category);
+  if (typeof options.minPrice === "number" && Number.isFinite(options.minPrice)) params.set("minPrice", String(options.minPrice));
+  if (typeof options.maxPrice === "number" && Number.isFinite(options.maxPrice)) params.set("maxPrice", String(options.maxPrice));
+  if (options.cursor) params.set("cursor", options.cursor);
   return signalFetch<SignalCatalogueResponse>("/api/catalogue", params);
+}
+
+export async function searchSignalTruePrice(query: string) {
+  const clean = query.trim();
+  if (clean.length < 2) return null;
+  return signalFetch<SignalTruePriceResponse>("/api/true-price", new URLSearchParams({ q: clean }));
 }
 
 export function getSignalEngineStatus() {
