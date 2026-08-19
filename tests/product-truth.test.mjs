@@ -56,6 +56,19 @@ test("trust and membership copy do not claim unimplemented finality", async () =
   assert.ok(subscriptions.includes("final higher-tier feature split is still being reviewed"));
 });
 
+test("privacy notice covers Companion and on-demand Local Radar handling", async () => {
+  const privacy = await source("app/privacy/page.tsx");
+  assert.ok(privacy.includes("FateDrop Companion"));
+  assert.ok(privacy.includes("current Local Radar route does not write those coordinates"));
+  assert.ok(privacy.includes("one-way salted hashes"));
+});
+
+test("Cloud metric ingestion uses constant-time secret comparison", async () => {
+  const route = await source("app/api/dashboard/network-snapshot/route.ts");
+  assert.ok(route.includes("timingSafeEqual"));
+  assert.ok(route.includes('authorization.startsWith("Bearer ")'));
+});
+
 test("product truth and audit documents remain part of the repository", async () => {
   const [truth, audit] = await Promise.all([
     source("docs/fatedrop-product-truth.md"),
