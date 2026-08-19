@@ -44,6 +44,13 @@ test("dashboard Search is connected to the canonical Signal Engine client", asyn
   assert.ok(client.includes("FATEDROP_SIGNAL_ENGINE_URL"));
 });
 
+test("unknown delivery can never masquerade as a delivered total", async () => {
+  const catalogue = await source("lib/retailer-catalogue.ts");
+  const truePrice = await source("lib/true-price.ts");
+  assert.ok(catalogue.includes("return { deliveredPence: null, deliveryPence: null, known: false as const }"));
+  assert.ok(truePrice.includes("deliveredTruePricePence = input.deliveryKnown && input.mandatoryPostagePence !== null"));
+});
+
 test("trust and membership copy do not claim unimplemented finality", async () => {
   const [trust, home, subscriptions] = await Promise.all([
     source("app/trust/page.tsx"),
