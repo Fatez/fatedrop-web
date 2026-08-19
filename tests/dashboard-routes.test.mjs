@@ -38,7 +38,8 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.equal(root.includes('action="/dashboard/search"'), false);
   assert.ok(root.includes("MEMBER SINCE"));
   assert.ok(root.includes("TIME IN NETWORK"));
-  assert.ok(root.includes("FATEWINDOW BETA"));
+  assert.ok(root.includes("FATEDROP COMPANION · FOUNDATION"));
+  assert.ok(root.includes('href="/dashboard/search"'));
 });
 
 test("FateDrop Companion uses a shared illustrated asset rig and persists as account data", () => {
