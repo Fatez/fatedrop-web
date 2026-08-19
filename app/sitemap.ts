@@ -4,7 +4,7 @@ const routes = ["", "/about", "/businesses", "/collectors", "/events", "/free-dr
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const modified = new Date("2026-08-17T00:00:00.000Z");
+  const modified = new Date("2026-08-19T00:00:00.000Z");
   return routes.map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: modified,
