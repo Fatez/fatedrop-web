@@ -25,20 +25,20 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - name: Update Next to current stable security line
+      - name: Align Next runtime and lint tooling
         shell: bash
         run: |
-          if grep -q '"next": "\^16.3.0"' package.json; then
-            echo "Next 16.3.0 dependency already present."
+          if grep -q '"next": "\^16.3.0"' package.json && grep -q '"eslint-config-next": "16.3.0"' package.json; then
+            echo "Next runtime and lint tooling already aligned."
             exit 0
           fi
-          npm install next@16.3.0 --save-exact
-          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.dependencies.next='^16.3.0';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          npm install next@16.3.0 eslint-config-next@16.3.0 --save-exact
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.dependencies.next='^16.3.0';p.devDependencies['eslint-config-next']='16.3.0';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
           npm install --package-lock-only
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
-          git commit -m "Upgrade Next to 16.3.0 security line"
+          git commit -m "Align Next runtime and lint tooling to 16.3.0"
           git push origin HEAD:launch-foundation-v1
 
   verify:
