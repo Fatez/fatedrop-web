@@ -84,16 +84,17 @@ function ensureModelViewerRuntime() {
 export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_MANIFEST }: { request: CompanionRenderRequest; manifest?: CompanionAssetManifest }) {
   const mode = request.mode ?? companionRendererMode(manifest);
   const wants3d = mode === "webgl-3d" && Boolean(manifest.characterModelUrl);
-  const [modelLoaded, setModelLoaded] = useState(false);
-  const [runtimeFailed, setRuntimeFailed] = useState(false);
+  const [loadedModelUrl, setLoadedModelUrl] = useState<string | null>(null);
+  const [failedModelUrl, setFailedModelUrl] = useState<string | null>(null);
+  const modelLoaded = Boolean(manifest.characterModelUrl && loadedModelUrl === manifest.characterModelUrl);
+  const runtimeFailed = Boolean(manifest.characterModelUrl && failedModelUrl === manifest.characterModelUrl);
 
   useEffect(() => {
-    if (!wants3d) return;
+    const modelUrl = manifest.characterModelUrl;
+    if (!wants3d || !modelUrl) return;
     let active = true;
-    setModelLoaded(false);
-    setRuntimeFailed(false);
     void ensureModelViewerRuntime().catch(() => {
-      if (active) setRuntimeFailed(true);
+      if (active) setFailedModelUrl(modelUrl);
     });
     return () => {
       active = false;
@@ -107,6 +108,7 @@ export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_
   const presentation = reactionPresentation(request.reaction);
   const label = request.label ?? "FateDrop Companion";
   const modelViewerProps: Record<string, unknown> = {
+    key: manifest.characterModelUrl,
     src: manifest.characterModelUrl ?? undefined,
     alt: label,
     className: "fd-companion-model-viewer",
@@ -128,8 +130,11 @@ export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_
     "camera-controls": request.compact ? undefined : true,
     "disable-zoom": request.compact ? true : undefined,
     "touch-action": "pan-y",
-    onLoad: () => setModelLoaded(true),
-    onError: () => setRuntimeFailed(true),
+    onLoad: () => {
+      setLoadedModelUrl(manifest.characterModelUrl);
+      setFailedModelUrl(null);
+    },
+    onError: () => setFailedModelUrl(manifest.characterModelUrl),
   };
 
   return <div className="fd-companion-3d-stage" data-compact={request.compact ? "true" : "false"} data-ready={modelLoaded && !runtimeFailed ? "true" : "false"} data-reaction={request.reaction} aria-label={label}>
