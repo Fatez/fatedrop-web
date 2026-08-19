@@ -123,5 +123,7 @@ test("Product Spec v1 remains the repository authority", async () => {
   assert.ok(truth.includes("FateFind is the hunt"));
   assert.ok(truth.includes("FateMatch is the successful result"));
   assert.ok(truth.includes("Whisper — internal"));
-  assert.ok(audit.includes("FateFind / FateMatch / Watchlist naming collision"));
+  assert.ok(audit.includes("RESOLVED — FateFind / FateMatch naming collision"));
+  assert.ok(audit.includes("FateFind = the hunt the collector creates"));
+  assert.ok(audit.includes("FateMatch = the successful observed result"));
 });
