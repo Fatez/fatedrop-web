@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
+import { canonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(canonicalSiteUrl()),
   title: "FateDrop — UK TCG Discovery Network",
   description:
     "A UK TCG founding-beta network for catalogue discovery, evidence-backed stock intelligence, independent retailers and events.",
   openGraph: {
     title: "FateDrop — Find stock. Support independents. Collect smarter.",
     description:
-      "A live TCG market network connecting collector demand with participating catalogues, stock intelligence, independent retailers and events.",
+      "A founding-beta TCG discovery network connecting collector demand with participating catalogues, evidence-backed stock intelligence, independent retailers and events.",
     type: "website",
     images: [{ url: "/assets/fatedrop-header.webp", width: 1817, height: 866, alt: "FateDrop ultraviolet network artwork" }],
   },
