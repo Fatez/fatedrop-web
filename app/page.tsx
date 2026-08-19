@@ -58,10 +58,10 @@ export default function Home() {
       <section className="lifecycle-section section-shell">
         <div className="lifecycle-copy">
           <p className="eyebrow"><span />The early-signal advantage</p>
-          <h2>Detect earlier catalogue signals—not only conventional in-stock events.</h2>
-          <p>Whisper can add useful context when a new SKU or unseen product begins appearing in retailer data. Manifested verifies purchasable stock; Vanished records loss of verified availability; Echo marks availability returning.</p>
+          <h2>Echo when something is moving. Manifested when it is real.</h2>
+          <p>Echo is FateDrop&apos;s public early-intelligence state: meaningful queue, security, catalogue or metadata movement worth watching, without promising that stock is coming. Manifested means availability or another meaningful event is confirmed from observed evidence. Vanished records previously confirmed availability being lost.</p>
           <span className="status-chip validated">Evidence-backed beta lifecycle</span>
-          <small>Signal timing depends on the data each retailer makes available. No guaranteed-first or instant-everywhere claim.</small>
+          <small>Whisper remains internal engine terminology. Signal timing depends on the evidence each source exposes; an Echo is never a guarantee that a drop is imminent.</small>
         </div>
         <StockLifecycle />
       </section>
@@ -86,7 +86,7 @@ export default function Home() {
 
       <section className="trust-section section-shell" id="trust">
         <div className="trust-intro"><p className="eyebrow"><span />Trust by design</p><h2>Evidence—not manufactured confidence.</h2><p>Verification, measured performance and promotional placement remain separate. Paid placement cannot buy stronger trust evidence, and planned infrastructure stays visibly labelled.</p><Link className="text-link" href="/trust">Explore the evidence model <span>→</span></Link></div>
-        <div className="trust-grid"><article><span>Evidence model · foundation</span><h3>Trust needs enough evidence.</h3><p>FateScore is a planned evidence-led model. Until its scoring inputs and publication policy are implemented, FateDrop shows the evidence it actually has rather than inventing a score.</p></article><article><span>Drop Pulse · foundation</span><h3>Context needs an observed transition.</h3><p>Drop Pulse summarises timestamp-supported movement; it does not replace Whisper, Manifested, Vanished or Echo.</p></article><article><span>FateFair · planned</span><h3>Guidance needs context.</h3><p>Future price guidance requires comparable offers, condition, delivery, history, freshness and sample size before it can be trustworthy.</p></article></div>
+        <div className="trust-grid"><article><span>Evidence model · foundation</span><h3>Trust needs enough evidence.</h3><p>FateScore is a planned evidence-led model. Until its scoring inputs and publication policy are implemented, FateDrop shows the evidence it actually has rather than inventing a score.</p></article><article><span>Drop Pulse · foundation</span><h3>Context needs observed movement.</h3><p>Drop Pulse summarises timestamp-supported activity behind an offer or event. It is secondary context around Echo, Manifested and Vanished—not another public lifecycle state.</p></article><article><span>FateFair · planned</span><h3>Guidance needs context.</h3><p>Future price guidance requires comparable offers, condition, delivery, history, freshness and sample size before it can be trustworthy.</p></article></div>
       </section>
 
       <section className="events-teaser section-shell">
