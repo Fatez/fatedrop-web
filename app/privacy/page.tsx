@@ -3,7 +3,7 @@ import { SiteShell } from "@/components/page-shell";
 
 export const metadata: Metadata = {
   title: "Founding Beta Privacy Notice | FateDrop",
-  description: "How FateDrop uses beta enquiries, FateDrop ID profiles, Companion settings, membership and connected Discord information.",
+  description: "How FateDrop uses beta enquiries, FateDrop ID profiles, Companion settings, membership, Local Radar and connected Discord information.",
 };
 
 export default function PrivacyPage() {
@@ -18,6 +18,8 @@ export default function PrivacyPage() {
         <p>Preset profile images are stored as a small FateDrop asset reference. If you upload your own profile image, the browser crops and compresses it to a small WebP image before it is stored with your profile. The original source file is not retained by FateDrop.</p>
         <h2>FateDrop Companion</h2>
         <p>If you customise the FateDrop Companion, FateDrop stores the account-level loadout choices needed to reproduce it, such as selected appearance/cosmetic IDs, gear, aura, background, signal familiar/companion choice and selected TCG preferences. These are configuration values rather than a hidden biometric profile. The richer 3D renderer is still a product foundation; if future Companion features require materially different personal data, this notice must be updated before that data is collected.</p>
+        <h2>Local Radar location</h2>
+        <p>Local Radar asks the browser for location only after you choose to use the nearby-search control. The current API receives latitude, longitude and search radius only to perform that authenticated Places-provider lookup and returns the results with a private, no-store response. The current Local Radar route does not write those coordinates into the FateDrop account or activity database. If future location history or saved-area features are added, the storage and retention position must be documented before they go live.</p>
         <h2>Passwords and sessions</h2>
         <p>Passwords are stored as one-way salted hashes rather than readable passwords. FateDrop operators do not receive a readable copy of your password from the account store. A strictly necessary session cookie is used to keep you signed in. Session records are time-limited and can be invalidated when you sign out.</p>
         <h2>Membership and billing</h2>
@@ -29,7 +31,7 @@ export default function PrivacyPage() {
         <h2>Where data is stored</h2>
         <p>Local development uses ignored local files. Hosted production is designed to use a private managed PostgreSQL database configured through protected environment variables. There is no public account, password-hash, lead-list or database-export endpoint.</p>
         <h2>Why it is used</h2>
-        <p>Account data is used to provide identity, profile, Companion configuration, membership and connected-access features. Enquiry data is used to review and reply to the journey you selected. Optional marketing consent remains separate. FateDrop does not sell beta-lead or profile information.</p>
+        <p>Account data is used to provide identity, profile, Companion configuration, membership and connected-access features. On-demand location is used only for the current nearby-store query described above. Enquiry data is used to review and reply to the journey you selected. Optional marketing consent remains separate. FateDrop does not sell beta-lead or profile information.</p>
         <h2>Retention and your rights</h2>
         <p>Working retention periods must be confirmed in the final legal review. Before public scale, FateDrop also needs a dedicated contact route for access, correction, deletion, consent withdrawal and other applicable data-rights requests.</p>
       </article>
