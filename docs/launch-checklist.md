@@ -40,7 +40,11 @@ Production should use persistent PostgreSQL rather than local files:
 - `FATEDROP_METRIC_STORE=postgres`
 - `DATABASE_URL=<protected Neon connection string>`
 
-Run the current `database/postgres.sql` against the intended production database before enabling writes.
+Run the existing production schema plus reviewed additive migrations against the intended database before enabling dependent writes. The current website branch adds:
+
+- `database/2026-08-19-user-preferences.sql` — Universal Wishlist + shared notification preference tables.
+
+Do not silently apply production migrations from a build/deploy job.
 
 ### Cloud → website metric publishing
 
@@ -119,7 +123,9 @@ Account/dashboard:
 - `/dashboard/search?q=elite+trainer+box`
 - `/dashboard/true-price?q=elite+trainer+box`
 - `/dashboard/watchlist`
+- `/dashboard/wishlist`
 - `/dashboard/alerts`
+- `/dashboard/notifications`
 - `/dashboard/stores`
 - `/dashboard/local-radar`
 - `/dashboard/events`
@@ -131,6 +137,8 @@ API:
 
 - `/api/network-status`
 - `/api/events`
+- `/api/wishlist`
+- `/api/notification-preferences`
 - authenticated account/profile routes
 - FateFind create/list route
 - Stripe/Discord routes only when configured
@@ -153,6 +161,7 @@ API:
 - [ ] Security headers are present in production responses.
 - [ ] `/api`, `/account` and `/dashboard` remain excluded from crawlers.
 - [ ] Local Radar uses location only on demand; no unadvertised coordinate persistence is introduced.
+- [ ] Wishlist and notification preference records are covered by final retention/deletion policy before scaled launch.
 
 ## 7. Companion
 
@@ -170,16 +179,16 @@ The current persistent loadout is safe to launch as a foundation if desired. The
 
 ## 8. Events
 
-`/api/events` now provides the canonical website migration path from persisted Cloud `upcomingEvents` data. The existing dashboard static-sourced directory must remain labelled static until Cloud ingestion actually publishes events.
+`/api/events` provides the canonical website migration path from persisted Cloud `upcomingEvents` data. The existing dashboard static-sourced directory must remain labelled static until Cloud ingestion actually publishes events.
 
 ## 9. Owner decisions that do not belong in an autonomous code guess
 
 - final Plus vs Pro pricing and capability split
 - final FateScore policy and inputs
 - whether/when FateWindow returns from HOLD
-- Universal Wishlist persistence/notification rules across app and web
 - final retailer paid-plan structure
 - final 3D Companion cosmetic/progression economy
 - final Event Vendor Mode commercial rules
-- final UK legal text
+- final UK legal text / data retention periods
+- production database migration approval
 - production deployment approval
