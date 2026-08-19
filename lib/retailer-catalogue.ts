@@ -97,9 +97,9 @@ export function formatGBP(pence: number) {
 }
 
 export function calculateDeliveredPrice(pricePence: number, freeDeliveryThresholdPence?: number, knownDeliveryPence?: number) {
-  if (freeDeliveryThresholdPence && pricePence >= freeDeliveryThresholdPence) return { deliveredPence: pricePence, deliveryPence: 0, known: true };
-  if (typeof knownDeliveryPence === "number") return { deliveredPence: pricePence + knownDeliveryPence, deliveryPence: knownDeliveryPence, known: true };
-  return { deliveredPence: pricePence, deliveryPence: null, known: false };
+  if (freeDeliveryThresholdPence && pricePence >= freeDeliveryThresholdPence) return { deliveredPence: pricePence, deliveryPence: 0, known: true as const };
+  if (typeof knownDeliveryPence === "number") return { deliveredPence: pricePence + knownDeliveryPence, deliveryPence: knownDeliveryPence, known: true as const };
+  return { deliveredPence: null, deliveryPence: null, known: false as const };
 }
 
 export function calculateMarkup(pricePence: number, rrpPence?: number) {
