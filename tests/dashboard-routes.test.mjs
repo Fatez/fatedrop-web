@@ -23,10 +23,12 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation follows Discover Track Network Account structure", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group), `shared dashboard nav missing ${group}`);
-  for (const href of ["/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) {
+  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) {
     assert.ok(nav.includes(href), `shared dashboard nav missing ${href}`);
   }
-  assert.equal(nav.includes('["⌕", "Search", "/dashboard/search"]'), false, "dead standalone Search navigation should stay removed");
+  assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'), "Search should be a first-class dashboard destination");
+  assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'), "saved intent should use canonical FateFind language");
+  assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'), "account navigation should use Companion language");
 });
 
 test("dashboard home uses the shared shell and retains personal collector identity", () => {
@@ -39,7 +41,7 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes("FATEWINDOW BETA"));
 });
 
-test("custom avatar uses a shared illustrated asset rig and persists as account data", () => {
+test("FateDrop Companion uses a shared illustrated asset rig and persists as account data", () => {
   const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
   const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
   const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
@@ -49,11 +51,12 @@ test("custom avatar uses a shared illustrated asset rig and persists as account 
   const loadout = fs.readFileSync("lib/avatar-loadout.ts", "utf8");
   const assets = fs.readFileSync("lib/avatar-assets.ts", "utf8");
   const sprites = fs.readFileSync("public/assets/avatar-v2/avatar-sprites.svg", "utf8");
-  const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
+  const fateFind = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
 
-  assert.ok(page.includes("Design My Avatar"));
+  assert.ok(page.includes("FateDrop Companion"));
+  assert.ok(page.includes("3D READY FOUNDATION"));
   assert.ok(builder.includes("SAVE AVATAR"));
   assert.ok(builder.includes("AvatarOptionThumbnail"));
   for (const category of ["skin", "hair", "face", "eyes", "outfit", "headwear", "accessory", "gear", "companion", "aura", "background"]) assert.ok(builder.includes(`${category}:`), `avatar builder missing ${category}`);
@@ -75,8 +78,9 @@ test("custom avatar uses a shared illustrated asset rig and persists as account 
   assert.ok(sprites.includes('id="outfit-spectral-bomber"'));
   assert.ok(sprites.includes('id="companion-radar-drone"'));
   assert.ok(sprites.includes('id="bg-command-room"'));
-  assert.ok(fateMatch.includes("YOUR COMPANION"));
-  assert.ok(fateMatch.includes("AvatarPreview"));
+  assert.ok(fateFind.includes("YOUR COMPANION"));
+  assert.ok(fateFind.includes("FATEFIND"));
+  assert.ok(fateFind.includes("AvatarPreview"));
   assert.ok(api.includes("assertSameOrigin"));
   assert.ok(api.includes("normalizeAvatarLoadout"));
   assert.ok(storage.includes("fatedrop_user_avatars"));
@@ -97,7 +101,7 @@ test("free live alert feed redacts actionable signal fields before browser deliv
   assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
-test("live alerts grade major surges separately and use the saved avatar cinematic", () => {
+test("live alerts grade major surges separately and use the saved Companion cinematic", () => {
   const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
   const beam = fs.readFileSync("components/signal-beam.tsx", "utf8");
   const cinematic = fs.readFileSync("components/avatar-signal-cinematic.tsx", "utf8");
