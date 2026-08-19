@@ -4,23 +4,23 @@ import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page
 import { StockLifecycle } from "@/components/stock-lifecycle";
 
 export const metadata: Metadata = {
-  title: "Trust, FateScore & Stock Signals | FateDrop",
-  description: "How FateDrop separates verification, measured evidence, stock transitions and future price guidance.",
+  title: "Trust & Stock Signals | FateDrop",
+  description: "How FateDrop separates verification, measured evidence, stock transitions and planned price guidance.",
 };
 
 export default function TrustPage() {
   return (
     <SiteShell>
-      <PageHero eyebrow="Trust by design" title="Evidence—not manufactured confidence." description="FateDrop separates business verification from measured performance, supports stock labels with observed transitions and keeps promotions clearly labelled.">
+      <PageHero eyebrow="Trust by design" title="Evidence—not manufactured confidence." description="FateDrop separates business verification from measured evidence, supports stock labels with observed transitions and keeps promotions clearly labelled.">
         <div className="button-row"><Link className="button button-primary" href="/join?type=collector">Join the Collector Beta <span>↗</span></Link><Link className="text-link" href="#stock-lifecycle">See the stock lifecycle <span>↓</span></Link></div>
       </PageHero>
 
       <section className="content-section section-shell">
         <SectionHeading eyebrow="Three trust layers" title="Confidence should be earned in public." body="A verified business is not automatically a top performer, a sponsored placement is not a recommendation and missing evidence never becomes an invented score." />
         <div className="trust-grid standalone">
-          <article><span>FateScore · validated beta model</span><h3>Verification and performance stay separate.</h3><p>FateScore is an evidence-led retailer trust model. Where there is not enough reliable evidence, the honest result is “Not enough data”.</p></article>
-          <article><span>Drop Pulse · validated beta</span><h3>A label needs an observed transition.</h3><p>Labels such as just listed, recently restocked or price dropped must be supported by timestamps or catalogue history.</p></article>
-          <article><span>FateFair · active expansion</span><h3>Price guidance needs context.</h3><p>Future guidance is designed to consider comparable offers, condition, grade, delivery, history, freshness and sample size.</p></article>
+          <article><span>Evidence model · foundation</span><h3>Verification and performance stay separate.</h3><p>FateScore is a planned evidence-led retailer trust model, not a live public ranking. Until the scoring inputs and publication policy are implemented and validated, FateDrop should show the evidence it actually has rather than invent a score.</p></article>
+          <article><span>Drop Pulse · foundation</span><h3>A label needs an observed transition.</h3><p>Drop Pulse is an evidence-context layer, not a fifth lifecycle state. Labels such as just listed, recently restocked or price dropped need timestamps or catalogue history before they are shown.</p></article>
+          <article><span>FateFair · planned</span><h3>Price guidance needs context.</h3><p>Future FateFair guidance is intended to consider comparable offers, condition, grade, delivery, history, freshness and sample size. It is not presented as live guidance today.</p></article>
         </div>
       </section>
 
@@ -30,7 +30,7 @@ export default function TrustPage() {
       </section>
 
       <section className="content-section section-shell">
-        <div className="quote-band"><p className="eyebrow"><span />No pay-to-trust</p><blockquote>A retailer cannot purchase a stronger trust score.</blockquote><p>Commercial placements must be clearly labelled. Outbound clicks are referrals—not confirmed sales unless proper conversion attribution exists.</p></div>
+        <div className="quote-band"><p className="eyebrow"><span />No pay-to-trust</p><blockquote>A retailer cannot purchase a stronger trust result.</blockquote><p>Commercial placements must be clearly labelled. Outbound clicks are referrals—not confirmed sales unless proper conversion attribution exists.</p></div>
       </section>
       <FinalCta />
     </SiteShell>
