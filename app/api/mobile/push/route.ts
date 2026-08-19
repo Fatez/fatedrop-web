@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getSnapshotForRequest } from "@/lib/auth";
-import { getDatabasePool } from "@/lib/postgres";
+import { fateDropPostgres } from "@/lib/postgres";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,12 +19,18 @@ export async function POST(request: Request) {
   const deviceLabel = typeof payload?.deviceLabel === "string" ? payload.deviceLabel.trim().slice(0, 120) || null : null;
   const now = Math.floor(Date.now() / 1000);
   try {
-    const pool = getDatabasePool();
-    await pool.query(`
+    const sql = await fateDropPostgres();
+    await sql`
       INSERT INTO fatedrop_push_endpoints (id,user_id,expo_push_token,platform,device_label,enabled,created_at,updated_at)
-      VALUES ($1,$2,$3,$4,$5,true,$6,$6)
-      ON CONFLICT (expo_push_token) DO UPDATE SET user_id=EXCLUDED.user_id,platform=EXCLUDED.platform,device_label=EXCLUDED.device_label,enabled=true,updated_at=EXCLUDED.updated_at,failure_reason=NULL
-    `, [randomUUID(), snapshot.account.id, token, platform, deviceLabel, now]);
+      VALUES (${randomUUID()},${snapshot.account.id},${token},${platform},${deviceLabel},true,${now},${now})
+      ON CONFLICT (expo_push_token) DO UPDATE SET
+        user_id=EXCLUDED.user_id,
+        platform=EXCLUDED.platform,
+        device_label=EXCLUDED.device_label,
+        enabled=true,
+        updated_at=EXCLUDED.updated_at,
+        failure_reason=NULL
+    `;
     return Response.json({ registered: true }, { status: 201, headers: { "cache-control": "private, no-store" } });
   } catch {
     return Response.json({ error: "Push endpoint storage is not ready. Apply the hosted notification migration first." }, { status: 503 });
@@ -38,8 +44,9 @@ export async function DELETE(request: Request) {
   const token = validExpoToken(payload?.token);
   if (!token) return Response.json({ error: "A valid Expo push token is required." }, { status: 400 });
   try {
-    const pool = getDatabasePool();
-    await pool.query("UPDATE fatedrop_push_endpoints SET enabled=false,updated_at=$3 WHERE user_id=$1 AND expo_push_token=$2", [snapshot.account.id, token, Math.floor(Date.now() / 1000)]);
+    const sql = await fateDropPostgres();
+    const now = Math.floor(Date.now() / 1000);
+    await sql`UPDATE fatedrop_push_endpoints SET enabled=false,updated_at=${now} WHERE user_id=${snapshot.account.id} AND expo_push_token=${token}`;
     return Response.json({ registered: false }, { headers: { "cache-control": "private, no-store" } });
   } catch {
     return Response.json({ error: "Push endpoint could not be updated." }, { status: 503 });
