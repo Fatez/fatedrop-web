@@ -42,9 +42,10 @@ test("interactive phone preview retains every controlled screen and safeguard", 
     assert.match(source, new RegExp(`screen === \\"${screen}\\"`));
   }
 
-  for (const state of ["Whisper", "Manifested", "Vanished", "Echo"]) {
+  for (const state of ["Echo", "Manifested", "Vanished"]) {
     assert.match(source, new RegExp(`name: \\"${state}\\"`));
   }
+  assert.ok(!source.includes('name: "Whisper"'));
 
   for (const requirement of [
     "Interactive product preview — sample data",
@@ -52,7 +53,8 @@ test("interactive phone preview retains every controlled screen and safeguard", 
     "Save to Universal Wishlist",
     "FateFind is watching the network.",
     "Event Vendor Mode",
-    "This preview is not displaying real-time stock.",
+    "This preview is not displaying real-time stock",
+    "Echo never guarantees a drop",
   ]) {
     assert.ok(source.includes(requirement));
   }
