@@ -46,8 +46,15 @@ export class LeadStorageUnavailableError extends Error {
 
 let fileWriteQueue: Promise<void> = Promise.resolve();
 
+function storageMode() {
+  if (process.env.FATEDROP_LEAD_STORE) return process.env.FATEDROP_LEAD_STORE;
+  if (process.env.NODE_ENV === "development") return "file";
+  if (process.env.DATABASE_URL) return "postgres";
+  return "disabled";
+}
+
 export async function storeLead(record: LeadRecord) {
-  const mode = process.env.FATEDROP_LEAD_STORE ?? (process.env.NODE_ENV === "development" ? "file" : "disabled");
+  const mode = storageMode();
 
   if (mode === "postgres") {
     await storeInPostgres(record);
