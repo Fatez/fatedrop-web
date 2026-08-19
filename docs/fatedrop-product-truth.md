@@ -55,14 +55,14 @@ The website ingestion schema can represent queue/security signal kinds and the C
 
 | Feature | Status | Canonical purpose | Notes |
 | --- | --- | --- | --- |
-| **Network Search / Unified Search** | FOUNDATION | Search connected catalogue offers from one product query. | Signal Engine exposes `/api/catalogue`. The dashboard Search route is present but is not yet connected to live result rendering. |
-| **True Price** | BETA | Keep item price, official RRP, mandatory delivery/fees and delivered total separate; compare delivered premium/discount where evidence exists. | `lib/true-price.ts` correctly withholds delivered total when delivery is unknown. |
+| **Network Search / Unified Search** | BETA | Search connected catalogue offers from one product query. | The dashboard Search route now queries the canonical Signal Engine `/api/catalogue` endpoint server-side and renders observed offer, availability, price, RRP and known-delivery context without sample-result fallback. |
+| **True Price** | BETA | Keep item price, official RRP, mandatory delivery/fees and delivered total separate; compare delivered premium/discount where evidence exists. | `lib/true-price.ts` withholds delivered total when delivery is unknown and the low-level delivery helper now returns a structurally null delivered total when delivery is unknown. |
 | **RRP context** | BETA | Show official/verified RRP only when a supported reference exists. | Pokémon Center is configured as an official RRP source in the Signal Engine; website persists Cloud RRP references. |
 | **FateFind** | FOUNDATION/BETA | A saved wanted search/intent rule: product plus constraints such as max True Price/RRP premium and online/local scope. | Current storage/classes still use legacy `FateMatch` internal naming. Preserve storage compatibility while public naming is reconciled. |
 | **Watchlist** | FOUNDATION | A simple saved-product list. | Keep conceptually distinct from a structured FateFind rule even if both later share storage or UI. |
 | **FateMatch** | PLANNED / RESERVED NAME | Cross-retailer product/offer matching and comparison, not the name of the saved-search feature. | Do not migrate/delete existing `fate_match` storage yet. Treat current code naming as legacy/internal until a safe migration is designed. |
 | **Local Radar** | BETA when provider configured; otherwise FOUNDATION | Discover nearby TCG businesses through an approved Places provider, while keeping external discovery separate from verified FateDrop-network stock. | External map discovery is not proof of live stock. |
-| **Retailer storefronts / Indie Stores** | BETA LAB | Browse a participating/experimental retailer catalogue inside FateDrop before handing purchase to the retailer. | Current website directly reads two Shopify catalogue feeds; labels must remain experimental unless retailer participation/verification is confirmed. |
+| **Retailer storefronts / Indie Stores** | BETA LAB | Browse experimental retailer catalogue feeds inside FateDrop before handing purchase to the retailer. | Current website directly reads two Shopify catalogue feeds; the UI must not imply formal partner/verification status unless retailer participation is confirmed. |
 
 ### True Price rules
 
@@ -108,7 +108,7 @@ A working heuristic exists in `lib/fate-window.ts` and can label evidence as Buy
 | Feature | Status | Canonical purpose |
 | --- | --- | --- |
 | Public Fate Encounters examples | DEMO | Demonstrate intended event format. |
-| Dashboard sourced event directory | BETA / STATIC-SOURCED | Current code contains sourced UK event references. It must show freshness/source context and tell users to verify details before travel. It is not yet the Cloud live event feed. |
+| Dashboard sourced event directory | BETA / STATIC-SOURCED | Current code contains sourced UK event references. It shows review/source context and tells users to verify details before travel. It is not yet the Cloud live event feed. |
 | Event Vendor Mode | PLANNED / FOUNDATION | Temporary, clearly labelled event inventory that must not survive as ordinary shop stock after an event. |
 | Cloud event feed | FOUNDATION | Network snapshot schema supports upcoming events, but the current Signal Engine website publisher sends an empty event list. |
 
