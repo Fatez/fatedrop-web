@@ -67,7 +67,7 @@ Where evidence permits show:
 
 Unknown delivery is **unknown**, never free. Unknown RRP is **unknown**, never inferred from a reseller price.
 
-The dashboard True Price experience now uses the canonical Signal Engine `/api/true-price` offer groups rather than the old direct-Shopify lab as its primary comparison source.
+The dashboard True Price experience uses the canonical Signal Engine `/api/true-price` offer groups rather than the old direct-Shopify lab as its primary comparison source.
 
 ## Compare Offers — CORE
 
@@ -157,6 +157,8 @@ Wishlist is intentionally simpler than FateFind:
 
 It should survive sold-out states and retailer changes. It is not an active price/availability rule and should remain conceptually distinct from FateFind.
 
+Current web status: **FOUNDATION**. The branch now includes a persistent PostgreSQL wishlist model, authenticated same-origin API, dashboard list/save/remove experience and additive migration `database/2026-08-19-user-preferences.sql`. It becomes production-persistent only after that migration is deliberately approved and applied.
+
 ## Alerts — CORE
 
 Alerts is personal, not the global activity feed.
@@ -166,10 +168,16 @@ It should contain:
 - active FateFinds;
 - FateMatch / stock / price notifications sent to the user;
 - notification history;
-- preferences for Echo, Manifested, price conditions and delivery channels;
+- preferences for Echo, Manifested, Vanished, price conditions and delivery channels;
 - Discord/push/web preferences where available.
 
 Global network activity belongs primarily on Home.
+
+### Shared notification preferences
+
+Current web status: **FOUNDATION**. One account model now stores Echo, Manifested, Vanished, price-change and FateMatch preferences plus web/push/Discord channel choices and optional quiet hours. The preference record is cross-platform by design; a saved channel preference does **not** claim that an unconnected delivery service is operational.
+
+The same additive `2026-08-19-user-preferences.sql` migration must be approved/applied before production persistence is enabled.
 
 ## Network Activity — KEEP on Home
 
@@ -213,7 +221,7 @@ Intended reactions include:
 - Vanished — quiet lost-signal state;
 - major precursor activity — cinematic surge without implying guaranteed stock.
 
-The account already persists a Companion/avatar loadout. `lib/companion-contract.ts` now defines a renderer/asset boundary so the current illustrated fallback can later be replaced by a GLB/WebGL 3D character + floating droid without changing account identity storage.
+The account already persists a Companion/avatar loadout. `lib/companion-contract.ts` defines a renderer/asset boundary so the current illustrated fallback can later be replaced by a GLB/WebGL 3D character + floating droid without changing account identity storage.
 
 ## Membership / Discord
 
