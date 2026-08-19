@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
+import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
 import type { FateMatch } from "@/lib/fate-match";
 import { createFateMatch, listUserFateMatches } from "@/lib/fate-match-storage";
 import { hasCapability } from "@/lib/entitlements";
@@ -25,8 +25,8 @@ function notifications(value: unknown) {
   };
 }
 
-export async function GET() {
-  const snapshot = await getCurrentSnapshot();
+export async function GET(request: Request) {
+  const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
   try {
     const fateFinds = await listUserFateMatches(snapshot.account.id);
@@ -39,7 +39,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const snapshot = await getCurrentSnapshot();
+    const snapshot = await getSnapshotForRequest(request);
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
     if (!hasCapability(snapshot.membership, "advanced_fate_match")) return Response.json({ error: "Premium FateFind monitoring is required." }, { status: 403 });
     const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
