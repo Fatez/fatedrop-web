@@ -2,30 +2,25 @@ import { SignalIcon, type SignalIconName } from "./signal-icon";
 
 const stages = [
   {
-    name: "Whisper",
-    description: "A new SKU or previously unseen product begins appearing in retailer data.",
-    icon: "whisper" as SignalIconName,
+    name: "Echo",
+    description: "Meaningful early movement is detected. An Echo is worth watching, but it is not confirmation that stock is coming.",
+    icon: "echo" as SignalIconName,
   },
   {
     name: "Manifested",
-    description: "The product has been verified as live and available to purchase.",
+    description: "Availability or another meaningful product event has been confirmed from observed evidence.",
     icon: "manifested" as SignalIconName,
   },
   {
     name: "Vanished",
-    description: "The product has transitioned from available to sold out.",
+    description: "Previously confirmed availability has been lost, sold out or removed from the observed source.",
     icon: "vanished" as SignalIconName,
-  },
-  {
-    name: "Echo",
-    description: "Availability returns after selling out.",
-    icon: "echo" as SignalIconName,
   },
 ] as const;
 
 export function StockLifecycle() {
   return (
-    <div className="lifecycle" aria-label="FateDrop stock lifecycle">
+    <div className="lifecycle" aria-label="FateDrop public signal lifecycle">
       <div className="lifecycle-signal" aria-hidden="true"><i /></div>
       <div className="lifecycle-grid">
         {stages.map((stage, index) => (
