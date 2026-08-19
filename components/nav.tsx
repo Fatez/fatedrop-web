@@ -44,10 +44,13 @@ export function Nav() {
                 <span><b>My FateDrop ID</b><small>Profile, member since & identity</small></span><i>◎</i>
               </Link>
               <Link href="/dashboard" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
-                <span><b>Dashboard</b><small>Signals, metrics & activity</small></span><i>▦</i>
+                <span><b>Dashboard</b><small>Search, signals, True Price & activity</small></span><i>▦</i>
+              </Link>
+              <Link href="/dashboard/avatar" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
+                <span><b>FateDrop Companion</b><small>Persistent collector loadout foundation</small></span><i>◇</i>
               </Link>
               <Link href="/subscriptions#collectors" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
-                <span><b>Membership</b><small>Trial, Premium & billing</small></span><i>◇</i>
+                <span><b>Membership</b><small>Trial, Premium & billing</small></span><i>♛</i>
               </Link>
             </div>
           </div>
@@ -76,4 +79,3 @@ export function Nav() {
     </header>
   );
 }
-
