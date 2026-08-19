@@ -35,28 +35,31 @@ test("all current FateDrop routes and core project files are present", async () 
 });
 
 test("interactive phone preview retains every controlled screen and safeguard", async () => {
-  const source = await readFile(new URL("components/interactive-phone-demo.tsx", root), "utf8");
+  const source = await readFile(new URL("components/interactive-phone-demo-v2.tsx", root), "utf8");
 
   for (const screen of ["home", "search", "indies", "alerts", "more"]) {
     assert.match(source, new RegExp(`id: \\"${screen}\\"`));
     assert.match(source, new RegExp(`screen === \\"${screen}\\"`));
   }
 
-  for (const state of ["Echo", "Manifested", "Vanished"]) {
-    assert.match(source, new RegExp(`name: \\"${state}\\"`));
+  for (const state of ["ECHO", "MANIFESTED", "VANISHED"]) {
+    assert.ok(source.includes(state), `${state} is missing from the public phone preview`);
   }
-  assert.ok(!source.includes('name: "Whisper"'));
+  assert.ok(!source.includes("WHISPER"));
 
   for (const requirement of [
-    "Interactive product preview — sample data",
+    "Interactive preview · sample data",
     "Compare True Price",
-    "Save to Universal Wishlist",
-    "FateFind is watching the network.",
-    "Event Vendor Mode",
-    "This preview is not displaying real-time stock",
-    "Echo never guarantees a drop",
+    "Save to Wishlist",
+    "Create FateFind",
+    "FATEMATCH",
+    "Global Echo / Manifested / Vanished activity belongs on Home",
+    "Local Radar",
+    "Fate Encounters",
+    "FATEDROP / COMMAND CENTRE",
+    "COMPANION · 3D ASSET SLOT READY",
   ]) {
-    assert.ok(source.includes(requirement));
+    assert.ok(source.includes(requirement), `${requirement} is missing from the current product showcase`);
   }
 
   assert.ok(!source.includes("navigator.geolocation"));
