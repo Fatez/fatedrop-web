@@ -12,7 +12,7 @@ function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnaps
       id: snapshot.account.id,
       fateId: snapshot.account.fateId,
       email: snapshot.account.email,
-      handle: snapshot.account.handle,
+      handle: snapshot.account.username,
       displayName: snapshot.account.displayName,
       createdAt: snapshot.account.createdAt,
     },
