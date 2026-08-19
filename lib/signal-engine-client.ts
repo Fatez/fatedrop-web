@@ -60,6 +60,18 @@ export type SignalTruePriceResponse = {
   disclaimer: string;
 };
 
+export type SignalRetailerState = {
+  id: string;
+  name: string;
+  healthy: boolean;
+  lastScanAt: number | null;
+  lastSuccessAt: number | null;
+  lastError?: string | null;
+  productsSeen?: number | null;
+  pagesScanned?: number | null;
+  baselineCompleted: boolean;
+};
+
 export type SignalEngineStatus = {
   success: boolean;
   monitor?: {
@@ -68,6 +80,9 @@ export type SignalEngineStatus = {
     offersTracked?: number;
     currentlyAvailable?: number;
     retailers?: number;
+  };
+  state?: {
+    retailers?: SignalRetailerState[];
   };
 };
 
