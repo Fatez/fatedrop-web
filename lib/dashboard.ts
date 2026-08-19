@@ -1,6 +1,5 @@
 import type { AccountSnapshot } from "./account-storage";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal } from "./dashboard-storage";
-import { siteConfig } from "./site-data";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
 
@@ -47,10 +46,10 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
   const whispers = (network?.recentSignals ?? []).filter((signal) => signal.state === "whisper" || signal.state === "echo").slice(0, 4);
 
   const publishedBaseline = {
-    productsTracked: Number(siteConfig.snapshot[0].value.replace(/,/g, "")),
-    inStock: Number(siteConfig.snapshot[1].value.replace(/,/g, "")),
-    catalogueRetailers: Number(siteConfig.snapshot[2].value),
-    healthyMonitors: Number(siteConfig.snapshot[3].value),
+    productsTracked: network?.metrics.productsTracked ?? null,
+    inStock: network?.metrics.inStock ?? null,
+    catalogueRetailers: network?.metrics.catalogueRetailers ?? null,
+    healthyMonitors: network?.metrics.healthyMonitors ?? null,
   };
 
   return {
@@ -94,7 +93,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         label: "Network lifecycle metrics",
         source: network ? network.source : "Awaiting FateDrop Cloud metric feed",
         updatedAt: network?.measuredAt ?? null,
-        note: network ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle counters remain unavailable and the published beta catalogue snapshot is shown separately.",
+        note: network ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle and catalogue counters remain unavailable rather than falling back to stale values.",
       },
     ],
   };
