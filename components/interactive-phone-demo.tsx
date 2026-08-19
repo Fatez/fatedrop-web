@@ -8,10 +8,9 @@ type AlertMode = "lifecycle" | "fatefind";
 type MoreMode = "radar" | "events";
 
 const lifecycle = [
-  { name: "Whisper", copy: "A new product or SKU begins appearing in retailer data.", tone: "violet" },
+  { name: "Echo", copy: "Meaningful early movement is visible, but confirmed purchasable stock is not established yet.", tone: "cyan" },
   { name: "Manifested", copy: "The product has been verified as live and available to purchase.", tone: "green" },
-  { name: "Vanished", copy: "The product has transitioned from available to sold out.", tone: "pink" },
-  { name: "Echo", copy: "Availability has returned after selling out.", tone: "cyan" },
+  { name: "Vanished", copy: "Previously confirmed availability is no longer observed.", tone: "pink" },
 ] as const;
 
 const navigation: { id: Screen; label: string; icon: string }[] = [
@@ -23,9 +22,9 @@ const navigation: { id: Screen; label: string; icon: string }[] = [
 ];
 
 const offers = [
-  { retailer: "Northstar Cards", price: 49.95, postage: 3.49, pulse: "Manifested", availability: "In stock" },
-  { retailer: "Card Corner UK", price: 51.5, postage: 0, pulse: "Echo", availability: "Returned" },
-  { retailer: "The Indie Deck", price: 47.99, postage: 4.25, pulse: "Manifested", availability: "Low stock" },
+  { retailer: "Northstar Cards", price: 49.95, postage: 3.49, pulse: "Confirmed", availability: "In stock" },
+  { retailer: "Card Corner UK", price: 51.5, postage: 0, pulse: "High activity", availability: "Observed movement" },
+  { retailer: "The Indie Deck", price: 47.99, postage: 4.25, pulse: "Recent change", availability: "Low stock" },
 ];
 
 export function InteractivePhoneDemo() {
@@ -64,7 +63,7 @@ export function InteractivePhoneDemo() {
 
   const returnToOffer = () => {
     setScreen("search");
-    setPhoneNotice("Lifecycle complete. Choose a sample retailer to finish the journey.");
+    setPhoneNotice("Signal journey complete. Choose a sample retailer to finish the journey.");
   };
 
   const journeyStep = useMemo(() => {
@@ -73,8 +72,8 @@ export function InteractivePhoneDemo() {
     if (screen === "search" && showTruePrice) return 3;
     if (screen === "search") return 2;
     if (screen === "alerts" && alertMode === "fatefind") return fateFindActive ? 5 : 4;
-    if (screen === "alerts" && lifecycleIndex === 3) return 8;
-    if (screen === "alerts" && lifecycleIndex === 2) return 7;
+    if (screen === "alerts" && lifecycleIndex === 2) return 8;
+    if (screen === "alerts" && lifecycleIndex === 1) return 7;
     if (screen === "alerts") return 6;
     return 1;
   }, [alertMode, fateFindActive, lifecycleIndex, phoneNotice, productSaved, screen, showTruePrice]);
@@ -104,7 +103,7 @@ export function InteractivePhoneDemo() {
     if (screen === "alerts") return {
       kicker: lifecycle[lifecycleIndex].name,
       title: lifecycle[lifecycleIndex].copy,
-      benefit: "Follow stock from first signal to returning availability, with each transition grounded in observable retailer data.",
+      benefit: "Follow early intelligence into confirmed availability and eventual availability loss, with each state grounded in observable retailer data.",
       cta: "How stock intelligence works",
       href: "/trust",
     };
@@ -125,7 +124,7 @@ export function InteractivePhoneDemo() {
     return {
       kicker: "Collector home",
       title: "See the network move from one focused overview.",
-      benefit: "Recent product signals, returning availability, events and shortcuts make the next useful action immediately visible.",
+      benefit: "Recent product signals, confirmed availability, events and shortcuts make the next useful action immediately visible.",
       cta: "Explore the collector experience",
       href: "/collectors",
     };
@@ -229,7 +228,7 @@ export function InteractivePhoneDemo() {
           <div className="demo-journey-progress">
             <span>GUIDED JOURNEY · {String(journeyStep).padStart(2, "0")} / 09</span>
             <div aria-hidden="true"><i style={{ width: `${(journeyStep / 9) * 100}%` }} /></div>
-            <p>{["Search an example product", "Review sample retailer offers", "Compare the True Price", "Save to Universal Wishlist", "Activate FateFind", "See Manifested", "Step into Vanished", "Watch availability Echo", "Continue to a sample retailer"][journeyStep - 1]}</p>
+            <p>{["Search an example product", "Review sample retailer offers", "Compare the True Price", "Save to Universal Wishlist", "Activate FateFind", "See Echo early intelligence", "See Manifested confirmation", "Step into Vanished", "Continue to a sample retailer"][journeyStep - 1]}</p>
           </div>
           <div className="companion-benefit"><small>COLLECTOR BENEFIT</small><p>{companion.benefit}</p></div>
           <Link href={companion.href}>{companion.cta} <b>↗</b></Link>
@@ -249,12 +248,12 @@ function HomePreview({ goTo, openFateFind, openEvent }: { goTo: (screen: Screen)
     <div className="preview-view">
       <ScreenTitle eyebrow="NETWORK ACTIVITY · SAMPLE" title="Know what moved." />
       <div className="preview-metric-grid">
-        <article><strong>6,332</strong><span>products mapped</span></article>
-        <article><strong>3</strong><span>healthy monitors</span></article>
+        <article><strong>6,332</strong><span>sample products mapped</span></article>
+        <article><strong>3</strong><span>sample monitors</span></article>
       </div>
       <div className="preview-activity-list">
-        <article><i className="signal-green" /><div><small>MANIFESTED · SAMPLE</small><strong>Journey Together ETB</strong><span>Verified example availability</span></div></article>
-        <article><i className="signal-cyan" /><div><small>ECHO · SAMPLE</small><strong>Prismatic Evolutions Bundle</strong><span>Example availability returned</span></div></article>
+        <article><i className="signal-green" /><div><small>MANIFESTED · SAMPLE</small><strong>Journey Together ETB</strong><span>Confirmed example availability</span></div></article>
+        <article><i className="signal-cyan" /><div><small>ECHO · SAMPLE</small><strong>Prismatic Evolutions Bundle</strong><span>Example early catalogue movement</span></div></article>
       </div>
       <button type="button" className="preview-event-teaser" onClick={openEvent}>
         <span>UPCOMING EVENT · SAMPLE</span><strong>Fate Encounters Demo Day</strong><small>12 Sep · Example Hall · Birmingham</small>
@@ -359,7 +358,7 @@ function AlertsPreview(props: AlertsPreviewProps) {
     <div className="preview-view">
       <ScreenTitle eyebrow="ALERTS · SIMULATION" title="Follow every signal." />
       <div className="preview-segmented" role="group" aria-label="Alerts demonstration mode">
-        <button type="button" className={props.alertMode === "lifecycle" ? "active" : ""} onClick={() => props.setAlertMode("lifecycle")}>Lifecycle</button>
+        <button type="button" className={props.alertMode === "lifecycle" ? "active" : ""} onClick={() => props.setAlertMode("lifecycle")}>Signals</button>
         <button type="button" className={props.alertMode === "fatefind" ? "active" : ""} onClick={() => props.setAlertMode("fatefind")}>FateFind</button>
       </div>
       {props.alertMode === "lifecycle" ? (
@@ -370,16 +369,16 @@ function AlertsPreview(props: AlertsPreviewProps) {
             <strong>{activeState.name}</strong>
             <p>{activeState.copy}</p>
           </article>
-          <div className="preview-lifecycle-steps" aria-label="Stock lifecycle states">
+          <div className="preview-lifecycle-steps" aria-label="Public FateDrop signal states">
             {lifecycle.map((state, index) => (
               <button type="button" className={index === props.lifecycleIndex ? "active" : ""} aria-pressed={index === props.lifecycleIndex} onClick={() => props.setLifecycleIndex(index)} key={state.name}>
                 <span>{index + 1}</span>{state.name}
               </button>
             ))}
           </div>
-          <p className="preview-evidence-line">Built to deliver the earliest evidence-backed stock information available.</p>
-          <p className="preview-disclaimer">Demonstration only. This preview is not displaying real-time stock.</p>
-          {props.lifecycleIndex >= 1 ? <button type="button" className="preview-next-action" onClick={props.returnToOffer}>Return to the sample offer <span>→</span></button> : null}
+          <p className="preview-evidence-line">Echo is early intelligence. Manifested is confirmed. Vanished records lost confirmed availability.</p>
+          <p className="preview-disclaimer">Demonstration only. This preview is not displaying real-time stock, and Echo never guarantees a drop.</p>
+          <button type="button" className="preview-next-action" onClick={props.returnToOffer}>Return to the sample offer <span>→</span></button>
         </>
       ) : (
         <div className="preview-fatefind-form">
