@@ -43,7 +43,7 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes('href="/dashboard/search"'));
 });
 
-test("FateDrop Companion uses a shared illustrated rig with a 3D renderer boundary", () => {
+test("FateDrop Companion uses the live 3D Sentinel renderer with illustrated fallback", () => {
   const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
   const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
   const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
@@ -57,17 +57,25 @@ test("FateDrop Companion uses a shared illustrated rig with a 3D renderer bounda
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
   assert.ok(page.includes("FateDrop Companion"));
-  assert.ok(page.includes("3D READY FOUNDATION"));
-  assert.ok(builder.includes("SAVE AVATAR"));
+  assert.ok(page.includes("3D SENTINEL READY"));
+  assert.ok(page.includes("illustrated character retained as a safe fallback"));
+  assert.ok(builder.includes("CompanionRenderer"));
+  assert.ok(builder.includes("SAVE COMPANION"));
+  assert.ok(builder.includes("3D SENTINEL · MODEL V1"));
   for (const category of ["skin", "hair", "face", "eyes", "outfit", "headwear", "accessory", "gear", "companion", "aura", "background"]) assert.ok(builder.includes(`${category}:`));
   assert.ok(loadout.includes("AVATAR_SKINS"));
   assert.ok(assets.includes("avatar-sprites.svg"));
   assert.ok(layered.includes("avatarLayerHref"));
   assert.ok(preview.includes("AvatarLayeredCharacter"));
   assert.ok(renderer.includes("CompanionRenderRequest"));
-  assert.ok(renderer.includes("webgl-3d"));
-  assert.ok(contract.includes("characterModelUrl"));
+  assert.ok(renderer.includes("model-viewer"));
+  assert.ok(renderer.includes("AvatarPreview"));
+  assert.ok(renderer.includes("2D FALLBACK"));
+  assert.ok(renderer.includes("MODEL_VIEWER_SCRIPT_URL"));
+  assert.ok(contract.includes('characterModelUrl: "/assets/companion/fatedrop-companion-v1.glb"'));
+  assert.ok(contract.includes('characterFormat: "glb"'));
   assert.ok(contract.includes("droidModelUrl"));
+  assert.ok(contract.includes("animationClips: {}"));
   assert.ok(sprites.includes('id="companion-radar-drone"'));
   assert.ok(fateFind.includes("YOUR COMPANION"));
   assert.ok(api.includes("normalizeAvatarLoadout"));
