@@ -28,8 +28,12 @@ function notifications(value: unknown) {
 export async function GET() {
   const snapshot = await getCurrentSnapshot();
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
-  try { return Response.json({ fateFinds: await listUserFateMatches(snapshot.account.id) }, { headers: { "Cache-Control": "private, no-store" } }); }
-  catch { return Response.json({ fateFinds: [], pendingMigration: true }, { headers: { "Cache-Control": "private, no-store" } }); }
+  try {
+    const fateFinds = await listUserFateMatches(snapshot.account.id);
+    return Response.json({ fateFinds, matches: fateFinds }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch {
+    return Response.json({ fateFinds: [], matches: [], pendingMigration: true }, { headers: { "Cache-Control": "private, no-store" } });
+  }
 }
 
 export async function POST(request: Request) {
@@ -65,7 +69,7 @@ export async function POST(request: Request) {
     if ((scope === "local" || scope === "either") && match.radiusKm !== null && (match.latitude === null || match.longitude === null)) return Response.json({ error: "Local-radius FateFind matching requires a resolved location." }, { status: 400 });
     try {
       const saved = await createFateMatch(match);
-      return Response.json({ fateFind: saved, message: "FateFind saved. A qualifying observed result can become a FateMatch." }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+      return Response.json({ fateFind: saved, match: saved, message: "FateFind saved. A qualifying observed result can become a FateMatch." }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
     } catch {
       return Response.json({ error: "FateFind storage is not ready. Apply the Fate Network migration first." }, { status: 503 });
     }
