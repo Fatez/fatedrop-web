@@ -12,12 +12,6 @@ export const siteConfig = {
     { label: "Trust", href: "/trust" },
     { label: "Merch", href: "/merch" },
   ],
-  snapshot: [
-    { value: "6,332", label: "products tracked" },
-    { value: "2,592", label: "currently in stock" },
-    { value: "4", label: "catalogue retailers" },
-    { value: "3", label: "healthy automated monitors" },
-  ],
   marketCategories: ["Major retail products", "Independent catalogues", "Singles", "Sealed products", "Graded cards", "Accessories", "Preorders", "Local stock", "Event-vendor inventory"],
   networkTargets: [
     { value: "100+", label: "participating catalogues" },
@@ -30,18 +24,18 @@ export const siteConfig = {
     {
       name: "Free",
       price: "£0",
-      features: ["Browse participating catalogues", "Basic product search", "Shops and events", "Limited wishlist", "Direct retailer purchasing"],
+      features: ["FateDrop ID", "Network discovery", "Participating shops and events", "Basic saved products", "Direct retailer purchasing"],
     },
     {
       name: "FateDrop Plus",
       price: "£4.99 / month",
       featured: true,
-      features: ["Product-specific alerts", "Whisper, Manifested, Vanished and Echo notifications", "Universal Wishlist", "FateFind saved searches", "Maximum-price preferences", "True Price comparisons", "Local Radar alerts", "Release reminders"],
+      features: ["Premium signal detail", "Whisper, Manifested, Vanished and Echo lifecycle alerts", "FateFind saved intent", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
     },
     {
       name: "FateDrop Pro",
       price: "£14.99 / month",
-      features: ["Earliest evidence-backed stock signals", "Priority delivery when production infrastructure supports it", "Advanced lifecycle intelligence", "Basket Breaker", "Collection Gap Finder", "Set Completion Basket", "FateFair", "Advanced event and vendor features", "Future multi-TCG access"],
+      features: ["Shared Premium capability foundation", "Higher-tier feature split under product review", "Future advanced intelligence only as released", "No guaranteed-first or fabricated priority claims"],
     },
   ],
   retailerPlans: [
@@ -55,13 +49,13 @@ export const siteConfig = {
       price: "£9.99 / month",
       secondaryPrice: "or £99 / year",
       featured: true,
-      features: ["Complete catalogue", "Verified FateDrop storefront", "Search visibility", "Events and preorders", "Catalogue monitoring", "Basic referral analytics"],
+      features: ["Complete catalogue", "Verified FateDrop storefront", "Search visibility", "Events and preorders", "Catalogue monitoring", "Basic referral analytics when available"],
     },
     {
       name: "Indie Pro",
       price: "£24.99 / month",
       secondaryPrice: "or £249 / year",
-      features: ["Advanced analytics", "Demand Signal", "Event Vendor Mode", "Indie Exclusives", "Release Command Centre participation", "Priority catalogue support", "Clearly labelled promotional tools"],
+      features: ["Advanced analytics when released", "Aggregated demand insight when released", "Event Vendor Mode when released", "Priority catalogue support", "Clearly labelled promotional tools"],
     },
   ],
   audiences: [
@@ -69,16 +63,16 @@ export const siteConfig = {
       eyebrow: "01 / Collectors",
       title: "Spend less time searching and more time collecting.",
       description:
-        "Search multiple retailers, save wanted products, compare the real cost, receive relevant signals and discover local shops and events.",
+        "Search participating retailers, save wanted intent, compare the real cost, receive relevant signals and discover local shops and events.",
       cta: "Explore collector tools",
       href: "/collectors",
       accent: "cyan",
     },
     {
       eyebrow: "02 / Retailers & vendors",
-      title: "Put your products in front of collectors ready to buy.",
+      title: "Put your products in front of collectors already looking.",
       description:
-        "Connect a catalogue, gain search visibility, send buyers to your checkout and learn what collectors cannot find.",
+        "Connect a catalogue, gain relevant discovery, send buyers to your checkout and build toward evidence-backed demand insight.",
       cta: "See retailer value",
       href: "/businesses",
       accent: "violet",
@@ -87,7 +81,7 @@ export const siteConfig = {
       eyebrow: "03 / Event organisers",
       title: "Make every event discoverable before the doors open.",
       description:
-        "Publish tickets, schedules and vendors—then make stalls and temporary catalogues searchable on the show floor.",
+        "Build toward one journey for dates, tickets, vendors and clearly labelled temporary event inventory.",
       cta: "Explore event discovery",
       href: "/events",
       accent: "green",
@@ -98,69 +92,69 @@ export const siteConfig = {
       number: "01",
       title: "Unified Search",
       description:
-        "Search products across participating independent retailer catalogues from one place.",
-      meta: "One query / multiple indies",
+        "Search products across connected catalogue offers through one network model as feeds come online.",
+      meta: "One query / connected sources",
     },
     {
       number: "02",
       title: "True Price",
       description:
-        "Compare expected cost using price, known postage and free-delivery thresholds. Checkout remains the final confirmation.",
-      meta: "Product + known delivery",
+        "Compare item price, verified RRP and known mandatory delivery. Unknown delivery remains unknown.",
+      meta: "Item + RRP + known delivery",
     },
     {
       number: "03",
-      title: "Universal Wishlist",
+      title: "Watchlist",
       description:
-        "Save wanted products across connected retailers, including unavailable or sold-out products.",
-      meta: "One list / network-wide",
+        "Keep wanted products in one account-level collector list as the shared save model develops.",
+      meta: "Saved products / account-wide",
     },
     {
       number: "04",
       title: "FateFind",
       description:
-        "Create a structured search using product, maximum price, condition, location, collection and preorder preferences.",
-      meta: "A more precise wanted search",
+        "Create a structured wanted search using product, maximum True Price or RRP premium and online/local scope.",
+      meta: "Saved intent / network monitoring",
     },
     {
       number: "05",
       title: "Drop Pulse",
       description:
-        "See timestamp-supported labels such as just listed, recently restocked and price dropped.",
-      meta: "Evidence-supported status",
+        "Summarise timestamp-supported network movement without turning weak evidence into manufactured urgency.",
+      meta: "Evidence-supported context",
     },
     {
       number: "06",
       title: "Local Radar",
       description:
-        "Discover nearby independent shops, local inventory and events using location or a UK postcode.",
-      meta: "Map + accessible list view",
+        "Discover nearby TCG businesses while keeping external Places results separate from verified FateDrop-network stock.",
+      meta: "Nearby discovery / evidence separated",
     },
     {
       number: "07",
       title: "Events",
       description:
-        "Browse upcoming card shows, trade nights, tournaments, ticket details and participating vendors.",
-      meta: "Online discovery / real-world trade",
+        "Browse clearly labelled demonstration or sourced event information and verify organiser details before travel.",
+      meta: "Demo / sourced beta",
     },
     {
       number: "08",
       title: "Event Vendor Mode",
       description:
-        "Search clearly labelled temporary inventory by product, vendor, stall, price and condition.",
-      meta: "Event stock / never ordinary stock",
+        "Planned temporary inventory search that stays clearly separate from ordinary shop stock.",
+      meta: "Planned event-stock layer",
     },
   ],
   roadmap: [
-    { name: "Basket Breaker", status: "In development" },
-    { name: "FateBounty + Demand Signal", status: "In development" },
-    { name: "FateFair", status: "Active expansion" },
-    { name: "Collection Gap Finder", status: "Coming later" },
-    { name: "Release Command Centre", status: "Coming later" },
-    { name: "Preorder Confidence + Forecast", status: "Coming later" },
-    { name: "Indie Exclusives + Fair Drop", status: "Coming later" },
-    { name: "Event Companion + Shop Trails", status: "Active expansion" },
-    { name: "Future multi-TCG support", status: "Coming later" },
+    { name: "Basket Breaker", status: "Planned" },
+    { name: "FateBounty + Demand Signal", status: "Planned" },
+    { name: "FateFair", status: "Planned" },
+    { name: "Collection Gap Finder", status: "Planned" },
+    { name: "Release Command Centre", status: "Planned" },
+    { name: "Preorder Confidence + Forecast", status: "Planned" },
+    { name: "Indie Exclusives + Fair Drop", status: "Planned" },
+    { name: "Event Companion + Shop Trails", status: "Planned" },
+    { name: "Future multi-TCG support", status: "Planned" },
   ],
 } as const;
 
