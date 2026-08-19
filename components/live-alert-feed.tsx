@@ -6,16 +6,16 @@ import { SignalBeam } from "@/components/signal-beam";
 import type { AvatarLoadout } from "@/lib/avatar-loadout";
 import type { NetworkSignal, SignalIntensity, SignalKind } from "@/lib/dashboard-storage";
 
-const kindMeta: Record<SignalKind, { label: string; glyph: string }> = {
-  whisper: { label: "WHISPER", glyph: "W" },
-  manifested: { label: "MANIFESTED", glyph: "M" },
-  vanished: { label: "VANISHED", glyph: "V" },
-  echo: { label: "ECHO", glyph: "E" },
+const kindMeta: Record<SignalKind, { label: string; glyph: string; context?: string }> = {
+  whisper: { label: "ECHO", glyph: "E", context: "early network intelligence" },
+  manifested: { label: "MANIFESTED", glyph: "M", context: "confirmed availability" },
+  vanished: { label: "VANISHED", glyph: "V", context: "confirmed availability lost" },
+  echo: { label: "MANIFESTED", glyph: "M", context: "confirmed restock" },
   price_change: { label: "PRICE CHANGE", glyph: "£" },
   launch_date_change: { label: "LAUNCH CHANGE", glyph: "D" },
-  queue: { label: "QUEUE CONDITION", glyph: "Q" },
-  security: { label: "SECURITY CONDITION", glyph: "S" },
-  drop_pulse: { label: "DROP PULSE", glyph: "P" },
+  queue: { label: "ECHO", glyph: "E", context: "queue condition observed" },
+  security: { label: "ECHO", glyph: "E", context: "security / traffic condition observed" },
+  drop_pulse: { label: "ECHO", glyph: "E", context: "evidence-backed activity context" },
 };
 
 function money(pence: number | null | undefined) {
@@ -102,7 +102,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
       confidence: 0.99,
       title: "Destined Rivals Elite Trainer Box · DEMO",
       retailer: "Pokémon Center UK · LOCAL DEMO",
-      detail: "A confirmed product-level Manifested event. The focused Signal Card remains distinct from an upstream major network condition.",
+      detail: "A confirmed product-level Manifested event. The focused Signal Card remains distinct from an upstream early Echo.",
       deliveredPricePence: 4999,
       occurredAt,
     });
@@ -118,7 +118,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
       confidence: 0.86,
       title: "Pokémon Center UK · network conditions changed",
       retailer: "Pokémon Center UK · LOCAL DEMO",
-      detail: "Security or traffic behaviour changed. FateDrop is now watching for corroborating queue, catalogue and inventory movement; this does not claim stock is imminent.",
+      detail: "Echo detected: security or traffic behaviour changed. FateDrop is watching for corroborating queue, catalogue and inventory movement; this does not claim stock is imminent.",
       deliveredPricePence: null,
       occurredAt,
     });
@@ -126,11 +126,11 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
 
   const majorSignal = signals.find((signal) => signalIntensity(signal) === "major" && now - signal.occurredAt <= 1800) ?? null;
   const majorDemo = Boolean(majorSignal?.id.startsWith("local-demo-"));
-  const stageSignal = majorSignal && (unlocked || majorDemo) ? majorSignal : majorSignal ? { ...majorSignal, title: "Major network movement detected", retailer: null, detail: "FateDrop detected a significant upstream condition change. Actionable context is Premium.", confidence: null } : null;
+  const stageSignal = majorSignal && (unlocked || majorDemo) ? majorSignal : majorSignal ? { ...majorSignal, title: "Major network movement detected", retailer: null, detail: "FateDrop detected a significant upstream condition change. This is Echo-level context, not confirmed stock; actionable detail is Premium.", confidence: null } : null;
   const majorFresh = Boolean(majorSignal && freshIds.has(majorSignal.id));
 
   return <section className="fd-alerts-feed">
-    <div className="fd-alerts-feedhead"><div><span>LIVE SIGNAL CARDS</span><small>{source ? `Source: ${source} · checks every 10s` : "Awaiting FateDrop Cloud"}</small></div><div className="fd-alert-feed-actions"><button type="button" onClick={testMajorSignal}>TEST AVATAR SURGE</button><button type="button" onClick={testProductSignal}>TEST PRODUCT SIGNAL</button><b>{signals.length} SIGNAL{signals.length === 1 ? "" : "S"}</b></div></div>
+    <div className="fd-alerts-feedhead"><div><span>NETWORK SIGNAL CARDS</span><small>{source ? `Source: ${source} · checks every 10s` : "Awaiting FateDrop Cloud"}</small></div><div className="fd-alert-feed-actions"><button type="button" onClick={testMajorSignal}>TEST AVATAR SURGE</button><button type="button" onClick={testProductSignal}>TEST PRODUCT SIGNAL</button><b>{signals.length} SIGNAL{signals.length === 1 ? "" : "S"}</b></div></div>
     <div className="fd-alert-stage"><AvatarSignalCinematic signal={stageSignal} loadout={avatarLoadout} pulseKey={majorSignal?.id ?? "network-listening"} autoPulse={majorFresh}/></div>
     {signals.length ? <div className="fd-signal-grid">{signals.map((signal) => {
       const kind = signalKind(signal);
@@ -139,14 +139,14 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
       const demo = signal.id.startsWith("local-demo-");
       const confidence = signal.confidence == null ? null : Math.round(signal.confidence * 100);
       return <article className={`fd-signal-card state-${signal.state} intensity-${intensity} ${unlocked || demo ? "" : "locked"} ${demo ? "demo" : ""}`} key={signal.id}>
-        <div className="fd-signal-card-top"><span><i>{meta.glyph}</i>{meta.label}{intensity === "major" ? <em>MAJOR</em> : null}{demo ? <em>LOCAL DEMO</em> : null}</span><time>{relativeTime(signal.occurredAt, now)}</time></div>
+        <div className="fd-signal-card-top"><span><i>{meta.glyph}</i>{meta.label}{meta.context ? <em>{meta.context}</em> : null}{intensity === "major" ? <em>MAJOR ACTIVITY</em> : null}{demo ? <em>LOCAL DEMO</em> : null}</span><time>{relativeTime(signal.occurredAt, now)}</time></div>
         <div className={unlocked || demo ? "" : "fd-alert-blur"}><h2>{signal.title}</h2><p>{demo ? signal.retailer : unlocked ? (signal.retailer || "Retailer pending") : "Retailer hidden"}</p></div>
         <SignalBeam pulseKey={signal.id} state={signal.state} intensity={intensity === "major" ? "standard" : intensity} autoPulse={freshIds.has(signal.id)}/>
         <div className={`fd-signal-detail ${unlocked || demo ? "" : "fd-alert-blur"}`}>{demo ? signal.detail : unlocked ? (signal.detail || "FateDrop signal event detected.") : "Unlock Premium to reveal product, retailer and actionable signal context."}</div>
         <footer><span><small>TRUE PRICE</small><b>{demo ? money(signal.deliveredPricePence) : unlocked ? money(signal.deliveredPricePence) : "£—.——"}</b></span><span><small>DETECTED</small><b>{relativeTime(signal.occurredAt, now)}</b></span><span><small>{confidence !== null ? "CONFIDENCE" : "SIGNAL"}</small><b>{confidence !== null ? `${confidence}%` : meta.label}</b></span></footer>
         {!unlocked && !demo ? <div className="fd-alert-lock">♛</div> : null}
       </article>;
-    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>Your Fate companion remains on watch. When a major precursor condition lands, the avatar can enter the scene and fire the cinematic alert; confirmed product transitions still materialise as focused Signal Cards.</p><button type="button" onClick={testMajorSignal}>Test the avatar surge locally</button><button type="button" onClick={testProductSignal}>Test a product signal locally</button></div>}
-    <style jsx>{`.fd-alert-stage{padding:14px;border-bottom:1px solid #19161e;background:#08070c}.fd-alert-feed-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.fd-alert-feed-actions button,.fd-alerts-empty button{min-height:32px;padding:0 10px;border:1px solid rgba(88,232,255,.18);border-radius:9px;background:linear-gradient(135deg,rgba(88,232,255,.07),rgba(157,109,255,.08));color:#b9f3ff;font-size:7px;font-weight:900;letter-spacing:.09em;cursor:pointer}.fd-alerts-empty button+button{margin-left:7px}.fd-signal-card.demo{box-shadow:inset 0 0 0 1px rgba(88,232,255,.14)}.fd-signal-card.intensity-major{background:radial-gradient(circle at 100% 0%,rgba(88,232,255,.08),transparent 25%),radial-gradient(circle at 85% 15%,rgba(157,109,255,.1),transparent 36%),#0b0a10}.fd-signal-card-top em{margin-left:4px;padding:3px 5px;border:1px solid rgba(88,232,255,.18);border-radius:999px;color:#75eaff;font-size:5px;font-style:normal;letter-spacing:.1em}.fd-signal-card.intensity-major .fd-signal-card-top em:first-of-type{border-color:rgba(190,123,255,.28);color:#caa8ff}@media(max-width:760px){.fd-alerts-feedhead{align-items:flex-start;gap:10px;flex-direction:column}.fd-alert-feed-actions{justify-content:flex-start}}`}</style>
+    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>Your FateDrop Companion remains on watch. Meaningful precursor movement can surface publicly as Echo; confirmed availability materialises separately as Manifested.</p><button type="button" onClick={testMajorSignal}>Test the avatar surge locally</button><button type="button" onClick={testProductSignal}>Test a product signal locally</button></div>}
+    <style jsx>{`.fd-alert-stage{padding:14px;border-bottom:1px solid #19161e;background:#08070c}.fd-alert-feed-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.fd-alert-feed-actions button,.fd-alerts-empty button{min-height:32px;padding:0 10px;border:1px solid rgba(88,232,255,.18);border-radius:9px;background:linear-gradient(135deg,rgba(88,232,255,.07),rgba(157,109,255,.08));color:#b9f3ff;font-size:7px;font-weight:900;letter-spacing:.09em;cursor:pointer}.fd-alerts-empty button+button{margin-left:7px}.fd-signal-card.demo{box-shadow:inset 0 0 0 1px rgba(88,232,255,.14)}.fd-signal-card.intensity-major{background:radial-gradient(circle at 100% 0%,rgba(88,232,255,.08),transparent 25%),radial-gradient(circle at 85% 15%,rgba(157,109,255,.1),transparent 36%),#0b0a10}.fd-signal-card-top em{margin-left:4px;padding:3px 5px;border:1px solid rgba(88,232,255,.18);border-radius:999px;color:#75eaff;font-size:5px;font-style:normal;letter-spacing:.08em}.fd-signal-card.intensity-major .fd-signal-card-top em{border-color:rgba(190,123,255,.28);color:#caa8ff}@media(max-width:760px){.fd-alerts-feedhead{align-items:flex-start;gap:10px;flex-direction:column}.fd-alert-feed-actions{justify-content:flex-start}}`}</style>
   </section>;
 }
