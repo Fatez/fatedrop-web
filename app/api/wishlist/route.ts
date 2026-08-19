@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
+import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
 import { listWishlist, removeWishlistItem, upsertWishlistItem, type WishlistItem } from "@/lib/wishlist-storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const snapshot = await getCurrentSnapshot();
+export async function GET(request: Request) {
+  const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
   try { return Response.json({ wishlist: await listWishlist(snapshot.account.id) }, { headers: { "Cache-Control": "private, no-store" } }); }
   catch { return Response.json({ wishlist: [], pendingMigration: true }, { headers: { "Cache-Control": "private, no-store" } }); }
@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const snapshot = await getCurrentSnapshot();
+    const snapshot = await getSnapshotForRequest(request);
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
     const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
     if (!payload) return Response.json({ error: "Invalid wishlist payload." }, { status: 400 });
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     assertSameOrigin(request);
-    const snapshot = await getCurrentSnapshot();
+    const snapshot = await getSnapshotForRequest(request);
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
     const payload = await request.json().catch(() => null) as { id?: unknown } | null;
     const id = typeof payload?.id === "string" ? payload.id.trim().slice(0, 180) : "";

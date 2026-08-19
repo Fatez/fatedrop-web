@@ -1,4 +1,4 @@
-import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
+import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, saveNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
 
 export const runtime = "nodejs";
@@ -11,8 +11,8 @@ function time(value: unknown) {
   return value;
 }
 
-export async function GET() {
-  const snapshot = await getCurrentSnapshot();
+export async function GET(request: Request) {
+  const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
   try { return Response.json({ preferences: await getNotificationPreferences(snapshot.account.id) }, { headers: { "Cache-Control": "private, no-store" } }); }
   catch { return Response.json({ preferences: DEFAULT_NOTIFICATION_PREFERENCES, pendingMigration: true }, { headers: { "Cache-Control": "private, no-store" } }); }
@@ -21,7 +21,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     assertSameOrigin(request);
-    const snapshot = await getCurrentSnapshot();
+    const snapshot = await getSnapshotForRequest(request);
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
     const current = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
     const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
