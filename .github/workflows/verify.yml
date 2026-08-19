@@ -12,7 +12,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,5 +23,7 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Verify
+      - name: Verify Next.js application
         run: npm run verify
+      - name: Verify OpenNext Cloudflare build
+        run: npx opennextjs-cloudflare build
