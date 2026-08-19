@@ -133,11 +133,12 @@ test("live alerts grade major surges separately and use the saved Companion cine
   assert.ok(ingest.includes('"drop_pulse"'));
 });
 
-test("True Price includes the evidence-safe FateWindow decision layer", () => {
+test("True Price keeps FateWindow explicitly experimental", () => {
   const page = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
   const storefront = fs.readFileSync("components/live-storefront.tsx", "utf8");
   const engine = fs.readFileSync("lib/fate-window.ts", "utf8");
-  assert.ok(page.includes("FATEWINDOW · BETA"));
+  assert.ok(page.includes("FATEWINDOW · EXPERIMENTAL BETA"));
+  assert.ok(storefront.includes("FATEWINDOW · EXPERIMENTAL BETA"));
   assert.ok(storefront.includes("evaluateFateWindow"));
   assert.ok(engine.includes('label: "BUY WINDOW OPEN"'));
   assert.ok(engine.includes('label: "WAIT"'));
