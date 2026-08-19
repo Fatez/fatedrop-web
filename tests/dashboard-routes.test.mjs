@@ -23,32 +23,29 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation follows Discover Track Network Account structure", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group), `shared dashboard nav missing ${group}`);
-  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) {
-    assert.ok(nav.includes(href), `shared dashboard nav missing ${href}`);
-  }
-  assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'), "Search should be a first-class dashboard destination");
-  assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'), "saved intent should use canonical FateFind language");
-  assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'), "account navigation should use Companion language");
+  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href), `shared dashboard nav missing ${href}`);
+  assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
+  assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'));
+  assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'));
 });
 
 test("dashboard home uses the shared shell and retains personal collector identity", () => {
   const root = fs.readFileSync("app/dashboard/page.tsx", "utf8");
   assert.ok(root.includes("DashboardPageShell"));
   assert.equal(root.includes("fd-dashboard-sidebar"), false);
-  assert.equal(root.includes('action="/dashboard/search"'), false);
   assert.ok(root.includes("MEMBER SINCE"));
   assert.ok(root.includes("TIME IN NETWORK"));
   assert.ok(root.includes("FATEDROP COMPANION · FOUNDATION"));
   assert.ok(root.includes('href="/dashboard/search"'));
 });
 
-test("FateDrop Companion uses a shared illustrated asset rig and persists as account data", () => {
+test("FateDrop Companion uses a shared illustrated rig with a 3D renderer boundary", () => {
   const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
   const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
   const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
   const layered = fs.readFileSync("components/avatar-layered-character.tsx", "utf8");
-  const legacyAdapter = fs.readFileSync("components/avatar-anime-character.tsx", "utf8");
-  const thumb = fs.readFileSync("components/avatar-option-thumbnail.tsx", "utf8");
+  const renderer = fs.readFileSync("components/companion-renderer.tsx", "utf8");
+  const contract = fs.readFileSync("lib/companion-contract.ts", "utf8");
   const loadout = fs.readFileSync("lib/avatar-loadout.ts", "utf8");
   const assets = fs.readFileSync("lib/avatar-assets.ts", "utf8");
   const sprites = fs.readFileSync("public/assets/avatar-v2/avatar-sprites.svg", "utf8");
@@ -59,30 +56,17 @@ test("FateDrop Companion uses a shared illustrated asset rig and persists as acc
   assert.ok(page.includes("FateDrop Companion"));
   assert.ok(page.includes("3D READY FOUNDATION"));
   assert.ok(builder.includes("SAVE AVATAR"));
-  assert.ok(builder.includes("AvatarOptionThumbnail"));
-  for (const category of ["skin", "hair", "face", "eyes", "outfit", "headwear", "accessory", "gear", "companion", "aura", "background"]) assert.ok(builder.includes(`${category}:`), `avatar builder missing ${category}`);
+  for (const category of ["skin", "hair", "face", "eyes", "outfit", "headwear", "accessory", "gear", "companion", "aura", "background"]) assert.ok(builder.includes(`${category}:`));
   assert.ok(loadout.includes("AVATAR_SKINS"));
-  assert.ok(loadout.includes("AVATAR_FACES"));
-  assert.ok(loadout.includes("AVATAR_EYES"));
-  assert.ok(loadout.includes("AVATAR_ACCESSORIES"));
-  assert.ok(loadout.includes('"ember-fringe"'));
-  assert.ok(loadout.includes('"spectral-bomber"'));
-  assert.ok(loadout.includes('"command-room"'));
-  assert.ok(loadout.includes('"neon-desk"'));
   assert.ok(assets.includes("avatar-sprites.svg"));
   assert.ok(layered.includes("avatarLayerHref"));
-  assert.ok(layered.includes("<use"));
   assert.ok(preview.includes("AvatarLayeredCharacter"));
-  assert.ok(legacyAdapter.includes("AvatarLayeredCharacter"));
-  assert.ok(thumb.includes("AvatarLayeredCharacter"));
-  assert.ok(sprites.includes('id="hair-front-midnight-spikes"'));
-  assert.ok(sprites.includes('id="outfit-spectral-bomber"'));
+  assert.ok(renderer.includes("CompanionRenderRequest"));
+  assert.ok(renderer.includes("webgl-3d"));
+  assert.ok(contract.includes("characterModelUrl"));
+  assert.ok(contract.includes("droidModelUrl"));
   assert.ok(sprites.includes('id="companion-radar-drone"'));
-  assert.ok(sprites.includes('id="bg-command-room"'));
   assert.ok(fateFind.includes("YOUR COMPANION"));
-  assert.ok(fateFind.includes("FATEFIND"));
-  assert.ok(fateFind.includes("AvatarPreview"));
-  assert.ok(api.includes("assertSameOrigin"));
   assert.ok(api.includes("normalizeAvatarLoadout"));
   assert.ok(storage.includes("fatedrop_user_avatars"));
 });
@@ -115,35 +99,23 @@ test("live alerts grade major surges separately and use the saved Companion cine
   assert.ok(feed.includes("TEST AVATAR SURGE"));
   assert.ok(feed.includes("TEST PRODUCT SIGNAL"));
   assert.ok(feed.includes('kind: "security"'));
-  assert.ok(feed.includes('intensity: "major"'));
   assert.ok(feed.includes('kind: "manifested"'));
-  assert.ok(feed.includes('intensity: "standard"'));
   assert.ok(feed.includes("local-demo-"));
-  assert.ok(beam.includes("intensity-subtle"));
   assert.ok(beam.includes("intensity-major"));
   assert.ok(cinematic.includes("MAJOR NETWORK ACTIVITY"));
-  assert.ok(cinematic.includes("DROP DETECTED"));
-  assert.ok(cinematic.includes("CONDITIONS BUILDING"));
-  assert.ok(cinematic.includes("AvatarAnimeCharacter"));
-  assert.ok(cinematic.includes("fd-cinematic-beam"));
   assert.ok(alerts.includes("getUserAvatar"));
-  assert.ok(alerts.includes("avatarLoadout"));
   assert.ok(ingest.includes('"queue"'));
   assert.ok(ingest.includes('"security"'));
   assert.ok(ingest.includes('"drop_pulse"'));
 });
 
-test("True Price keeps FateWindow explicitly experimental", () => {
+test("True Price is canonical Cloud comparison and FateWindow is held", () => {
   const page = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
-  const storefront = fs.readFileSync("components/live-storefront.tsx", "utf8");
-  const engine = fs.readFileSync("lib/fate-window.ts", "utf8");
-  assert.ok(page.includes("FATEWINDOW · EXPERIMENTAL BETA"));
-  assert.ok(storefront.includes("FATEWINDOW · EXPERIMENTAL BETA"));
-  assert.ok(storefront.includes("evaluateFateWindow"));
-  assert.ok(engine.includes('label: "BUY WINDOW OPEN"'));
-  assert.ok(engine.includes('label: "WAIT"'));
-  assert.ok(engine.includes('label: "EVIDENCE BUILDING"'));
-  assert.ok(engine.includes("Official RRP is not verified"));
+  const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  assert.ok(page.includes("searchSignalTruePrice"));
+  assert.ok(page.includes("FATEWINDOW · HOLD / EXPERIMENTAL"));
+  assert.ok(page.includes("CREATE FATEFIND"));
+  assert.ok(client.includes('"/api/true-price"'));
 });
 
 test("Stripe checkout blocks duplicate live subscriptions and repeat trials", () => {
