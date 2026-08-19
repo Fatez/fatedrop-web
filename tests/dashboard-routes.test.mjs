@@ -6,6 +6,8 @@ const dashboardRoutes = [
   "app/dashboard/search/page.tsx",
   "app/dashboard/alerts/page.tsx",
   "app/dashboard/watchlist/page.tsx",
+  "app/dashboard/wishlist/page.tsx",
+  "app/dashboard/notifications/page.tsx",
   "app/dashboard/stores/page.tsx",
   "app/dashboard/events/page.tsx",
   "app/dashboard/true-price/page.tsx",
@@ -23,9 +25,11 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation follows Discover Track Network Account structure", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group));
-  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/notifications", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
   assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'));
+  assert.ok(nav.includes('["☆", "Wishlist", "/dashboard/wishlist"]'));
+  assert.ok(nav.includes('["≋", "Preferences", "/dashboard/notifications"]'));
   assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'));
 });
 
@@ -70,14 +74,39 @@ test("FateDrop Companion uses a shared illustrated rig with a 3D renderer bounda
   assert.ok(storage.includes("fatedrop_user_avatars"));
 });
 
-test("Alerts is personal rather than a duplicate global network feed", () => {
+test("Alerts is personal and links to shared notification preferences", () => {
   const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
   assert.ok(alerts.includes("YOUR HUNTS · YOUR NOTIFICATIONS"));
   assert.ok(alerts.includes("ACTIVE FATEFINDS"));
   assert.ok(alerts.includes("YOUR NOTIFICATION / HUNT HISTORY"));
-  assert.ok(alerts.includes("Global per-signal preference storage is not being faked"));
+  assert.ok(alerts.includes('/dashboard/notifications'));
+  assert.ok(alerts.includes("one account-level persistence model"));
   assert.equal(alerts.includes("<LiveAlertFeed"), false);
   assert.ok(alerts.includes("Open Network Activity"));
+});
+
+test("Universal Wishlist is persistent, separate from FateFind and migration-safe", () => {
+  const page = fs.readFileSync("app/dashboard/wishlist/page.tsx", "utf8");
+  const api = fs.readFileSync("app/api/wishlist/route.ts", "utf8");
+  const storage = fs.readFileSync("lib/wishlist-storage.ts", "utf8");
+  const migration = fs.readFileSync("database/2026-08-19-user-preferences.sql", "utf8");
+  assert.ok(page.includes("Wishlist means “I want this.”"));
+  assert.ok(page.includes("FateFind means “go hunt this for me.”"));
+  assert.ok(api.includes("assertSameOrigin"));
+  assert.ok(storage.includes("fatedrop_wishlist_items"));
+  assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS fatedrop_wishlist_items"));
+});
+
+test("notification preferences use one persistent cross-channel account model", () => {
+  const page = fs.readFileSync("app/dashboard/notifications/page.tsx", "utf8");
+  const api = fs.readFileSync("app/api/notification-preferences/route.ts", "utf8");
+  const storage = fs.readFileSync("lib/notification-preferences.ts", "utf8");
+  const migration = fs.readFileSync("database/2026-08-19-user-preferences.sql", "utf8");
+  assert.ok(page.includes("ONE PROFILE · EVERY CHANNEL"));
+  assert.ok(api.includes("assertSameOrigin"));
+  assert.ok(storage.includes("fatedrop_notification_preferences"));
+  for (const signal of ["echo", "manifested", "vanished", "priceChange", "fateMatch"]) assert.ok(storage.includes(signal));
+  assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS fatedrop_notification_preferences"));
 });
 
 test("free signal API redacts actionable fields before browser delivery", () => {
