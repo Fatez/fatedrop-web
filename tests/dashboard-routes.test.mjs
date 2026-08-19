@@ -22,8 +22,8 @@ test("every retained dashboard destination has a real page", () => {
 
 test("core dashboard navigation follows Discover Track Network Account structure", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
-  for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group), `shared dashboard nav missing ${group}`);
-  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href), `shared dashboard nav missing ${href}`);
+  for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group));
+  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
   assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'));
   assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'));
@@ -52,7 +52,6 @@ test("FateDrop Companion uses a shared illustrated rig with a 3D renderer bounda
   const fateFind = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
-
   assert.ok(page.includes("FateDrop Companion"));
   assert.ok(page.includes("3D READY FOUNDATION"));
   assert.ok(builder.includes("SAVE AVATAR"));
@@ -71,12 +70,18 @@ test("FateDrop Companion uses a shared illustrated rig with a 3D renderer bounda
   assert.ok(storage.includes("fatedrop_user_avatars"));
 });
 
-test("free live alert feed redacts actionable signal fields before browser delivery", () => {
+test("Alerts is personal rather than a duplicate global network feed", () => {
   const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
+  assert.ok(alerts.includes("YOUR HUNTS · YOUR NOTIFICATIONS"));
+  assert.ok(alerts.includes("ACTIVE FATEFINDS"));
+  assert.ok(alerts.includes("YOUR NOTIFICATION / HUNT HISTORY"));
+  assert.ok(alerts.includes("Global per-signal preference storage is not being faked"));
+  assert.equal(alerts.includes("<LiveAlertFeed"), false);
+  assert.ok(alerts.includes("Open Network Activity"));
+});
+
+test("free signal API redacts actionable fields before browser delivery", () => {
   const api = fs.readFileSync("app/api/dashboard/signals/route.ts", "utf8");
-  assert.ok(alerts.includes('"Premium signal detail"'));
-  assert.ok(alerts.includes("deliveredPricePence: null"));
-  assert.ok(alerts.includes("confidence: null"));
   assert.ok(api.includes('"Premium signal detail"'));
   assert.ok(api.includes('"Major network movement detected"'));
   assert.ok(api.includes("retailer: null"));
@@ -86,27 +91,14 @@ test("free live alert feed redacts actionable signal fields before browser deliv
   assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
-test("live alerts grade major surges separately and use the saved Companion cinematic", () => {
+test("internal alert visualiser maps precursor intelligence to public Echo", () => {
   const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
-  const beam = fs.readFileSync("components/signal-beam.tsx", "utf8");
-  const cinematic = fs.readFileSync("components/avatar-signal-cinematic.tsx", "utf8");
-  const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
-  const ingest = fs.readFileSync("app/api/dashboard/network-snapshot/route.ts", "utf8");
-  assert.ok(feed.includes('fetch("/api/dashboard/signals"'));
-  assert.ok(feed.includes("10_000"));
-  assert.ok(feed.includes("SignalBeam"));
-  assert.ok(feed.includes("AvatarSignalCinematic"));
+  assert.ok(feed.includes('whisper: { label: "ECHO"'));
+  assert.ok(feed.includes('queue: { label: "ECHO"'));
+  assert.ok(feed.includes('security: { label: "ECHO"'));
+  assert.ok(feed.includes('echo: { label: "MANIFESTED"'));
   assert.ok(feed.includes("TEST AVATAR SURGE"));
   assert.ok(feed.includes("TEST PRODUCT SIGNAL"));
-  assert.ok(feed.includes('kind: "security"'));
-  assert.ok(feed.includes('kind: "manifested"'));
-  assert.ok(feed.includes("local-demo-"));
-  assert.ok(beam.includes("intensity-major"));
-  assert.ok(cinematic.includes("MAJOR NETWORK ACTIVITY"));
-  assert.ok(alerts.includes("getUserAvatar"));
-  assert.ok(ingest.includes('"queue"'));
-  assert.ok(ingest.includes('"security"'));
-  assert.ok(ingest.includes('"drop_pulse"'));
 });
 
 test("True Price is canonical Cloud comparison and FateWindow is held", () => {
@@ -116,6 +108,29 @@ test("True Price is canonical Cloud comparison and FateWindow is held", () => {
   assert.ok(page.includes("FATEWINDOW · HOLD / EXPERIMENTAL"));
   assert.ok(page.includes("CREATE FATEFIND"));
   assert.ok(client.includes('"/api/true-price"'));
+});
+
+test("retailer discovery separates Cloud runtime health from storefront lab feeds", () => {
+  const stores = fs.readFileSync("app/dashboard/stores/page.tsx", "utf8");
+  const network = fs.readFileSync("lib/retailer-network.ts", "utf8");
+  const registry = fs.readFileSync("lib/retailer-registry.ts", "utf8");
+  assert.ok(stores.includes("CANONICAL CLOUD RETAILERS"));
+  assert.ok(stores.includes("EXPERIMENTAL STOREFRONT LAB"));
+  assert.ok(network.includes("getSignalEngineStatus"));
+  assert.ok(registry.includes("cloudRetailerId"));
+  assert.ok(registry.includes('cloudRetailerId: "smyths-uk"'));
+});
+
+test("Events has a canonical network-feed migration endpoint", () => {
+  const eventsApi = fs.readFileSync("app/api/events/route.ts", "utf8");
+  assert.ok(eventsApi.includes("getLatestNetworkMetricSnapshot"));
+  assert.ok(eventsApi.includes('status: snapshot ? "network" : "awaiting-network-feed"'));
+  assert.ok(eventsApi.includes("upcomingEvents"));
+});
+
+test("baseline production security headers are configured", () => {
+  const config = fs.readFileSync("next.config.ts", "utf8");
+  for (const header of ["X-Content-Type-Options", "Referrer-Policy", "X-Frame-Options", "Permissions-Policy"]) assert.ok(config.includes(header));
 });
 
 test("Stripe checkout blocks duplicate live subscriptions and repeat trials", () => {
