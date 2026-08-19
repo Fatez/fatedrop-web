@@ -41,6 +41,8 @@ No production rollout should depend on mutually diverged Cloud branches.
 
 ## 2. Database readiness — BLOCKER
 
+A read-only production Neon audit on 19 August 2026 confirmed the existing FateDrop account/market tables are present and the new release tables below are not yet installed. No production mutation was performed.
+
 No migration is applied automatically by build/deploy jobs.
 
 Review and deliberately apply the required additive migrations to the intended Neon production database only after backup/rollback review.
@@ -48,34 +50,34 @@ Review and deliberately apply the required additive migrations to the intended N
 Website/account persistence:
 
 - `database/2026-08-19-user-preferences.sql`
-  - Universal Wishlist
-  - shared notification preferences
+  - `fatedrop_wishlist_items`
+  - `fatedrop_notification_preferences`
 
 Cloud hosted FateFind/notification persistence:
 
 - `signal-engine/database/hosted-fatefind-notifications.sql`
-  - hosted FateMatch ledger
-  - Expo push endpoints
-  - notification outbox
-  - notification delivery attempts
+  - `fatedrop_hosted_fate_matches`
+  - `fatedrop_push_endpoints`
+  - `fatedrop_notification_outbox`
+  - `fatedrop_notification_delivery_attempts`
 
 Retailer intelligence persistence when that runtime is promoted:
 
 - `signal-engine/database/uk-retailer-registry.sql`
-  - retailer registry
-  - discovery evidence
-  - monitoring state/run history
+  - `fatedrop_retailer_registry`
+  - `fatedrop_retailer_discovery_evidence`
+  - `fatedrop_retailer_monitor_runs`
 
 Release proof:
 
 - migrations execute cleanly against the intended database
-- existing FateDrop account tables remain intact
+- existing FateDrop account/market tables remain intact
 - rollback/restore procedure is documented
 - website and Cloud both use the same intended Neon environment
 
 ## 3. Stripe live subscriptions — BLOCKER FOR PAID LAUNCH
 
-Current connected Stripe configuration is sandbox/test mode. Do not claim FateDrop accepts real subscriptions until the live flow is proven.
+Current connected Stripe configuration is sandbox/test mode. Plus (£4.99/month) and Pro (£14.99/month) test prices exist, but they are not live-mode prices. Do not claim FateDrop accepts real subscriptions until the live flow is proven.
 
 Required production path:
 
@@ -93,11 +95,9 @@ Required production path:
 
 Client-side flags are never payment authority.
 
-## 4. Shared entitlement consistency — BLOCKER
+## 4. Shared entitlement consistency — CODE COMPLETE / COMMERCIAL SPLIT PENDING
 
-The website entitlement contract is authoritative.
-
-Current capability vocabulary shared by website and app:
+The website entitlement contract is authoritative and the mobile client uses the same capability vocabulary:
 
 - `browse_network`
 - `selected_signals`
@@ -109,30 +109,31 @@ Current capability vocabulary shared by website and app:
 - `premium_discord`
 - `fate_lock_eligibility`
 
-Before release:
+The current implementation deliberately gives active Plus/Pro accounts the shared premium capability set until the final Plus-vs-Pro commercial differentiation is chosen. Do not invent UI-only tier differences.
 
-- website and app capability vocabularies must remain identical
-- all paid UI gates must call the shared entitlement layer rather than infer tier locally
-- final Plus-vs-Pro commercial differentiation must be deliberately chosen and then encoded centrally
+Before paid release:
 
-## 5. Mobile FateDrop ID credential storage — BLOCKER FOR PUBLIC STORE RELEASE
+- choose final Plus-vs-Pro capability split
+- encode it centrally in the authoritative entitlement layer
+- verify web/app/Discord consume those capabilities rather than infer tier locally
 
-Non-sensitive offline identity/sync cache may remain in AsyncStorage.
+## 5. Mobile FateDrop ID credential storage — CODE COMPLETE / DEVICE PROOF PENDING
 
-The opaque bearer session token must move from AsyncStorage to OS-protected credential storage before public App Store / Play Store release:
+The opaque bearer session token now uses `expo-secure-store` (`~15.0.8`, SDK-54 compatible):
 
-- iOS: Keychain
-- Android: Keystore-backed storage
-- Expo path: `expo-secure-store` using the SDK-compatible version installed via `npx expo install expo-secure-store`
+- iOS uses OS-protected Keychain storage
+- Android uses Keystore-backed secure storage
+- non-sensitive offline sync snapshot remains in AsyncStorage
+- legacy development installs migrate an existing AsyncStorage token into SecureStore once and immediately delete the legacy token
+- sign-out removes secure token + legacy token + cached snapshot
+- 401/session expiry clears the full local session state
 
-After migration:
+Exact hardened mobile head `04875a85f8bd2b49c743b5d51d3ce6def58fd581` passed GitHub Actions run `32278608243`.
 
-- sign-in stores only the bearer token in SecureStore
-- cached snapshot remains separate
-- sign-out removes both secure token and cached snapshot
-- 401/session-expiry clears both stores
-- app CI remains green
-- real iPhone and Android login/logout/session-expiry are tested
+Still required before public App Store / Play Store release:
+
+- real iPhone sign-in/sign-out/session-expiry proof
+- real Android sign-in/sign-out/session-expiry proof
 
 ## 6. Hosted FateFind / FateMatch — BLOCKER FOR PREMIUM HUNTS
 
@@ -190,9 +191,23 @@ Before scaled public promotion:
 - ordinary reseller selling price is never silently treated as official RRP
 - delivered-price ordering only compares known delivery totals as known
 
-## 10. Website production QA — BLOCKER
+## 10. Website code/security verification — GREEN
 
-Current launch-foundation branch has passed lint, TypeScript, automated tests, Next production build and OpenNext/Cloudflare build.
+Website release CI now validates stacked launch-foundation PRs as well as `main` and includes a high-severity production dependency audit.
+
+The release branch was upgraded from Next 16.2.11 to Next 16.3.0 and `eslint-config-next` 16.3.0 after the audit identified vulnerable PostCSS/Sharp versions in the older Next dependency tree.
+
+Exact hardened website head `78c9506bcd6ec1fd4f4284a73a09c9bb1f1f93fb` passed GitHub Actions run `32278645111` including:
+
+- clean dependency install
+- production dependency audit at high severity
+- ESLint
+- TypeScript
+- automated tests
+- Next.js production build
+- OpenNext/Cloudflare build
+
+## 11. Website production QA — BLOCKER
 
 Still required on the deployed release candidate:
 
@@ -210,11 +225,11 @@ Still required on the deployed release candidate:
 - privacy / terms / trust routes
 - custom domain/canonical metadata
 
-## 11. Mobile production QA — BLOCKER
+## 12. Mobile production QA — BLOCKER
 
-CI is not a substitute for device proof.
+Mobile exact hardened head `04875a85f8bd2b49c743b5d51d3ce6def58fd581` passed its repository tests plus mobile lint/typecheck workflow.
 
-Test on physical iPhone and Android:
+CI is not a substitute for device proof. Test on physical iPhone and Android:
 
 - cold start
 - sign in / sign out
@@ -232,19 +247,29 @@ Test on physical iPhone and Android:
 - Local Radar permission allowed/denied
 - app background/foreground refresh
 
-## 12. Dependency/security review — BLOCKER
+## 13. Cloud code/security verification — GREEN
 
-Do not blindly run forced major upgrades.
+Hosted FateFind/FateMatch Cloud CI now includes a high-severity production dependency audit before the complete Signal Engine test suite.
 
-Before release:
+Exact hardened hosted-notification head `34475bb0430e3382f6ab88c76b7d1aab0eab54d7` passed GitHub Actions run `32278708384`.
 
-- review website high-severity npm advisory chain and patch safely where possible
-- retain/document any unavoidable upstream Expo/Metro advisory only after confirming exposure and lack of safe patched version
+The hosted evaluator remains OFF by default and no notification migration has been applied to production.
+
+## 14. Remaining dependency/security review — BLOCKER
+
+Production Web and hosted Signal Engine now have enforced high-severity audit gates.
+
+Still required:
+
+- review/document the residual upstream Expo/Metro `image-size` advisory and patch when a compatible fixed version exists
 - no secrets or production database exports in Git
 - production account/session endpoints remain no-store where appropriate
 - security headers verified on deployed website
+- actual deployed versions rechecked immediately before release
 
-## 13. Runtime / rollback — BLOCKER
+Do not blindly run forced major dependency upgrades.
+
+## 15. Runtime / rollback — BLOCKER
 
 Before opening to customers:
 
@@ -256,7 +281,7 @@ Before opening to customers:
 - retailer registry runtime remains separately disable-able
 - rollback target/previous known-good deployment identified for website and Cloud
 
-## 14. Product areas safe to defer
+## 16. Product areas safe to defer
 
 These do not block the first solid release unless deliberately marketed as live:
 
@@ -272,9 +297,9 @@ These do not block the first solid release unless deliberately marketed as live:
 - XP/tokens
 - full multi-TCG expansion
 
-## 15. Intelligence Centre handoff
+## 17. Intelligence Centre handoff
 
-After Sections 1–13 are green, feature churn should stop and the main engineering programme becomes the FateDrop Intelligence Centre:
+After the release blockers above are green, feature churn should stop and the main engineering programme becomes the FateDrop Intelligence Centre:
 
 `Retailer discovery → Registry → Adapter/collector → Raw offers → Canonical product identity → RRP provenance → Delivery intelligence → True Price → Stock/price history → Signal Engine → FateFind/FateMatch → App/Web/Discord/Companion`
 
@@ -295,8 +320,14 @@ Primary Intelligence Centre priorities:
 
 **Product architecture:** code-complete foundation
 
+**Web code/security gate:** GREEN
+
+**Mobile code/security gate:** GREEN; physical-device proof pending
+
+**Hosted Signal Engine code/security gate:** GREEN
+
 **Commercial production:** not yet active
 
-**Release blockers:** branch consolidation, reviewed migrations, live Stripe proof, secure mobile token storage, hosted notification E2E, real-device/browser QA, dependency/security review, deployment/rollback proof
+**Confirmed remaining release blockers:** canonical branch consolidation, reviewed production migrations, live Stripe proof, hosted notification end-to-end activation, real iPhone/Android + deployed browser QA, residual Expo advisory review, deployment/rollback proof.
 
 Do not reopen completed product design unless a release test demonstrates a real functional or consistency defect.
