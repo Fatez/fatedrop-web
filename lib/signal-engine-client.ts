@@ -15,6 +15,8 @@ export type SignalCatalogueOffer = {
   category?: string;
   productId?: string;
   rrpGbp?: number;
+  rrpSource?: string;
+  rrpObservedAt?: string;
   lastSeen?: string;
 };
 
@@ -50,6 +52,9 @@ export type SignalTruePriceGroup = {
   category: string;
   matchingConfidence: number;
   retailerCount: number;
+  rrpGbp?: number;
+  rrpSource?: string;
+  rrpObservedAt?: string;
   offers: SignalTruePriceOffer[];
 };
 
