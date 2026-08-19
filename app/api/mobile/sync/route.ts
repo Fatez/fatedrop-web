@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       id: snapshot.account.id,
       fateId: snapshot.account.fateId,
       email: snapshot.account.email,
-      handle: snapshot.account.handle,
+      handle: snapshot.account.username,
       displayName: snapshot.account.displayName,
       createdAt: snapshot.account.createdAt,
     },
