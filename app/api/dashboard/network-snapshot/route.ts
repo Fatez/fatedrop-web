@@ -1,4 +1,5 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { dispatchCanonicalPushAlerts } from "@/lib/canonical-push";
 import { saveNetworkMetricSnapshot, type NetworkEventListing, type NetworkMetricSnapshot, type NetworkSignal, type SignalIntensity, type SignalKind, type SignalLifecycle } from "@/lib/dashboard-storage";
 import { processNetworkOpportunity, processRrpReferenceProduct } from "@/lib/fate-network-pipeline";
 import { parseNetworkOpportunity, parseRrpReferenceProduct } from "@/lib/network-ingest";
@@ -99,7 +100,19 @@ export async function POST(request: Request) {
       }
     }
 
-    return Response.json({ stored: inserted, measuredAt, rrpReferenceProcessed, rrpReferenceDeferred, opportunitiesProcessed, opportunitiesDeferred, fateMatchesTriggered }, { status: inserted ? 201 : 200 });
+    // Push delivery is deliberately isolated from network ingestion. It is inert unless
+    // FATEDROP_PUSH_DISPATCH_ENABLED=true, and a provider/database failure never rejects
+    // the authoritative snapshot or FateMatch processing above.
+    const push = await dispatchCanonicalPushAlerts({ measuredAt }).catch(() => ({
+      enabled: process.env.FATEDROP_PUSH_DISPATCH_ENABLED === "true",
+      queued: 0,
+      claimed: 0,
+      sent: 0,
+      failed: 0,
+      error: "dispatch_failed",
+    }));
+
+    return Response.json({ stored: inserted, measuredAt, rrpReferenceProcessed, rrpReferenceDeferred, opportunitiesProcessed, opportunitiesDeferred, fateMatchesTriggered, push }, { status: inserted ? 201 : 200 });
   } catch {
     return Response.json({ error: "Network snapshot could not be stored." }, { status: 500 });
   }
