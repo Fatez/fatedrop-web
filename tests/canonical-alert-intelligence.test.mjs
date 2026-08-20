@@ -37,9 +37,15 @@ test('canonical signal packs use exact offer history and canonical-product alter
   assert.match(moduleSource, /lowestKnownUrl: links\.lowestKnown\?\.url/);
 });
 
-test('mobile API consumes the shared canonical alert module', () => {
+test('mobile API consumes shared alerts and redacts premium intelligence for free accounts', () => {
   assert.match(routeSource, /listCanonicalAlerts/);
   assert.doesNotMatch(routeSource, /fatedrop_retail_offers/);
+  assert.match(routeSource, /function freeAlert/);
+  assert.match(routeSource, /rrpPence: null/);
+  assert.match(routeSource, /lowestKnown: null/);
+  assert.match(routeSource, /officialReference: null/);
+  assert.match(routeSource, /alternatives: \[\]/);
+  assert.match(routeSource, /canonicalAlerts\.map\(freeAlert\)/);
 });
 
 test('push delivery is feature-gated, deduplicated and failure-isolated', () => {
