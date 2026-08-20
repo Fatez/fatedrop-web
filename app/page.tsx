@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EventCalendar } from "@/components/event-calendar";
 import { FutureExpansion } from "@/components/future-expansion";
+import { HomeCompanionShowcase } from "@/components/home-companion-showcase";
 import { InteractivePhoneDemo } from "@/components/interactive-phone-demo";
 import { NetworkProof } from "@/components/network-proof";
 import { FinalCta, SiteShell } from "@/components/page-shell";
@@ -67,6 +68,7 @@ export default function Home() {
       </section>
 
       <WhyFateDrop />
+      <HomeCompanionShowcase />
 
       <section className="business-section section-shell">
         <div className="business-visual">
