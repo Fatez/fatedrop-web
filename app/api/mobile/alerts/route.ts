@@ -60,12 +60,12 @@ function intelligence(row: SignalRow) {
   const lowestComparisonPence = comparisonBasis === "delivered" ? row.lowest_delivered_price_pence : row.lowest_item_price_pence;
   const comparable = currentComparisonPence != null && lowestComparisonPence != null;
   const savingsPence = comparable ? Math.max(0, currentComparisonPence - lowestComparisonPence) : null;
-  const savingsPercent = comparable && currentComparisonPence! > 0
-    ? roundOne((savingsPence! / currentComparisonPence!) * 100)
+  const savingsPercent = comparable && currentComparisonPence > 0
+    ? roundOne((savingsPence! / currentComparisonPence) * 100)
     : null;
 
   let verdict: FateVerdict = "NO_FAIR_COMPARISON";
-  if (comparable) verdict = currentComparisonPence! <= lowestComparisonPence! ? "LOWEST_KNOWN" : "BETTER_OFFER_FOUND";
+  if (comparable) verdict = currentComparisonPence <= lowestComparisonPence ? "LOWEST_KNOWN" : "BETTER_OFFER_FOUND";
 
   return {
     rrpPence,
@@ -153,31 +153,6 @@ function toMarketEvent(row: SignalRow) {
   };
 }
 
-const SELECT_ALERTS = `
-  SELECT
-    s.id,s.state,s.product_id,s.offer_id,s.retailer_name,s.title,s.url,s.price_pence,
-    s.rrp_pence AS signal_rrp_pence,p.official_rrp_pence AS canonical_rrp_pence,
-    s.delivered_price_pence,s.confidence,s.detected_at,s.reason,
-    best.offer_id AS lowest_offer_id,best.retailer_name AS lowest_retailer_name,best.url AS lowest_url,
-    best.price_pence AS lowest_item_price_pence,
-    CASE WHEN best.postage_pence IS NOT NULL AND best.price_pence IS NOT NULL THEN best.price_pence + best.postage_pence ELSE NULL END AS lowest_delivered_price_pence
-  FROM fatedrop_signals s
-  LEFT JOIN fatedrop_products p ON p.id=s.product_id
-  LEFT JOIN LATERAL (
-    SELECT ro.offer_id,ro.retailer_name,ro.url,ro.price_pence,ro.postage_pence
-    FROM fatedrop_retail_offers ro
-    WHERE ro.product_id=s.product_id
-      AND ro.stock_status IN ('in_stock','low_stock','preorder')
-      AND ro.price_pence IS NOT NULL
-      AND (s.delivered_price_pence IS NULL OR ro.postage_pence IS NOT NULL)
-    ORDER BY CASE
-      WHEN s.delivered_price_pence IS NOT NULL THEN ro.price_pence + ro.postage_pence
-      ELSE ro.price_pence
-    END ASC, ro.last_seen_at DESC
-    LIMIT 1
-  ) best ON true
-`;
-
 export async function GET(request: Request) {
   const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) {
@@ -191,8 +166,6 @@ export async function GET(request: Request) {
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
 
-    // Neon tagged templates cannot safely interpolate a whole SELECT fragment, so keep the two
-    // equivalent queries explicit. The SQL is read-only and uses canonical product IDs only.
     const rows = requestedId
       ? await sql`
           SELECT
