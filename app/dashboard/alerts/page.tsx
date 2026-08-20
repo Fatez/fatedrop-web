@@ -7,6 +7,7 @@ import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts
 import { activityLabel, buildDashboardData, moneyFromPence, relativeTime } from "@/lib/dashboard";
 import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
+import { serverNowSeconds } from "@/lib/server-time";
 
 export const metadata: Metadata = {
   title: "Alerts | FateDrop Dashboard",
@@ -59,7 +60,7 @@ export default async function AlertsPage() {
   const personalHistory = data?.personal.recent ?? [];
   const trialEligible = Boolean(snapshot && !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt);
   const hasOpenSubscription = Boolean(snapshot?.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
-  const now = data?.generatedAt ?? Math.floor(Date.now() / 1000);
+  const now = data?.generatedAt ?? serverNowSeconds();
 
   return <DashboardPageShell title="Alerts" eyebrow="YOUR HUNTS · YOUR NOTIFICATIONS">
     <div className="fd-personal-alerts">
