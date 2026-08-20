@@ -29,25 +29,25 @@ export function HomeCompanionShowcase() {
     <div className="fd-home-companion-copy">
       <p className="eyebrow"><span />Fate Companion</p>
       <h2 id="fd-home-companion-title">Your signal has a face.</h2>
-      <p>FateDrop Companions are designed to make the network feel personal. Your collector character can become the visual layer for states such as Watching, Echo, Manifested and FateMatch as the animation system comes online.</p>
+      <p>FateDrop Companions make the network feel personal. Choose KAEL or NYRA as your collector identity, add VØX as an optional familiar, and preview the same signal states used across Watching, Echo, Manifested and FateMatch.</p>
       <div className="fd-companion-points">
-        <span><b>01</b>Choose your collector identity</span>
-        <span><b>02</b>Add a Signal Droid familiar</span>
-        <span><b>03</b>Build toward reactive signal animations</span>
+        <span><b>01</b>Choose KAEL or NYRA</span>
+        <span><b>02</b>Summon VØX when you want a familiar</span>
+        <span><b>03</b>Build toward full reactive animations</span>
       </div>
       <div className="button-row">
         <Link className="button button-primary" href="/account/register">Create FateDrop ID <span>↗</span></Link>
         <Link className="button button-secondary" href="/dashboard/avatar">Open Companion Lab</Link>
       </div>
-      <small>Signal Warden preview · optimised real-time model · animation rig in progress</small>
+      <small>NYRA preview · optimised real-time model · reactive rig pipeline</small>
     </div>
 
-    <div className="fd-home-companion-stage" aria-label="Signal Warden 3D preview">
+    <div className="fd-home-companion-stage" aria-label="NYRA 3D preview">
       <div className="fd-home-companion-grid" aria-hidden="true" />
       <div className="fd-home-companion-aura" aria-hidden="true" />
       <div className="fd-home-companion-platform" aria-hidden="true" />
       {modelReady ? <CompanionModelCanvas variant="female" reaction="watching" showStatus={false} /> : <div className="fd-home-companion-pending">COMPANION SIGNAL STANDBY</div>}
-      <div className="fd-home-companion-chip"><span>WARDEN / 01</span><b>3D READY</b></div>
+      <div className="fd-home-companion-chip"><span>NYRA / N-02</span><b>3D READY</b></div>
       <div className="fd-home-companion-readout"><span>STATE</span><b>WATCHING</b><span>ROLE</span><b>COLLECTOR</b></div>
     </div>
 
