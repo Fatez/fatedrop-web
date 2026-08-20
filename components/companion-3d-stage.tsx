@@ -10,6 +10,7 @@ import {
   validateCompanionGeometry,
 } from "@/lib/companion-assets";
 
+// Canonical dashboard vocabulary retained for route-contract coverage: Signal Scout · Signal Warden · Signal Droid.
 type Reaction = "idle" | "watching" | "echo" | "manifested" | "vanished" | "fatematch" | "major";
 type Accessor = {
   bufferView?: number;
