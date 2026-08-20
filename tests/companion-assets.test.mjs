@@ -11,7 +11,7 @@ test("Companion registry keeps each 3D asset in an explicit role", () => {
   assert.equal(COMPANION_ASSETS.droid.role, "droid");
   assert.equal(COMPANION_ASSETS.droid.state, "ready");
   assert.equal(COMPANION_ASSETS.female.role, "humanoid");
-  assert.equal(COMPANION_ASSETS.female.state, "quarantined");
+  assert.equal(COMPANION_ASSETS.female.state, "ready");
 });
 
 test("humanoid validation accepts the Scout proportions", () => {
@@ -22,7 +22,15 @@ test("humanoid validation accepts the Scout proportions", () => {
   assert.equal(error, null);
 });
 
-test("humanoid validation rejects the crossed Warden card/prop geometry", () => {
+test("humanoid validation accepts the optimized Warden proportions", () => {
+  const error = validateCompanionGeometry(COMPANION_ASSETS.female, {
+    min: [0, 0, 0],
+    max: [7878, 16383, 3571],
+  });
+  assert.equal(error, null);
+});
+
+test("humanoid validation still rejects a crossed flat card/prop", () => {
   const error = validateCompanionGeometry(COMPANION_ASSETS.female, {
     min: [-32756, -2802, -20909],
     max: [32767, 2802, 20781],
