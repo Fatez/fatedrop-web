@@ -20,23 +20,23 @@ export type CompanionBounds = {
 export const COMPANION_ASSETS: Record<CompanionVariant, CompanionAssetDefinition> = {
   male: {
     id: "male",
-    label: "Signal Scout",
+    label: "KAEL",
     role: "humanoid",
     file: "/assets/companions/fatedrop-male.glb",
     state: "ready",
-    description: "Collector companion",
+    description: "Collector hunter",
   },
   female: {
     id: "female",
-    label: "Signal Warden",
+    label: "NYRA",
     role: "humanoid",
     file: "/assets/companions/fatedrop-female.glb",
     state: "ready",
-    description: "Collector companion",
+    description: "Network tactician",
   },
   droid: {
     id: "droid",
-    label: "Signal Droid",
+    label: "VØX",
     role: "droid",
     file: "/assets/companions/fatedrop-droid.glb",
     state: "ready",
@@ -55,10 +55,9 @@ export function companionDimensions(bounds: CompanionBounds) {
 }
 
 /**
- * Rejects obviously crossed companion assets before they reach the renderer.
- * Humanoids must read as vertically dominant; the droid must be genuinely
- * volumetric rather than a flat prop/card. This is deliberately conservative:
- * it catches role swaps without trying to infer character identity from art.
+ * Reject crossed assets before they reach the renderer. Humanoids must read as
+ * vertically dominant; the familiar must be genuinely volumetric rather than
+ * a card or flat prop.
  */
 export function validateCompanionGeometry(asset: CompanionAssetDefinition, bounds: CompanionBounds): string | null {
   const { width, height, depth } = companionDimensions(bounds);
@@ -73,7 +72,7 @@ export function validateCompanionGeometry(asset: CompanionAssetDefinition, bound
   }
 
   if (smallest / largest < 0.28) {
-    return `${asset.label} was rejected: expected a volumetric droid model, not a flat prop.`;
+    return `${asset.label} was rejected: expected a volumetric familiar model, not a flat prop.`;
   }
 
   return null;
