@@ -164,7 +164,7 @@ export function AvatarBuilder({ initialLoadout, initialFavouriteTcgs, persistent
           </button>;
         })}</div>
         <div className="fd-avatar-favourites"><div><small>FAVOURITE TCGs</small><h3>Let your collection shape your style.</h3><p>Choose up to three. FateDrop keeps the artwork original; these preferences only influence cosmetic discovery and accent treatment.</p></div><div>{FAVOURITE_TCGS.map((tcg) => <button type="button" key={tcg} data-active={favourites.includes(tcg)} onClick={() => toggleFavourite(tcg)}>{tcgLabels[tcg]}{favourites.includes(tcg) ? <span>✓</span> : null}</button>)}</div></div>
-        <div className="fd-avatar-actions"><button type="button" className="secondary" onClick={randomise}>↻ RANDOMISE</button><button type="button" className="primary" onClick={save} disabled={busy}>{busy ? "SAVING…" : "SAVE COMPANION →"}</button><p role="status">{message}</p></div>
+        <div className="fd-avatar-actions"><button type="button" className="secondary" onClick={randomise}>↻ RANDOMISE</button><button type="button" className="primary" onClick={save} disabled={busy}>{busy ? "SAVING…" : "SAVE AVATAR →"}</button><p role="status">{message}</p></div>
       </div>
     </div>
 
