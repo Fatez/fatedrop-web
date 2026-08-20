@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CanonicalAlertSignalPack } from "@/components/canonical-alert-signal-pack";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { StartMembershipButton } from "@/components/membership-actions";
 import { getCurrentSnapshot } from "@/lib/auth";
@@ -32,6 +33,17 @@ function rrpLine(alert: CanonicalAlert) {
 
 function verdictLine(alert: CanonicalAlert) {
   const intel = alert.priceIntelligence;
+  if (alert.fateStage === "VANISHED") {
+    const alternatives = alert.preparedLinks.alternatives.length;
+    return alternatives
+      ? { tone: "better", text: `VANISHED · ${alternatives} LIVE ALTERNATIVE${alternatives === 1 ? "" : "S"} READY` }
+      : { tone: "unknown", text: "VANISHED · NO LIVE ALTERNATIVE CURRENTLY VERIFIED" };
+  }
+  if (alert.fateStage === "ECHO") {
+    return intel.lowestKnown
+      ? { tone: "unknown", text: `ECHO · LINKS PREPARED · ${intel.lowestKnown.retailer || "ALTERNATIVE"} ALREADY IN NETWORK` }
+      : { tone: "unknown", text: "ECHO · LINKS PREPARED · STOCK NOT CONFIRMED" };
+  }
   if (intel.verdict === "BETTER_OFFER_FOUND" && intel.lowestKnown?.comparisonPricePence != null) {
     const lowest = moneyFromPence(intel.lowestKnown.comparisonPricePence);
     const saving = moneyFromPence(intel.savingsPence);
@@ -43,6 +55,13 @@ function verdictLine(alert: CanonicalAlert) {
   }
   if (intel.verdict === "LOWEST_KNOWN") return { tone: "lowest", text: `LOWEST KNOWN · Best comparable ${intel.comparisonBasis === "delivered" ? "delivered price" : "item price"}` };
   return { tone: "unknown", text: "NO FAIR COMPARISON · Delivery or comparable pricing is incomplete" };
+}
+
+function primaryActionLabel(alert: CanonicalAlert) {
+  if (alert.fateStage === "MANIFESTED") return "BUY / VIEW PRODUCT ↗";
+  if (alert.fateStage === "ECHO") return "INSPECT PAGE ↗";
+  if (alert.fateStage === "VANISHED") return "VIEW LAST PAGE ↗";
+  return "VIEW PRODUCT ↗";
 }
 
 export default async function AlertsPage() {
@@ -69,21 +88,22 @@ export default async function AlertsPage() {
         <div className="fd-alert-personal-metrics"><span><b>{activeFateFinds.length}</b>ACTIVE FATEFINDS</span><span><b>{canonicalAlerts.length}</b>RECENT SIGNALS</span><span><b>{plan}</b>ACCESS</span></div>
       </section>
 
-      {!premium ? <section className="fd-alerts-gate"><div><span>PREMIUM MONITORING</span><h2>Free sees the movement. Premium gets the price intelligence.</h2><p>Canonical signals remain visible, while RRP deltas, cheapest-known comparable offers, priority delivery and FateFind automation form the deeper monitoring layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot?.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
+      {!premium ? <section className="fd-alerts-gate"><div><span>PREMIUM MONITORING</span><h2>Free sees the movement. Premium gets the price intelligence.</h2><p>Canonical signals remain visible, while RRP deltas, cheapest-known comparable offers, prepared retailer links, priority delivery and FateFind automation form the deeper monitoring layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot?.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
 
       <section className="fd-dash-card fd-canonical-alerts"><div className="fd-dash-card-head"><span>CANONICAL SIGNAL INBOX</span><small>{canonicalAlerts.length ? `${canonicalAlerts.length} recent` : "Awaiting signals"}</small></div>{canonicalAlerts.length ? <div className="fd-canonical-list">{canonicalAlerts.map((alert)=>{
         const verdict = verdictLine(alert);
         return <article key={alert.id} className={`fd-canonical-signal ${alert.fateStage.toLowerCase()}`}>
           <div className="fd-canonical-stage"><i/><b>{alert.fateStage === "ECHO" ? "ECHO" : alert.fateStage === "MANIFESTED" ? "MANIFESTED" : alert.fateStage}</b><small>{relativeTime(alertTime(alert),now)}</small></div>
           <div className="fd-canonical-copy"><strong>{alert.title}</strong><span>{premium ? `${alert.retailer} · ${alert.message}` : "Connected retailer · Premium price detail"}</span>{premium && rrpLine(alert) ? <em>{rrpLine(alert)}</em> : null}{premium ? <em className={`verdict ${verdict.tone}`}>{verdict.text}</em> : null}</div>
-          <div className="fd-canonical-action">{premium ? <a href={alert.productUrl} target="_blank" rel="noreferrer">VIEW PRODUCT ↗</a> : <Link href="/dashboard/membership">UNLOCK →</Link>}</div>
+          <div className="fd-canonical-action">{premium ? <a href={alert.productUrl} target="_blank" rel="noreferrer">{primaryActionLabel(alert)}</a> : <Link href="/dashboard/membership">UNLOCK →</Link>}</div>
+          {premium ? <CanonicalAlertSignalPack alert={alert} now={now}/> : null}
         </article>;
       })}</div> : <div className="fd-dashboard-empty"><strong>No canonical signals available.</strong><span>FateDrop does not fabricate an alert when the network has nothing real to report.</span></div>}</section>
 
       <div className="fd-alert-personal-grid">
         <section className="fd-dash-card fd-alert-finds"><div className="fd-dash-card-head"><span>ACTIVE FATEFINDS</span><Link href="/dashboard/watchlist">Manage hunts</Link></div>{activeFateFinds.length ? <div className="fd-dashboard-list">{activeFateFinds.slice(0,8).map((hunt)=><article key={hunt.id}><span className="fd-store-thumb">◎</span><div><strong>{hunt.query || "Resolved product"}</strong><small>{hunt.maxTruePricePence !== null ? `Max £${(hunt.maxTruePricePence/100).toFixed(2)} delivered` : "Any True Price"}{hunt.maxPercentAboveRrp !== null ? ` · max +${hunt.maxPercentAboveRrp}% RRP` : ""} · {hunt.scope}</small></div><aside>WATCHING<small>A qualifying result becomes a FateMatch</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>No active FateFinds yet.</strong><span>Create a structured product hunt and FateDrop can evaluate matching network opportunities.</span><Link className="fd-dashboard-wide-button" href="/dashboard/watchlist">Create FateFind →</Link></div>}</section>
 
-        <section className="fd-dash-card fd-alert-delivery"><div className="fd-dash-card-head"><span>DELIVERY CHANNELS</span><Link href="/dashboard/notifications">Edit preferences</Link></div><div className="fd-delivery-list"><div><b>WEB</b><span>Canonical signal inbox plus account notification history.</span><i className="live">AVAILABLE</i></div><div><b>DISCORD</b><span>Shared account preference; delivery activates only when Discord is linked, enabled and entitled.</span><i className="pending">CONFIGURATION-DEPENDENT</i></div><div><b>APP PUSH</b><span>Device registration and exact-alert routing are connected; remote delivery still requires the production dispatcher.</span><i className="pending">VALIDATING</i></div></div><p>Echo, Manifested, Vanished, price and FateMatch preferences share one account-level persistence model. FateDrop never treats an unconfigured channel as delivered.</p></section>
+        <section className="fd-dash-card fd-alert-delivery"><div className="fd-dash-card-head"><span>DELIVERY CHANNELS</span><Link href="/dashboard/notifications">Edit preferences</Link></div><div className="fd-delivery-list"><div><b>WEB</b><span>Canonical signal inbox plus account notification history.</span><i className="live">AVAILABLE</i></div><div><b>DISCORD</b><span>Shared account preference; delivery activates only when Discord is linked, enabled and entitled.</span><i className="pending">CONFIGURATION-DEPENDENT</i></div><div><b>APP PUSH</b><span>Device registration and exact-alert routing are connected; remote delivery remains feature-gated until controlled production testing.</span><i className="pending">VALIDATING</i></div></div><p>Echo, Manifested, Vanished, price and FateMatch preferences share one account-level persistence model. FateDrop never treats an unconfigured channel as delivered.</p></section>
       </div>
 
       <section className="fd-dash-card fd-alert-history"><div className="fd-dash-card-head"><span>YOUR NOTIFICATION / HUNT HISTORY</span><small>{personalHistory.length ? `${personalHistory.length} recent` : "No personal events yet"}</small></div>{personalHistory.length && data ? <div className="fd-dashboard-list">{personalHistory.map((event)=><article key={event.id}><span className="fd-store-thumb">◇</span><div><strong>{event.title || activityLabel(event)}</strong><small>{event.subtitle || event.retailer || activityLabel(event)}</small></div><aside>{event.amountPence ? moneyFromPence(event.amountPence) : activityLabel(event).toUpperCase()}<small>{relativeTime(event.occurredAt,data.generatedAt)}</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>Nothing has been sent to you yet.</strong><span>Network activity can still be happening above; this list only grows from real personal/account events.</span></div>}</section>
