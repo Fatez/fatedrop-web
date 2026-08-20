@@ -75,6 +75,7 @@ export function AvatarBuilder({ initialLoadout, initialFavouriteTcgs, persistent
   const [message, setMessage] = useState(persistent ? "Your Companion loadout is synced to your FateDrop ID." : "Preview mode is ready. Companion saving needs account storage.");
 
   const currentOptions = useMemo(() => categoryOptions[category] as readonly string[], [category]);
+  const characterVariant = loadout.base === "warden" ? "female" : "male";
 
   function choose(value: string) {
     setLoadout((current) => ({ ...current, [category]: value } as AvatarLoadout));
@@ -140,7 +141,7 @@ export function AvatarBuilder({ initialLoadout, initialFavouriteTcgs, persistent
         <div className="fd-avatar-stage-grid"/>
         <div className="fd-avatar-stage-glow"/>
         <div className="fd-avatar-stage-platform"/>
-        <div className="fd-avatar-character-model"><CompanionModelCanvas variant="male" reaction="watching"/></div>
+        <div className="fd-avatar-character-model"><CompanionModelCanvas variant={characterVariant} reaction="watching"/></div>
         {loadout.companion !== "none" ? <div className="fd-avatar-droid-model"><CompanionModelCanvas variant="droid" reaction="watching" showStatus={false}/></div> : null}
         <div className="fd-avatar-hud left"><span>RIG STATUS</span><b>◆ READY</b><span>POSE</span><b>◆ WATCHING</b></div>
         <div className="fd-avatar-hud right"><span>COMPANION</span><b>◆ {loadout.companion === "none" ? "NONE" : "SIGNAL DROID"}</b><span>LIGHTING</span><b>◆ STUDIO</b></div>
