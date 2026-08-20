@@ -20,18 +20,39 @@ type Accessor = {
   type: "SCALAR" | "VEC2" | "VEC3" | "VEC4";
   normalized?: boolean;
 };
-type Primitive = { attributes: Record<string, number>; indices?: number };
+type BufferView = { byteOffset?: number; byteLength: number; byteStride?: number };
+type Primitive = { attributes: Record<string, number>; indices?: number; material?: number };
+type TextureInfo = {
+  index: number;
+  extensions?: {
+    KHR_texture_transform?: {
+      offset?: [number, number];
+      scale?: [number, number];
+    };
+  };
+};
 type GlbDocument = {
   accessors: Accessor[];
-  bufferViews: { byteOffset?: number; byteStride?: number }[];
+  bufferViews: BufferView[];
   meshes: { primitives: Primitive[] }[];
+  images?: { bufferView?: number; mimeType?: string }[];
+  textures?: { source?: number; extensions?: { EXT_texture_webp?: { source: number } } }[];
+  materials?: { pbrMetallicRoughness?: { baseColorTexture?: TextureInfo } }[];
+};
+type EmbeddedTexture = {
+  bytes: Uint8Array;
+  mimeType: string;
 };
 type Mesh = {
   positions: Float32Array;
   normals: Float32Array;
   colors: Float32Array;
+  texcoords: Float32Array;
+  texture: EmbeddedTexture | null;
   indices: Uint16Array;
 };
+
+type TextureSource = ImageBitmap | HTMLImageElement;
 
 const REACTIONS: { id: Reaction; label: string }[] = [
   { id: "idle", label: "Idle" },
@@ -107,10 +128,10 @@ function calculateNormals(positions: Float32Array, indices: Uint16Array) {
     const nx = aby * acz - abz * acy;
     const ny = abz * acx - abx * acz;
     const nz = abx * acy - aby * acx;
-    for (const index of [ia, ib, ic]) {
-      normals[index] += nx;
-      normals[index + 1] += ny;
-      normals[index + 2] += nz;
+    for (const vertexOffset of [ia, ib, ic]) {
+      normals[vertexOffset] += nx;
+      normals[vertexOffset + 1] += ny;
+      normals[vertexOffset + 2] += nz;
     }
   }
   for (let i = 0; i < normals.length; i += 3) {
@@ -146,6 +167,30 @@ function expandColors(rawColors: Float32Array | null, vertexCount: number, asset
   return colors;
 }
 
+function textureForPrimitive(document: GlbDocument, binary: ArrayBuffer, primitive: Primitive): { texture: EmbeddedTexture | null; transform: { offset: [number, number]; scale: [number, number] } } {
+  const fallback = { texture: null, transform: { offset: [0, 0] as [number, number], scale: [1, 1] as [number, number] } };
+  if (primitive.material == null) return fallback;
+  const info = document.materials?.[primitive.material]?.pbrMetallicRoughness?.baseColorTexture;
+  if (!info) return fallback;
+  const texture = document.textures?.[info.index];
+  const sourceIndex = texture?.extensions?.EXT_texture_webp?.source ?? texture?.source;
+  if (sourceIndex == null) return fallback;
+  const image = document.images?.[sourceIndex];
+  if (!image || image.bufferView == null) return fallback;
+  const bufferView = document.bufferViews[image.bufferView];
+  if (!bufferView) return fallback;
+  const start = bufferView.byteOffset || 0;
+  const bytes = new Uint8Array(binary.slice(start, start + bufferView.byteLength));
+  const transform = info.extensions?.KHR_texture_transform;
+  return {
+    texture: { bytes, mimeType: image.mimeType || "image/webp" },
+    transform: {
+      offset: transform?.offset || [0, 0],
+      scale: transform?.scale || [1, 1],
+    },
+  };
+}
+
 function parseGlb(buffer: ArrayBuffer, asset: CompanionAssetDefinition): Mesh {
   const view = new DataView(buffer);
   if (buffer.byteLength < 20 || view.getUint32(0, true) !== 0x46546c67 || view.getUint32(4, true) !== 2) {
@@ -173,6 +218,7 @@ function parseGlb(buffer: ArrayBuffer, asset: CompanionAssetDefinition): Mesh {
   const rawPositions = accessor(document, binary, primitive.attributes.POSITION);
   const rawColors = primitive.attributes.COLOR_0 == null ? null : accessor(document, binary, primitive.attributes.COLOR_0);
   const rawIndices = accessor(document, binary, primitive.indices);
+  const rawTexcoords = primitive.attributes.TEXCOORD_0 == null ? null : accessor(document, binary, primitive.attributes.TEXCOORD_0);
   const rawBounds = calculateBounds(rawPositions);
   const geometryError = validateCompanionGeometry(asset, rawBounds);
   if (geometryError) throw new Error(geometryError);
@@ -197,10 +243,21 @@ function parseGlb(buffer: ArrayBuffer, asset: CompanionAssetDefinition): Mesh {
   const indices = new Uint16Array(rawIndices.length);
   for (let i = 0; i < rawIndices.length; i += 1) indices[i] = rawIndices[i];
 
+  const textureData = textureForPrimitive(document, binary, primitive);
+  const texcoords = new Float32Array(vertexCount * 2);
+  if (rawTexcoords && rawTexcoords.length >= vertexCount * 2) {
+    for (let i = 0; i < vertexCount; i += 1) {
+      texcoords[i * 2] = rawTexcoords[i * 2] * textureData.transform.scale[0] + textureData.transform.offset[0];
+      texcoords[i * 2 + 1] = rawTexcoords[i * 2 + 1] * textureData.transform.scale[1] + textureData.transform.offset[1];
+    }
+  }
+
   return {
     positions,
     normals: calculateNormals(positions, indices),
     colors: expandColors(rawColors, vertexCount, asset),
+    texcoords,
+    texture: rawTexcoords ? textureData.texture : null,
     indices,
   };
 }
@@ -222,7 +279,26 @@ function tint(reaction: Reaction): [number, number, number] {
   return [0.72, 0.48, 1];
 }
 
-function render(canvas: HTMLCanvasElement, mesh: Mesh, reaction: Reaction, asset: CompanionAssetDefinition, stopped: () => boolean) {
+async function loadTextureSource(texture: EmbeddedTexture): Promise<TextureSource> {
+  const bytes = texture.bytes.buffer.slice(texture.bytes.byteOffset, texture.bytes.byteOffset + texture.bytes.byteLength) as ArrayBuffer;
+  const blob = new Blob([bytes], { type: texture.mimeType });
+  if (typeof createImageBitmap === "function") return createImageBitmap(blob);
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Companion texture could not be decoded."));
+    };
+    image.src = url;
+  });
+}
+
+function render(canvas: HTMLCanvasElement, mesh: Mesh, textureSource: TextureSource | null, reaction: () => Reaction, asset: CompanionAssetDefinition, stopped: () => boolean) {
   const context = canvas.getContext("webgl", { alpha: true, antialias: true });
   if (!context) throw new Error("WebGL is unavailable on this device.");
   const gl: WebGLRenderingContext = context;
@@ -231,11 +307,13 @@ function render(canvas: HTMLCanvasElement, mesh: Mesh, reaction: Reaction, asset
     attribute vec3 aPosition;
     attribute vec3 aNormal;
     attribute vec4 aColor;
+    attribute vec2 aTexcoord;
     uniform float uAngle;
     uniform float uAspect;
     uniform float uBob;
     varying vec4 vColor;
     varying vec3 vNormal;
+    varying vec2 vUv;
     void main(){
       float c=cos(uAngle),s=sin(uAngle);
       mat3 r=mat3(c,0.0,-s,0.0,1.0,0.0,s,0.0,c);
@@ -246,19 +324,25 @@ function render(canvas: HTMLCanvasElement, mesh: Mesh, reaction: Reaction, asset
       gl_Position=vec4(p.x,p.y,p.z*0.42,1.0);
       vColor=aColor;
       vNormal=normalize(r*aNormal);
+      vUv=aTexcoord;
     }
   `);
   const fs = compile(gl, gl.FRAGMENT_SHADER, `
     precision mediump float;
     uniform vec3 uTint;
+    uniform sampler2D uBaseColor;
+    uniform float uUseTexture;
     varying vec4 vColor;
     varying vec3 vNormal;
+    varying vec2 vUv;
     void main(){
       vec3 key=normalize(vec3(-0.35,0.72,0.72));
-      float diffuse=0.56+0.50*max(dot(normalize(vNormal),key),0.0);
-      vec3 base=max(vColor.rgb,vec3(0.075));
-      vec3 material=mix(base,uTint,0.09);
-      vec3 lit=min(material*diffuse+uTint*0.028,vec3(1.0));
+      float diffuse=0.66+0.34*max(dot(normalize(vNormal),key),0.0);
+      vec3 fallback=max(vColor.rgb,vec3(0.075));
+      vec3 sampled=texture2D(uBaseColor,fract(vUv)).rgb;
+      vec3 base=mix(fallback,sampled,uUseTexture);
+      vec3 material=mix(base,uTint,uUseTexture>0.5?0.035:0.09);
+      vec3 lit=min(material*diffuse+uTint*0.022,vec3(1.0));
       gl_FragColor=vec4(lit,1.0);
     }
   `);
@@ -270,10 +354,13 @@ function render(canvas: HTMLCanvasElement, mesh: Mesh, reaction: Reaction, asset
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || "Companion program failed.");
   gl.useProgram(program);
 
+  const buffers: WebGLBuffer[] = [];
   const bind = (name: string, data: Float32Array, size: number) => {
     const location = gl.getAttribLocation(program, name);
     if (location < 0) return;
     const buffer = gl.createBuffer();
+    if (!buffer) throw new Error("Could not create Companion vertex buffer.");
+    buffers.push(buffer);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(location);
@@ -282,12 +369,33 @@ function render(canvas: HTMLCanvasElement, mesh: Mesh, reaction: Reaction, asset
   bind("aPosition", mesh.positions, 3);
   bind("aNormal", mesh.normals, 3);
   bind("aColor", mesh.colors, 4);
+  bind("aTexcoord", mesh.texcoords, 2);
   const indexBuffer = gl.createBuffer();
+  if (!indexBuffer) throw new Error("Could not create Companion index buffer.");
+  buffers.push(indexBuffer);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
 
-  const color = tint(reaction);
-  gl.uniform3f(gl.getUniformLocation(program, "uTint"), color[0], color[1], color[2]);
+  const texture = gl.createTexture();
+  if (!texture) throw new Error("Could not create Companion texture.");
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  if (textureSource) {
+    // glTF/WebP assets use glTF UV orientation; do not apply the usual browser-image Y flip.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureSource);
+    gl.generateMipmap(gl.TEXTURE_2D);
+  } else {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+  }
+  gl.uniform1i(gl.getUniformLocation(program, "uBaseColor"), 0);
+  gl.uniform1f(gl.getUniformLocation(program, "uUseTexture"), textureSource ? 1 : 0);
+
+  const tintLocation = gl.getUniformLocation(program, "uTint");
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.CULL_FACE);
   gl.clearColor(0, 0, 0, 0);
@@ -304,7 +412,10 @@ function render(canvas: HTMLCanvasElement, mesh: Mesh, reaction: Reaction, asset
       canvas.height = height;
     }
     const time = (now - started) / 1000;
-    const speed = reaction === "major" ? 0.48 : reaction === "echo" ? 0.34 : 0.20;
+    const activeReaction = reaction();
+    const color = tint(activeReaction);
+    gl.uniform3f(tintLocation, color[0], color[1], color[2]);
+    const speed = activeReaction === "major" ? 0.48 : activeReaction === "echo" ? 0.34 : 0.20;
     const bob = asset.role === "droid" ? Math.sin(time * 1.7) * 0.035 : Math.sin(time * 1.35) * 0.008;
     gl.viewport(0, 0, width, height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -315,7 +426,15 @@ function render(canvas: HTMLCanvasElement, mesh: Mesh, reaction: Reaction, asset
     frameId = requestAnimationFrame(frame);
   };
   frameId = requestAnimationFrame(frame);
-  return () => cancelAnimationFrame(frameId);
+  return () => {
+    cancelAnimationFrame(frameId);
+    for (const buffer of buffers) gl.deleteBuffer(buffer);
+    gl.deleteTexture(texture);
+    gl.deleteProgram(program);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (textureSource && "close" in textureSource && typeof textureSource.close === "function") textureSource.close();
+  };
 }
 
 export function CompanionModelCanvas({
@@ -334,6 +453,8 @@ export function CompanionModelCanvas({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const asset = COMPANION_ASSETS[variant];
+  const reactionRef = useRef(reaction);
+  reactionRef.current = reaction;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -349,9 +470,15 @@ export function CompanionModelCanvas({
         if (!response.ok) throw new Error(`${asset.label} asset returned ${response.status}.`);
         return response.arrayBuffer();
       })
-      .then((buffer) => {
+      .then(async (buffer) => {
         if (stopped()) return;
-        cleanup = render(canvas, parseGlb(buffer, asset), reaction, asset, stopped);
+        const mesh = parseGlb(buffer, asset);
+        const textureSource = mesh.texture ? await loadTextureSource(mesh.texture) : null;
+        if (stopped()) {
+          if (textureSource && "close" in textureSource && typeof textureSource.close === "function") textureSource.close();
+          return;
+        }
+        cleanup = render(canvas, mesh, textureSource, () => reactionRef.current, asset, stopped);
         if (!stopped()) setLoading(false);
       })
       .catch((cause: unknown) => {
@@ -364,7 +491,7 @@ export function CompanionModelCanvas({
       generation.current += 1;
       cleanup?.();
     };
-  }, [asset, reaction]);
+  }, [asset]);
 
   const unavailable = asset.state !== "ready" ? asset.unavailableMessage || `${asset.label} is temporarily unavailable.` : error;
 
@@ -379,7 +506,7 @@ export function CompanionModelCanvas({
 }
 
 export function Companion3DStage() {
-  const [variant, setVariant] = useState<CompanionVariant>("droid");
+  const [variant, setVariant] = useState<CompanionVariant>("female");
   const [reaction, setReaction] = useState<Reaction>("idle");
   const selected = COMPANION_ASSETS[variant];
 
