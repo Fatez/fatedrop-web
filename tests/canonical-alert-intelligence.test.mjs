@@ -24,6 +24,19 @@ test('RRP and delivered-price comparisons remain separate', () => {
   assert.match(moduleSource, /ro\.postage_pence IS NOT NULL/);
 });
 
+test('canonical signal packs use exact offer history and canonical-product alternatives', () => {
+  assert.match(moduleSource, /WHERE hs\.offer_id=s\.offer_id/);
+  assert.match(moduleSource, /WHERE ro\.product_id=s\.product_id AND ro\.offer_id<>s\.offer_id/);
+  assert.match(moduleSource, /signalThread: signalThread\(row\)/);
+  assert.match(moduleSource, /preparedLinks: links/);
+  assert.match(moduleSource, /INSPECT PRODUCT/);
+  assert.match(moduleSource, /BUY \/ VIEW PRODUCT/);
+  assert.match(moduleSource, /VIEW LAST PRODUCT PAGE/);
+  assert.match(moduleSource, /ro\.retailer_id='pokemon-center-uk'/);
+  assert.match(moduleSource, /linksPrepared: true/);
+  assert.match(moduleSource, /lowestKnownUrl: links\.lowestKnown\?\.url/);
+});
+
 test('mobile API consumes the shared canonical alert module', () => {
   assert.match(routeSource, /listCanonicalAlerts/);
   assert.doesNotMatch(routeSource, /fatedrop_retail_offers/);
