@@ -1,9 +1,46 @@
 import { getSnapshotForRequest } from "@/lib/auth";
-import { listCanonicalAlerts } from "@/lib/canonical-alerts";
+import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { hasCapability } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function freeAlert(alert: CanonicalAlert): CanonicalAlert {
+  return {
+    ...alert,
+    product: {
+      ...alert.product,
+      rrpPence: null,
+    },
+    priceIntelligence: {
+      rrpPence: null,
+      rrpDeltaPercent: null,
+      comparisonBasis: alert.priceIntelligence.comparisonBasis,
+      verdict: "NO_FAIR_COMPARISON",
+      currentComparisonPence: null,
+      lowestKnown: null,
+      savingsPence: null,
+      savingsPercent: null,
+    },
+    preparedLinks: {
+      primary: alert.preparedLinks.primary,
+      lowestKnown: null,
+      officialReference: null,
+      alternatives: [],
+      compareQuery: alert.preparedLinks.compareQuery,
+      fateFindQuery: alert.preparedLinks.fateFindQuery,
+    },
+    notification: {
+      title: alert.notification.title,
+      body: `${alert.retailer} · ${alert.fateStage === "ECHO" ? "early signal" : alert.fateStage === "MANIFESTED" ? "confirmed availability" : alert.fateStage === "VANISHED" ? "availability lost" : "network activity"}`,
+      data: {
+        ...alert.notification.data,
+        verdict: "NO_FAIR_COMPARISON",
+        lowestKnownUrl: null,
+      },
+    },
+  };
+}
 
 export async function GET(request: Request) {
   const snapshot = await getSnapshotForRequest(request);
@@ -19,11 +56,13 @@ export async function GET(request: Request) {
     const requestedId = url.searchParams.get("id")?.trim() || null;
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
-    const alerts = await listCanonicalAlerts({ id: requestedId, limit });
+    const premium = hasCapability(snapshot.membership, "priority_alerts");
+    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit });
+    const alerts = premium ? canonicalAlerts : canonicalAlerts.map(freeAlert);
 
     return Response.json({
       success: true,
-      premium: hasCapability(snapshot.membership, "priority_alerts"),
+      premium,
       count: alerts.length,
       alerts,
     }, { headers: { "cache-control": "private, no-store" } });
