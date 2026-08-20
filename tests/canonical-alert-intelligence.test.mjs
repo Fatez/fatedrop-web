@@ -6,6 +6,8 @@ const moduleSource = await readFile(new URL('../lib/canonical-alerts.ts', import
 const pushSource = await readFile(new URL('../lib/canonical-push.ts', import.meta.url), 'utf8');
 const routeSource = await readFile(new URL('../app/api/mobile/alerts/route.ts', import.meta.url), 'utf8');
 const ingestSource = await readFile(new URL('../app/api/dashboard/network-snapshot/route.ts', import.meta.url), 'utf8');
+const webAlertsSource = await readFile(new URL('../app/dashboard/alerts/page.tsx', import.meta.url), 'utf8');
+const webPackSource = await readFile(new URL('../components/canonical-alert-signal-pack.tsx', import.meta.url), 'utf8');
 
 test('canonical alerts expose RRP and best-offer intelligence', () => {
   assert.match(moduleSource, /official_rrp_pence/);
@@ -35,6 +37,17 @@ test('canonical signal packs use exact offer history and canonical-product alter
   assert.match(moduleSource, /ro\.retailer_id='pokemon-center-uk'/);
   assert.match(moduleSource, /linksPrepared: true/);
   assert.match(moduleSource, /lowestKnownUrl: links\.lowestKnown\?\.url/);
+});
+
+test('web Alerts exposes expandable lifecycle-aware signal packs', () => {
+  assert.match(webAlertsSource, /CanonicalAlertSignalPack/);
+  assert.match(webAlertsSource, /alert\.fateStage === "VANISHED"/);
+  assert.match(webAlertsSource, /alert\.fateStage === "ECHO"/);
+  assert.match(webPackSource, /SIGNAL TRAIL/);
+  assert.match(webPackSource, /STILL LIVE ELSEWHERE/);
+  assert.match(webPackSource, /COMPARE ALL OFFERS/);
+  assert.match(webPackSource, /CREATE FATEFIND/);
+  assert.match(webPackSource, /Early intelligence only/);
 });
 
 test('mobile API consumes shared alerts and redacts premium intelligence for free accounts', () => {
