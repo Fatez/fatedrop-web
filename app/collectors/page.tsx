@@ -81,7 +81,7 @@ export default function CollectorsPage() {
         <SectionHeading
           eyebrow="One signal language"
           title="Four states. One meaning everywhere."
-          body="The same lifecycle should mean the same thing on the website, in the app, on Discord and in a push notification."
+          body="Whisper → Echo → Manifested → Vanished. The same lifecycle should mean the same thing on the website, in the app, on Discord and in a push notification."
         />
         <div style={{ marginTop: 42 }}><StockLifecycle /></div>
       </section>
