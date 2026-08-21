@@ -20,9 +20,9 @@ export default function Home() {
     <SiteShell>
       <KoruReferenceLanding />
 
-      <NetworkProof />
-
       <KoruAppSection />
+
+      <NetworkProof />
 
       <section className="home-outcomes section-shell" aria-labelledby="home-outcomes-title">
         <div className="home-outcomes-head"><p className="eyebrow"><span />Built around the collector journey</p><h2 id="home-outcomes-title">The character gives FateDrop a voice. The network still does the work.</h2><p>Koru is the guide. Search, True Price, FateFind, retailer discovery and evidence-backed lifecycle signals remain the core product.</p></div>
