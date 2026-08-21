@@ -56,7 +56,12 @@ export default function TrustPage() {
       </section>
 
       <section className="content-section section-shell">
-        <div className="quote-band"><p className="eyebrow"><span />No pay-to-trust</p><blockquote>A retailer cannot purchase a stronger trust result.</blockquote><p>Commercial placement, sponsorship and promotion must stay clearly labelled and separate from verification, stock evidence and any future trust model.</p></div>
+        <div className="quote-band">
+          <p className="eyebrow"><span />FateScore · planned</p>
+          <blockquote>Trust should be earned by evidence, never bought.</blockquote>
+          <p>FateScore is a planned evidence-led retailer trust model. It is not a live final score today, and any future model must remain explainable, evidence-led and separate from commercial placement.</p>
+          <p>A retailer cannot purchase a stronger verification or trust result. Sponsorship and promotion must stay clearly labelled and separate from stock evidence.</p>
+        </div>
       </section>
       <FinalCta />
     </SiteShell>
