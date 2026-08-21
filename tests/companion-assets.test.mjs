@@ -13,18 +13,37 @@ function walk(dir) {
   });
 }
 
-test("Koru is the canonical web mascot and approved artwork is present", () => {
+test("Koru remains the FateDrop mascot and approved artwork is present", () => {
   const brand = read("lib/koru-brand.ts");
   assert.ok(brand.includes('name: "Koru"'));
-  assert.ok(brand.includes('code: "K-09"'));
   assert.ok(brand.includes('role: "FateDrop Signal Companion"'));
-  assert.ok(brand.includes("modelUrl: null"));
   for (const file of [
     "public/assets/companions/koru-portrait.webp",
     "public/assets/companions/koru-signal-companion.webp",
     "public/assets/companions/koru-and-friends.webp",
     "public/assets/merch/koru-crystal-jersey.webp",
   ]) assert.equal(fs.existsSync(path.join(root, file)), true, `${file} missing`);
+});
+
+test("active companion roster is exactly the five Koru and Friends characters", () => {
+  const contract = read("lib/companion-contract.ts");
+  assert.ok(contract.includes('ACTIVE_COMPANION_IDS = ["koru", "fenn", "aeris", "nyxen", "solix"]'));
+  for (const name of ["Koru", "Fenn", "Aeris", "Nyxen", "Solix"]) assert.ok(contract.includes(`name: "${name}"`));
+  assert.ok(contract.includes("slot: 1"));
+  assert.ok(contract.includes("slot: 5"));
+  assert.equal(contract.includes("droidModelUrl"), false);
+  assert.equal(contract.includes("characterModelUrl"), false);
+  assert.equal(contract.includes("AvatarLoadout"), false);
+  assert.ok(contract.includes("COMPANION_SCHEMA_VERSION = 2"));
+});
+
+test("Kael and Nyra are archive-only and never active companion IDs", () => {
+  const contract = read("lib/companion-contract.ts");
+  assert.ok(contract.includes('id: "kael", name: "Kael", code: "K-01"'));
+  assert.ok(contract.includes('id: "nyra", name: "Nyra", code: "N-02"'));
+  const activeLine = contract.split("\n").find((line) => line.includes("ACTIVE_COMPANION_IDS")) || "";
+  assert.equal(activeLine.includes("kael"), false);
+  assert.equal(activeLine.includes("nyra"), false);
 });
 
 test("retired Scout and Droid GLBs are absent from the active web tree", () => {
@@ -39,7 +58,7 @@ test("no standalone HTML companion experiments remain in the website repository"
   assert.deepEqual(html, []);
 });
 
-test("Koru reaction contract preserves all four public lifecycle meanings", () => {
+test("companion reaction contract preserves all four public lifecycle meanings", () => {
   const contract = read("lib/companion-contract.ts");
   assert.ok(contract.includes('kind === "whisper" || kind === "drop_pulse"'));
   assert.ok(contract.includes('return "watching"'));
@@ -50,11 +69,24 @@ test("Koru reaction contract preserves all four public lifecycle meanings", () =
   assert.equal(contract.includes('kind === "manifested" || kind === "echo"'), false);
 });
 
-test("profile avatar stays separate from the fixed Koru mascot", () => {
-  const builder = read("components/avatar-builder.tsx");
-  assert.ok(builder.includes("Collector avatar"));
-  assert.ok(builder.includes("Koru is not selectable"));
-  assert.ok(builder.includes("AvatarPreview"));
-  assert.equal(builder.includes("CompanionModelCanvas"), false);
-  assert.equal(builder.includes('tcgStyle: "TCG Style"'), false);
+test("legacy mini-companions cannot return through active profile persistence", () => {
+  const loadout = read("lib/avatar-loadout.ts");
+  const assets = read("lib/avatar-assets.ts");
+  const layered = read("components/avatar-layered-character.tsx");
+  for (const retired of ["radar-drone", "signal-orb", "mini-beacon"]) assert.equal(loadout.includes(retired), false);
+  assert.equal(assets.includes('"companion"'), false);
+  assert.equal(layered.includes('avatarLayerHref("companion"'), false);
+});
+
+test("dashboard selector exposes five active slots and profile renders the real companion", () => {
+  const selector = read("components/companion-selector.tsx");
+  const page = read("app/dashboard/avatar/page.tsx");
+  const profile = read("app/dashboard/profile/page.tsx");
+  assert.ok(selector.includes("ACTIVE_COMPANION_ROSTER.map"));
+  assert.ok(selector.includes("5 ACTIVE SLOTS"));
+  assert.ok(page.includes("Koru, Fenn, Aeris, Nyxen or Solix"));
+  assert.ok(page.includes("LEGACY_COMPANION_ARCHIVE"));
+  assert.equal(page.includes("AvatarBuilder"), false);
+  assert.ok(profile.includes("CompanionRenderer"));
+  assert.equal(profile.includes("AvatarPreview"), false);
 });
