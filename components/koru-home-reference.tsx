@@ -18,7 +18,7 @@ export function KoruReferenceLanding() {
     <section className="kr-shell section-shell" aria-label="FateDrop introduction">
       <div className="kr-landing-card">
         <article className="kr-hero">
-          <div className="kr-hero-bg" aria-hidden="true" />
+          <img className="kr-hero-image" src="/assets/home/koru-home-hero.webp" alt="Koru overlooking the FateDrop landscape at sunset" />
           <div className="kr-hero-shade" aria-hidden="true" />
 
           <div className="kr-copy">
@@ -72,9 +72,9 @@ export function KoruReferenceLanding() {
       .kr-landing-card,.kr-lifecycle,.kr-retailers,.kr-friends-banner{border:1px solid rgba(205,194,215,.13);overflow:hidden;background:#090c12}
       .kr-landing-card{border-radius:22px;box-shadow:0 28px 90px rgba(0,0,0,.25)}
 
-      .kr-hero{position:relative;isolation:isolate;min-height:clamp(620px,47vw,780px);overflow:hidden;background:#0a0d14}
-      .kr-hero-bg{position:absolute;z-index:0;inset:0;background-image:url('/assets/home/koru-home-hero.webp');background-position:center center;background-repeat:no-repeat;background-size:cover;filter:saturate(1) contrast(1.01) brightness(1.04)}
-      .kr-hero-shade{position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.58) 0%,rgba(5,8,14,.42) 16%,rgba(5,8,14,.2) 31%,rgba(5,8,14,.055) 43%,transparent 57%),linear-gradient(180deg,rgba(4,6,11,.03) 0%,transparent 76%,rgba(4,6,11,.12) 100%)}
+      .kr-hero{position:relative;min-height:clamp(620px,47vw,780px);overflow:hidden;background:#0a0d14}
+      .kr-hero-image{position:absolute;z-index:0;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:center center;filter:saturate(1) contrast(1.01) brightness(1.04)}
+      .kr-hero-shade{position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(5,8,14,.58) 0%,rgba(5,8,14,.42) 16%,rgba(5,8,14,.2) 31%,rgba(5,8,14,.055) 43%,transparent 57%),linear-gradient(180deg,rgba(4,6,11,.03) 0%,transparent 76%,rgba(4,6,11,.12) 100%)}
       .kr-copy{position:absolute;z-index:2;left:clamp(34px,4.4vw,76px);top:50%;width:min(43%,620px);transform:translateY(-48%);text-shadow:0 2px 28px rgba(0,0,0,.42)}
       .kr-kicker{margin:0 0 18px;color:#b39ac1;font-size:9px;font-weight:850;letter-spacing:.19em}
       .kr-copy h1{margin:0;color:#f7efe8;font-family:Georgia,'Times New Roman',serif;font-size:clamp(3.35rem,4.7vw,6rem);font-weight:500;line-height:.94;letter-spacing:-.052em;text-wrap:balance}
@@ -139,7 +139,7 @@ export function KoruReferenceLanding() {
         .kr-shell{width:calc(100% - 18px);margin-top:78px}
         .kr-landing-card,.kr-lifecycle,.kr-retailers,.kr-friends-banner{border-radius:14px}
         .kr-hero{min-height:700px}
-        .kr-hero-bg{background-position:66% center}
+        .kr-hero-image{object-position:66% center}
         .kr-hero-shade{background:linear-gradient(180deg,rgba(5,8,14,.05) 0%,rgba(5,8,14,.02) 46%,rgba(5,8,14,.38) 67%,rgba(5,8,14,.78) 100%)}
         .kr-copy{left:22px;right:22px;top:auto;bottom:76px;width:auto;transform:none;text-shadow:0 3px 24px rgba(0,0,0,.7)}
         .kr-kicker{font-size:8px}
