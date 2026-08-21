@@ -1,42 +1,58 @@
-import Link from "next/link";
+import type { EncounterEvent } from "@/lib/encounter-types";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const days = Array.from({ length: 30 }, (_, index) => index + 1);
-const eventDays: Record<number, { label: string; href: string; tone: string }> = {
-  12: { label: "Card Collective", href: "#demo-event-0", tone: "violet" },
-  27: { label: "Trade & Play", href: "#demo-event-1", tone: "cyan" },
-};
 
-export function EventCalendar({ compact = false }: { compact?: boolean }) {
+function monthLabel(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(date);
+}
+
+function tone(event: EncounterEvent) {
+  const categories = (event.categories || []).join(" ").toLowerCase();
+  return categories.includes("trade") || categories.includes("play") ? "cyan" : "violet";
+}
+
+export function EventCalendar({ events, compact = false }: { events: EncounterEvent[]; compact?: boolean }) {
+  const anchor = events[0] ? new Date(events[0].startDateTime) : new Date();
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const mondayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+  const monthEvents = events.filter((event) => {
+    const date = new Date(event.startDateTime);
+    return date.getFullYear() === year && date.getMonth() === month;
+  });
+  const byDay = new Map<number, EncounterEvent[]>();
+  for (const event of monthEvents) {
+    const day = new Date(event.startDateTime).getDate();
+    const current = byDay.get(day) || [];
+    current.push(event);
+    byDay.set(day, current);
+  }
+
   return (
     <div className={compact ? "encounter-calendar compact" : "encounter-calendar"}>
       <div className="calendar-head">
-        <div>
-          <small>FATE ENCOUNTERS</small>
-          <h3>September 2026</h3>
-        </div>
-        <span className="calendar-demo">Demo calendar</span>
+        <div><small>FATE ENCOUNTERS</small><h3>{monthLabel(anchor)}</h3></div>
+        <span className="calendar-demo">Live UK feed</span>
       </div>
-      <div className="calendar-grid" role="grid" aria-label="Demo event calendar for September 2026">
+      <div className="calendar-grid" role="grid" aria-label={`Live Fate Encounters calendar for ${monthLabel(anchor)}`}>
         {weekdays.map((day) => <span className="weekday" role="columnheader" key={day}>{day}</span>)}
-        <span className="calendar-blank" aria-hidden="true" />
-        {days.map((day) => {
-          const event = eventDays[day];
-          return event ? (
-            <Link className={`calendar-day has-event ${event.tone}`} href={event.href} role="gridcell" key={day} aria-label={`${day} September: Demo event, ${event.label}`}>
-              <b>{day}</b><i /><small>{event.label}</small>
-            </Link>
-          ) : (
-            <span className="calendar-day" role="gridcell" key={day}><b>{day}</b></span>
-          );
+        {Array.from({ length: mondayOffset }, (_, index) => <span className="calendar-blank" aria-hidden="true" key={`blank-${index}`} />)}
+        {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
+          const dayEvents = byDay.get(day) || [];
+          const event = dayEvents[0];
+          if (!event) return <span className="calendar-day" role="gridcell" key={day}><b>{day}</b></span>;
+          const label = dayEvents.length > 1 ? `${event.name} +${dayEvents.length - 1}` : event.name;
+          const content = <><b>{day}</b><i /><small>{label}</small></>;
+          return event.officialEventUrl ? <a className={`calendar-day has-event ${tone(event)}`} href={event.officialEventUrl} target="_blank" rel="noreferrer" role="gridcell" key={day} aria-label={`${day} ${monthLabel(anchor)}: ${label}`}>{content}</a> : <span className={`calendar-day has-event ${tone(event)}`} role="gridcell" key={day} aria-label={`${day} ${monthLabel(anchor)}: ${label}`}>{content}</span>;
         })}
       </div>
       <div className="calendar-foot">
-        <span><i className="legend-violet" />Card show</span>
-        <span><i className="legend-cyan" />Trade & play</span>
-        <p>Live event data connection coming next.</p>
+        <span><i className="legend-violet" />Card show / convention</span>
+        <span><i className="legend-cyan" />Trade / play event</span>
+        <p>{monthEvents.length} source-verified listing{monthEvents.length === 1 ? "" : "s"} in this month.</p>
       </div>
-      <div className="event-data-state" role="status"><b>Demo mode</b><span>No live event feed is connected. All dates and listings shown here are demonstrations.</span></div>
+      <div className="event-data-state" role="status"><b>Live feed</b><span>Event details are sourced from FateDrop&apos;s hosted Encounters feed. Check the organiser or ticket source before travelling.</span></div>
     </div>
   );
 }
