@@ -13,12 +13,17 @@ const retailers = [
   "Jet Cards",
 ] as const;
 
+const HERO_DEBUG_SOURCE =
+  "https://raw.githubusercontent.com/Fatez/fatedrop-web/a91b67b79a36bff3297de2c129434e9d017273ec/public/assets/home/koru-home-hero.webp";
+
 export function KoruReferenceLanding() {
   return <>
     <section className="kr-shell section-shell" aria-label="FateDrop introduction">
       <div className="kr-landing-card">
-        <article className="kr-hero">
-          <img className="kr-hero-image" src="/assets/home/koru-home-hero.webp" alt="Koru overlooking the FateDrop landscape at sunset" />
+        <article
+          className="kr-hero"
+          style={{ backgroundImage: `url(${HERO_DEBUG_SOURCE})` }}
+        >
           <div className="kr-hero-shade" aria-hidden="true" />
 
           <div className="kr-copy">
@@ -61,7 +66,7 @@ export function KoruReferenceLanding() {
       </section>
 
       <section className="kr-friends-banner" aria-label="Koru and Friends">
-        <img src="/assets/home/koru-and-friends-banner.webp" alt="Koru and Friends together at dusk in the FateDrop universe" />
+        <img src="/assets/home/koru-and-friends-banner.webp?v=20260821-2" alt="Koru and Friends together at dusk in the FateDrop universe" />
         <Link className="kr-friends-hotspot" href="/merch" aria-label="Explore Koru and Friends merchandise"><span>Explore Koru &amp; Friends merchandise</span></Link>
         <Link className="kr-friends-mobile-link button kr-primary" href="/merch">Explore Koru &amp; Friends <span>↗</span></Link>
       </section>
@@ -72,8 +77,7 @@ export function KoruReferenceLanding() {
       .kr-landing-card,.kr-lifecycle,.kr-retailers,.kr-friends-banner{border:1px solid rgba(205,194,215,.13);overflow:hidden;background:#090c12}
       .kr-landing-card{border-radius:22px;box-shadow:0 28px 90px rgba(0,0,0,.25)}
 
-      .kr-hero{position:relative;min-height:clamp(620px,47vw,780px);overflow:hidden;background:#0a0d14}
-      .kr-hero-image{position:absolute;z-index:0;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:center center;filter:saturate(1) contrast(1.01) brightness(1.04)}
+      .kr-hero{position:relative;min-height:clamp(620px,47vw,780px);overflow:hidden;background-color:#0a0d14;background-position:center center;background-repeat:no-repeat;background-size:cover}
       .kr-hero-shade{position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(5,8,14,.58) 0%,rgba(5,8,14,.42) 16%,rgba(5,8,14,.2) 31%,rgba(5,8,14,.055) 43%,transparent 57%),linear-gradient(180deg,rgba(4,6,11,.03) 0%,transparent 76%,rgba(4,6,11,.12) 100%)}
       .kr-copy{position:absolute;z-index:2;left:clamp(34px,4.4vw,76px);top:50%;width:min(43%,620px);transform:translateY(-48%);text-shadow:0 2px 28px rgba(0,0,0,.42)}
       .kr-kicker{margin:0 0 18px;color:#b39ac1;font-size:9px;font-weight:850;letter-spacing:.19em}
@@ -138,8 +142,7 @@ export function KoruReferenceLanding() {
       @media(max-width:760px){
         .kr-shell{width:calc(100% - 18px);margin-top:78px}
         .kr-landing-card,.kr-lifecycle,.kr-retailers,.kr-friends-banner{border-radius:14px}
-        .kr-hero{min-height:700px}
-        .kr-hero-image{object-position:66% center}
+        .kr-hero{min-height:700px;background-position:66% center}
         .kr-hero-shade{background:linear-gradient(180deg,rgba(5,8,14,.05) 0%,rgba(5,8,14,.02) 46%,rgba(5,8,14,.38) 67%,rgba(5,8,14,.78) 100%)}
         .kr-copy{left:22px;right:22px;top:auto;bottom:76px;width:auto;transform:none;text-shadow:0 3px 24px rgba(0,0,0,.7)}
         .kr-kicker{font-size:8px}
