@@ -42,10 +42,9 @@ test("interactive phone preview retains every controlled screen and safeguard", 
     assert.match(source, new RegExp(`screen === \\"${screen}\\"`));
   }
 
-  for (const state of ["ECHO", "MANIFESTED", "VANISHED"]) {
+  for (const state of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) {
     assert.ok(source.includes(state), `${state} is missing from the public phone preview`);
   }
-  assert.ok(!source.includes("WHISPER"));
 
   for (const requirement of [
     "Interactive preview · sample data",
@@ -53,15 +52,19 @@ test("interactive phone preview retains every controlled screen and safeguard", 
     "Save to Wishlist",
     "Create FateFind",
     "FATEMATCH",
-    "Global Echo / Manifested / Vanished activity belongs on Home",
+    "Global Whisper / Echo / Manifested / Vanished activity belongs on Home",
     "Local Radar",
     "Fate Encounters",
     "FATEDROP / COMMAND CENTRE",
-    "COMPANION · 3D ASSET SLOT READY",
+    "KORU & FRIENDS · FIVE COMPANION SLOTS",
+    "Koru, Fenn, Aeris, Nyxen and Solix",
   ]) {
     assert.ok(source.includes(requirement), `${requirement} is missing from the current product showcase`);
   }
 
+  assert.ok(source.includes("Catalogue or product movement detected · stock not confirmed"));
+  assert.ok(source.includes("Queue/access readiness changed"));
+  assert.equal(source.includes("signal droid"), false);
   assert.ok(!source.includes("navigator.geolocation"));
   assert.ok(!source.includes("localStorage"));
 });
