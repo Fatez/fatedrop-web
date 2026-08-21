@@ -113,7 +113,7 @@ test("notification preferences use one persistent cross-channel account model", 
   assert.ok(page.includes("ONE PROFILE · EVERY CHANNEL"));
   assert.ok(api.includes("assertSameOrigin"));
   assert.ok(storage.includes("fatedrop_notification_preferences"));
-  for (const signal of ["echo", "manifested", "vanished", "priceChange", "fateMatch"]) assert.ok(storage.includes(signal));
+  for (const signal of ["whisper", "echo", "manifested", "vanished", "priceChange", "fateMatch"]) assert.ok(storage.includes(signal));
   assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS fatedrop_notification_preferences"));
 });
 
@@ -128,12 +128,16 @@ test("free signal API redacts actionable fields before browser delivery", () => 
   assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
-test("internal alert visualiser maps precursor intelligence to public Echo", () => {
+test("internal alert visualiser preserves the final signal vocabulary", () => {
   const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
-  assert.ok(feed.includes('whisper: { label: "ECHO"'));
+  assert.ok(feed.includes('whisper: { label: "WHISPER"'));
+  assert.ok(feed.includes('echo: { label: "ECHO"'));
   assert.ok(feed.includes('queue: { label: "ECHO"'));
   assert.ok(feed.includes('security: { label: "ECHO"'));
-  assert.ok(feed.includes('echo: { label: "MANIFESTED"'));
+  assert.ok(feed.includes('drop_pulse: { label: "DROP PULSE"'));
+  assert.ok(feed.includes('state: "echo"'));
+  assert.equal(feed.includes('whisper: { label: "ECHO"'), false);
+  assert.equal(feed.includes('echo: { label: "MANIFESTED"'), false);
   assert.ok(feed.includes("TEST AVATAR SURGE"));
   assert.ok(feed.includes("TEST PRODUCT SIGNAL"));
 });
