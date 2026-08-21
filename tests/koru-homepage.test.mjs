@@ -15,6 +15,13 @@ test("homepage is led by the approved Koru signal concept", () => {
   assert.ok(reference.includes("MEET THE VOICE OF FATEDROP"));
 });
 
+test("homepage landing uses the clean Koru hero asset", () => {
+  const reference = read("components/koru-home-reference.tsx");
+  assert.ok(reference.includes("/assets/home/koru-home-hero.avif"));
+  assert.ok(fs.existsSync("public/assets/home/koru-home-hero.avif"));
+  assert.equal(reference.includes("koru-home-hero-embedded.svg"), false);
+});
+
 test("homepage art treatment is matte and TCG-aware rather than neon-only", () => {
   const sections = read("components/koru-home-sections.tsx");
   assert.ok(sections.includes("saturate(.48)"));
