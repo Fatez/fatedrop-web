@@ -89,6 +89,9 @@ export function bearerTokenFromRequest(request: Request) {
 export function assertSameOrigin(request: Request) {
   if (process.env.NODE_ENV !== "production") return;
 
+  const fetchSite = request.headers.get("sec-fetch-site")?.toLowerCase();
+  if (fetchSite === "cross-site") throw new Error("CROSS_ORIGIN");
+
   const origin = request.headers.get("origin");
   if (!origin) return;
 
