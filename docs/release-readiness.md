@@ -1,333 +1,275 @@
 # FateDrop Release Readiness
 
-_Last reviewed: 19 August 2026_
+_Last reviewed: 21 August 2026_
 
-This is the canonical cross-platform release gate for FateDrop. It exists to prevent repeated re-audits and to keep the remaining work focused on operational readiness rather than redesign.
+This is the canonical cross-platform release gate for FateDrop. It exists to stop completed work being rediscovered as “pending” and to keep beta work focused on production proof rather than redesign.
 
-## Release definition
+A green CI build is necessary but does not by itself prove deployment, device behaviour, billing, Discord or push delivery.
 
-FateDrop is **release ready** only when all BLOCKER items below are complete and proven in a production-like environment. A green CI build is necessary but does not by itself prove subscriptions, database persistence, push delivery, Discord delivery, or device behaviour.
+## Current audit snapshot
 
-## 1. Canonical branch consolidation — BLOCKER
+| Area | Status | Evidence / remaining proof |
+| --- | --- | --- |
+| Signal Engine reliability | **GREEN** | Core specialist retailer scans were production-proven healthy after lock, bulk-write/read and worker-pool fixes. |
+| Final signal vocabulary | **GREEN IN CODE** | Whisper → Echo → Manifested → Vanished is preserved across canonical web alerts/push and the protected mobile beta. Drop Pulse remains supporting context. |
+| Web lifecycle surfaces | **GREEN IN CI** | Lifecycle consistency PR and internal visualiser follow-up merged to web `main`. |
+| Web security baseline | **VALIDATING** | Fresh current-main CSP/HSTS/private-cache/Sec-Fetch hardening PR is in CI/deployed-proof flow; old stale draft is not the merge candidate. |
+| Production database schema | **GREEN** | Wishlist, notification preferences, hosted FateMatch, push/outbox and retailer-registry tables exist in the intended Neon database. |
+| True Price / RRP logic | **GREEN FOUNDATION** | RRP-first comparison and unknown-delivery fail-closed behaviour are implemented. Pokémon Center UK authoritative RRP data exists; broader Asmodee provenance remains unproven. |
+| Protected mobile beta code | **GREEN IN CI** | Companion beta branch has final lifecycle reconciliation, RRP-first True Price and stable native app identifiers. |
+| Native/EAS project link | **BLOCKER** | iOS/Android IDs and EAS build profiles exist, but Expo must issue and persist the real `extra.eas.projectId`. |
+| Production push | **BLOCKER** | Production currently has 0 push endpoints, 0 outbox rows and 0 delivery attempts. Real-device registration/delivery is not yet proven. |
+| Discord | **CONDITIONAL BLOCKER** | Treat as a blocker only if Premium Discord is advertised as live. Production send/entitlement proof must be captured before that claim. |
+| Paid Stripe launch | **BLOCKER FOR PAID LAUNCH** | Do not claim live paid subscriptions until live-mode price/webhook/entitlement/cancellation behaviour is proven. |
+| Website production smoke | **BLOCKER** | Must be checked against the deployed release candidate, including effective headers and account flows. |
+| Physical mobile QA | **BLOCKER** | Expo Go boot is not a substitute for standalone EAS build, fresh install, notification and Android/iPhone proof. |
+| Local Radar / Fate Encounters | **SEPARATE WORKSTREAM** | Explicitly excluded from this audit pass; do not alter from this release checklist workstream. |
+
+## 1. Canonical release lines
 
 ### Website
 
-Required merge order:
-
-1. `fatedrop-network-consistency-audit` (Product Spec v1 reconciliation)
-2. `launch-foundation-v1` (homepage phone, dashboard showcase, FateDrop ID/mobile sync, entitlements)
-
-Do not merge the second branch before its base is reconciled.
+Current `main` is the release source. Lifecycle consistency is reconciled. Do not resurrect old three-stage copy or the retired “Whisper is internal” contract.
 
 ### Mobile
 
-Required merge order:
+The protected beta line is:
 
-1. `fatedrop-mobile-product-spec-v1`
-2. `launch-foundation-v1`
+`agent/mobile-production-companion-rescue`
 
-The older Railway-native app PR must be compared/reconciled rather than blindly merged because some runtime/dependency work overlaps later architecture.
+It intentionally contains richer Companion/canonical-alert work than mobile `main`. Before an App Store/Play Store release, reconcile this protected beta into the chosen release branch with CI and physical-device proof. Do not blindly replace its canonical alert inbox with the older network-feed implementation from `main`.
+
+Current protected-beta release candidate includes:
+
+- direct `three` + `expo-gl` Companion renderer;
+- KAEL/NYRA Companion path;
+- final four-stage lifecycle semantics;
+- Whisper notification preference and development test notification;
+- RRP-first True Price;
+- stable `fatedrop` scheme/slug;
+- iOS bundle identifier `uk.co.fatedrop`;
+- Android application ID `uk.co.fatedrop`;
+- EAS preview/production build profiles.
 
 ### Cloud
 
-Open workstreams must be reconciled into one canonical release line before production activation:
+Reliability fixes are merged/deployed. Do not reopen the solved deadlock/starvation/read-amplification work unless production evidence regresses.
 
-- Pokémon Center continuous collector
-- RRP provenance
-- UK retailer intelligence registry
-- hosted FateFind/FateMatch notifications
+Remaining Cloud work should focus on source coverage/health, RRP provenance and end-to-end delivery proof rather than reliability redesign.
 
-No production rollout should depend on mutually diverged Cloud branches.
+## 2. Production database readiness — GREEN
 
-## 2. Database readiness — BLOCKER
+The intended Neon production database contains the additive release tables that the old 19 August checklist incorrectly described as missing, including:
 
-A read-only production Neon audit on 19 August 2026 confirmed the existing FateDrop account/market tables are present and the new release tables below are not yet installed. No production mutation was performed.
+- `fatedrop_wishlist_items`
+- `fatedrop_notification_preferences`
+- `fatedrop_hosted_fate_matches`
+- `fatedrop_push_endpoints`
+- `fatedrop_notification_outbox`
+- `fatedrop_notification_delivery_attempts`
+- `fatedrop_retailer_registry`
+- `fatedrop_retailer_discovery_evidence`
+- `fatedrop_retailer_monitor_runs`
 
-No migration is applied automatically by build/deploy jobs.
+Table existence is not the same as operational proof. In particular, the push tables currently contain no registered device or delivery history.
 
-Review and deliberately apply the required additive migrations to the intended Neon production database only after backup/rollback review.
+## 3. Final signal contract — LOCKED
 
-Website/account persistence:
+Never drift from these public meanings:
 
-- `database/2026-08-19-user-preferences.sql`
-  - `fatedrop_wishlist_items`
-  - `fatedrop_notification_preferences`
+1. **Whisper** — product/catalogue/metadata movement; something may be coming.
+2. **Echo** — queue/traffic/security/access readiness changed; get ready.
+3. **Manifested** — confirmed purchasable live stock.
+4. **Vanished** — confirmed availability has gone.
 
-Cloud hosted FateFind/notification persistence:
+**Drop Pulse** is supporting evidence/context, not a fifth lifecycle stage.
 
-- `signal-engine/database/hosted-fatefind-notifications.sql`
-  - `fatedrop_hosted_fate_matches`
-  - `fatedrop_push_endpoints`
-  - `fatedrop_notification_outbox`
-  - `fatedrop_notification_delivery_attempts`
+A legacy internal `echo` value must not automatically be interpreted as Manifested. Normalise legacy sources by their evidence meaning.
 
-Retailer intelligence persistence when that runtime is promoted:
+## 4. True Price / RRP — BETA READY, COVERAGE EXPANDING
 
-- `signal-engine/database/uk-retailer-registry.sql`
-  - `fatedrop_retailer_registry`
-  - `fatedrop_retailer_discovery_evidence`
-  - `fatedrop_retailer_monitor_runs`
+Release rules:
 
-Release proof:
+- ordinary reseller price is never guessed as RRP;
+- RRP is shown only when an authoritative/approved observation exists;
+- item price can be compared with RRP even when delivery is unknown;
+- unknown delivery remains unknown and is never treated as free;
+- delivered True Price is shown only when mandatory delivery/fees are known;
+- percentage deltas use the authoritative RRP reference.
 
-- migrations execute cleanly against the intended database
-- existing FateDrop account/market tables remain intact
-- rollback/restore procedure is documented
-- website and Cloud both use the same intended Neon environment
+Production has Pokémon Center UK authoritative RRP coverage. Asmodee UK provenance remains a coverage task, not permission to weaken matching rules merely to create rows.
 
-## 3. Stripe live subscriptions — BLOCKER FOR PAID LAUNCH
+## 5. Mobile EAS / standalone build — BLOCKER
 
-Current connected Stripe configuration is sandbox/test mode. Plus (£4.99/month) and Pro (£14.99/month) test prices exist, but they are not live-mode prices. Do not claim FateDrop accepts real subscriptions until the live flow is proven.
+Repository identity is now prepared, but the Expo account must create/link the actual project.
 
-Required production path:
+Required proof sequence:
 
-1. live Plus and Pro prices created/confirmed in Stripe
-2. production `STRIPE_SECRET_KEY`
-3. production `STRIPE_WEBHOOK_SECRET`
-4. production `STRIPE_PRICE_PLUS`
-5. production `STRIPE_PRICE_PRO`
-6. production webhook URL configured
-7. one real low-risk subscription completed
-8. webhook changes `fatedrop_memberships` to `active`/`trialing` as expected
-9. `/api/mobile/sync` returns the resulting effective tier/capabilities
-10. website/app paid gates unlock from backend membership truth
-11. cancellation / failed payment / expiry returns the account to the correct effective entitlement
+1. link/create FateDrop in EAS from the `mobile` directory;
+2. confirm Expo writes the real `extra.eas.projectId` into app configuration;
+3. run verification again;
+4. produce an internal iOS preview build;
+5. install it on a physical iPhone;
+6. produce an Android preview build and install on a physical Android device;
+7. confirm cold start, sign-in and Companion rendering outside Expo Go.
 
-Client-side flags are never payment authority.
+Do not invent the project UUID in source control.
 
-## 4. Shared entitlement consistency — CODE COMPLETE / COMMERCIAL SPLIT PENDING
+## 6. Production push — BLOCKER
 
-The website entitlement contract is authoritative and the mobile client uses the same capability vocabulary:
+Current production state at this review:
 
-- `browse_network`
-- `selected_signals`
-- `retailer_discovery`
-- `true_price`
-- `advanced_fate_match`
-- `priority_alerts`
-- `advanced_filters`
-- `premium_discord`
-- `fate_lock_eligibility`
+- enabled push endpoints: **0**
+- total push endpoints: **0**
+- notification outbox rows: **0**
+- delivery attempts: **0**
 
-The current implementation deliberately gives active Plus/Pro accounts the shared premium capability set until the final Plus-vs-Pro commercial differentiation is chosen. Do not invent UI-only tier differences.
+The code path exists but has not been operationally exercised.
 
-Before paid release:
+Required proof:
 
-- choose final Plus-vs-Pro capability split
-- encode it centrally in the authoritative entitlement layer
-- verify web/app/Discord consume those capabilities rather than infer tier locally
+1. EAS project ID is present;
+2. signed-in physical device explicitly grants notification permission;
+3. Expo push token registers to the authenticated FateDrop ID;
+4. production `fatedrop_push_endpoints` contains that enabled endpoint;
+5. one controlled eligible signal queues exactly one push;
+6. Expo returns a successful ticket/provider identifier;
+7. delivery-attempt telemetry records the result;
+8. the physical device receives it;
+9. tapping it opens the exact FateDrop alert/product context;
+10. duplicate signal processing does not duplicate delivery;
+11. revoked/dead tokens disable safely.
 
-## 5. Mobile FateDrop ID credential storage — CODE COMPLETE / DEVICE PROOF PENDING
+Repeat core proof on Android before wider beta.
 
-The opaque bearer session token now uses `expo-secure-store` (`~15.0.8`, SDK-54 compatible):
+## 7. Discord — CONDITIONAL BLOCKER
 
-- iOS uses OS-protected Keychain storage
-- Android uses Keystore-backed secure storage
-- non-sensitive offline sync snapshot remains in AsyncStorage
-- legacy development installs migrate an existing AsyncStorage token into SecureStore once and immediately delete the legacy token
-- sign-out removes secure token + legacy token + cached snapshot
-- 401/session expiry clears the full local session state
+Discord is not allowed to become a second membership authority.
 
-Exact hardened mobile head `04875a85f8bd2b49c743b5d51d3ce6def58fd581` passed GitHub Actions run `32278608243`.
+Before advertising Premium Discord as live, prove:
 
-Still required before public App Store / Play Store release:
+- required production bot token/channel configuration is present;
+- one controlled FateDrop message is recorded as sent with provider message ID;
+- message visibly arrives in the intended channel;
+- bot permissions are least-privilege for required channel actions;
+- user/account link and premium entitlement behaviour work as advertised;
+- cancellation/expiry removes premium access where role gating is used;
+- Discord failure cannot break web/push delivery.
+
+## 8. Stripe — BLOCKER FOR PAID LAUNCH ONLY
+
+Do not open paid subscriptions solely because checkout code exists.
+
+Required live proof:
 
-- real iPhone sign-in/sign-out/session-expiry proof
-- real Android sign-in/sign-out/session-expiry proof
-
-## 6. Hosted FateFind / FateMatch — BLOCKER FOR PREMIUM HUNTS
-
-Code foundation exists behind `FATEDROP_HOSTED_FATEFIND_ENABLED=false`.
-
-Required activation sequence:
-
-1. hosted notification migration applied
-2. website/account API deployed
-3. Cloud evaluator deployed with feature flag still OFF
-4. paid test account creates a FateFind
-5. known qualifying offer creates exactly one hosted FateMatch event
-6. repeated scan of identical offer does not duplicate the notification
-7. unknown delivery fails closed for delivered-price rules
-8. master FateMatch preference suppresses delivery when disabled
-9. quiet hours defer push/Discord rather than failing/sending immediately
-10. hosted FateMatch remains visible in personal history
-11. only after all tests pass: deliberately enable hosted evaluator
-
-## 7. Push notifications — BLOCKER FOR MOBILE ALERT CLAIMS
-
-Required real-device proof:
-
-- permission is user initiated
-- Expo push token registers against authenticated FateDrop ID
-- disabled/revoked endpoint is handled safely
-- one FateMatch push reaches a physical iPhone
-- one FateMatch push reaches a physical Android device
-- tapping notification opens a valid FateDrop context / retailer URL path
-- duplicate scans do not create duplicate notifications
-
-## 8. Discord — BLOCKER ONLY IF PREMIUM DISCORD IS ADVERTISED AT LAUNCH
-
-Required before enabling Discord marketing/capability:
-
-- OAuth account link works
-- Discord user link persists against FateDrop ID
-- active entitlement maps to intended premium role/access
-- cancellation/expiry removes premium access
-- FateMatch Discord delivery tested
-- failed/blocked DM is recorded without breaking web/push delivery
-- Discord never becomes a second source of membership truth
-
-Keep Discord disabled publicly until the above is proven.
-
-## 9. True Price / RRP provenance — BLOCKER FOR STRONG RRP CLAIMS
-
-True Price rules are already conservative: unknown delivery must remain unknown.
-
-Before scaled public promotion:
-
-- reconcile/deploy Cloud RRP provenance work
-- RRP shown only when an observed/approved source exists
-- source + observed timestamp exposed where available
-- ordinary reseller selling price is never silently treated as official RRP
-- delivered-price ordering only compares known delivery totals as known
-
-## 10. Website code/security verification — GREEN
-
-Website release CI now validates stacked launch-foundation PRs as well as `main` and includes a high-severity production dependency audit.
-
-The release branch was upgraded from Next 16.2.11 to Next 16.3.0 and `eslint-config-next` 16.3.0 after the audit identified vulnerable PostCSS/Sharp versions in the older Next dependency tree.
-
-Exact hardened website head `78c9506bcd6ec1fd4f4284a73a09c9bb1f1f93fb` passed GitHub Actions run `32278645111` including:
-
-- clean dependency install
-- production dependency audit at high severity
-- ESLint
-- TypeScript
-- automated tests
-- Next.js production build
-- OpenNext/Cloudflare build
-
-## 11. Website production QA — BLOCKER
-
-Still required on the deployed release candidate:
-
-- homepage desktop/mobile visual smoke test
-- interactive phone journey
-- dashboard showcase
-- create account / login / logout
-- Search → product → offers → retailer checkout
-- True Price and unknown-delivery states
-- Wishlist create/remove/sync
-- FateFind create/list
-- Alerts/FateMatch history
-- membership state
-- error / empty / loading states
-- privacy / terms / trust routes
-- custom domain/canonical metadata
-
-## 12. Mobile production QA — BLOCKER
-
-Mobile exact hardened head `04875a85f8bd2b49c743b5d51d3ce6def58fd581` passed its repository tests plus mobile lint/typecheck workflow.
-
-CI is not a substitute for device proof. Test on physical iPhone and Android:
-
-- cold start
-- sign in / sign out
-- session expiry
-- offline cached identity display
-- online sync recovery
-- Search
-- True Price
-- Wishlist cross-platform sync
-- hosted FateFind creation
-- FateMatch history
-- notification opt-in
-- push delivery/open
-- retailer external checkout
-- Local Radar permission allowed/denied
-- app background/foreground refresh
-
-## 13. Cloud code/security verification — GREEN
-
-Hosted FateFind/FateMatch Cloud CI now includes a high-severity production dependency audit before the complete Signal Engine test suite.
-
-Exact hardened hosted-notification head `34475bb0430e3382f6ab88c76b7d1aab0eab54d7` passed GitHub Actions run `32278708384`.
-
-The hosted evaluator remains OFF by default and no notification migration has been applied to production.
-
-## 14. Remaining dependency/security review — BLOCKER
-
-Production Web and hosted Signal Engine now have enforced high-severity audit gates.
-
-Still required:
-
-- review/document the residual upstream Expo/Metro `image-size` advisory and patch when a compatible fixed version exists
-- no secrets or production database exports in Git
-- production account/session endpoints remain no-store where appropriate
-- security headers verified on deployed website
-- actual deployed versions rechecked immediately before release
-
-Do not blindly run forced major dependency upgrades.
-
-## 15. Runtime / rollback — BLOCKER
-
-Before opening to customers:
-
-- Railway Signal Engine health endpoint checked from public network
-- Cloudflare/website health checked
-- Neon connection failure produces controlled error states
-- Signal Engine outage does not fabricate stock/price data
-- hosted evaluator can be disabled immediately with feature flag
-- retailer registry runtime remains separately disable-able
-- rollback target/previous known-good deployment identified for website and Cloud
-
-## 16. Product areas safe to defer
-
-These do not block the first solid release unless deliberately marketed as live:
-
-- final 3D Companion GLB/animations (renderer boundary already exists)
-- production Events ingestion beyond current foundation
-- Event Vendor Mode
-- FateScore public policy
-- FateWindow
-- FateFair
-- Basket Breaker
-- Reserve & Collect
-- Passport
-- XP/tokens
-- full multi-TCG expansion
-
-## 17. Intelligence Centre handoff
-
-After the release blockers above are green, feature churn should stop and the main engineering programme becomes the FateDrop Intelligence Centre:
-
-`Retailer discovery → Registry → Adapter/collector → Raw offers → Canonical product identity → RRP provenance → Delivery intelligence → True Price → Stock/price history → Signal Engine → FateFind/FateMatch → App/Web/Discord/Companion`
-
-Primary Intelligence Centre priorities:
-
-1. reconcile and activate retailer registry foundation
-2. national/specialist UK retailer qualification
-3. regional/independent retailer coverage growth
-4. robust canonical product matching for variants/bundles
-5. delivery-policy evidence/rules
-6. stock + price history
-7. RRP source coverage
-8. signal confidence/quality
-9. Local Radar location coverage
-10. later multi-TCG expansion
-
-## Current release status
-
-**Product architecture:** code-complete foundation
-
-**Web code/security gate:** GREEN
-
-**Mobile code/security gate:** GREEN; physical-device proof pending
-
-**Hosted Signal Engine code/security gate:** GREEN
-
-**Commercial production:** not yet active
-
-**Confirmed remaining release blockers:** canonical branch consolidation, reviewed production migrations, live Stripe proof, hosted notification end-to-end activation, real iPhone/Android + deployed browser QA, residual Expo advisory review, deployment/rollback proof.
-
-Do not reopen completed product design unless a release test demonstrates a real functional or consistency defect.
+- live Plus/Pro price IDs;
+- production Stripe secret/webhook configuration;
+- real low-risk subscription;
+- signature-verified webhook changes membership state;
+- web/mobile effective capabilities reflect backend membership truth;
+- duplicate webhook is idempotent;
+- cancellation, failed payment and expiry return correct entitlement state;
+- checkout clearly states price, billing frequency, trial, renewal and cancellation.
+
+## 9. Web security / legal gate — VALIDATING
+
+Current code already uses scrypt password hashing, opaque sessions and HttpOnly/SameSite/Secure production cookies. Sampled auth/account mutation routes use the shared same-origin guard.
+
+Fresh hardening is being validated against current `main`, not the stale early draft:
+
+- CSP;
+- HSTS;
+- explicit private no-store/noindex headers;
+- API no-store baseline;
+- Sec-Fetch-Site cross-site rejection before Origin fallback;
+- automated regression coverage;
+- tracked UK security/legal launch gate.
+
+Still required outside source code:
+
+- Cloudflare auth rate limiting;
+- Turnstile/equivalent abuse challenge if required;
+- deployed header/CSP inspection;
+- secret-history review;
+- backup/restore and incident-response procedure;
+- final privacy/controller/retention/processor information;
+- final UK consumer Terms and subscription-law review.
+
+## 10. Website production QA — BLOCKER
+
+Run against the deployed release candidate, not a local build:
+
+- homepage desktop/mobile visual smoke;
+- four-stage lifecycle wording;
+- interactive sample/demo labelling;
+- create account / login / logout;
+- dashboard private caching/noindex response;
+- Search → canonical product → offers → retailer;
+- True Price with known/unknown RRP and delivery;
+- Wishlist create/remove/sync;
+- FateFind create/list;
+- Alerts and signal packs;
+- notification preference persistence including Whisper;
+- membership/error/empty/loading states;
+- privacy / terms / trust routes;
+- external retailer links use HTTPS and correct destination;
+- CSP does not break Companion, imagery, Stripe redirects or API calls;
+- canonical custom domain/metadata/robots behaviour.
+
+## 11. Mobile physical QA — BLOCKER
+
+Run on standalone/internal EAS builds:
+
+- fresh install / cold start;
+- sign in / sign out / expired session;
+- offline cached identity and online recovery;
+- Home / Search / Indies / Alerts / More;
+- True Price and RRP-first comparison;
+- canonical Whisper / Echo / Manifested / Vanished presentation;
+- Companion selection and reactions;
+- notification permission allowed/denied;
+- push register / receive / tap-through;
+- retailer external checkout;
+- background/foreground recovery;
+- iPhone and Android core pass.
+
+## 12. Retailer health — BETA COVERAGE TASK
+
+Healthy specialist coverage has been production-proven for the core Shopify/specialist group after reliability fixes.
+
+Known inaccessible/unhealthy retailers must remain explicit and fail safely. Do not bypass security/access controls. Prefer public/approved feeds, APIs or partnerships for blocked national retailers.
+
+A retailer being inaccessible is a coverage limitation, not permission to fabricate stock state.
+
+## 13. Safe-to-defer product areas
+
+These do not block the first solid beta unless marketed as live promises:
+
+- FateScore public scoring policy;
+- FateFair;
+- FateWindow;
+- Basket Breaker / basket optimisation;
+- Reserve & Collect;
+- Passport;
+- XP/tokens/progression;
+- broad multi-TCG expansion;
+- richer event/vendor expansion.
+
+Local Radar / Fate Encounters are handled in a separate active workstream and are intentionally not modified by this audit.
+
+## Current release decision
+
+**Not ready for unrestricted public/paid launch yet.**
+
+The codebase is substantially closer than the old 19 August checklist suggested. The remaining blockers are now mostly operational proof rather than feature architecture:
+
+1. merge/deploy/verify current web security hardening;
+2. link the mobile app to a real EAS project;
+3. produce standalone iOS/Android beta builds;
+4. register the first production push endpoint and prove end-to-end delivery;
+5. run deployed browser and physical-device smoke tests;
+6. prove Discord only if it will be advertised as live;
+7. prove live Stripe only before taking real paid subscriptions;
+8. complete final security/legal deployment controls and review.
+
+Do not reopen completed product design unless a release test demonstrates a real functional, security or consistency defect.
