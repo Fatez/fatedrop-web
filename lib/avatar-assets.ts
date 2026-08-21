@@ -2,7 +2,7 @@ import type { AvatarLoadout } from "@/lib/avatar-loadout";
 
 export const AVATAR_SPRITE_SHEET = "/assets/avatar-v2/avatar-sprites.svg";
 
-export type AvatarLayerKind = "background" | "aura" | "base" | "skin" | "hairBack" | "face" | "eyes" | "outfit" | "accessory" | "gear" | "hairFront" | "headwear" | "companion";
+export type AvatarLayerKind = "background" | "aura" | "base" | "skin" | "hairBack" | "face" | "eyes" | "outfit" | "accessory" | "gear" | "hairFront" | "headwear";
 
 export function avatarLayerId(kind: AvatarLayerKind, loadout: AvatarLoadout) {
   switch (kind) {
@@ -18,7 +18,6 @@ export function avatarLayerId(kind: AvatarLayerKind, loadout: AvatarLoadout) {
     case "gear": return `gear-${loadout.gear}`;
     case "hairFront": return `hair-front-${loadout.hair}`;
     case "headwear": return `head-${loadout.headwear}`;
-    case "companion": return `companion-${loadout.companion}`;
   }
 }
 
@@ -39,8 +38,7 @@ export const AVATAR_LAYER_ORDER: AvatarLayerKind[] = [
   "gear",
   "hairFront",
   "headwear",
-  "companion",
 ];
 
-export const AVATAR_RIG_VERSION = 2;
+export const AVATAR_RIG_VERSION = 3;
 export const AVATAR_RIG_VIEWBOX = "0 0 640 960";
