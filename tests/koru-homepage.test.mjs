@@ -4,44 +4,51 @@ import fs from "node:fs";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
-test("homepage is led by the approved Koru signal concept", () => {
+test("homepage keeps the approved Koru landing as the visual anchor", () => {
   const home = read("app/page.tsx");
   const reference = read("components/koru-home-reference.tsx");
   assert.ok(home.includes("<KoruReferenceLanding"));
-  assert.ok(home.includes("<KoruAppSection"));
   assert.ok(reference.includes("You don&apos;t chase drops."));
   assert.ok(reference.includes("You get the signal."));
   assert.ok(reference.includes("THE NETWORK LANGUAGE"));
   assert.ok(reference.includes("MEET THE VOICE OF FATEDROP"));
 });
 
-test("homepage landing uses the clean Koru hero asset", () => {
-  const reference = read("components/koru-home-reference.tsx");
-  assert.ok(reference.includes("/assets/home/koru-home-hero.avif"));
-  assert.ok(fs.existsSync("public/assets/home/koru-home-hero.avif"));
-  assert.equal(reference.includes("koru-home-hero-embedded.svg"), false);
-});
-
-test("homepage art treatment is matte and TCG-aware rather than neon-only", () => {
-  const sections = read("components/koru-home-sections.tsx");
-  assert.ok(sections.includes("saturate(.48)"));
-  assert.ok(sections.includes("sepia(.07)"));
-  assert.ok(sections.includes("koru-card-signal"));
-  assert.ok(sections.includes("mini-card-stack"));
-  assert.ok(sections.includes("Product cards, RRP and retailer evidence stay central"));
-});
-
-test("Koru remains fixed while personal collector identity stays separate", () => {
+test("homepage is intentionally short and product-led", () => {
   const home = read("app/page.tsx");
-  const sections = read("components/koru-home-sections.tsx");
-  assert.ok(home.includes("Koru remains the fixed FateDrop signal companion"));
-  assert.ok(sections.includes("One mascot across every TCG"));
-  assert.equal(home.includes("Customise Companion"), false);
-  assert.equal(home.includes("account-selected character"), false);
+  assert.ok(home.includes("<KoruFriendsMerchSection"));
+  assert.ok(home.includes("<FateDropPillars"));
+  assert.ok(home.includes("<FateDropPhoneSection"));
+  assert.ok(home.includes("<IndieBridgeSection"));
+  assert.ok(home.includes("<EventsHomeLink"));
+  assert.equal(home.includes("<FutureExpansion"), false);
+  assert.equal(home.includes("<NetworkProof"), false);
+  assert.equal(home.includes("<WhyFateDrop"), false);
 });
 
-test("homepage retains the final four-stage lifecycle contract", () => {
-  const reference = read("components/koru-home-reference.tsx");
-  assert.ok(reference.includes("KORU_LIFECYCLE"));
-  assert.ok(reference.includes("Four states. One meaning everywhere."));
+test("public product language uses FateMatch and the final lifecycle", () => {
+  const siteData = read("lib/site-data.ts");
+  const trust = read("app/trust/page.tsx");
+  const collectors = read("app/collectors/page.tsx");
+  assert.ok(siteData.includes("FateMatch"));
+  assert.equal(siteData.includes("FateFind"), false);
+  assert.ok(trust.includes("Whisper. Echo. Manifested. Vanished."));
+  assert.ok(collectors.includes("Whisper → Echo → Manifested → Vanished"));
+});
+
+test("free drops are removed from the public navigation", () => {
+  const siteData = read("lib/site-data.ts");
+  const footer = read("components/footer.tsx");
+  const retired = read("app/free-drops/page.tsx");
+  assert.equal(siteData.includes('label: "Free Drops"'), false);
+  assert.equal(footer.includes('href="/free-drops"'), false);
+  assert.ok(retired.includes('redirect("/")'));
+});
+
+test("Koru and Friends is the merch bridge rather than a second product", () => {
+  const sections = read("components/koru-final-sections.tsx");
+  const merch = read("app/merch/page.tsx");
+  assert.ok(sections.includes("/assets/home/koru-home-section.png"));
+  assert.ok(sections.includes('href="/merch"'));
+  assert.ok(merch.includes("The culture around the signal."));
 });

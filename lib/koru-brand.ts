@@ -5,7 +5,7 @@ export const KORU_BRAND = {
   voice: "The mascot and signal voice of FateDrop",
   portrait: "/assets/companions/koru-portrait.webp",
   fullArtwork: "/assets/companions/koru-signal-companion.webp",
-  friendsArtwork: "/assets/companions/koru-and-friends.webp",
+  friendsArtwork: "/assets/home/koru-home-section.png",
   modelUrl: null as string | null,
   modelFormat: null as "glb" | null,
 } as const;
@@ -19,5 +19,5 @@ export const KORU_LIFECYCLE = [
 
 export const KORU_MERCH = {
   hero: "/assets/merch/koru-crystal-jersey.webp",
-  universe: "/assets/companions/koru-and-friends.webp",
+  universe: "/assets/home/koru-home-section.png",
 } as const;

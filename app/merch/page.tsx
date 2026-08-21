@@ -5,31 +5,37 @@ import { SiteShell } from "@/components/page-shell";
 import { KORU_MERCH } from "@/lib/koru-brand";
 
 export const metadata: Metadata = {
-  title: "Koru & Friends | FateDrop",
-  description: "Preview FateDrop's Koru & Friends supporter merchandise direction.",
+  title: "Koru & Friends Merch | FateDrop",
+  description: "Explore the Koru & Friends visual world and FateDrop supporter merchandise direction.",
 };
 
 export default function MerchPage() {
-  return <SiteShell>
-    <section className="merch-page-hero section-shell">
-      <img className="merch-hero-image" src={KORU_MERCH.hero} alt="" width="1448" height="1086" loading="eager" aria-hidden="true"/>
-      <div className="merch-hero-copy">
-        <p className="eyebrow"><span/>Koru &amp; Friends</p>
-        <h1>Wear the signal.<br/>Meet the mascot.</h1>
-        <p>Koru is the face and voice of FateDrop. Koru &amp; Friends gives that original character universe somewhere to live beyond the app — apparel, stickers, pins, collectibles and future supporter drops.</p>
-        <div className="button-row"><Link className="button button-primary" href="#koru">Explore Koru <span>↓</span></Link><span className="status-chip expansion">Concept range · not on sale</span></div>
-      </div>
-      <span className="merch-hero-capsule">KORU · K-09 · FATEDROP SIGNAL COMPANION</span>
-    </section>
+  return (
+    <SiteShell>
+      <section className="merch-page-hero section-shell koru-merch-hero">
+        <img className="merch-hero-image" src={KORU_MERCH.universe} alt="Koru and Friends in the FateDrop world" width="1600" height="900" loading="eager" />
+        <div className="merch-hero-copy">
+          <p className="eyebrow"><span />Koru &amp; Friends</p>
+          <h1>The culture around the signal.</h1>
+          <p>Koru is the voice of FateDrop. Koru &amp; Friends is the original character world around it—artwork, apparel and supporter pieces with the same mature dusk-toned identity as the platform.</p>
+          <div className="button-row"><Link className="button button-primary" href="#collection">Explore the collection <span>↓</span></Link><Link className="button button-secondary" href="/">Back to FateDrop</Link></div>
+        </div>
+        <span className="merch-hero-capsule">ORIGINAL FATEDROP CHARACTERS · KORU &amp; FRIENDS</span>
+      </section>
 
-    <section className="merch-lookbook section-shell" id="koru">
-      <div className="merch-capsule-intro"><div><p className="eyebrow"><span/>Koru collection</p><h2>A FateDrop character, not a TCG skin.</h2></div><p>The merchandise direction stays centred on FateDrop&apos;s own identity. Koru can appear in subtle technical pieces, louder character artwork and limited Koru &amp; Friends drops without borrowing another game&apos;s branding.</p></div>
-      <div className="phase-list">
-        <article><div className="phase-image"><img src={KORU_MERCH.hero} alt="Koru K-09 crystal FateDrop jersey concept" width="1448" height="1086" loading="lazy"/></div><div className="phase-card-copy"><span>01 / K-09</span><small>FATEDROP · KORU</small><h2>Koru Crystal Jersey</h2><p>Technical FateDrop jersey concept built around Koru&apos;s crystalline signal identity and the violet/cyan network palette.</p><em>Koru · The Signal Companion</em><b>Concept · sampling not started</b></div></article>
-        <article><div className="phase-image"><img src={KORU_MERCH.universe} alt="Koru and Friends FateDrop character universe concept" width="1552" height="1013" loading="lazy"/></div><div className="phase-card-copy"><span>02 / UNIVERSE</span><small>ORIGINAL FATEDROP CHARACTERS</small><h2>Koru &amp; Friends</h2><p>A future character-led range for tees, art cards, stickers, pins, plush and collectibles. Koru remains the lead mascot; friends expand the world rather than replacing him by TCG.</p><em>Same network · different personalities</em><b>Concept universe · names/designs subject to final brand lock</b></div></article>
-      </div>
-    </section>
+      <section className="merch-lookbook section-shell" id="collection">
+        <div className="merch-capsule-intro"><div><p className="eyebrow"><span />Supporter collection</p><h2>Subtle when it should be. Character-led when it earns it.</h2></div><p>The merch can carry Koru quietly through technical graphics or go fully illustrated through Koru &amp; Friends. The product stays FateDrop first; the character world gives the community something ownable around it.</p></div>
+        <div className="phase-list">
+          <article><div className="phase-image"><img src={KORU_MERCH.hero} alt="Koru FateDrop jersey concept" width="1448" height="1086" loading="lazy" /></div><div className="phase-card-copy"><span>01 / KORU</span><small>FATEDROP SUPPORTER APPAREL</small><h2>Koru collection</h2><p>Technical, mature character pieces designed around FateDrop&apos;s signal identity rather than another TCG&apos;s branding.</p><em>Koru · the voice of the network</em><b>More finished apparel artwork can be added as the range is loaded.</b></div></article>
+          <article><div className="phase-image"><img src={KORU_MERCH.universe} alt="Koru and Friends FateDrop character universe" width="1600" height="900" loading="lazy" /></div><div className="phase-card-copy"><span>02 / KORU &amp; FRIENDS</span><small>ORIGINAL FATEDROP WORLD</small><h2>Koru &amp; Friends</h2><p>The broader artwork and character layer for tees, prints, stickers, pins and future collectibles without changing the serious product underneath FateDrop.</p><em>One network · a world of its own</em><b>Character-led supporter range</b></div></article>
+        </div>
+      </section>
 
-    <section className="content-section section-shell"><div className="quote-band"><blockquote>Koru is the brand character. The merch supports FateDrop — it does not turn FateDrop into a clothing shop.</blockquote><p>These are design concepts only. Manufacturing, sizing, pricing, stock, fulfilment and checkout are not live. The first beta remains focused on the collector network; supporter merchandise can follow once quality and fulfilment are ready.</p><Link className="button button-secondary" href="/join" style={{ marginTop: 30 }}>Join FateDrop <span>↗</span></Link></div></section>
-  </SiteShell>;
+      <section className="content-section section-shell"><div className="quote-band"><blockquote>The merch should strengthen FateDrop&apos;s identity—not turn FateDrop into a clothing shop.</blockquote><p>The platform remains focused on signals, True Price, FateMatch and the collector-to-indie network. Koru &amp; Friends gives the brand a culture around that utility.</p><Link className="button button-secondary" href="/join" style={{ marginTop: 30 }}>Join FateDrop <span>↗</span></Link></div></section>
+
+      <style>{`
+        .koru-merch-hero{border-color:rgba(211,192,211,.14)!important;background:#090b10!important}.koru-merch-hero .merch-hero-image{filter:saturate(.68) contrast(.92) brightness(.72)!important}.koru-merch-hero:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,8,13,.89) 0%,rgba(7,8,13,.64) 34%,rgba(7,8,13,.18) 62%,rgba(7,8,13,.15) 100%),linear-gradient(180deg,transparent 50%,rgba(4,6,10,.42));pointer-events:none}.koru-merch-hero .merch-hero-copy,.koru-merch-hero .merch-hero-capsule{z-index:2}.koru-merch-hero .merch-hero-copy h1{font-family:Georgia,'Times New Roman',serif!important;font-weight:500!important;letter-spacing:-.05em!important}
+      `}</style>
+    </SiteShell>
+  );
 }

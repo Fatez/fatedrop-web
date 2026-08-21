@@ -14,23 +14,23 @@ export function Footer() {
         <div className="footer-links">
           <div>
             <span>Explore</span>
-            {siteConfig.nav.map((item) => (
-              <Link href={item.href} key={item.href}>{item.label}</Link>
-            ))}
+            {siteConfig.nav.map((item) => <Link href={item.href} key={item.href}>{item.label}</Link>)}
             <Link href="/subscriptions">Membership</Link>
-            <Link href="/account">My FateDrop ID</Link>
-            <Link href="/about">About</Link>
+            <Link href="/about">About &amp; vision</Link>
           </div>
           <div>
             <span>Join</span>
             <Link href="/join?type=collector">Collector beta</Link>
-            <Link href="/join?type=business">Business enquiry</Link>
+            <Link href="/join?type=business">Retailer enquiry</Link>
             <Link href="/join?type=event">List an event</Link>
-            <Link href="/free-drops">Free Drops</Link>
+            <Link href="/account">My FateDrop ID</Link>
             {DISCORD_COMMUNITY_OPEN ? <a href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">FateDrop Discord</a> : <span className="footer-coming-soon">Discord · opening soon</span>}
           </div>
           <div>
-            <span>Legal</span>
+            <span>Principles</span>
+            <Link href="/trust">Trust &amp; signals</Link>
+            <Link href="/businesses">Independent-first network</Link>
+            <Link href="/merch">Koru &amp; Friends</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/cookies">Cookie information</Link>
