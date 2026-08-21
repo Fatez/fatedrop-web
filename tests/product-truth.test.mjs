@@ -94,17 +94,18 @@ test("FateFind API uses same-origin writes while keeping legacy client response 
   assert.ok(route.includes("max: 250"));
 });
 
-test("trust and membership copy do not claim unimplemented finality", async () => {
-  const [trust, about, future, subscriptions] = await Promise.all([
+test("trust, roadmap and membership copy do not claim unimplemented finality", async () => {
+  const [trust, about, siteData, subscriptions] = await Promise.all([
     source("app/trust/page.tsx"),
     source("app/about/page.tsx"),
-    source("components/future-expansion.tsx"),
+    source("lib/site-data.ts"),
     source("app/subscriptions/page.tsx"),
   ]);
   assert.equal(trust.includes("FateScore · validated beta model"), false);
   assert.ok(trust.includes("FateScore is a planned evidence-led retailer trust model"));
   assert.ok(about.includes("<FutureExpansion"));
-  assert.ok(future.includes("FateFair · planned"));
+  assert.ok(about.includes("siteConfig.roadmap"));
+  assert.ok(siteData.includes('{ name: "FateFair", status: "Planned" }'));
   assert.ok(subscriptions.includes("final higher-tier feature split is still being reviewed"));
 });
 
