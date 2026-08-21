@@ -1,23 +1,23 @@
 # FateDrop Product Spec v1
 
-_Last reviewed: 19 August 2026_
+_Last reviewed: 21 August 2026_
 
-This document is the canonical product authority for FateDrop Web and the reference point for the mobile app, Cloud and Discord workstreams. When old marketing copy, dashboard labels or internal implementation names disagree with this file, the public product should be reconciled to this specification without destructive schema changes.
+This document is the canonical product authority for FateDrop Web and the reference point for the mobile app, Cloud and Discord workstreams. When old marketing copy, tests, dashboard labels or implementation aliases disagree with this file, reconcile the surface to this specification without destructive schema changes.
 
 ## Status vocabulary
 
 - **LIVE** — production-connected and safe to present as available now.
 - **BETA** — implemented and usable, but still being validated, expanded or hardened.
 - **DEMO** — illustrative data or UI only. It must never look live.
-- **FOUNDATION** — architecture/data model/integration path exists, but the complete user promise is not live.
+- **FOUNDATION** — architecture/data model/integration path exists, but the complete user promise is not yet proven live.
 - **HOLD** — keep the implementation/concept, but do not make it a launch pillar.
 - **PLANNED** — future direction only.
 
 ## Core product promise
 
-FateDrop searches the TCG market for collectors, compares the real delivered price against verified RRP where known, watches for wanted products, and alerts users when something worth knowing happens — while connecting collectors with independent retailers, local stores and events.
+FateDrop searches the TCG market for collectors, compares observed prices against authoritative RRP where known, watches for wanted products, and alerts users when something worth knowing happens — while connecting collectors with independent retailers, local stores and events.
 
-Pokémon TCG is the launch focus. The product and retailer architecture should remain capable of expanding to other TCGs later.
+Pokémon TCG is the launch focus. Product identity, retailer and Companion architecture should remain capable of expanding to other TCGs later.
 
 ## Consumer navigation model
 
@@ -25,11 +25,11 @@ The mobile product is built around five durable destinations:
 
 1. **Home** — network activity and personal hunt highlights.
 2. **Search** — product-first catalogue search, offer comparison and purchase hand-off.
-3. **Indies** — retailer discovery, storefronts and local discovery.
-4. **Alerts** — personal FateFinds, alert preferences and notification history.
+3. **Indies** — retailer discovery and storefronts.
+4. **Alerts** — canonical signal inbox, FateFind/FateMatch history and notification preferences.
 5. **More** — Wishlist, Events, Local Radar, Companion/account/membership and genuinely secondary tools.
 
-The website dashboard can expose more destinations, but it should preserve the same mental model rather than creating a new top-level screen for every feature.
+The website dashboard may expose more destinations, but it should preserve the same mental model rather than creating a new top-level screen for every idea.
 
 ## Core consumer jobs
 
@@ -38,36 +38,36 @@ The website dashboard can expose more destinations, but it should preserve the s
 | Find | Search / Catalogue |
 | Compare | Compare Offers, True Price, RRP context |
 | Watch | FateFind, Universal Wishlist |
-| Detect | Echo, Manifested, Vanished, Drop Pulse |
+| Detect | Whisper, Echo, Manifested, Vanished; Drop Pulse as supporting context |
 | Discover | Indies, Local Radar, Events / Fate Encounters |
-| Receive | Alerts, Companion, Discord extension |
+| Receive | Alerts, Companion, push, Discord extension |
 
 ## Search / Catalogue — CORE
 
-Search is the primary engine. The user journey should remain brutally simple:
+Search is the primary engine. The durable journey is:
 
-**search → product → offers → compare → buy**
+**search → canonical product → offers → compare → retailer**
 
-Search should be product-first rather than retailer-first. Duplicate retailer listings should group beneath a product identity where the evidence allows it.
+Search is product-first rather than retailer-first. Duplicate retailer listings should group beneath a canonical product identity where the evidence allows it.
 
-Current web status: **BETA**. Dashboard Search queries the canonical Signal Engine `/api/catalogue` endpoint server-side with observed stock, price, RRP and delivery context.
+Current web status: **BETA**. Dashboard Search queries the canonical Signal Engine `/api/catalogue` endpoint with observed stock, price, RRP and delivery context.
 
 ## True Price — CORE / major USP
 
-True Price is a pricing layer across FateDrop, not merely a standalone tool.
+True Price is a pricing layer across FateDrop, not merely a standalone screen.
 
-Where evidence permits show:
+Where evidence permits, show:
 
 1. item price;
-2. verified/official RRP;
+2. authoritative/official RRP;
 3. item £ / % difference from RRP;
-4. mandatory delivery/fees;
-5. delivered True Price;
-6. delivered £ / % difference from RRP.
+4. mandatory delivery/fees when known;
+5. delivered True Price when delivery is known;
+6. delivered £ / % difference from RRP when that comparison is valid.
 
-Unknown delivery is **unknown**, never free. Unknown RRP is **unknown**, never inferred from a reseller price.
+Unknown delivery is **unknown**, never free. Unknown RRP is **unknown**, never inferred from an ordinary reseller price.
 
-The dashboard True Price experience uses the canonical Signal Engine `/api/true-price` offer groups rather than the old direct-Shopify lab as its primary comparison source.
+RRP-first comparison remains useful even where delivery is not yet known. Delivered True Price is an enhancement, not a prerequisite for showing a valid item-price-to-RRP comparison.
 
 ## Compare Offers — CORE
 
@@ -77,49 +77,61 @@ Do not call this retailer ranking. Objective sorting by known delivered cost, it
 
 ## RRP comparison — CORE / major USP
 
-Verified RRP context should be pervasive in Search, offer comparison, FateFind and alerts whenever the evidence exists.
+Authoritative RRP context should be pervasive in Search, offer comparison, FateFind and alerts whenever evidence exists.
 
-Example: `£79.99 · +33% above RRP`.
+Example: `£79.99 · +33.3% above RRP`.
 
-## Public signal model
+The provenance source matters. A normal retailer selling price must never silently become “official RRP”.
 
-The public lifecycle is deliberately simple:
+## Public signal model — FINAL FOUR-STAGE CONTRACT
 
-### Echo — early intelligence
+The public lifecycle is:
 
-**Public status: BETA/FOUNDATION depending evidence source.**
+**Whisper → Echo → Manifested → Vanished**
 
-Echo means FateDrop observed meaningful early movement worth watching, but confirmed purchasable stock is not established by that signal alone.
+These names describe evidence states. A product does not have to pass through every stage.
 
-Possible evidence includes queue/security/traffic condition changes, catalogue movement, metadata appearance, launch changes or other corroborating precursor activity.
-
-**Echo does not mean a drop is guaranteed.**
-
-Internal engine terminology may continue to include `whisper`, queue/security kinds or other low-level observations. Those names do not need to become major consumer states.
-
-### Manifested — confirmed
+### Whisper — product / catalogue movement
 
 **Public status: BETA.**
 
-Manifested means a meaningful event is confirmed in the observed evidence source, most commonly confirmed purchasable availability or a confirmed restock.
+Whisper means FateDrop observed product, catalogue or metadata movement that may be worth watching. Something may be coming, but the evidence does **not** mean queue/access readiness changed and does **not** confirm purchasable stock.
 
-An internal legacy `echo` restock lifecycle event should be presented publicly as **Manifested / restock confirmed**, not as early Echo.
+Examples can include a new catalogue object, metadata change, product appearance or other product-level precursor evidence.
 
-### Vanished — availability lost
+**Whisper is a real public lifecycle state. Do not collapse it into Echo.**
+
+### Echo — access readiness
+
+**Public status: BETA/FOUNDATION depending evidence source.**
+
+Echo means queue, traffic, security or access behaviour changed in a way that tells the collector to get ready.
+
+Echo is not fabricated from normal catalogue movement. Catalogue/product movement belongs to Whisper.
+
+**Echo does not guarantee that stock is coming or that checkout will succeed.**
+
+### Manifested — confirmed purchasable availability
+
+**Public status: BETA.**
+
+Manifested means purchasable live stock or another explicitly confirmed availability event has been established from observed evidence.
+
+Do not treat an arbitrary `echo` string from legacy code as Manifested. Legacy sources must be normalised using the evidence they actually represent.
+
+### Vanished — confirmed availability lost
 
 **Public status: BETA / contextual.**
 
-Vanished means previously confirmed availability is no longer observed. It is useful in activity/history but is not a launch feature that needs its own destination.
+Vanished means previously confirmed availability is no longer observed, is sold out, or has otherwise been lost from the observed source.
 
-### Whisper — internal
+It is useful in alerts and history but does not need its own top-level destination.
 
-Whisper remains available as internal engine terminology where useful, but it should not be a headline consumer lifecycle state.
-
-## Drop Pulse — contextual
+## Drop Pulse — contextual evidence, not a fifth lifecycle state
 
 **Status: FOUNDATION/BETA.**
 
-Drop Pulse answers a simple question such as “how active is this right now?” using observable evidence. It should be a small contextual badge/summary, not a standalone screen.
+Drop Pulse summarises observable activity such as recent meaningful changes. It supports the lifecycle but must remain visibly separate from Whisper/Echo/Manifested/Vanished.
 
 Prefer explainable evidence such as `High activity · 4 meaningful changes in 12 min` over unexplained urgency scores.
 
@@ -133,13 +145,13 @@ Example:
 
 - Destined Rivals ETB
 - max £65 delivered
-- max +10% above verified RRP
+- max +10% above authoritative RRP
 - sealed
 - UK
 - any eligible retailer
 - in stock
 
-FateDrop monitors qualifying network opportunities against the saved rule.
+FateDrop evaluates qualifying network opportunities against the saved rule.
 
 ### FateMatch — KEEP
 
@@ -151,37 +163,36 @@ Existing internal `fate_match` storage/API names therefore remain useful and do 
 
 ## Universal Wishlist — KEEP
 
-Wishlist is intentionally simpler than FateFind:
+Wishlist means:
 
 > “I want / like this product.”
 
-It should survive sold-out states and retailer changes. It is not an active price/availability rule and should remain conceptually distinct from FateFind.
+It survives sold-out states and retailer changes. It is not an active price/availability rule and remains distinct from FateFind.
 
-Current web status: **FOUNDATION**. The branch now includes a persistent PostgreSQL wishlist model, authenticated same-origin API, dashboard list/save/remove experience and additive migration `database/2026-08-19-user-preferences.sql`. It becomes production-persistent only after that migration is deliberately approved and applied.
+Current web status: **BETA**. Production persistence tables exist and the authenticated website API/list/save/remove path is implemented. A zero-row production table means no user item has been saved yet; it does not mean the persistence layer is absent.
 
 ## Alerts — CORE
 
-Alerts is personal, not the global activity feed.
+Alerts is personal and may contain:
 
-It should contain:
-
+- canonical Whisper / Echo / Manifested / Vanished signals;
 - active FateFinds;
-- FateMatch / stock / price notifications sent to the user;
+- FateMatch / stock / price notifications relevant to the user;
 - notification history;
-- preferences for Echo, Manifested, Vanished, price conditions and delivery channels;
-- Discord/push/web preferences where available.
+- RRP/True Price context where entitlement and evidence allow;
+- web/push/Discord preferences.
 
-Global network activity belongs primarily on Home.
+Global network activity belongs primarily on Home; personal delivery/history belongs in Alerts.
 
 ### Shared notification preferences
 
-Current web status: **FOUNDATION**. One account model now stores Echo, Manifested, Vanished, price-change and FateMatch preferences plus web/push/Discord channel choices and optional quiet hours. The preference record is cross-platform by design; a saved channel preference does **not** claim that an unconnected delivery service is operational.
+Current status: **BETA**. One persisted account model stores separate Whisper, Echo, Manifested and Vanished preferences plus price-change/FateMatch and web/push/Discord channel choices with optional quiet hours.
 
-The same additive `2026-08-19-user-preferences.sql` migration must be approved/applied before production persistence is enabled.
+A saved preference does **not** claim that a delivery channel has been operationally proven. Push remains unproven until a real Expo device endpoint and delivery attempt exist.
 
 ## Network Activity — KEEP on Home
 
-Home is the heartbeat of FateDrop: recent confirmed Manifested activity, meaningful Echo intelligence, useful stock/price movement, a relevant FateFind result and perhaps one upcoming event/local card.
+Home is the heartbeat of FateDrop. It can show meaningful Whisper product movement, Echo access-readiness context, confirmed Manifested activity, price movement, a relevant FateMatch and carefully sourced secondary discovery content.
 
 It should answer: **“Anything worth knowing right now?”**
 
@@ -191,45 +202,46 @@ Independent retailer discovery is one of the features that prevents FateDrop bec
 
 Users should be able to discover retailers, browse clean storefront/catalogue experiences and hand off to the retailer to complete purchase.
 
-FateDrop is not the merchant of record. The retailer keeps checkout, fulfilment, returns, support and the customer relationship.
+FateDrop is not the merchant of record. The retailer keeps checkout, fulfilment, returns, support and the customer relationship unless a future product explicitly changes that model.
 
 ## Verified retailer status — KEEP
 
-A FateDrop Verified badge should mean an objective identity/catalogue relationship was verified. It must not automatically mean cheapest, best service, fastest delivery or permanent trustworthiness.
+A FateDrop Verified badge means an objective identity/catalogue relationship was verified. It must not automatically mean cheapest, best service, fastest delivery or permanent trustworthiness.
 
 ## Local Radar — KEEP / secondary
 
-Discover nearby TCG businesses/events from location or postcode when the provider is configured. External Places discovery is not proof of stock or partnership.
+Discover nearby TCG businesses/events from user-triggered location or postcode when the provider is configured. External Places discovery is not proof of stock or partnership.
 
 ## Events / Fate Encounters — KEEP
 
 Use **Events** as the functional label and **Fate Encounters** as the branded experience title.
 
-Current dashboard directory: **BETA / static-sourced** until automated event ingestion is connected.
+Event Vendor Mode remains **HOLD / FOUNDATION** until enough real organiser/vendor evidence justifies its standard shopper exposure.
 
-Event Vendor Mode remains **HOLD / FOUNDATION** until enough real vendors justify its standard shopper exposure.
-
-## FateDrop Companion — KEEP / FOUNDATION
+## FateDrop Companion — KEEP / BETA
 
 The Companion is a presentation and identity layer for the intelligence, not a replacement for it.
 
-Intended reactions include:
+Current release-candidate implementation includes a live 3D path and persistent Companion selection/loadout foundations. Production asset/device QA is still required.
 
-- Echo — scanner/droid awareness state;
-- Manifested — stronger confirmed-drop animation;
+Reaction rule:
+
+- Whisper — anticipation / watch / notice;
+- Echo — readiness / scan / alert posture;
+- Manifested — stronger confirmed-stock reaction;
 - FateMatch — personal “found it” reaction;
 - Vanished — quiet lost-signal state;
-- major precursor activity — cinematic surge without implying guaranteed stock.
+- Major/high-value confirmed alert — strongest celebration/cinematic state.
 
-The account already persists a Companion/avatar loadout. `lib/companion-contract.ts` defines a renderer/asset boundary so the current illustrated fallback can later be replaced by a GLB/WebGL 3D character + floating droid without changing account identity storage.
+Do not spend the strongest victory animation on normal Whisper or Echo events.
 
 ## Membership / Discord
 
 Membership should remain simple: Free has meaningful value; paid membership unlocks stronger monitoring/alerts/FateFind/early intelligence according to the final commercial split.
 
-Current code still has one shared Premium capability envelope across paid tiers, so the final Plus-vs-Pro distinction remains an owner decision rather than a claim to invent in code.
+The entitlement layer remains the authority. Do not create client-only paid access truth.
 
-Discord extends FateDrop through role/alert delivery. It should not become a competing primary UI.
+Discord extends FateDrop through role/alert delivery. It must not become a competing membership authority or primary product UI.
 
 ## Retailer-facing / backend systems
 
@@ -263,18 +275,25 @@ Keep architecture or concepts where useful, but do not promote them as launch pi
 - XP / tokens / progression;
 - Event Vendor Mode expansion.
 
-Basket optimisation is particularly strong as a future extension of True Price: compare the cheapest single-retailer basket against the cheapest split basket using delivered cost.
+Basket optimisation is a strong **PLANNED** extension of True Price: compare the cheapest single-retailer basket against the cheapest split basket using delivered cost.
+
+## DEMO rule
+
+Anything marked **DEMO** or sample must be visibly labelled. Demo signal buttons, sample phone content and local test notifications must never be presented as real network activity.
 
 ## Safety and evidence rules
 
 - Incomplete catalogue walks never replace the last verified complete state.
 - Retailer access controls are not bypassed.
-- Queue/security observations are context, not a promise that stock is imminent.
+- Whisper product/catalogue movement is not Echo access readiness.
+- Echo queue/security/traffic observations are context, not a promise that stock is imminent.
+- Manifested requires confirmed availability evidence.
 - A retailer listing is not guaranteed checkout success.
 - A click is not a sale.
 - A Places result is not verified stock.
 - Unknown delivery is not free delivery.
 - Unknown RRP is not guessed RRP.
+- Drop Pulse is context, not a fifth lifecycle stage.
 - Demo data is visibly demo data.
 - Static sourced data carries source/freshness context.
 - No product statistic, retailer count, user count, revenue number, reliability percentage or performance claim appears without a current evidence source.
