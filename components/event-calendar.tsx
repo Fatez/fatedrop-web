@@ -1,4 +1,5 @@
 import type { EncounterEvent } from "@/lib/encounter-types";
+import { loadUpcomingEncounters } from "@/lib/encounters";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -11,13 +12,14 @@ function tone(event: EncounterEvent) {
   return categories.includes("trade") || categories.includes("play") ? "cyan" : "violet";
 }
 
-export function EventCalendar({ events, compact = false }: { events: EncounterEvent[]; compact?: boolean }) {
-  const anchor = events[0] ? new Date(events[0].startDateTime) : new Date();
+export async function EventCalendar({ events, compact = false }: { events?: EncounterEvent[]; compact?: boolean }) {
+  const sourceEvents = events ?? (await loadUpcomingEncounters(100)).events;
+  const anchor = sourceEvents[0] ? new Date(sourceEvents[0].startDateTime) : new Date();
   const year = anchor.getFullYear();
   const month = anchor.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const mondayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
-  const monthEvents = events.filter((event) => {
+  const monthEvents = sourceEvents.filter((event) => {
     const date = new Date(event.startDateTime);
     return date.getFullYear() === year && date.getMonth() === month;
   });
