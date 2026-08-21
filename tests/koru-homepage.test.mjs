@@ -30,18 +30,23 @@ test("public product language preserves FateFind to FateMatch and the final life
   const siteData = read("lib/site-data.ts");
   const trust = read("app/trust/page.tsx");
   const collectors = read("app/collectors/page.tsx");
+  const layout = read("app/layout.tsx");
   assert.ok(siteData.includes("FateFind → FateMatch"));
   assert.ok(siteData.includes("successful result is a FateMatch"));
+  assert.ok(layout.includes("FateFind hunts"));
+  assert.ok(layout.includes("FateMatch results"));
   assert.ok(trust.includes("Whisper. Echo. Manifested. Vanished."));
   assert.ok(collectors.includes("Whisper → Echo → Manifested → Vanished"));
 });
 
-test("free drops are removed from the public navigation", () => {
+test("free drops are removed from public discovery", () => {
   const siteData = read("lib/site-data.ts");
   const footer = read("components/footer.tsx");
   const retired = read("app/free-drops/page.tsx");
+  const sitemap = read("app/sitemap.ts");
   assert.equal(siteData.includes('label: "Free Drops"'), false);
   assert.equal(footer.includes('href="/free-drops"'), false);
+  assert.equal(sitemap.includes('"/free-drops"'), false);
   assert.ok(retired.includes('redirect("/")'));
 });
 
