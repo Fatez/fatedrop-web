@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { NotificationPreferences } from "@/lib/notification-preferences";
 
 export function NotificationPreferenceForm({ initial, persistent }: { initial: NotificationPreferences; persistent: boolean }) {
   const [preferences, setPreferences] = useState(initial);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  useEffect(() => {
+    if (initial.updatedAt !== 0) return;
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!detected) return;
+    setPreferences((current) => ({ ...current, timezone: detected }));
+  }, [initial.updatedAt]);
+
   function toggle(key: keyof NotificationPreferences) { setPreferences((current) => ({ ...current, [key]: !current[key] })); }
   async function save() {
     setStatus("saving");
