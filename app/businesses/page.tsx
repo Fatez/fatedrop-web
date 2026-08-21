@@ -47,9 +47,9 @@ export default function BusinessesPage() {
           <small>COLLECTOR DEMAND → FATEDROP → YOUR STORE</small>
           <div className="retailer-network-flow" aria-label="Retailer catalogue to collector journey"><span>Catalogue</span><i /><span>FateDrop</span><i /><span>Collector</span><i /><span>Your checkout</span></div>
           <div className="search-journey">
-            <div className="search-query">Collector searches or creates a FateMatch</div>
+            <div className="search-query">Collector searches or creates a FateFind</div>
             <div className="journey-arrow" />
-            <div className="journey-result"><span className="journey-thumb" /><div><b>Your relevant product is surfaced</b><small>Retailer identity stays visible</small></div><span>Found</span></div>
+            <div className="journey-result"><span className="journey-thumb" /><div><b>A qualifying FateMatch can surface your product</b><small>Retailer identity stays visible</small></div><span>Found</span></div>
             <div className="journey-arrow" />
             <div className="journey-store"><small>DIRECT RETAILER JOURNEY</small><strong>Your product page. Your checkout.</strong><p>FateDrop does not pretend to be the stockist.</p></div>
           </div>
