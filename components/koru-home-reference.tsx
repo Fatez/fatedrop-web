@@ -27,7 +27,7 @@ export function KoruReferenceLanding() {
             <p className="kr-lede">FateDrop watches participating TCG retailers, adds price context and turns network movement into one clear signal lifecycle.</p>
             <div className="kr-actions">
               <Link className="button kr-primary" href="/join?type=collector">Start Your Free Trial <span>↗</span></Link>
-              <Link className="button kr-secondary" href="/how-it-works">See How It Works</Link>
+              <Link className="button kr-secondary" href="/collectors">See How It Works</Link>
             </div>
             <div className="kr-proof"><span>POKÉMON TCG FIRST</span><i/><span>INDEPENDENT-FIRST</span><i/><span>EVIDENCE-BACKED SIGNALS</span></div>
           </div>
@@ -56,7 +56,7 @@ export function KoruReferenceLanding() {
         <section className="kr-retailers" aria-label="Participating retailer sources">
           <div className="kr-retailer-title"><span>MONITORING PARTICIPATING RETAILER SOURCES</span><small>Coverage grows as sources are validated.</small></div>
           <div className="kr-retailer-row">{retailers.map((name) => <b key={name}>{name}</b>)}</div>
-          <Link href="/indies">View Retailers <span>→</span></Link>
+          <Link href="/businesses">View Retailers <span>→</span></Link>
         </section>
       </div>
 
@@ -72,8 +72,8 @@ export function KoruReferenceLanding() {
       .kr-landing-card,.kr-friends-banner{border:1px solid rgba(205,194,215,.14);border-radius:14px;overflow:hidden;background:#090c12;box-shadow:0 28px 90px rgba(0,0,0,.34)}
 
       .kr-hero{position:relative;isolation:isolate;min-height:clamp(560px,44vw,720px);overflow:hidden;background:#0a0d14}
-      .kr-hero-bg{position:absolute;z-index:-3;inset:0;background-image:url('/assets/home/koru-home-hero.webp');background-position:center center;background-repeat:no-repeat;background-size:cover;filter:saturate(.86) contrast(1.01) brightness(.9)}
-      .kr-hero-shade{position:absolute;z-index:-2;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.9) 0%,rgba(5,8,14,.72) 25%,rgba(5,8,14,.3) 43%,rgba(5,8,14,.03) 66%,rgba(5,8,14,.1) 100%),linear-gradient(180deg,rgba(5,7,12,.04),transparent 56%,rgba(5,7,12,.42) 100%)}
+      .kr-hero-bg{position:absolute;z-index:-3;inset:0;background-image:url('/assets/home/koru-home-hero.webp');background-position:center center;background-repeat:no-repeat;background-size:cover;filter:saturate(.96) contrast(1.02) brightness(1.02)}
+      .kr-hero-shade{position:absolute;z-index:-2;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.7) 0%,rgba(5,8,14,.4) 26%,rgba(5,8,14,.08) 48%,transparent 72%),linear-gradient(180deg,rgba(5,7,12,.02),transparent 68%,rgba(5,7,12,.16) 100%)}
       .kr-copy{position:absolute;z-index:4;left:clamp(28px,4vw,66px);top:50%;width:min(44%,590px);transform:translateY(-52%)}
       .kr-kicker{margin:0 0 18px;color:#9e83ac;font-size:9px;font-weight:850;letter-spacing:.18em}
       .kr-copy h1{margin:0;color:#f0e8df;font-family:Georgia,'Times New Roman',serif;font-size:clamp(3rem,4.6vw,5.9rem);font-weight:500;line-height:.94;letter-spacing:-.052em;text-wrap:balance}
@@ -85,14 +85,14 @@ export function KoruReferenceLanding() {
       .kr-proof{margin-top:28px;display:flex;align-items:center;flex-wrap:wrap;gap:9px;color:#958c90;font-size:7px;font-weight:800;letter-spacing:.12em}
       .kr-proof i{width:3px;height:3px;border-radius:50%;background:#826590}
 
-      .kr-meet{position:absolute;z-index:5;right:clamp(24px,3.2vw,52px);top:50%;width:178px;padding:16px 17px;border:1px solid rgba(236,226,220,.14);border-radius:12px;background:rgba(6,9,14,.48);backdrop-filter:blur(14px);text-decoration:none;transform:translateY(-8%);transition:transform .2s ease,border-color .2s ease}
+      .kr-meet{position:absolute;z-index:5;right:clamp(24px,3.2vw,52px);top:50%;width:178px;padding:12px 0;border:0;border-radius:0;background:transparent;text-shadow:0 2px 18px rgba(0,0,0,.9);text-decoration:none;transform:translateY(-8%);transition:transform .2s ease,color .2s ease}
       .kr-meet:hover{transform:translateY(-11%);border-color:rgba(177,136,198,.42)}
       .kr-meet span{display:block;color:#ede4de;font-family:Georgia,serif;font-size:18px}
       .kr-meet b{color:#a27db2;font-weight:500}
       .kr-meet p{margin:6px 0 10px;color:#a69da1;font-size:10px;line-height:1.48}
       .kr-meet small{color:#9a7ca7;font-size:7px;font-weight:800;letter-spacing:.12em}
 
-      .kr-lifecycle{padding:20px 28px 18px;border-top:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,#0a0e15,#080b11)}
+      .kr-lifecycle{position:relative;padding:20px 28px 18px;border-top:1px solid rgba(255,255,255,.09);background:rgba(7,10,15,.76);backdrop-filter:blur(18px)}
       .kr-lifecycle-title{display:flex;justify-content:center;align-items:center;gap:18px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,.055)}
       .kr-lifecycle-title span{color:#e3d9d1;font-family:Georgia,serif;font-size:17px}
       .kr-lifecycle-title small{color:#76727a;font-size:8px;letter-spacing:.12em}
@@ -106,7 +106,7 @@ export function KoruReferenceLanding() {
       .kr-life-grid [data-stage='manifested'] .kr-life-icon{color:#91aa81;border-color:rgba(133,166,119,.36)}
       .kr-life-grid [data-stage='vanished'] .kr-life-icon{color:#c0ac8d;border-color:rgba(184,163,132,.34)}
 
-      .kr-retailers{display:grid;grid-template-columns:minmax(170px,.65fr) minmax(0,2.4fr) auto;gap:22px;align-items:center;padding:17px 30px;border-top:1px solid rgba(255,255,255,.055);background:#080b10}
+      .kr-retailers{display:grid;grid-template-columns:minmax(170px,.65fr) minmax(0,2.4fr) auto;gap:22px;align-items:center;padding:17px 30px;border-top:1px solid rgba(255,255,255,.07);background:rgba(6,9,14,.88)}
       .kr-retailer-title{display:grid;gap:3px}
       .kr-retailer-title span{color:#88818a;font-size:7px;font-weight:800;letter-spacing:.12em}
       .kr-retailer-title small{color:#5f5b62;font-size:7px}
@@ -136,13 +136,13 @@ export function KoruReferenceLanding() {
         .kr-landing-card,.kr-friends-banner{border-radius:12px}
         .kr-hero{min-height:700px}
         .kr-hero-bg{background-position:66% center}
-        .kr-hero-shade{background:linear-gradient(180deg,rgba(5,8,14,.62) 0%,rgba(5,8,14,.4) 28%,rgba(5,8,14,.08) 48%,rgba(5,8,14,.78) 78%,rgba(5,8,14,.94) 100%),linear-gradient(90deg,rgba(5,8,14,.46),transparent 70%)}
+        .kr-hero-shade{background:linear-gradient(180deg,rgba(5,8,14,.26) 0%,rgba(5,8,14,.08) 45%,rgba(5,8,14,.56) 75%,rgba(5,8,14,.82) 100%),linear-gradient(90deg,rgba(5,8,14,.24),transparent 72%)}
         .kr-copy{left:22px;right:22px;top:auto;bottom:112px;width:auto;transform:none}
         .kr-kicker{font-size:8px}
         .kr-copy h1{font-size:clamp(2.65rem,12vw,4.2rem)}
         .kr-lede{max-width:520px;font-size:12px}
         .kr-proof{display:none}
-        .kr-meet{top:20px;right:18px;bottom:auto;width:142px;padding:12px 13px;background:rgba(5,8,14,.6)}
+        .kr-meet{top:20px;right:18px;bottom:auto;width:142px;padding:10px 0;background:transparent}
         .kr-meet span{font-size:15px}.kr-meet p{font-size:8px}
         .kr-lifecycle{padding:18px 15px}
         .kr-lifecycle-title{align-items:flex-start;flex-direction:column;gap:4px}
