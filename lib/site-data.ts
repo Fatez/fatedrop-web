@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "FateDrop",
   title: "FateDrop — UK TCG Signal Intelligence & Indie Discovery",
   description:
-    "Follow evidence-backed stock signals, understand True Price, use FateMatch and discover independent TCG retailers and events across the UK.",
+    "Follow evidence-backed stock signals, understand True Price, create FateFind hunts, receive FateMatch results and discover independent TCG retailers and events across the UK.",
   tagline: "Follow the signal. Find the retailer. Collect smarter.",
   nav: [
     { label: "Collectors", href: "/collectors" },
@@ -29,7 +29,7 @@ export const siteConfig = {
       name: "FateDrop Plus",
       price: "£4.99 / month",
       featured: true,
-      features: ["Premium signal detail", "Whisper, Echo, Manifested and Vanished lifecycle alerts", "FateMatch saved intent", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
+      features: ["Premium signal detail", "Whisper, Echo, Manifested and Vanished lifecycle alerts", "FateFind saved hunts with FateMatch results", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
     },
     {
       name: "FateDrop Pro",
@@ -62,7 +62,7 @@ export const siteConfig = {
       eyebrow: "01 / Collectors",
       title: "Find the right drop with better context.",
       description:
-        "Follow signals, compare True Price, create FateMatches and discover independent retailers and events through one network.",
+        "Follow signals, compare True Price, create FateFind hunts, receive FateMatch results and discover independent retailers and events through one network.",
       cta: "Explore collector tools",
       href: "/collectors",
       accent: "cyan",
@@ -103,10 +103,10 @@ export const siteConfig = {
     },
     {
       number: "03",
-      title: "FateMatch",
+      title: "FateFind → FateMatch",
       description:
-        "Turn collector intent into a network search that surfaces qualifying observed offers across participating retailers.",
-      meta: "Wanted intent / network match",
+        "Create a FateFind hunt with the product and limits that matter. When an observed active offer qualifies, that successful result is a FateMatch.",
+      meta: "Wanted intent / qualifying result",
     },
     {
       number: "04",
