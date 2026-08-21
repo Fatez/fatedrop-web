@@ -67,3 +67,5 @@ This checklist is a production-readiness control, not legal advice. A successful
 ## Operational rule
 
 No P0 item should be marked complete without evidence: configuration, automated test, deployed response, documented procedure or professional legal review as appropriate. Security and legal readiness are ongoing controls rather than a one-time launch checkbox.
+
+A green GitHub/OpenNext build proves source compatibility only. The deployed Cloudflare response must still be inspected for effective headers, caching behaviour and integration compatibility before this gate is marked complete.
