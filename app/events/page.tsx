@@ -2,37 +2,43 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AppScreen } from "@/components/app-screen";
 import { EventCalendar } from "@/components/event-calendar";
+import { FateEncountersLive } from "@/components/fate-encounters-live";
 import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
-import { demoEvents } from "@/lib/site-data";
 import { FateSignalField } from "@/components/fate-signal-field";
+import { loadUpcomingEncounters } from "@/lib/encounters";
 
 export const metadata: Metadata = {
   title: "TCG Events & Card Shows | FateDrop",
-  description: "Discover UK TCG events, attending vendors, ticket information and clearly marked event inventory.",
+  description: "Discover source-verified UK TCG events, nearby card shows, attending vendors, ticket information and clearly evidenced event inventory.",
 };
 
-export default function EventsPage() {
+export default async function EventsPage() {
+  const feed = await loadUpcomingEncounters(1000);
+  const eventCount = feed.events.length;
+
   return (
     <SiteShell>
-      <PageHero motif="events" eyebrow="Events & local commerce" title="Make the whole event discoverable." description="FateDrop brings dates, venues, tickets, attending vendors and clearly marked event inventory into one collector-first journey.">
-        <div className="button-row"><Link className="button button-primary" href="/join?type=event">Bring your event to FateDrop <span>↗</span></Link><Link className="text-link" href="#encounters-calendar">Open the calendar <span>↓</span></Link></div>
+      <PageHero motif="events" eyebrow="Fate Encounters · live UK network" title="Find the TCG scene around you." description="Browse source-verified UK card shows, conventions, trade events and participating vendors, then use Local Radar to see what is happening near your postcode.">
+        <div className="button-row"><Link className="button button-primary" href="#live-encounters">Explore live events <span>↓</span></Link><Link className="text-link" href="/join?type=event">Bring your event to FateDrop <span>↗</span></Link></div>
       </PageHero>
+
       <section className="content-section section-shell" id="encounters-calendar">
-        <SectionHeading eyebrow="Fate Encounters" title="Upcoming card events, in one calendar." body="Browse upcoming card shows, trade events and vendor gatherings, then open the full listing for venue, time, tickets and attending businesses. The calendar below uses clearly labelled demo data until the live event feed is connected." />
-        <div style={{ marginTop: 58 }}><EventCalendar /></div>
+        <SectionHeading eyebrow="UK event calendar" title="Real upcoming card events, in one calendar." body={feed.live ? `${eventCount} upcoming source-backed listings are currently available through the hosted Fate Encounters feed. Dates and venues remain linked to organiser or ticket-source evidence.` : "The hosted Fate Encounters feed is temporarily unavailable. FateDrop does not substitute demo events when the live feed cannot be reached."} />
+        <div style={{ marginTop: 58 }}><EventCalendar events={feed.events} /></div>
       </section>
+
       <section className="content-section section-shell split-section">
-        <div className="copy-stack"><p className="eyebrow"><span />From postcode to show floor</p><h2>Online discovery should lead somewhere real.</h2><p>Collectors can explore upcoming events, understand who will be there and plan a visit with more confidence. Organisers gain a clearer way to present the whole show—not just a date on a poster.</p><div className="point-list"><div><span>01</span><p>Venue, town, date, opening hours and ticket information.</p></div><div><span>02</span><p>Attending retailer and vendor profiles.</p></div><div><span>03</span><p>Location and postcode discovery through Local Radar.</p></div></div></div>
+        <div className="copy-stack"><p className="eyebrow"><span />From postcode to show floor</p><h2>Online discovery should lead somewhere real.</h2><p>Collectors can explore upcoming events, see who is confirmed to attend and plan the journey with clearer evidence. A vendor listing can identify a table or stall without pretending that vendor has published physical stock.</p><div className="point-list"><div><span>01</span><p>Venue, postcode, dates, opening hours and ticket-source links.</p></div><div><span>02</span><p>Source-verified participating vendors and table locations where organisers publish them.</p></div><div><span>03</span><p>Postcode or device-location discovery through hosted Local Radar.</p></div></div></div>
         <div className="events-phone-wrap"><FateSignalField variant="events" className="events-signal-field" /><div className="phone-frame page-phone"><div className="phone-island" /><AppScreen screen="home" /></div><span>FATE ENCOUNTERS / APP ENTRY POINT</span></div>
       </section>
-      <section className="content-section section-shell" id="event-preview">
-        <SectionHeading eyebrow="Event card preview" title="The useful details, before the journey." body="The examples below demonstrate the intended event format. They are not real listings." />
-        <div className="event-list" style={{ marginTop: 55 }}>
-          {demoEvents.map((event, index) => <article className="event-card" id={`demo-event-${index}`} key={event.name}><span className="demo-label">Demonstration entry</span><div><h3>{event.name}</h3><p>{event.date} · {event.hours}</p><small>{event.venue}<br />{event.postcode}<br />{event.organiser}</small><p className="event-description">{event.description}</p></div><div className="event-meta"><span>{event.ticket}</span><span>{event.vendors}</span><span>Participating vendor profiles</span><span>{event.directions}</span></div><span className="stock-flag">{event.stock}</span></article>)}
-        </div>
+
+      <section className="content-section section-shell" id="live-encounters">
+        <SectionHeading eyebrow="Live event explorer" title="Calendar, nearby discovery and vendor evidence." body="Filter the live UK feed, inspect organiser-backed vendor locations and search a postcode or your device location. Online catalogue stock and physical branch stock remain deliberately separate." />
+        <div style={{ marginTop: 48 }}><FateEncountersLive initialEvents={feed.events} live={feed.live} /></div>
       </section>
+
       <section className="content-section section-shell">
-        <div className="quote-band event-vendor-band"><FateSignalField variant="events" className="event-vendor-signal-field" /><div className="event-floor-fragment" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><p className="eyebrow"><span />Event Vendor Mode · active expansion</p><blockquote>Temporary stock should look temporary.</blockquote><p>Search event inventory by product, vendor, stall, price and condition. When an event ends, archived inventory must not appear as ordinary retailer availability.</p><Link className="button button-primary" href="/join?type=event" style={{ marginTop: 30 }}>Submit an Event <span>↗</span></Link></div>
+        <div className="quote-band event-vendor-band"><FateSignalField variant="events" className="event-vendor-signal-field" /><div className="event-floor-fragment" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><p className="eyebrow"><span />Event Vendor Mode · evidence first</p><blockquote>A table number is not a stock claim.</blockquote><p>Confirmed vendors can be shown from organiser evidence even when they publish no inventory. Event stock appears only from explicit vendor or FateDrop event-inventory evidence and expires rather than becoming ordinary retailer availability.</p><Link className="button button-primary" href="/join?type=event" style={{ marginTop: 30 }}>Submit an Event <span>↗</span></Link></div>
       </section>
       <FinalCta />
     </SiteShell>
