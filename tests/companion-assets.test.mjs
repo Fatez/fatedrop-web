@@ -5,13 +5,12 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { COMPANION_ASSETS, validateCompanionGeometry } = require("../lib/companion-assets.ts");
 
-test("Companion registry keeps each 3D asset in an explicit role", () => {
+test("Companion registry keeps each selectable 3D asset in an explicit role", () => {
+  assert.deepEqual(Object.keys(COMPANION_ASSETS).sort(), ["droid", "male"]);
   assert.equal(COMPANION_ASSETS.male.role, "humanoid");
   assert.equal(COMPANION_ASSETS.male.state, "ready");
   assert.equal(COMPANION_ASSETS.droid.role, "droid");
   assert.equal(COMPANION_ASSETS.droid.state, "ready");
-  assert.equal(COMPANION_ASSETS.female.role, "humanoid");
-  assert.equal(COMPANION_ASSETS.female.state, "quarantined");
 });
 
 test("humanoid validation accepts the Scout proportions", () => {
@@ -22,8 +21,8 @@ test("humanoid validation accepts the Scout proportions", () => {
   assert.equal(error, null);
 });
 
-test("humanoid validation rejects the crossed Warden card/prop geometry", () => {
-  const error = validateCompanionGeometry(COMPANION_ASSETS.female, {
+test("humanoid validation still rejects crossed card/prop geometry", () => {
+  const error = validateCompanionGeometry(COMPANION_ASSETS.male, {
     min: [-32756, -2802, -20909],
     max: [32767, 2802, 20781],
   });
