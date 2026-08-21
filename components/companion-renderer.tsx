@@ -1,29 +1,23 @@
 "use client";
 
-import { AvatarPreview, type AvatarMood } from "@/components/avatar-preview";
-import { DEFAULT_COMPANION_ASSET_MANIFEST, companionRendererMode, type CompanionAssetManifest, type CompanionRenderRequest } from "@/lib/companion-contract";
-
-function fallbackMood(reaction: CompanionRenderRequest["reaction"]): AvatarMood {
-  if (reaction === "echo") return "whisper";
-  if (reaction === "manifested") return "manifested";
-  if (reaction === "vanished") return "alert";
-  if (reaction === "fatematch") return "match";
-  if (reaction === "major") return "major";
-  if (reaction === "watching") return "watching";
-  return "idle";
-}
+import { KoruMascot } from "@/components/koru-mascot";
+import {
+  DEFAULT_COMPANION_ASSET_MANIFEST,
+  companionRendererMode,
+  type CompanionAssetManifest,
+  type CompanionRenderRequest,
+} from "@/lib/companion-contract";
 
 export function CompanionRenderer({ request, manifest = DEFAULT_COMPANION_ASSET_MANIFEST }: { request: CompanionRenderRequest; manifest?: CompanionAssetManifest }) {
-  const mode = request.mode ?? companionRendererMode(manifest);
+  const mode = companionRendererMode(manifest);
 
-  // The 3D boundary is intentionally explicit: when the production GLB/animation
-  // manifest is supplied, this component becomes the only account-facing swap point.
-  // Until then the persisted loadout is rendered through the proven illustrated rig.
   if (mode === "webgl-3d" && manifest.characterModelUrl) {
-    return <div className="fd-companion-3d-pending" data-model={manifest.characterModelUrl} data-droid={manifest.droidModelUrl ?? undefined} aria-label={request.label ?? "FateDrop Companion 3D renderer pending integration"}>
-      <AvatarPreview loadout={request.loadout} mood={fallbackMood(request.reaction)} compact={request.compact} label={request.label ?? "FateDrop Companion"}/>
+    return <div className="koru-3d-boundary" data-model={manifest.characterModelUrl}>
+      <KoruMascot reaction={request.reaction} compact={request.compact} label={request.label}/>
+      <span>Approved Koru 3D asset registered · web renderer pending isolated validation</span>
+      <style jsx>{`.koru-3d-boundary{display:grid;gap:8px}.koru-3d-boundary>span{color:#77717e;font-size:8px;text-align:center}`}</style>
     </div>;
   }
 
-  return <AvatarPreview loadout={request.loadout} mood={fallbackMood(request.reaction)} compact={request.compact} label={request.label ?? "FateDrop Companion"}/>;
+  return <KoruMascot reaction={request.reaction} compact={request.compact} label={request.label}/>;
 }
