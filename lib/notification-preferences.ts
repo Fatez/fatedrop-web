@@ -1,6 +1,7 @@
 import { fateDropPostgres } from "@/lib/postgres";
 
 export type NotificationPreferences = {
+  whisper: boolean;
   echo: boolean;
   manifested: boolean;
   vanished: boolean;
@@ -17,6 +18,7 @@ export type NotificationPreferences = {
 };
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  whisper: true,
   echo: true,
   manifested: true,
   vanished: false,
@@ -35,17 +37,14 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 export function isValidIanaTimezone(value: string) {
   const timezone = value.trim();
   if (!timezone || timezone.length > 80) return false;
-  try {
-    new Intl.DateTimeFormat("en-GB", { timeZone: timezone }).format(0);
-    return true;
-  } catch {
-    return false;
-  }
+  try { new Intl.DateTimeFormat("en-GB", { timeZone: timezone }).format(0); return true; }
+  catch { return false; }
 }
 
 function mapPreferences(row: Record<string, unknown>): NotificationPreferences {
   const timezone = String(row.timezone || "Europe/London");
   return {
+    whisper: row.whisper_enabled == null ? true : Boolean(row.whisper_enabled),
     echo: Boolean(row.echo_enabled), manifested: Boolean(row.manifested_enabled), vanished: Boolean(row.vanished_enabled),
     priceChange: Boolean(row.price_change_enabled), fateMatch: Boolean(row.fate_match_enabled), web: Boolean(row.web_enabled),
     push: Boolean(row.push_enabled), discord: Boolean(row.discord_enabled), quietHours: Boolean(row.quiet_hours_enabled),
@@ -63,13 +62,13 @@ export async function getNotificationPreferences(userId: string) {
 export async function saveNotificationPreferences(userId: string, preferences: NotificationPreferences) {
   const sql = await fateDropPostgres();
   const rows = await sql`INSERT INTO fatedrop_notification_preferences (
-    user_id,echo_enabled,manifested_enabled,vanished_enabled,price_change_enabled,fate_match_enabled,
+    user_id,whisper_enabled,echo_enabled,manifested_enabled,vanished_enabled,price_change_enabled,fate_match_enabled,
     web_enabled,push_enabled,discord_enabled,quiet_hours_enabled,quiet_hours_start,quiet_hours_end,timezone,updated_at
   ) VALUES (
-    ${userId},${preferences.echo},${preferences.manifested},${preferences.vanished},${preferences.priceChange},${preferences.fateMatch},
+    ${userId},${preferences.whisper},${preferences.echo},${preferences.manifested},${preferences.vanished},${preferences.priceChange},${preferences.fateMatch},
     ${preferences.web},${preferences.push},${preferences.discord},${preferences.quietHours},${preferences.quietStart},${preferences.quietEnd},${preferences.timezone},${preferences.updatedAt}
   ) ON CONFLICT (user_id) DO UPDATE SET
-    echo_enabled=EXCLUDED.echo_enabled, manifested_enabled=EXCLUDED.manifested_enabled, vanished_enabled=EXCLUDED.vanished_enabled,
+    whisper_enabled=EXCLUDED.whisper_enabled, echo_enabled=EXCLUDED.echo_enabled, manifested_enabled=EXCLUDED.manifested_enabled, vanished_enabled=EXCLUDED.vanished_enabled,
     price_change_enabled=EXCLUDED.price_change_enabled, fate_match_enabled=EXCLUDED.fate_match_enabled,
     web_enabled=EXCLUDED.web_enabled, push_enabled=EXCLUDED.push_enabled, discord_enabled=EXCLUDED.discord_enabled,
     quiet_hours_enabled=EXCLUDED.quiet_hours_enabled, quiet_hours_start=EXCLUDED.quiet_hours_start, quiet_hours_end=EXCLUDED.quiet_hours_end,

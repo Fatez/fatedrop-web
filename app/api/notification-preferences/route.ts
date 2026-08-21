@@ -29,7 +29,7 @@ export async function PATCH(request: Request) {
     const timezone = typeof payload.timezone === "string" && payload.timezone.trim() ? payload.timezone.trim().slice(0, 80) : current.timezone;
     if (!isValidIanaTimezone(timezone)) return Response.json({ error: "Choose a valid timezone." }, { status: 400 });
     const next: NotificationPreferences = {
-      echo: boolean(payload.echo, current.echo), manifested: boolean(payload.manifested, current.manifested), vanished: boolean(payload.vanished, current.vanished),
+      whisper: boolean(payload.whisper, current.whisper), echo: boolean(payload.echo, current.echo), manifested: boolean(payload.manifested, current.manifested), vanished: boolean(payload.vanished, current.vanished),
       priceChange: boolean(payload.priceChange, current.priceChange), fateMatch: boolean(payload.fateMatch, current.fateMatch),
       web: boolean(payload.web, current.web), push: boolean(payload.push, current.push), discord: boolean(payload.discord, current.discord),
       quietHours: boolean(payload.quietHours, current.quietHours), quietStart: time(payload.quietStart), quietEnd: time(payload.quietEnd), timezone,
