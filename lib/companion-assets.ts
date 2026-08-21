@@ -1,4 +1,4 @@
-export type CompanionVariant = "male" | "female" | "droid";
+export type CompanionVariant = "male" | "droid";
 export type CompanionAssetRole = "humanoid" | "droid";
 export type CompanionAssetState = "ready" | "quarantined";
 
@@ -25,15 +25,6 @@ export const COMPANION_ASSETS: Record<CompanionVariant, CompanionAssetDefinition
     file: "/assets/companions/fatedrop-male.glb",
     state: "ready",
     description: "Collector companion",
-  },
-  female: {
-    id: "female",
-    label: "Signal Warden",
-    role: "humanoid",
-    file: "/assets/companions/fatedrop-female.glb",
-    state: "quarantined",
-    description: "Collector companion",
-    unavailableMessage: "Signal Warden's deployed 3D asset has been blocked because it is not a valid humanoid model. FateDrop will not substitute another companion in its place.",
   },
   droid: {
     id: "droid",
