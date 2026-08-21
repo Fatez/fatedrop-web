@@ -1,0 +1,41 @@
+name: Fate Encounters Production Smoke
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe live Fate Encounters website
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://fatedrop-web.fatedrop-web.workers.dev"
+          curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 "$BASE/events" > /tmp/events.html
+          curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 "$BASE/api/encounters?limit=20" > /tmp/encounters.json
+          python - <<'PY'
+          import json
+          html=open('/tmp/events.html', encoding='utf-8').read()
+          data=json.load(open('/tmp/encounters.json', encoding='utf-8'))
+          print('EVENTS_PAGE', {
+              'live_heading': 'Find the TCG scene around you.' in html,
+              'demo_calendar': 'Demo calendar' in html,
+              'live_calendar': 'Live UK feed' in html,
+          })
+          print('ENCOUNTERS_API', {
+              'success': data.get('success'),
+              'count': data.get('count'),
+              'sample': [event.get('name') for event in data.get('events', [])[:5]],
+          })
+          if 'Find the TCG scene around you.' not in html:
+              raise SystemExit('live Fate Encounters page is not deployed')
+          if 'Demo calendar' in html:
+              raise SystemExit('demo calendar is still live')
+          if data.get('success') is not True or not data.get('events'):
+              raise SystemExit('live Encounters API has no events')
+          PY
