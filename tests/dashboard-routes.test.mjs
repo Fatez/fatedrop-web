@@ -41,6 +41,8 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes("TIME IN NETWORK"));
   assert.ok(root.includes('href="/dashboard/avatar"'));
   assert.ok(root.includes('href="/dashboard/search"'));
+  assert.ok(root.includes("KORU &amp; FRIENDS · FIVE ACTIVE SLOTS"));
+  assert.equal(root.includes("floating signal droid"), false);
 });
 
 test("Koru and Friends is the only active companion system", () => {
@@ -50,7 +52,6 @@ test("Koru and Friends is the only active companion system", () => {
   const renderer = fs.readFileSync("components/companion-renderer.tsx", "utf8");
   const contract = fs.readFileSync("lib/companion-contract.ts", "utf8");
   const loadout = fs.readFileSync("lib/avatar-loadout.ts", "utf8");
-  const assets = fs.readFileSync("lib/avatar-assets.ts", "utf8");
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
 
@@ -68,13 +69,21 @@ test("Koru and Friends is the only active companion system", () => {
   assert.equal(contract.includes("droidModelUrl"), false);
   assert.equal(contract.includes("AvatarLoadout"), false);
   for (const retired of ["radar-drone", "signal-orb", "mini-beacon"]) assert.equal(loadout.includes(retired), false);
-  assert.equal(assets.includes('"companion"'), false);
   assert.ok(api.includes("companionId"));
   assert.ok(api.includes("normalizeCompanionId"));
   assert.ok(storage.includes("fatedrop_user_avatars"));
-  assert.equal(fs.existsSync("components/companion-3d-stage.tsx"), false);
-  assert.equal(fs.existsSync("public/assets/companions/fatedrop-male.glb"), false);
-  assert.equal(fs.existsSync("public/assets/companions/fatedrop-droid.glb"), false);
+  for (const retiredFile of [
+    "components/companion-3d-stage.tsx",
+    "components/avatar-builder.tsx",
+    "components/avatar-preview.tsx",
+    "components/avatar-option-thumbnail.tsx",
+    "components/avatar-anime-character.tsx",
+    "components/avatar-layered-character.tsx",
+    "lib/avatar-assets.ts",
+    "public/assets/avatar-v2/avatar-sprites.svg",
+    "public/assets/companions/fatedrop-male.glb",
+    "public/assets/companions/fatedrop-droid.glb",
+  ]) assert.equal(fs.existsSync(retiredFile), false, `${retiredFile} should remain retired`);
 });
 
 test("Alerts is personal and links to shared notification preferences", () => {
@@ -123,7 +132,7 @@ test("free signal API redacts actionable fields before browser delivery", () => 
   assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
-test("internal alert visualiser preserves the final signal vocabulary", () => {
+test("internal alert visualiser preserves the final signal vocabulary and companion language", () => {
   const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
   assert.ok(feed.includes('whisper: { label: "WHISPER"'));
   assert.ok(feed.includes('echo: { label: "ECHO"'));
@@ -133,8 +142,10 @@ test("internal alert visualiser preserves the final signal vocabulary", () => {
   assert.ok(feed.includes('state: "echo"'));
   assert.equal(feed.includes('whisper: { label: "ECHO"'), false);
   assert.equal(feed.includes('echo: { label: "MANIFESTED"'), false);
-  assert.ok(feed.includes("TEST AVATAR SURGE"));
+  assert.ok(feed.includes("TEST COMPANION SURGE"));
   assert.ok(feed.includes("TEST PRODUCT SIGNAL"));
+  assert.ok(feed.includes("Your selected Koru &amp; Friends companion remains on watch"));
+  assert.equal(feed.includes("TEST AVATAR SURGE"), false);
 });
 
 test("True Price is canonical Cloud comparison and FateWindow is held", () => {
