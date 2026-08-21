@@ -21,7 +21,7 @@ export function KoruReferenceLanding() {
           <article className="kr-hero">
             <img
               className="kr-hero-image"
-              src="/assets/home/koru-home-hero-embedded.svg?v=20260821-hero-safe"
+              src="/assets/home/koru-home-hero.avif?v=20260821-koru-clean"
               alt="Koru overlooking the FateDrop landscape at sunset"
             />
             <div className="kr-hero-shade" aria-hidden="true" />
