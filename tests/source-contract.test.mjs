@@ -56,7 +56,7 @@ test("interactive phone preview retains every controlled screen and safeguard", 
     "Local Radar",
     "Fate Encounters",
     "FATEDROP / COMMAND CENTRE",
-    "KORU & FRIENDS · FIVE COMPANION SLOTS",
+    "KORU &amp; FRIENDS · FIVE COMPANION SLOTS",
     "Koru, Fenn, Aeris, Nyxen and Solix",
   ]) {
     assert.ok(source.includes(requirement), `${requirement} is missing from the current product showcase`);
