@@ -30,7 +30,7 @@ export const siteConfig = {
       name: "FateDrop Plus",
       price: "£4.99 / month",
       featured: true,
-      features: ["Premium signal detail", "Whisper, Manifested, Vanished and Echo lifecycle alerts", "FateFind saved intent", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
+      features: ["Premium signal detail", "Echo, Manifested and Vanished lifecycle alerts", "FateFind saved intent", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
     },
     {
       name: "FateDrop Pro",
