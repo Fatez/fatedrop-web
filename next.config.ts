@@ -35,8 +35,15 @@ const privateHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
+    // Next's local development runtime uses eval-backed source maps/HMR.
+    // Keep the strict production CSP unchanged, but do not apply that CSP
+    // to local development where it would create a false-positive dev error.
+    const browserSecurityHeaders = process.env.NODE_ENV === "development"
+      ? securityHeaders.filter(({ key }) => key !== "Content-Security-Policy")
+      : [...securityHeaders];
+
     return [
-      { source: "/(.*)", headers: [...securityHeaders] },
+      { source: "/(.*)", headers: browserSecurityHeaders },
       { source: "/account/:path*", headers: [...privateHeaders] },
       { source: "/dashboard/:path*", headers: [...privateHeaders] },
       { source: "/api/:path*", headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }] },
