@@ -39,12 +39,12 @@ export default async function DashboardPage() {
           <div className="fd-command-card"><small>{latestSignal ? signalLabel(latestSignal).toUpperCase() : "NETWORK READY"}</small><strong>{latestSignal ? (premium ? latestSignal.title : "Premium signal") : "FateDrop Signal"}</strong><span>{latestSignal?.retailer || "Detect · Compare · Connect"}</span></div>
           <SignalBeam pulseKey={latestSignal?.id || "network-ready"} state={latestSignal?.state || "manifested"}/>
         </div>
-        <div className="fd-command-metrics"><span><b>{metric(network?.metrics.manifested)}</b>MANIFESTED</span><span><b>{metric(network?.metrics.echo)}</b>ECHO</span><span><b>{metric(network?.metrics.changes24h)}</b>24H CHANGES</span><span><b>{plan}</b>YOUR PLAN</span></div>
+        <div className="fd-command-metrics"><span><b>{metric(data.publicSignalMetrics.manifested)}</b>MANIFESTED</span><span><b>{metric(data.publicSignalMetrics.echo)}</b>ECHO</span><span><b>{metric(network?.metrics.changes24h)}</b>24H CHANGES</span><span><b>{plan}</b>YOUR PLAN</span></div>
       </section>
 
       <section className="fd-core-actions" aria-label="Core FateDrop actions">
         <Link href="/dashboard/search"><span>⌕</span><div><small>DISCOVER</small><strong>Network Search</strong><p>Query the canonical Signal Engine catalogue and keep one search model across FateDrop.</p></div><b>→</b></Link>
-        <Link href="/dashboard/alerts"><span>◉</span><div><small>DETECT</small><strong>Live Signals</strong><p>Whisper, Manifested, Vanished and Echo lifecycle intelligence from observed transitions.</p></div><b>→</b></Link>
+        <Link href="/dashboard/alerts"><span>◉</span><div><small>DETECT</small><strong>Live Signals</strong><p>Echo, Manifested and Vanished lifecycle intelligence from observed transitions.</p></div><b>→</b></Link>
         <Link href="/dashboard/true-price"><span>⇄</span><div><small>COMPARE</small><strong>True Price</strong><p>Separate item price, verified RRP and known delivery instead of trusting the sticker price.</p></div><b>→</b></Link>
         <Link href="/dashboard/watchlist"><span>♡</span><div><small>TRACK</small><strong>FateFind</strong><p>Save structured wanted intent for the products and thresholds you actually care about.</p></div><b>→</b></Link>
       </section>
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
 
         <section className="fd-dash-card fd-command-feed fd-living-panel">
           <div className="fd-dash-card-head"><span>EARLY INTELLIGENCE</span><Link href="/dashboard/alerts">Open feed</Link></div>
-          <div className="fd-dashboard-list">{data.echoWhispers.length ? data.echoWhispers.map((item)=><article key={item.id}><span className={`fd-signal-thumb ${item.state}`}>{item.state === "echo" ? "E" : "W"}</span><div><strong>{premium ? item.title : "Premium signal detail"}</strong><small>{premium ? (item.detail || item.retailer || signalLabel(item)) : "Actionable context locked"}</small></div><aside>{signalLabel(item)}<small>{relativeTime(item.occurredAt,data.generatedAt)}</small></aside></article>) : <div className="fd-dashboard-empty"><strong>No Whisper / Echo activity yet.</strong><span>Early network movement will surface here.</span></div>}</div>
+          <div className="fd-dashboard-list">{data.echoWhispers.length ? data.echoWhispers.map((item)=><article key={item.id}><span className={`fd-signal-thumb ${item.state}`}>E</span><div><strong>{premium ? item.title : "Premium signal detail"}</strong><small>{premium ? (item.detail || item.retailer || signalLabel(item)) : "Actionable context locked"}</small></div><aside>{signalLabel(item)}<small>{relativeTime(item.occurredAt,data.generatedAt)}</small></aside></article>) : <div className="fd-dashboard-empty"><strong>No Echo activity yet.</strong><span>Early network movement will surface here.</span></div>}</div>
         </section>
       </div>
     </div>
