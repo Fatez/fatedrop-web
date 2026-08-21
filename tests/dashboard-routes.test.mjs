@@ -30,7 +30,7 @@ test("core dashboard navigation follows Discover Track Network Account structure
   assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'));
   assert.ok(nav.includes('["☆", "Wishlist", "/dashboard/wishlist"]'));
   assert.ok(nav.includes('["≋", "Preferences", "/dashboard/notifications"]'));
-  assert.ok(nav.includes('["◇", "Companion", "/dashboard/avatar"]'));
+  assert.ok(nav.includes('["◇", "Koru & Friends", "/dashboard/avatar"]'));
 });
 
 test("dashboard home uses the shared shell and retains personal collector identity", () => {
@@ -39,45 +39,38 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.equal(root.includes("fd-dashboard-sidebar"), false);
   assert.ok(root.includes("MEMBER SINCE"));
   assert.ok(root.includes("TIME IN NETWORK"));
-  assert.ok(root.includes("FATEDROP COMPANION · FOUNDATION"));
+  assert.ok(root.includes('href="/dashboard/avatar"'));
   assert.ok(root.includes('href="/dashboard/search"'));
 });
 
-test("Koru is the fixed FateDrop mascot while profile customisation remains separate", () => {
+test("Koru and Friends is the only active companion system", () => {
   const page = fs.readFileSync("app/dashboard/avatar/page.tsx", "utf8");
-  const mascot = fs.readFileSync("components/koru-mascot.tsx", "utf8");
-  const builder = fs.readFileSync("components/avatar-builder.tsx", "utf8");
-  const preview = fs.readFileSync("components/avatar-preview.tsx", "utf8");
-  const layered = fs.readFileSync("components/avatar-layered-character.tsx", "utf8");
+  const selector = fs.readFileSync("components/companion-selector.tsx", "utf8");
+  const profile = fs.readFileSync("app/dashboard/profile/page.tsx", "utf8");
   const renderer = fs.readFileSync("components/companion-renderer.tsx", "utf8");
   const contract = fs.readFileSync("lib/companion-contract.ts", "utf8");
-  const brand = fs.readFileSync("lib/koru-brand.ts", "utf8");
   const loadout = fs.readFileSync("lib/avatar-loadout.ts", "utf8");
   const assets = fs.readFileSync("lib/avatar-assets.ts", "utf8");
-  const sprites = fs.readFileSync("public/assets/avatar-v2/avatar-sprites.svg", "utf8");
   const api = fs.readFileSync("app/api/account/avatar/route.ts", "utf8");
   const storage = fs.readFileSync("lib/avatar-storage.ts", "utf8");
-  assert.ok(page.includes("Meet Koru"));
-  assert.ok(page.includes("<KoruMascot"));
-  assert.ok(page.includes("<AvatarBuilder"));
-  assert.ok(page.includes("Your profile is separate from Koru"));
-  assert.ok(mascot.includes("Koru, the FateDrop Signal Companion"));
-  assert.ok(builder.includes("SAVE PROFILE"));
-  assert.ok(builder.includes("Koru is not selectable"));
-  assert.ok(builder.includes("AvatarPreview"));
-  assert.equal(builder.includes("CompanionModelCanvas"), false);
-  assert.ok(loadout.includes("AVATAR_SKINS"));
-  assert.ok(assets.includes("avatar-sprites.svg"));
-  assert.ok(layered.includes("avatarLayerHref"));
-  assert.ok(preview.includes("AvatarLayeredCharacter"));
+
+  assert.ok(page.includes("<CompanionSelector"));
+  assert.ok(page.includes("Koru, Fenn, Aeris, Nyxen or Solix"));
+  assert.ok(page.includes("LEGACY_COMPANION_ARCHIVE"));
+  assert.equal(page.includes("AvatarBuilder"), false);
+  assert.ok(selector.includes("ACTIVE_COMPANION_ROSTER.map"));
+  assert.ok(selector.includes("5 ACTIVE SLOTS"));
+  assert.ok(profile.includes("CompanionRenderer"));
   assert.ok(renderer.includes("CompanionRenderRequest"));
-  assert.ok(contract.includes("characterModelUrl"));
-  assert.ok(contract.includes('fallbackArtworkVersion: "koru-v1"'));
-  assert.ok(brand.includes('name: "Koru"'));
-  assert.ok(brand.includes('code: "K-09"'));
-  assert.ok(brand.includes("modelUrl: null"));
-  assert.ok(sprites.includes('id="companion-radar-drone"'));
-  assert.ok(api.includes("normalizeAvatarLoadout"));
+  assert.ok(renderer.includes("KoruMascot"));
+  assert.ok(contract.includes('ACTIVE_COMPANION_IDS = ["koru", "fenn", "aeris", "nyxen", "solix"]'));
+  assert.ok(contract.includes("COMPANION_SCHEMA_VERSION = 2"));
+  assert.equal(contract.includes("droidModelUrl"), false);
+  assert.equal(contract.includes("AvatarLoadout"), false);
+  for (const retired of ["radar-drone", "signal-orb", "mini-beacon"]) assert.equal(loadout.includes(retired), false);
+  assert.equal(assets.includes('"companion"'), false);
+  assert.ok(api.includes("companionId"));
+  assert.ok(api.includes("normalizeCompanionId"));
   assert.ok(storage.includes("fatedrop_user_avatars"));
   assert.equal(fs.existsSync("components/companion-3d-stage.tsx"), false);
   assert.equal(fs.existsSync("public/assets/companions/fatedrop-male.glb"), false);
