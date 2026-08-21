@@ -90,7 +90,7 @@ export default function Home() {
       </section>
 
       <section className="events-teaser section-shell">
-        <div className="events-copy"><p className="eyebrow"><span />Fate Encounters · demo data</p><h2>Discover the event before the day. Search the vendors when you arrive.</h2><p>The current public calendar demonstrates dates, venues, tickets and participating vendors. The live event feed and production Event Vendor Mode remain future network layers.</p><div className="button-row"><Link className="button button-primary" href="/join?type=event">List an Event <span>↗</span></Link><Link className="button button-secondary" href="/events">Explore Event Vendor Mode</Link></div></div>
+        <div className="events-copy"><p className="eyebrow"><span />Fate Encounters · live UK calendar</p><h2>Discover the event before the day. Search the vendors when you arrive.</h2><p>Browse source-verified UK card shows, trade events and conventions, use Local Radar for nearby events, and inspect organiser-backed vendor or table locations where they are published. Physical event stock appears only when explicit evidence exists.</p><div className="button-row"><Link className="button button-primary" href="/join?type=event">List an Event <span>↗</span></Link><Link className="button button-secondary" href="/events">Explore Live Events</Link></div></div>
         <EventCalendar compact />
       </section>
 
