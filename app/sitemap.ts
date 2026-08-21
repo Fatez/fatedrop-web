@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
 import { canonicalSiteUrl } from "@/lib/site-url";
 
-const routes = ["", "/about", "/businesses", "/collectors", "/events", "/free-drops", "/join", "/merch", "/subscriptions", "/trust", "/privacy", "/terms", "/cookies"];
+const routes = ["", "/about", "/businesses", "/collectors", "/events", "/join", "/merch", "/subscriptions", "/trust", "/privacy", "/terms", "/cookies"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = canonicalSiteUrl();
-  const modified = new Date("2026-08-19T00:00:00.000Z");
+  const modified = new Date("2026-08-21T00:00:00.000Z");
   return routes.map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: modified,
