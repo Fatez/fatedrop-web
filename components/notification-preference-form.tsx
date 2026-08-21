@@ -6,7 +6,17 @@ import type { NotificationPreferences } from "@/lib/notification-preferences";
 export function NotificationPreferenceForm({ initial, persistent }: { initial: NotificationPreferences; persistent: boolean }) {
   const [preferences, setPreferences] = useState(initial);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  function toggle(key: keyof NotificationPreferences) { setPreferences((current) => ({ ...current, [key]: !current[key] })); }
+
+  function toggle(key: keyof NotificationPreferences) {
+    setPreferences((current) => {
+      if (key === "quietHours" && !current.quietHours && current.updatedAt === 0) {
+        const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return { ...current, quietHours: true, timezone: detected || current.timezone };
+      }
+      return { ...current, [key]: !current[key] };
+    });
+  }
+
   async function save() {
     setStatus("saving");
     try {

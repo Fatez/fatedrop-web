@@ -32,13 +32,25 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   updatedAt: 0,
 };
 
+export function isValidIanaTimezone(value: string) {
+  const timezone = value.trim();
+  if (!timezone || timezone.length > 80) return false;
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: timezone }).format(0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function mapPreferences(row: Record<string, unknown>): NotificationPreferences {
+  const timezone = String(row.timezone || "Europe/London");
   return {
     echo: Boolean(row.echo_enabled), manifested: Boolean(row.manifested_enabled), vanished: Boolean(row.vanished_enabled),
     priceChange: Boolean(row.price_change_enabled), fateMatch: Boolean(row.fate_match_enabled), web: Boolean(row.web_enabled),
     push: Boolean(row.push_enabled), discord: Boolean(row.discord_enabled), quietHours: Boolean(row.quiet_hours_enabled),
     quietStart: row.quiet_hours_start == null ? null : String(row.quiet_hours_start), quietEnd: row.quiet_hours_end == null ? null : String(row.quiet_hours_end),
-    timezone: String(row.timezone || "Europe/London"), updatedAt: Number(row.updated_at || 0),
+    timezone: isValidIanaTimezone(timezone) ? timezone : DEFAULT_NOTIFICATION_PREFERENCES.timezone, updatedAt: Number(row.updated_at || 0),
   };
 }
 
