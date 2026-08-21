@@ -73,9 +73,9 @@ export function KoruReferenceLanding() {
       .kr-landing-card{border-radius:22px;box-shadow:0 28px 90px rgba(0,0,0,.25)}
 
       .kr-hero{position:relative;isolation:isolate;min-height:clamp(620px,47vw,780px);overflow:hidden;background:#0a0d14}
-      .kr-hero-bg{position:absolute;z-index:-3;inset:0;background-image:url('/assets/home/koru-home-hero.webp');background-position:center center;background-repeat:no-repeat;background-size:cover;filter:saturate(1) contrast(1.01) brightness(1.04)}
-      .kr-hero-shade{position:absolute;z-index:-2;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.58) 0%,rgba(5,8,14,.42) 16%,rgba(5,8,14,.2) 31%,rgba(5,8,14,.055) 43%,transparent 57%),linear-gradient(180deg,rgba(4,6,11,.03) 0%,transparent 76%,rgba(4,6,11,.12) 100%)}
-      .kr-copy{position:absolute;z-index:4;left:clamp(34px,4.4vw,76px);top:50%;width:min(43%,620px);transform:translateY(-48%);text-shadow:0 2px 28px rgba(0,0,0,.42)}
+      .kr-hero-bg{position:absolute;z-index:0;inset:0;background-image:url('/assets/home/koru-home-hero.webp');background-position:center center;background-repeat:no-repeat;background-size:cover;filter:saturate(1) contrast(1.01) brightness(1.04)}
+      .kr-hero-shade{position:absolute;z-index:1;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.58) 0%,rgba(5,8,14,.42) 16%,rgba(5,8,14,.2) 31%,rgba(5,8,14,.055) 43%,transparent 57%),linear-gradient(180deg,rgba(4,6,11,.03) 0%,transparent 76%,rgba(4,6,11,.12) 100%)}
+      .kr-copy{position:absolute;z-index:2;left:clamp(34px,4.4vw,76px);top:50%;width:min(43%,620px);transform:translateY(-48%);text-shadow:0 2px 28px rgba(0,0,0,.42)}
       .kr-kicker{margin:0 0 18px;color:#b39ac1;font-size:9px;font-weight:850;letter-spacing:.19em}
       .kr-copy h1{margin:0;color:#f7efe8;font-family:Georgia,'Times New Roman',serif;font-size:clamp(3.35rem,4.7vw,6rem);font-weight:500;line-height:.94;letter-spacing:-.052em;text-wrap:balance}
       .kr-copy h1 em{display:inline-block;margin-top:8px;color:#b899cf;font-style:normal;text-shadow:0 2px 28px rgba(43,23,59,.38)}
@@ -86,7 +86,7 @@ export function KoruReferenceLanding() {
       .kr-proof{margin-top:29px;display:flex;align-items:center;flex-wrap:wrap;gap:9px;color:rgba(229,218,216,.62);font-size:7px;font-weight:800;letter-spacing:.12em}
       .kr-proof i{width:3px;height:3px;border-radius:50%;background:#a783b6}
 
-      .kr-meet{position:absolute;z-index:5;right:clamp(30px,3.6vw,64px);top:58px;display:grid;gap:5px;padding:10px 0;color:#eee3e1;text-decoration:none;text-align:right;text-shadow:0 2px 18px rgba(0,0,0,.72);transition:transform .2s ease,opacity .2s ease}
+      .kr-meet{position:absolute;z-index:3;right:clamp(30px,3.6vw,64px);top:58px;display:grid;gap:5px;padding:10px 0;color:#eee3e1;text-decoration:none;text-align:right;text-shadow:0 2px 18px rgba(0,0,0,.72);transition:transform .2s ease,opacity .2s ease}
       .kr-meet:hover{transform:translateX(-4px)}
       .kr-meet small{color:rgba(231,221,225,.63);font-size:7px;font-weight:800;letter-spacing:.15em}
       .kr-meet span{font-family:Georgia,serif;font-size:18px}
