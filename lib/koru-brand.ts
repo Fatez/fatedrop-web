@@ -6,8 +6,6 @@ export const KORU_BRAND = {
   portrait: "/assets/companions/koru-portrait.webp",
   fullArtwork: "/assets/companions/koru-signal-companion.webp",
   friendsArtwork: "/assets/home/koru-home-section.png",
-  modelUrl: null as string | null,
-  modelFormat: null as "glb" | null,
 } as const;
 
 export const KORU_LIFECYCLE = [
