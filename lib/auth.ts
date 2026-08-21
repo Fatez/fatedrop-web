@@ -89,6 +89,13 @@ export function bearerTokenFromRequest(request: Request) {
 export function assertSameOrigin(request: Request) {
   if (process.env.NODE_ENV !== "production") return;
 
+  // Modern browsers provide Sec-Fetch-Site even when an Origin header is
+  // absent. Reject an explicitly cross-site browser mutation before falling
+  // back to the existing Origin/forwarded-host checks. Native bearer clients
+  // do not normally send this browser metadata and continue through safely.
+  const fetchSite = request.headers.get("sec-fetch-site")?.toLowerCase();
+  if (fetchSite === "cross-site") throw new Error("CROSS_ORIGIN");
+
   const origin = request.headers.get("origin");
   if (!origin) return;
 
