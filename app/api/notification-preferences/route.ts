@@ -1,5 +1,5 @@
 import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
-import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, saveNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
+import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, isValidIanaTimezone, saveNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +27,7 @@ export async function PATCH(request: Request) {
     const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
     if (!payload) return Response.json({ error: "Invalid preference payload." }, { status: 400 });
     const timezone = typeof payload.timezone === "string" && payload.timezone.trim() ? payload.timezone.trim().slice(0, 80) : current.timezone;
+    if (!isValidIanaTimezone(timezone)) return Response.json({ error: "Choose a valid timezone." }, { status: 400 });
     const next: NotificationPreferences = {
       echo: boolean(payload.echo, current.echo), manifested: boolean(payload.manifested, current.manifested), vanished: boolean(payload.vanished, current.vanished),
       priceChange: boolean(payload.priceChange, current.priceChange), fateMatch: boolean(payload.fateMatch, current.fateMatch),
