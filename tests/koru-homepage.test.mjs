@@ -6,15 +6,13 @@ const read = (path) => fs.readFileSync(path, "utf8");
 
 test("homepage is led by the approved Koru signal concept", () => {
   const home = read("app/page.tsx");
-  const sections = read("components/koru-home-sections.tsx");
-  assert.ok(home.includes("<KoruHomeHero"));
-  assert.ok(home.includes("<KoruVoiceSection"));
+  const reference = read("components/koru-home-reference.tsx");
+  assert.ok(home.includes("<KoruReferenceLanding"));
   assert.ok(home.includes("<KoruAppSection"));
-  assert.ok(home.includes("<KoruFriendsHomeTeaser"));
-  assert.ok(sections.includes("You don&apos;t chase drops."));
-  assert.ok(sections.includes("You get the signal."));
-  assert.ok(sections.includes("FATEDROP / SIGNAL CARD"));
-  assert.ok(sections.includes("MEET <b>KORU.</b>"));
+  assert.ok(reference.includes("You don&apos;t chase drops."));
+  assert.ok(reference.includes("You get the signal."));
+  assert.ok(reference.includes("THE NETWORK LANGUAGE"));
+  assert.ok(reference.includes("MEET THE VOICE OF FATEDROP"));
 });
 
 test("homepage art treatment is matte and TCG-aware rather than neon-only", () => {
@@ -36,7 +34,7 @@ test("Koru remains fixed while personal collector identity stays separate", () =
 });
 
 test("homepage retains the final four-stage lifecycle contract", () => {
-  const sections = read("components/koru-home-sections.tsx");
-  for (const state of ["Whisper", "Echo", "Manifested", "Vanished"]) assert.ok(sections.includes("KORU_LIFECYCLE") || sections.includes(state));
-  assert.ok(sections.includes("Four states. One meaning everywhere."));
+  const reference = read("components/koru-home-reference.tsx");
+  assert.ok(reference.includes("KORU_LIFECYCLE"));
+  assert.ok(reference.includes("Four states. One meaning everywhere."));
 });
