@@ -33,139 +33,145 @@ export function KoruReferenceLanding() {
           </div>
 
           <Link className="kr-meet" href="/dashboard/avatar" aria-label="Meet Koru, the FateDrop signal companion">
-            <span>Meet <b>Koru.</b></span>
-            <p>The voice of the FateDrop network.</p>
-            <small>MEET KORU →</small>
+            <small>MEET THE VOICE OF FATEDROP</small>
+            <span>Meet <b>Koru.</b> <i>→</i></span>
           </Link>
         </article>
-
-        <section className="kr-lifecycle" aria-labelledby="kr-lifecycle-title">
-          <div className="kr-lifecycle-title">
-            <span id="kr-lifecycle-title">The FateDrop Signal Lifecycle</span>
-            <small>Four states. One meaning everywhere.</small>
-          </div>
-          <div className="kr-life-grid">
-            {KORU_LIFECYCLE.map((item, index) => <article key={item.state} data-stage={item.state.toLowerCase()}>
-              <div className="kr-life-icon">◇</div>
-              <div><strong>{item.state.toUpperCase()}</strong><p>{item.copy}</p></div>
-              {index < KORU_LIFECYCLE.length - 1 ? <i aria-hidden="true">→</i> : null}
-            </article>)}
-          </div>
-        </section>
-
-        <section className="kr-retailers" aria-label="Participating retailer sources">
-          <div className="kr-retailer-title"><span>MONITORING PARTICIPATING RETAILER SOURCES</span><small>Coverage grows as sources are validated.</small></div>
-          <div className="kr-retailer-row">{retailers.map((name) => <b key={name}>{name}</b>)}</div>
-          <Link href="/businesses">View Retailers <span>→</span></Link>
-        </section>
       </div>
+
+      <section className="kr-lifecycle" aria-labelledby="kr-lifecycle-title">
+        <div className="kr-lifecycle-title">
+          <div><small>THE NETWORK LANGUAGE</small><span id="kr-lifecycle-title">The FateDrop Signal Lifecycle</span></div>
+          <p>Four states. One meaning everywhere.</p>
+        </div>
+        <div className="kr-life-grid">
+          {KORU_LIFECYCLE.map((item, index) => <article key={item.state} data-stage={item.state.toLowerCase()}>
+            <span className="kr-life-number">0{index + 1}</span>
+            <div className="kr-life-icon">◇</div>
+            <div><strong>{item.state.toUpperCase()}</strong><p>{item.copy}</p></div>
+            {index < KORU_LIFECYCLE.length - 1 ? <i className="kr-life-arrow" aria-hidden="true">→</i> : null}
+          </article>)}
+        </div>
+      </section>
+
+      <section className="kr-retailers" aria-label="Participating retailer sources">
+        <div className="kr-retailer-title"><span>MONITORING PARTICIPATING RETAILER SOURCES</span><small>Coverage grows as sources are validated.</small></div>
+        <div className="kr-retailer-row">{retailers.map((name) => <b key={name}>{name}</b>)}</div>
+        <Link href="/businesses">View Retailers <span>→</span></Link>
+      </section>
 
       <section className="kr-friends-banner" aria-label="Koru and Friends">
         <img src="/assets/home/koru-and-friends-banner.webp" alt="Koru and Friends together at dusk in the FateDrop universe" />
         <Link className="kr-friends-hotspot" href="/merch" aria-label="Explore Koru and Friends merchandise"><span>Explore Koru &amp; Friends merchandise</span></Link>
-        <Link className="kr-friends-mobile-link button kr-primary" href="/merch">Explore Merch <span>↗</span></Link>
+        <Link className="kr-friends-mobile-link button kr-primary" href="/merch">Explore Koru &amp; Friends <span>↗</span></Link>
       </section>
     </section>
 
     <style>{`
-      .kr-shell{width:min(1520px,calc(100% - 28px));margin:88px auto 0}
-      .kr-landing-card,.kr-friends-banner{border:1px solid rgba(205,194,215,.14);border-radius:14px;overflow:hidden;background:#090c12;box-shadow:0 28px 90px rgba(0,0,0,.34)}
+      .kr-shell{width:min(1560px,calc(100% - 32px));margin:88px auto 0}
+      .kr-landing-card,.kr-lifecycle,.kr-retailers,.kr-friends-banner{border:1px solid rgba(205,194,215,.13);overflow:hidden;background:#090c12}
+      .kr-landing-card{border-radius:22px;box-shadow:0 28px 90px rgba(0,0,0,.25)}
 
-      .kr-hero{position:relative;isolation:isolate;min-height:clamp(560px,44vw,720px);overflow:hidden;background:#0a0d14}
-      .kr-hero-bg{position:absolute;z-index:-3;inset:0;background-image:url('/assets/home/koru-home-hero.webp');background-position:center center;background-repeat:no-repeat;background-size:cover;filter:saturate(.96) contrast(1.02) brightness(1.02)}
-      .kr-hero-shade{position:absolute;z-index:-2;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.7) 0%,rgba(5,8,14,.4) 26%,rgba(5,8,14,.08) 48%,transparent 72%),linear-gradient(180deg,rgba(5,7,12,.02),transparent 68%,rgba(5,7,12,.16) 100%)}
-      .kr-copy{position:absolute;z-index:4;left:clamp(28px,4vw,66px);top:50%;width:min(44%,590px);transform:translateY(-52%)}
-      .kr-kicker{margin:0 0 18px;color:#9e83ac;font-size:9px;font-weight:850;letter-spacing:.18em}
-      .kr-copy h1{margin:0;color:#f0e8df;font-family:Georgia,'Times New Roman',serif;font-size:clamp(3rem,4.6vw,5.9rem);font-weight:500;line-height:.94;letter-spacing:-.052em;text-wrap:balance}
-      .kr-copy h1 em{display:inline-block;margin-top:7px;color:transparent;background:linear-gradient(90deg,#a876ce,#9679bd 50%,#7793a8);background-clip:text;font-style:normal}
-      .kr-lede{max-width:510px;margin:24px 0 0;color:#c0b6b6;font-size:14px;line-height:1.68}
-      .kr-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:27px}
-      .kr-primary{background:linear-gradient(135deg,#75558f,#604873)!important;border-color:rgba(207,181,227,.26)!important;color:#fff!important;box-shadow:0 14px 36px rgba(82,57,102,.28)!important}
-      .kr-secondary{background:rgba(8,11,17,.72)!important;border-color:rgba(234,225,220,.18)!important;color:#e8e0dc!important;backdrop-filter:blur(10px)}
-      .kr-proof{margin-top:28px;display:flex;align-items:center;flex-wrap:wrap;gap:9px;color:#958c90;font-size:7px;font-weight:800;letter-spacing:.12em}
-      .kr-proof i{width:3px;height:3px;border-radius:50%;background:#826590}
+      .kr-hero{position:relative;isolation:isolate;min-height:clamp(620px,47vw,780px);overflow:hidden;background:#0a0d14}
+      .kr-hero-bg{position:absolute;z-index:-3;inset:0;background-image:url('/assets/home/koru-home-hero.webp');background-position:center center;background-repeat:no-repeat;background-size:cover;filter:saturate(1) contrast(1.01) brightness(1.04)}
+      .kr-hero-shade{position:absolute;z-index:-2;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.58) 0%,rgba(5,8,14,.42) 16%,rgba(5,8,14,.2) 31%,rgba(5,8,14,.055) 43%,transparent 57%),linear-gradient(180deg,rgba(4,6,11,.03) 0%,transparent 76%,rgba(4,6,11,.12) 100%)}
+      .kr-copy{position:absolute;z-index:4;left:clamp(34px,4.4vw,76px);top:50%;width:min(43%,620px);transform:translateY(-48%);text-shadow:0 2px 28px rgba(0,0,0,.42)}
+      .kr-kicker{margin:0 0 18px;color:#b39ac1;font-size:9px;font-weight:850;letter-spacing:.19em}
+      .kr-copy h1{margin:0;color:#f7efe8;font-family:Georgia,'Times New Roman',serif;font-size:clamp(3.35rem,4.7vw,6rem);font-weight:500;line-height:.94;letter-spacing:-.052em;text-wrap:balance}
+      .kr-copy h1 em{display:inline-block;margin-top:8px;color:#b899cf;font-style:normal;text-shadow:0 2px 28px rgba(43,23,59,.38)}
+      .kr-lede{max-width:505px;margin:25px 0 0;color:rgba(240,231,227,.82);font-size:14px;line-height:1.72}
+      .kr-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+      .kr-primary{background:linear-gradient(135deg,#75558f,#604873)!important;border-color:rgba(221,196,239,.28)!important;color:#fff!important;box-shadow:0 12px 34px rgba(61,39,79,.24)!important}
+      .kr-secondary{background:rgba(10,12,19,.38)!important;border-color:rgba(245,233,227,.22)!important;color:#f3eae5!important;backdrop-filter:blur(8px)}
+      .kr-proof{margin-top:29px;display:flex;align-items:center;flex-wrap:wrap;gap:9px;color:rgba(229,218,216,.62);font-size:7px;font-weight:800;letter-spacing:.12em}
+      .kr-proof i{width:3px;height:3px;border-radius:50%;background:#a783b6}
 
-      .kr-meet{position:absolute;z-index:5;right:clamp(24px,3.2vw,52px);top:50%;width:178px;padding:12px 0;border:0;border-radius:0;background:transparent;text-shadow:0 2px 18px rgba(0,0,0,.9);text-decoration:none;transform:translateY(-8%);transition:transform .2s ease,color .2s ease}
-      .kr-meet:hover{transform:translateY(-11%);border-color:rgba(177,136,198,.42)}
-      .kr-meet span{display:block;color:#ede4de;font-family:Georgia,serif;font-size:18px}
-      .kr-meet b{color:#a27db2;font-weight:500}
-      .kr-meet p{margin:6px 0 10px;color:#a69da1;font-size:10px;line-height:1.48}
-      .kr-meet small{color:#9a7ca7;font-size:7px;font-weight:800;letter-spacing:.12em}
+      .kr-meet{position:absolute;z-index:5;right:clamp(30px,3.6vw,64px);top:58px;display:grid;gap:5px;padding:10px 0;color:#eee3e1;text-decoration:none;text-align:right;text-shadow:0 2px 18px rgba(0,0,0,.72);transition:transform .2s ease,opacity .2s ease}
+      .kr-meet:hover{transform:translateX(-4px)}
+      .kr-meet small{color:rgba(231,221,225,.63);font-size:7px;font-weight:800;letter-spacing:.15em}
+      .kr-meet span{font-family:Georgia,serif;font-size:18px}
+      .kr-meet b{color:#c09bce;font-weight:500}
+      .kr-meet i{margin-left:5px;color:#c09bce;font-style:normal}
 
-      .kr-lifecycle{position:relative;padding:20px 28px 18px;border-top:1px solid rgba(255,255,255,.09);background:rgba(7,10,15,.76);backdrop-filter:blur(18px)}
-      .kr-lifecycle-title{display:flex;justify-content:center;align-items:center;gap:18px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,.055)}
-      .kr-lifecycle-title span{color:#e3d9d1;font-family:Georgia,serif;font-size:17px}
-      .kr-lifecycle-title small{color:#76727a;font-size:8px;letter-spacing:.12em}
-      .kr-life-grid{display:grid;grid-template-columns:repeat(4,1fr);max-width:1220px;margin:0 auto;padding:15px 0 6px}
-      .kr-life-grid article{position:relative;display:grid;grid-template-columns:44px 1fr;gap:11px;align-items:start;padding:7px 30px 7px 10px;min-width:0}
-      .kr-life-grid article>i{position:absolute;right:10px;top:23px;color:#735d80;font-style:normal}
-      .kr-life-icon{width:34px;height:34px;display:grid;place-items:center;border:1px solid rgba(161,129,177,.36);border-radius:10px;color:#a47db5;background:rgba(104,72,119,.09);font-size:19px;transform:rotate(45deg)}
-      .kr-life-grid strong{display:block;color:#e1d9d4;font-size:9px;letter-spacing:.07em}
-      .kr-life-grid p{margin:5px 0 0;color:#90898e;font-size:8px;line-height:1.52}
+      .kr-lifecycle{margin-top:14px;border-radius:18px;background:linear-gradient(180deg,#0d1119,#090d13);box-shadow:0 20px 60px rgba(0,0,0,.18)}
+      .kr-lifecycle-title{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;padding:22px 30px 17px;border-bottom:1px solid rgba(255,255,255,.06)}
+      .kr-lifecycle-title>div{display:grid;gap:4px}
+      .kr-lifecycle-title small{color:#8f738e;font-size:7px;font-weight:850;letter-spacing:.16em}
+      .kr-lifecycle-title span{color:#e8ded7;font-family:Georgia,serif;font-size:20px}
+      .kr-lifecycle-title>p{margin:0;color:#77727a;font-size:8px;letter-spacing:.1em}
+      .kr-life-grid{display:grid;grid-template-columns:repeat(4,1fr);max-width:1320px;margin:0 auto;padding:13px 12px 16px}
+      .kr-life-grid article{position:relative;display:grid;grid-template-columns:24px 40px 1fr;gap:11px;align-items:start;padding:14px 32px 12px 16px;min-width:0}
+      .kr-life-number{padding-top:9px;color:#4e4a53;font-size:7px;font-weight:800;letter-spacing:.08em}
+      .kr-life-icon{width:34px;height:34px;display:grid;place-items:center;border:1px solid rgba(161,129,177,.38);border-radius:10px;color:#aa83b8;background:rgba(104,72,119,.08);font-size:19px;transform:rotate(45deg)}
+      .kr-life-grid strong{display:block;padding-top:3px;color:#e5dcd7;font-size:9px;letter-spacing:.08em}
+      .kr-life-grid p{margin:5px 0 0;color:#938c92;font-size:8px;line-height:1.56}
+      .kr-life-arrow{position:absolute;right:10px;top:28px;color:#5e4b66;font-style:normal}
       .kr-life-grid [data-stage='echo'] .kr-life-icon{color:#80a6bf;border-color:rgba(116,158,186,.36)}
       .kr-life-grid [data-stage='manifested'] .kr-life-icon{color:#91aa81;border-color:rgba(133,166,119,.36)}
       .kr-life-grid [data-stage='vanished'] .kr-life-icon{color:#c0ac8d;border-color:rgba(184,163,132,.34)}
 
-      .kr-retailers{display:grid;grid-template-columns:minmax(170px,.65fr) minmax(0,2.4fr) auto;gap:22px;align-items:center;padding:17px 30px;border-top:1px solid rgba(255,255,255,.07);background:rgba(6,9,14,.88)}
-      .kr-retailer-title{display:grid;gap:3px}
-      .kr-retailer-title span{color:#88818a;font-size:7px;font-weight:800;letter-spacing:.12em}
+      .kr-retailers{margin-top:10px;display:grid;grid-template-columns:minmax(190px,.65fr) minmax(0,2.4fr) auto;gap:24px;align-items:center;padding:18px 30px;border-radius:14px;background:#090c12}
+      .kr-retailer-title{display:grid;gap:4px}
+      .kr-retailer-title span{color:#999099;font-size:7px;font-weight:800;letter-spacing:.13em}
       .kr-retailer-title small{color:#5f5b62;font-size:7px}
-      .kr-retailer-row{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px 24px}
-      .kr-retailer-row b{color:#c1b9b5;font-size:9px;font-weight:720;letter-spacing:.02em;white-space:nowrap}
-      .kr-retailers>a{color:#9b7da8;font-size:8px;font-weight:800;letter-spacing:.08em;text-decoration:none;white-space:nowrap}
+      .kr-retailer-row{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px 26px}
+      .kr-retailer-row b{color:#c8bfbb;font-size:9px;font-weight:680;letter-spacing:.015em;white-space:nowrap}
+      .kr-retailers>a{color:#aa87b6;font-size:8px;font-weight:800;letter-spacing:.08em;text-decoration:none;white-space:nowrap}
 
-      .kr-friends-banner{position:relative;margin-top:12px;line-height:0}
-      .kr-friends-banner>img{display:block;width:100%;height:auto;aspect-ratio:1916/821;object-fit:cover}
-      .kr-friends-hotspot{position:absolute;right:4.2%;bottom:9.2%;width:16.5%;height:10.5%;border-radius:10px;text-decoration:none;transition:box-shadow .2s ease,background .2s ease}
+      .kr-friends-banner{position:relative;margin-top:24px;border-radius:22px;line-height:0;background:#070a10;box-shadow:0 28px 90px rgba(0,0,0,.2)}
+      .kr-friends-banner>img{display:block;width:100%;height:auto;aspect-ratio:1916/821;object-fit:cover;filter:none}
+      .kr-friends-hotspot{position:absolute;right:4.1%;bottom:9.1%;width:16.8%;height:10.8%;border-radius:10px;text-decoration:none;transition:box-shadow .2s ease,background .2s ease}
       .kr-friends-hotspot span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-      .kr-friends-hotspot:hover,.kr-friends-hotspot:focus-visible{background:rgba(150,105,190,.08);box-shadow:0 0 0 2px rgba(178,129,216,.38),0 12px 40px rgba(72,44,95,.24);outline:none}
+      .kr-friends-hotspot:hover,.kr-friends-hotspot:focus-visible{background:rgba(150,105,190,.06);box-shadow:0 0 0 2px rgba(178,129,216,.42),0 12px 40px rgba(72,44,95,.2);outline:none}
       .kr-friends-mobile-link{display:none}
 
       @media(max-width:1080px){
-        .kr-copy{width:52%}
-        .kr-meet{right:22px;top:auto;bottom:24px;transform:none}
-        .kr-meet:hover{transform:translateY(-3px)}
+        .kr-copy{width:51%}
+        .kr-meet{right:24px;top:28px}
         .kr-retailers{grid-template-columns:1fr}
         .kr-retailer-title{text-align:center}
         .kr-retailer-row{gap:12px 20px}
         .kr-retailers>a{justify-self:center}
+        .kr-life-grid article{grid-template-columns:20px 36px 1fr;padding-right:24px}
       }
 
       @media(max-width:760px){
         .kr-shell{width:calc(100% - 18px);margin-top:78px}
-        .kr-landing-card,.kr-friends-banner{border-radius:12px}
+        .kr-landing-card,.kr-lifecycle,.kr-retailers,.kr-friends-banner{border-radius:14px}
         .kr-hero{min-height:700px}
         .kr-hero-bg{background-position:66% center}
-        .kr-hero-shade{background:linear-gradient(180deg,rgba(5,8,14,.26) 0%,rgba(5,8,14,.08) 45%,rgba(5,8,14,.56) 75%,rgba(5,8,14,.82) 100%),linear-gradient(90deg,rgba(5,8,14,.24),transparent 72%)}
-        .kr-copy{left:22px;right:22px;top:auto;bottom:112px;width:auto;transform:none}
+        .kr-hero-shade{background:linear-gradient(180deg,rgba(5,8,14,.05) 0%,rgba(5,8,14,.02) 46%,rgba(5,8,14,.38) 67%,rgba(5,8,14,.78) 100%)}
+        .kr-copy{left:22px;right:22px;top:auto;bottom:76px;width:auto;transform:none;text-shadow:0 3px 24px rgba(0,0,0,.7)}
         .kr-kicker{font-size:8px}
-        .kr-copy h1{font-size:clamp(2.65rem,12vw,4.2rem)}
+        .kr-copy h1{font-size:clamp(2.65rem,12vw,4.15rem)}
         .kr-lede{max-width:520px;font-size:12px}
         .kr-proof{display:none}
-        .kr-meet{top:20px;right:18px;bottom:auto;width:142px;padding:10px 0;background:transparent}
-        .kr-meet span{font-size:15px}.kr-meet p{font-size:8px}
-        .kr-lifecycle{padding:18px 15px}
-        .kr-lifecycle-title{align-items:flex-start;flex-direction:column;gap:4px}
-        .kr-life-grid{grid-template-columns:1fr 1fr}
-        .kr-life-grid article{padding:12px 16px 12px 5px}
-        .kr-life-grid article:nth-child(2)>i{display:none}
+        .kr-meet{top:18px;right:18px}
+        .kr-meet small{display:none}
+        .kr-meet span{font-size:15px}
+        .kr-lifecycle-title{align-items:flex-start;flex-direction:column;gap:5px;padding:19px 18px 14px}
+        .kr-lifecycle-title>p{font-size:7px}
+        .kr-life-grid{grid-template-columns:1fr 1fr;padding:8px}
+        .kr-life-grid article{grid-template-columns:18px 36px 1fr;padding:12px 14px 12px 6px}
+        .kr-life-grid article:nth-child(2) .kr-life-arrow{display:none}
         .kr-retailers{padding:17px}
         .kr-retailer-row{gap:10px 15px}
         .kr-retailer-row b{font-size:8px}
+        .kr-friends-banner{margin-top:16px;overflow:visible;background:transparent;border:0;box-shadow:none}
+        .kr-friends-banner>img{border:1px solid rgba(205,194,215,.13);border-radius:14px;aspect-ratio:auto;object-fit:contain}
         .kr-friends-hotspot{display:none}
-        .kr-friends-mobile-link{display:flex;position:relative;margin:12px auto 14px;width:max-content;line-height:1.2}
+        .kr-friends-mobile-link{display:flex;position:relative;margin:12px auto 0;width:max-content;line-height:1.2}
       }
 
       @media(max-width:480px){
         .kr-hero{min-height:650px}
-        .kr-copy{bottom:94px}
+        .kr-copy{bottom:62px}
         .kr-copy h1{font-size:2.7rem}
         .kr-actions{display:grid;grid-template-columns:1fr 1fr}
         .kr-actions .button{padding-inline:12px;text-align:center;justify-content:center}
-        .kr-meet{width:126px}
         .kr-life-grid{grid-template-columns:1fr}
-        .kr-life-grid article{padding:11px 6px}
-        .kr-life-grid article>i{display:none}
+        .kr-life-grid article{padding:11px 8px}
+        .kr-life-arrow{display:none}
         .kr-retailer-row{display:grid;grid-template-columns:1fr 1fr;text-align:center}
       }
     `}</style>
