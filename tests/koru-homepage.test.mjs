@@ -26,12 +26,12 @@ test("homepage is intentionally short and product-led", () => {
   assert.equal(home.includes("<WhyFateDrop"), false);
 });
 
-test("public product language uses FateMatch and the final lifecycle", () => {
+test("public product language preserves FateFind to FateMatch and the final lifecycle", () => {
   const siteData = read("lib/site-data.ts");
   const trust = read("app/trust/page.tsx");
   const collectors = read("app/collectors/page.tsx");
-  assert.ok(siteData.includes("FateMatch"));
-  assert.equal(siteData.includes("FateFind"), false);
+  assert.ok(siteData.includes("FateFind → FateMatch"));
+  assert.ok(siteData.includes("successful result is a FateMatch"));
   assert.ok(trust.includes("Whisper. Echo. Manifested. Vanished."));
   assert.ok(collectors.includes("Whisper → Echo → Manifested → Vanished"));
 });
