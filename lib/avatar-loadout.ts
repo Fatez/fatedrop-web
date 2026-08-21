@@ -1,3 +1,5 @@
+import { ACTIVE_COMPANION_IDS, normalizeCompanionId, type CompanionId } from "@/lib/companion-contract";
+
 export const AVATAR_BASES = ["scout", "runner", "warden"] as const;
 export const AVATAR_SKINS = ["light", "warm", "olive", "deep", "rich"] as const;
 export const AVATAR_HAIR = ["midnight-spikes", "violet-wave", "silver-fade", "cyan-crop", "ember-fringe"] as const;
@@ -7,7 +9,7 @@ export const AVATAR_OUTFITS = ["signal-hoodie", "collector-jacket", "tournament-
 export const AVATAR_HEADWEAR = ["signal-cap", "headphones", "visor", "beanie"] as const;
 export const AVATAR_ACCESSORIES = ["none", "chain", "card-charm", "signal-pin", "crossbody"] as const;
 export const AVATAR_GEAR = ["scanner", "binder", "slab-case", "none"] as const;
-export const AVATAR_COMPANIONS = ["radar-drone", "signal-orb", "mini-beacon", "none"] as const;
+export const AVATAR_COMPANIONS = ACTIVE_COMPANION_IDS;
 export const AVATAR_AURAS = ["violet", "cyan", "spectral", "gold"] as const;
 export const AVATAR_BACKGROUNDS = ["fate-network", "command-room", "card-vault", "tournament-floor", "neon-desk"] as const;
 export const AVATAR_TCG_STYLES = ["neutral", "pokemon", "one-piece", "lorcana", "magic", "yugioh"] as const;
@@ -22,7 +24,7 @@ export type AvatarOutfit = typeof AVATAR_OUTFITS[number];
 export type AvatarHeadwear = typeof AVATAR_HEADWEAR[number];
 export type AvatarAccessory = typeof AVATAR_ACCESSORIES[number];
 export type AvatarGear = typeof AVATAR_GEAR[number];
-export type AvatarCompanion = typeof AVATAR_COMPANIONS[number];
+export type AvatarCompanion = CompanionId;
 export type AvatarAura = typeof AVATAR_AURAS[number];
 export type AvatarBackground = typeof AVATAR_BACKGROUNDS[number];
 export type AvatarTcgStyle = typeof AVATAR_TCG_STYLES[number];
@@ -61,7 +63,7 @@ export const DEFAULT_AVATAR_LOADOUT: AvatarLoadout = {
   headwear: "signal-cap",
   accessory: "signal-pin",
   gear: "scanner",
-  companion: "radar-drone",
+  companion: "koru",
   aura: "violet",
   background: "command-room",
   tcgStyle: "neutral",
@@ -77,7 +79,7 @@ export const AVATAR_OPTION_LABELS = {
   headwear: { "signal-cap": "Signal Cap", headphones: "Headphones", visor: "Scanner Visor", beanie: "Collector Beanie" },
   accessory: { none: "No Accessory", chain: "Signal Chain", "card-charm": "Card Charm", "signal-pin": "Signal Pin", crossbody: "Collector Crossbody" },
   gear: { scanner: "Signal Scanner", binder: "Binder", "slab-case": "Slab Case", none: "No Gear" },
-  companion: { "radar-drone": "Radar Drone", "signal-orb": "Signal Orb", "mini-beacon": "Mini Beacon", none: "No Companion" },
+  companion: { koru: "Koru", fenn: "Fenn", aeris: "Aeris", nyxen: "Nyxen", solix: "Solix" },
   aura: { violet: "Violet Signal", cyan: "Icy Radar", spectral: "Spectral Foil", gold: "Gold Trace" },
   background: { "fate-network": "Fate Network", "command-room": "Collector Command Room", "card-vault": "Card Vault", "tournament-floor": "Tournament Floor", "neon-desk": "Neon Collector Desk" },
   tcgStyle: { neutral: "FateDrop", pokemon: "Pokémon TCG", "one-piece": "One Piece TCG", lorcana: "Lorcana", magic: "Magic", yugioh: "Yu-Gi-Oh!" },
@@ -100,7 +102,7 @@ export function normalizeAvatarLoadout(input: unknown): AvatarLoadout {
     headwear: isOneOf(raw.headwear, AVATAR_HEADWEAR) ? raw.headwear : DEFAULT_AVATAR_LOADOUT.headwear,
     accessory: isOneOf(raw.accessory, AVATAR_ACCESSORIES) ? raw.accessory : DEFAULT_AVATAR_LOADOUT.accessory,
     gear: isOneOf(raw.gear, AVATAR_GEAR) ? raw.gear : DEFAULT_AVATAR_LOADOUT.gear,
-    companion: isOneOf(raw.companion, AVATAR_COMPANIONS) ? raw.companion : DEFAULT_AVATAR_LOADOUT.companion,
+    companion: normalizeCompanionId(raw.companion),
     aura: isOneOf(raw.aura, AVATAR_AURAS) ? raw.aura : DEFAULT_AVATAR_LOADOUT.aura,
     background: isOneOf(rawBackground, AVATAR_BACKGROUNDS) ? rawBackground : DEFAULT_AVATAR_LOADOUT.background,
     tcgStyle: isOneOf(raw.tcgStyle, AVATAR_TCG_STYLES) ? raw.tcgStyle : DEFAULT_AVATAR_LOADOUT.tcgStyle,
