@@ -58,8 +58,10 @@ test("unknown delivery can never masquerade as a delivered total", async () => {
 test("public signal labels preserve the final four-stage lifecycle", async () => {
   const dashboard = await source("lib/dashboard.ts");
   assert.ok(dashboard.includes('if (kind === "whisper") return "Whisper"'));
-  assert.ok(dashboard.includes('if (kind === "queue" || kind === "security" || kind === "traffic" || kind === "drop_pulse" || kind === "echo") return "Echo"'));
+  assert.ok(dashboard.includes('if (kind === "echo" || kind === "queue" || kind === "security") return "Echo"'));
   assert.ok(dashboard.includes('if (kind === "manifested") return "Manifested"'));
+  assert.ok(dashboard.includes('if (kind === "vanished") return "Vanished"'));
+  assert.ok(dashboard.includes('if (kind === "drop_pulse") return "Drop Pulse"'));
   assert.equal(dashboard.includes('kind === "manifested" || kind === "echo"'), false);
   assert.equal(dashboard.includes('kind === "drop_pulse" || kind === "whisper"'), false);
 });
