@@ -9,6 +9,7 @@ type RecipientRow = {
   endpoint_id: string;
   user_id: string;
   expo_push_token: string;
+  whisper_enabled: boolean;
   echo_enabled: boolean;
   manifested_enabled: boolean;
   vanished_enabled: boolean;
@@ -48,6 +49,7 @@ function epoch(iso: string) {
 
 function stageEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
   if (!recipient.push_enabled) return false;
+  if (alert.fateStage === "WHISPER") return recipient.whisper_enabled;
   if (alert.fateStage === "ECHO") return recipient.echo_enabled;
   if (alert.fateStage === "MANIFESTED") return recipient.manifested_enabled;
   if (alert.fateStage === "VANISHED") return recipient.vanished_enabled;
@@ -101,6 +103,7 @@ async function eligibleRecipients() {
       pe.id AS endpoint_id,
       pe.user_id,
       pe.expo_push_token,
+      COALESCE(np.whisper_enabled,true) AS whisper_enabled,
       COALESCE(np.echo_enabled,true) AS echo_enabled,
       COALESCE(np.manifested_enabled,true) AS manifested_enabled,
       COALESCE(np.vanished_enabled,false) AS vanished_enabled,

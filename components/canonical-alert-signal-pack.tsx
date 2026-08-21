@@ -30,23 +30,26 @@ function offerPrice(offer: CanonicalOfferLink) {
 }
 
 function threadColor(entry: CanonicalSignalThreadEntry) {
+  if (entry.fateStage === "WHISPER") return "#73e9fb";
+  if (entry.fateStage === "ECHO") return "#b397ff";
   if (entry.fateStage === "MANIFESTED") return "#62e9b1";
   if (entry.fateStage === "VANISHED") return "#ff7582";
-  if (entry.fateStage === "ECHO") return "#b397ff";
-  return "#73e9fb";
+  return "#8b8591";
 }
 
 function packSummary(alert: CanonicalAlert) {
   const alternatives = alert.preparedLinks.alternatives.length;
-  if (alert.fateStage === "ECHO") return `SIGNAL PACK · LINKS PREPARED · ${alert.signalThread.length} UPDATE${alert.signalThread.length === 1 ? "" : "S"}`;
+  if (alert.fateStage === "WHISPER") return `SIGNAL PACK · PRODUCT MOVEMENT · ${alert.signalThread.length} UPDATE${alert.signalThread.length === 1 ? "" : "S"}`;
+  if (alert.fateStage === "ECHO") return `SIGNAL PACK · GET READY · ${alert.signalThread.length} UPDATE${alert.signalThread.length === 1 ? "" : "S"}`;
   if (alert.fateStage === "VANISHED") return `SIGNAL PACK · ${alternatives} LIVE ALTERNATIVE${alternatives === 1 ? "" : "S"}`;
   return `SIGNAL PACK · CONFIRMED · ${alternatives + 1} READY LINK${alternatives ? "S" : ""}`;
 }
 
 function explainer(alert: CanonicalAlert) {
-  if (alert.fateStage === "ECHO") return "Early intelligence only. Product and comparison routes are prepared while FateDrop watches for confirmation.";
+  if (alert.fateStage === "WHISPER") return "Catalogue or product movement has been detected. FateDrop has prepared the product and comparison routes, but stock is not confirmed.";
+  if (alert.fateStage === "ECHO") return "Queue, traffic, security or access readiness has changed. Get ready; stock is still not confirmed.";
   if (alert.fateStage === "VANISHED") return "This observed availability is no longer verified. Use the live alternatives below when FateDrop still sees the same canonical product elsewhere.";
-  return "Confirmed availability. Open the retailer, compare the network, or inspect another live offer.";
+  return "Confirmed purchasable availability. Open the retailer, compare the network, or inspect another live offer.";
 }
 
 export function CanonicalAlertSignalPack({ alert, now }: { alert: CanonicalAlert; now: number }) {
@@ -55,6 +58,7 @@ export function CanonicalAlertSignalPack({ alert, now }: { alert: CanonicalAlert
   const official = pack.officialReference?.url !== pack.primary.url ? pack.officialReference : null;
   const compareHref = `/dashboard/search?q=${encodeURIComponent(pack.compareQuery)}&stock=in&sort=price`;
   const fateFindHref = `/dashboard/watchlist?q=${encodeURIComponent(pack.fateFindQuery)}`;
+  const primaryEarly = alert.fateStage === "WHISPER" || alert.fateStage === "ECHO";
 
   return <details style={panel}>
     <summary style={{ cursor: "pointer", color: "#9beeff", fontSize: 8, fontWeight: 900, letterSpacing: ".08em", listStylePosition: "inside" }}>{packSummary(alert)}</summary>
@@ -62,7 +66,7 @@ export function CanonicalAlertSignalPack({ alert, now }: { alert: CanonicalAlert
       <p style={{ margin: 0, color: "#837c89", fontSize: 9, lineHeight: 1.55 }}>{explainer(alert)}</p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-        <a href={pack.primary.url} target="_blank" rel="noreferrer" style={{ ...action, borderColor: alert.fateStage === "MANIFESTED" ? "rgba(98,233,177,.28)" : "rgba(179,151,255,.28)", color: alert.fateStage === "MANIFESTED" ? "#8ff2ca" : "#cbb8ff" }}>{pack.primary.label} ↗</a>
+        <a href={pack.primary.url} target="_blank" rel="noreferrer" style={{ ...action, borderColor: alert.fateStage === "MANIFESTED" ? "rgba(98,233,177,.28)" : primaryEarly ? "rgba(179,151,255,.28)" : "rgba(116,225,244,.16)", color: alert.fateStage === "MANIFESTED" ? "#8ff2ca" : primaryEarly ? "#cbb8ff" : "#a8f1ff" }}>{pack.primary.label} ↗</a>
         <Link href={compareHref} style={action}>COMPARE ALL OFFERS →</Link>
         <Link href={fateFindHref} style={action}>CREATE FATEFIND →</Link>
         {official ? <a href={official.url} target="_blank" rel="noreferrer" style={action}>OFFICIAL / RRP REFERENCE ↗</a> : null}

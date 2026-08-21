@@ -26,6 +26,16 @@ test('RRP and delivered-price comparisons remain separate', () => {
   assert.match(moduleSource, /ro\.postage_pence IS NOT NULL/);
 });
 
+test('canonical alerts preserve the final four-stage lifecycle', () => {
+  assert.match(moduleSource, /"WHISPER" \| "ECHO" \| "MANIFESTED" \| "VANISHED"/);
+  assert.match(moduleSource, /state === "whisper"\) return "WHISPER"/);
+  assert.match(moduleSource, /state === "echo"\) return "ECHO"/);
+  assert.match(moduleSource, /state === "manifested"\) return "MANIFESTED"/);
+  assert.match(moduleSource, /state === "vanished"\) return "VANISHED"/);
+  assert.doesNotMatch(moduleSource, /state === "whisper"\) return "ECHO"/);
+  assert.doesNotMatch(moduleSource, /state === "manifested" \|\| state === "echo"/);
+});
+
 test('canonical signal packs use exact offer history and canonical-product alternatives', () => {
   assert.match(moduleSource, /WHERE hs\.offer_id=s\.offer_id/);
   assert.match(moduleSource, /WHERE ro\.product_id=s\.product_id AND ro\.offer_id<>s\.offer_id/);
@@ -39,15 +49,16 @@ test('canonical signal packs use exact offer history and canonical-product alter
   assert.match(moduleSource, /lowestKnownUrl: links\.lowestKnown\?\.url/);
 });
 
-test('web Alerts exposes expandable lifecycle-aware signal packs', () => {
-  assert.match(webAlertsSource, /CanonicalAlertSignalPack/);
-  assert.match(webAlertsSource, /alert\.fateStage === "VANISHED"/);
+test('web Alerts exposes lifecycle-aware signal packs for Whisper and Echo separately', () => {
+  assert.match(webAlertsSource, /alert\.fateStage === "WHISPER"/);
   assert.match(webAlertsSource, /alert\.fateStage === "ECHO"/);
+  assert.match(webAlertsSource, /alert\.fateStage === "VANISHED"/);
+  assert.match(webPackSource, /Catalogue or product movement has been detected/);
+  assert.match(webPackSource, /Queue, traffic, security or access readiness has changed/);
   assert.match(webPackSource, /SIGNAL TRAIL/);
   assert.match(webPackSource, /STILL LIVE ELSEWHERE/);
   assert.match(webPackSource, /COMPARE ALL OFFERS/);
   assert.match(webPackSource, /CREATE FATEFIND/);
-  assert.match(webPackSource, /Early intelligence only/);
 });
 
 test('mobile API consumes shared alerts and redacts premium intelligence for free accounts', () => {
@@ -61,8 +72,13 @@ test('mobile API consumes shared alerts and redacts premium intelligence for fre
   assert.match(routeSource, /canonicalAlerts\.map\(freeAlert\)/);
 });
 
-test('push delivery is feature-gated, deduplicated and failure-isolated', () => {
+test('push delivery is feature-gated, deduplicated and honors all four lifecycle preferences', () => {
   assert.match(pushSource, /FATEDROP_PUSH_DISPATCH_ENABLED === "true"/);
+  assert.match(pushSource, /whisper_enabled/);
+  assert.match(pushSource, /alert\.fateStage === "WHISPER"/);
+  assert.match(pushSource, /alert\.fateStage === "ECHO"/);
+  assert.match(pushSource, /alert\.fateStage === "MANIFESTED"/);
+  assert.match(pushSource, /alert\.fateStage === "VANISHED"/);
   assert.match(pushSource, /fatedrop_notification_outbox/);
   assert.match(pushSource, /ON CONFLICT \(dedupe_key\) DO NOTHING/);
   assert.match(pushSource, /fatedrop_notification_delivery_attempts/);

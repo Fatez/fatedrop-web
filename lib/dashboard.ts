@@ -10,9 +10,11 @@ function startOfUtcDay(timestamp: number) {
 
 export function publicSignalLabel(signal: NetworkSignal) {
   const kind = signal.kind ?? signal.state;
-  if (kind === "queue" || kind === "security" || kind === "drop_pulse" || kind === "whisper") return "Echo";
-  if (kind === "manifested" || kind === "echo") return "Manifested";
+  if (kind === "whisper") return "Whisper";
+  if (kind === "echo" || kind === "queue" || kind === "security") return "Echo";
+  if (kind === "manifested") return "Manifested";
   if (kind === "vanished") return "Vanished";
+  if (kind === "drop_pulse") return "Drop Pulse";
   if (kind === "price_change") return "Price change";
   if (kind === "launch_date_change") return "Launch change";
   return "Signal";
@@ -54,11 +56,11 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
   const personalRecent = activity.slice(0, 6);
   const confirmed = (network?.recentSignals ?? []).filter((signal) => {
     const kind = signal.kind ?? signal.state;
-    return kind === "manifested" || kind === "echo";
+    return kind === "manifested";
   }).slice(0, 4);
   const early = (network?.recentSignals ?? []).filter((signal) => {
     const kind = signal.kind ?? signal.state;
-    return kind === "whisper" || kind === "queue" || kind === "security" || kind === "drop_pulse";
+    return kind === "whisper" || kind === "echo" || kind === "queue" || kind === "security" || kind === "drop_pulse";
   }).slice(0, 4);
 
   const publishedBaseline = {
@@ -74,10 +76,9 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     networkHistory: history,
     publishedBaseline,
     publicSignalMetrics: {
-      echo: network?.metrics.whisper ?? null,
-      manifested: network?.metrics.manifested === null || network?.metrics.manifested === undefined
-        ? network?.metrics.echo ?? null
-        : (network.metrics.manifested ?? 0) + (network.metrics.echo ?? 0),
+      whisper: network?.metrics.whisper ?? null,
+      echo: network?.metrics.echo ?? null,
+      manifested: network?.metrics.manifested ?? null,
       vanished: network?.metrics.vanished ?? null,
     },
     personal: {
@@ -116,7 +117,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         label: "Network lifecycle metrics",
         source: network ? network.source : "Awaiting FateDrop Cloud metric feed",
         updatedAt: network?.measuredAt ?? null,
-        note: network ? "Derived from the latest persisted network snapshot. Public labels map internal weak/precursor states to Echo and confirmed restocks to Manifested." : "Until a live feed is connected, lifecycle and catalogue counters remain unavailable rather than falling back to stale values.",
+        note: network ? "Derived from the latest persisted network snapshot. Whisper, Echo, Manifested and Vanished retain the same meanings as the production Signal Engine." : "Until a live feed is connected, lifecycle and catalogue counters remain unavailable rather than falling back to stale values.",
       },
     ],
   };
@@ -143,8 +144,9 @@ export function activityLabel(event: DashboardActivityEvent) {
   if (event.type === "wishlist_hit") return "FateMatch";
   if (event.type === "store_tracked") return "Store tracked";
   if (event.type === "market_saving") return "True Price saving";
-  if (event.signalState === "whisper") return "Echo";
-  if (event.signalState === "echo" || event.signalState === "manifested") return "Manifested";
+  if (event.signalState === "whisper") return "Whisper";
+  if (event.signalState === "echo") return "Echo";
+  if (event.signalState === "manifested") return "Manifested";
   if (event.signalState === "vanished") return "Vanished";
   return "Signal seen";
 }

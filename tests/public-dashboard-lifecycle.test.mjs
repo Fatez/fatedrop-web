@@ -3,16 +3,24 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const dashboardPage = readFileSync(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8");
+const dashboardData = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
 
-test("dashboard uses normalized public lifecycle counters", () => {
-  assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\.manifested\)/);
+test("dashboard keeps all four canonical lifecycle counters distinct", () => {
+  assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\.whisper\)/);
   assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\.echo\)/);
-  assert.doesNotMatch(dashboardPage, /metric\(network\?\.metrics\.echo\).*ECHO/);
+  assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\.manifested\)/);
+  assert.match(dashboardData, /whisper: network\?\.metrics\.whisper/);
+  assert.match(dashboardData, /echo: network\?\.metrics\.echo/);
+  assert.match(dashboardData, /manifested: network\?\.metrics\.manifested/);
+  assert.doesNotMatch(dashboardData, /echo: network\?\.metrics\.whisper/);
+  assert.doesNotMatch(dashboardData, /\(network\.metrics\.manifested \?\? 0\) \+ \(network\.metrics\.echo \?\? 0\)/);
 });
 
-test("dashboard exposes only public lifecycle terminology", () => {
-  assert.match(dashboardPage, /Echo, Manifested and Vanished lifecycle intelligence/);
-  assert.match(dashboardPage, /No Echo activity yet\./);
-  assert.doesNotMatch(dashboardPage, /Whisper, Manifested/);
-  assert.doesNotMatch(dashboardPage, /No Whisper \/ Echo activity yet/);
+test("dashboard exposes the final four-stage lifecycle terminology", () => {
+  assert.match(dashboardPage, /Whisper, Echo, Manifested and Vanished lifecycle intelligence/);
+  assert.match(dashboardPage, /Whisper and Echo activity will surface here/);
+  assert.match(dashboardData, /if \(kind === "whisper"\) return "Whisper"/);
+  assert.match(dashboardData, /kind === "echo" \|\| kind === "queue" \|\| kind === "security"/);
+  assert.match(dashboardData, /if \(kind === "manifested"\) return "Manifested"/);
+  assert.match(dashboardData, /if \(kind === "vanished"\) return "Vanished"/);
 });
