@@ -55,12 +55,13 @@ test("unknown delivery can never masquerade as a delivered total", async () => {
   assert.ok(truePrice.includes("deliveredTruePricePence = input.deliveryKnown && input.mandatoryPostagePence !== null"));
 });
 
-test("public signal labels simplify Whisper and legacy restock Echo", async () => {
+test("public signal labels preserve the final four-stage lifecycle", async () => {
   const dashboard = await source("lib/dashboard.ts");
-  assert.ok(dashboard.includes('kind === "queue" || kind === "security" || kind === "drop_pulse" || kind === "whisper"'));
-  assert.ok(dashboard.includes('return "Echo"'));
-  assert.ok(dashboard.includes('kind === "manifested" || kind === "echo"'));
-  assert.ok(dashboard.includes('return "Manifested"'));
+  assert.ok(dashboard.includes('if (kind === "whisper") return "Whisper"'));
+  assert.ok(dashboard.includes('if (kind === "queue" || kind === "security" || kind === "traffic" || kind === "drop_pulse" || kind === "echo") return "Echo"'));
+  assert.ok(dashboard.includes('if (kind === "manifested") return "Manifested"'));
+  assert.equal(dashboard.includes('kind === "manifested" || kind === "echo"'), false);
+  assert.equal(dashboard.includes('kind === "drop_pulse" || kind === "whisper"'), false);
 });
 
 test("Companion has a versioned renderer boundary for future 3D assets", async () => {
