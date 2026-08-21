@@ -82,13 +82,13 @@ export function FateEncountersLive({ initialEvents, live }: { initialEvents: Enc
     }
   }
 
-  async function usePostcode() {
+  async function searchPostcode() {
     const clean = postcode.trim().toUpperCase();
     if (!clean) return setRadarError("Enter a UK postcode first.");
     await runRadar(new URLSearchParams({ postcode: clean }));
   }
 
-  function useDeviceLocation() {
+  function requestDeviceLocation() {
     if (!("geolocation" in navigator)) return setRadarError("Location is not available in this browser. Use a postcode instead.");
     setRadarLoading(true);
     setRadarError("");
@@ -127,7 +127,7 @@ export function FateEncountersLive({ initialEvents, live }: { initialEvents: Enc
 
     <section className={styles.radar}>
       <div className={styles.radarTop}><div><p className={styles.eyebrow}>Local Radar</p><h3>What is happening near you?</h3><p className={styles.radarCopy}>Use device location or a UK postcode to find nearby verified events. Shop discovery uses Google Places when the hosted provider is configured; a discovered shop is never treated as stock evidence.</p></div></div>
-      <div className={styles.locationRow}><input className={styles.input} value={postcode} onChange={(event) => setPostcode(event.target.value)} placeholder="UK postcode" aria-label="UK postcode"/><button type="button" className={styles.action} onClick={() => void usePostcode()}>Search postcode</button><button type="button" className={styles.action} onClick={useDeviceLocation}>Use my location</button></div>
+      <div className={styles.locationRow}><input className={styles.input} value={postcode} onChange={(event) => setPostcode(event.target.value)} placeholder="UK postcode" aria-label="UK postcode"/><button type="button" className={styles.action} onClick={() => void searchPostcode()}>Search postcode</button><button type="button" className={styles.action} onClick={requestDeviceLocation}>Use my location</button></div>
       <div className={styles.radiusRow}>{[10,25,50,100].map((value) => <button type="button" key={value} className={`${styles.radius} ${radius === value ? styles.chipActive : ""}`} onClick={() => setRadius(value)}>{value} miles</button>)}</div>
       {radarLoading ? <p className={styles.loading}>Checking nearby Fate Encounters…</p> : null}{radarError ? <p className={styles.error}>{radarError}</p> : null}
       {radar?.providers?.shops?.status === "unconfigured" ? <div className={styles.note}>Nearby event distance is live. Google Places shop discovery is not configured on the hosted service yet, so FateDrop is deliberately showing zero discovered shops rather than inventing them.</div> : null}
