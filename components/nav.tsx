@@ -47,7 +47,7 @@ export function Nav() {
                 <span><b>Dashboard</b><small>Search, signals, True Price & activity</small></span><i>▦</i>
               </Link>
               <Link href="/dashboard/avatar" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
-                <span><b>FateDrop Companion</b><small>Persistent collector loadout foundation</small></span><i>◇</i>
+                <span><b>Koru &amp; Friends</b><small>Choose your FateDrop companion</small></span><i>◇</i>
               </Link>
               <Link href="/subscriptions#collectors" role="menuitem" onClick={() => { setAccountOpen(false); setOpen(false); }}>
                 <span><b>Membership</b><small>Trial, Premium & billing</small></span><i>♛</i>
