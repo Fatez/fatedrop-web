@@ -1,7 +1,7 @@
 import { fateDropPostgres } from "@/lib/postgres";
 
 export type FatePriceVerdict = "LOWEST_KNOWN" | "BETTER_OFFER_FOUND" | "NO_FAIR_COMPARISON";
-export type CanonicalSignalStage = "ECHO" | "MANIFESTED" | "VANISHED" | "NETWORK";
+export type CanonicalSignalStage = "WHISPER" | "ECHO" | "MANIFESTED" | "VANISHED" | "NETWORK";
 
 export type CanonicalOfferLink = {
   offerId: string;
@@ -156,9 +156,10 @@ type SignalRow = {
   alternatives_json: unknown;
 };
 
-function publicStage(state: string): CanonicalSignalStage {
-  if (state === "whisper") return "ECHO";
-  if (state === "manifested" || state === "echo") return "MANIFESTED";
+export function publicStage(state: string): CanonicalSignalStage {
+  if (state === "whisper") return "WHISPER";
+  if (state === "echo") return "ECHO";
+  if (state === "manifested") return "MANIFESTED";
   if (state === "vanished") return "VANISHED";
   return "NETWORK";
 }
@@ -291,7 +292,7 @@ function preparedLinks(row: SignalRow, stage: CanonicalSignalStage, priceIntelli
     deliveredPricePence: row.delivered_price_pence,
     stockStatus: row.stock_status,
     intent: stage === "MANIFESTED" ? "buy" : "inspect",
-    label: stage === "MANIFESTED" ? "BUY / VIEW PRODUCT" : stage === "ECHO" ? "INSPECT PRODUCT" : "VIEW LAST PRODUCT PAGE",
+    label: stage === "MANIFESTED" ? "BUY / VIEW PRODUCT" : stage === "VANISHED" ? "VIEW LAST PRODUCT PAGE" : "INSPECT PRODUCT",
   };
 
   const lowestKnown = offerLink({
@@ -343,7 +344,7 @@ function notificationCopy(
   links: CanonicalPreparedLinks,
 ): CanonicalAlert["notification"] {
   const stage = publicStage(row.state);
-  const stageLabel = stage === "MANIFESTED" ? "Manifested" : stage === "ECHO" ? "Echo" : stage === "VANISHED" ? "Vanished" : "Signal";
+  const stageLabel = stage === "WHISPER" ? "Whisper" : stage === "ECHO" ? "Echo" : stage === "MANIFESTED" ? "Manifested" : stage === "VANISHED" ? "Vanished" : "Signal";
   const price = pounds(row.price_pence);
   const rrp = pounds(priceIntelligence.rrpPence);
   const delta = priceIntelligence.rrpDeltaPercent;
@@ -351,7 +352,8 @@ function notificationCopy(
   const lines: string[] = [];
   lines.push(price ? `${row.retailer_name} · ${price}` : row.retailer_name);
 
-  if (stage === "ECHO") lines.push("Product page prepared · stock is not confirmed yet");
+  if (stage === "WHISPER") lines.push("Catalogue or product movement detected · stock is not confirmed");
+  if (stage === "ECHO") lines.push("Queue, traffic or security readiness changed · get ready · stock is not confirmed");
   if (stage === "VANISHED") lines.push("Observed availability is no longer verified");
 
   if (rrp && delta != null) {
