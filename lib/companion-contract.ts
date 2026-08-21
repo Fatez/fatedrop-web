@@ -30,15 +30,16 @@ export const DEFAULT_COMPANION_ASSET_MANIFEST: CompanionAssetManifest = {
   droidModelUrl: null,
   droidFormat: null,
   animationClips: {},
-  fallbackArtworkVersion: "avatar-v2",
+  fallbackArtworkVersion: "koru-v1",
 };
 
 export function companionReactionFromSignal(input: { kind?: string | null; state?: string | null; fateMatch?: boolean; major?: boolean }): CompanionReaction {
   if (input.fateMatch) return "fatematch";
   if (input.major) return "major";
-  const kind = input.kind ?? input.state;
-  if (kind === "queue" || kind === "security" || kind === "drop_pulse" || kind === "whisper") return "echo";
-  if (kind === "manifested" || kind === "echo") return "manifested";
+  const kind = (input.kind ?? input.state ?? "").toLowerCase();
+  if (kind === "whisper" || kind === "drop_pulse") return "watching";
+  if (kind === "echo" || kind === "queue" || kind === "security" || kind === "traffic" || kind === "access_readiness" || kind === "access-blocked" || kind === "access_blocked") return "echo";
+  if (kind === "manifested") return "manifested";
   if (kind === "vanished") return "vanished";
   return "watching";
 }

@@ -18,7 +18,7 @@ test("public network proof never falls back to the retired hard-coded snapshot",
   assert.ok(dashboard.includes("Awaiting FateDrop Cloud metric feed"));
 });
 
-test("canonical dashboard language is Search, FateFind and FateDrop Companion", async () => {
+test("canonical dashboard language is Search, FateFind and Koru", async () => {
   const [nav, fateFind, companion] = await Promise.all([
     source("components/dashboard-nav.tsx"),
     source("app/dashboard/watchlist/page.tsx"),
@@ -30,7 +30,9 @@ test("canonical dashboard language is Search, FateFind and FateDrop Companion", 
   assert.ok(fateFind.includes('title="FateFind"'));
   assert.ok(fateFind.includes("FateFind</b> is the hunt"));
   assert.ok(fateFind.includes("successful result is a <b>FateMatch</b>"));
-  assert.ok(companion.includes('title="FateDrop Companion"'));
+  assert.ok(companion.includes('title="Koru"'));
+  assert.ok(companion.includes("Meet Koru"));
+  assert.ok(companion.includes("FateDrop&apos;s signal voice"));
 });
 
 test("dashboard Search and True Price use the canonical Signal Engine", async () => {
@@ -66,7 +68,7 @@ test("public signal labels preserve the final four-stage lifecycle", async () =>
   assert.equal(dashboard.includes('kind === "drop_pulse" || kind === "whisper"'), false);
 });
 
-test("Companion has a versioned renderer boundary for future 3D assets", async () => {
+test("Koru Companion has a versioned renderer boundary for future 3D assets", async () => {
   const [contract, renderer] = await Promise.all([
     source("lib/companion-contract.ts"),
     source("components/companion-renderer.tsx"),
@@ -78,7 +80,8 @@ test("Companion has a versioned renderer boundary for future 3D assets", async (
   assert.ok(contract.includes('"fallback-2d"'));
   assert.ok(contract.includes('"webgl-3d"'));
   assert.ok(renderer.includes('mode === "webgl-3d"'));
-  assert.ok(renderer.includes("AvatarPreview"));
+  assert.ok(renderer.includes("KoruMascot"));
+  assert.equal(renderer.includes("AvatarPreview"), false);
 });
 
 test("FateFind API uses same-origin writes while keeping legacy client response compatibility", async () => {
