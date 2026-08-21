@@ -58,10 +58,10 @@ export default async function DashboardPage() {
         </article>
 
         <article className="fd-companion-home fd-living-panel">
-          <div><span>FATEDROP COMPANION · FOUNDATION</span><h2>Your signal should feel<br/><em>like yours.</em></h2><p>The account already stores a persistent Companion loadout and signal reactions. The premium 3D character, animation layer and floating signal droid can plug into that identity without changing the evidence underneath an alert.</p></div>
-          <div className="fd-companion-states"><span>IDENTITY</span><span>ALERT REACTIONS</span><span>3D READY</span><span>APP CONTINUITY</span></div>
-          <div className="fd-companion-status"><i/><div><small>CURRENT STATUS</small><strong>Persistent loadout foundation · richer 3D renderer integrating next</strong></div></div>
-          <Link href="/dashboard/avatar">Customise FateDrop Companion →</Link>
+          <div><span>KORU &amp; FRIENDS · FIVE ACTIVE SLOTS</span><h2>Choose who walks<br/><em>the network with you.</em></h2><p>Koru remains FateDrop&apos;s mascot and signal voice. Your FateDrop ID can choose Koru, Fenn, Aeris, Nyxen or Solix as its personal companion; every character follows the same evidence-backed signal lifecycle.</p></div>
+          <div className="fd-companion-states"><span>5 CHARACTERS</span><span>ONE SIGNAL LANGUAGE</span><span>GLB SLOTS READY</span><span>ACCOUNT SYNC</span></div>
+          <div className="fd-companion-status"><i/><div><small>CURRENT STATUS</small><strong>Five stable companion slots ready · 3D models can register one at a time</strong></div></div>
+          <Link href="/dashboard/avatar">Choose Koru &amp; Friends companion →</Link>
         </article>
       </section>
 
