@@ -12,7 +12,7 @@ import { getCurrentSnapshot } from "@/lib/auth";
 import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, formatMemberSince, hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
 import { serverNowSeconds } from "@/lib/server-time";
 
-export const metadata: Metadata = { title: "My FateDrop ID", description: "Your FateDrop profile, membership and connected network access.", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "My FateDrop ID", description: "Your FateDrop profile, Koru & Friends companion, membership and connected network access.", robots: { index: false, follow: false } };
 
 function initials(name: string) {
   return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
@@ -76,10 +76,10 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </article>
 
         <article className="account-panel profile-panel-wide">
-          <div className="account-panel-head"><div><span>03 / PROFILE</span><h2>Shape your network identity.</h2></div><i>EDITABLE</i></div>
-          <p>Your profile picture and account details stay lightweight. The separate FateDrop Companion carries the custom character loadout, signal reactions and future 3D identity layer without overloading the login/profile model.</p>
+          <div className="account-panel-head"><div><span>03 / PROFILE &amp; COMPANION</span><h2>Your identity. Your companion.</h2></div><i>EDITABLE</i></div>
+          <p>Your profile picture and account details stay lightweight. Koru &amp; Friends is a separate companion layer: choose Koru, Fenn, Aeris, Nyxen or Solix without turning profile cosmetics into another competing character system.</p>
           <ProfileEditor profile={{ displayName: snapshot.account.displayName, username: snapshot.account.username, bio: snapshot.account.bio, avatarUrl: snapshot.account.avatarUrl, primaryTcg: snapshot.account.primaryTcg, collectorStyle: snapshot.account.collectorStyle, region: snapshot.account.region, profileTheme: snapshot.account.profileTheme }} />
-          <div className="button-row"><Link className="button button-secondary" href="/dashboard/avatar">Customise FateDrop Companion <span>↗</span></Link></div>
+          <div className="button-row"><Link className="button button-secondary" href="/dashboard/avatar">Choose Koru &amp; Friends companion <span>↗</span></Link></div>
         </article>
 
         <article className="account-panel loyalty-panel">
