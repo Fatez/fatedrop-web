@@ -7,15 +7,15 @@ import type { AvatarLoadout } from "@/lib/avatar-loadout";
 import type { NetworkSignal, SignalIntensity, SignalKind } from "@/lib/dashboard-storage";
 
 const kindMeta: Record<SignalKind, { label: string; glyph: string; context?: string }> = {
-  whisper: { label: "ECHO", glyph: "E", context: "early network intelligence" },
+  whisper: { label: "WHISPER", glyph: "W", context: "product / catalogue movement" },
   manifested: { label: "MANIFESTED", glyph: "M", context: "confirmed availability" },
   vanished: { label: "VANISHED", glyph: "V", context: "confirmed availability lost" },
-  echo: { label: "MANIFESTED", glyph: "M", context: "confirmed restock" },
+  echo: { label: "ECHO", glyph: "E", context: "access readiness changed" },
   price_change: { label: "PRICE CHANGE", glyph: "£" },
   launch_date_change: { label: "LAUNCH CHANGE", glyph: "D" },
   queue: { label: "ECHO", glyph: "E", context: "queue condition observed" },
   security: { label: "ECHO", glyph: "E", context: "security / traffic condition observed" },
-  drop_pulse: { label: "ECHO", glyph: "E", context: "evidence-backed activity context" },
+  drop_pulse: { label: "DROP PULSE", glyph: "P", context: "evidence-backed activity context" },
 };
 
 function money(pence: number | null | undefined) {
@@ -102,7 +102,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
       confidence: 0.99,
       title: "Destined Rivals Elite Trainer Box · DEMO",
       retailer: "Pokémon Center UK · LOCAL DEMO",
-      detail: "A confirmed product-level Manifested event. The focused Signal Card remains distinct from an upstream early Echo.",
+      detail: "A confirmed product-level Manifested event. The focused Signal Card remains distinct from earlier Whisper product movement or Echo access-readiness evidence.",
       deliveredPricePence: 4999,
       occurredAt,
     });
@@ -112,7 +112,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
     const occurredAt = Math.floor(Date.now() / 1000);
     addDemo({
       id: `local-demo-major-${Date.now()}`,
-      state: "whisper",
+      state: "echo",
       kind: "security",
       intensity: "major",
       confidence: 0.86,
@@ -126,7 +126,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
 
   const majorSignal = signals.find((signal) => signalIntensity(signal) === "major" && now - signal.occurredAt <= 1800) ?? null;
   const majorDemo = Boolean(majorSignal?.id.startsWith("local-demo-"));
-  const stageSignal = majorSignal && (unlocked || majorDemo) ? majorSignal : majorSignal ? { ...majorSignal, title: "Major network movement detected", retailer: null, detail: "FateDrop detected a significant upstream condition change. This is Echo-level context, not confirmed stock; actionable detail is Premium.", confidence: null } : null;
+  const stageSignal = majorSignal && (unlocked || majorDemo) ? majorSignal : majorSignal ? { ...majorSignal, title: "Major network movement detected", retailer: null, detail: "FateDrop detected a significant upstream access-readiness condition change. This is Echo-level context, not confirmed stock; actionable detail is Premium.", confidence: null } : null;
   const majorFresh = Boolean(majorSignal && freshIds.has(majorSignal.id));
 
   return <section className="fd-alerts-feed">
@@ -146,7 +146,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
         <footer><span><small>TRUE PRICE</small><b>{demo ? money(signal.deliveredPricePence) : unlocked ? money(signal.deliveredPricePence) : "£—.——"}</b></span><span><small>DETECTED</small><b>{relativeTime(signal.occurredAt, now)}</b></span><span><small>{confidence !== null ? "CONFIDENCE" : "SIGNAL"}</small><b>{confidence !== null ? `${confidence}%` : meta.label}</b></span></footer>
         {!unlocked && !demo ? <div className="fd-alert-lock">♛</div> : null}
       </article>;
-    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>Your FateDrop Companion remains on watch. Meaningful precursor movement can surface publicly as Echo; confirmed availability materialises separately as Manifested.</p><button type="button" onClick={testMajorSignal}>Test the avatar surge locally</button><button type="button" onClick={testProductSignal}>Test a product signal locally</button></div>}
+    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>Your FateDrop Companion remains on watch. Product/catalogue movement can surface as Whisper; queue, traffic or security readiness can surface as Echo; confirmed availability materialises separately as Manifested.</p><button type="button" onClick={testMajorSignal}>Test the avatar surge locally</button><button type="button" onClick={testProductSignal}>Test a product signal locally</button></div>}
     <style jsx>{`.fd-alert-stage{padding:14px;border-bottom:1px solid #19161e;background:#08070c}.fd-alert-feed-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.fd-alert-feed-actions button,.fd-alerts-empty button{min-height:32px;padding:0 10px;border:1px solid rgba(88,232,255,.18);border-radius:9px;background:linear-gradient(135deg,rgba(88,232,255,.07),rgba(157,109,255,.08));color:#b9f3ff;font-size:7px;font-weight:900;letter-spacing:.09em;cursor:pointer}.fd-alerts-empty button+button{margin-left:7px}.fd-signal-card.demo{box-shadow:inset 0 0 0 1px rgba(88,232,255,.14)}.fd-signal-card.intensity-major{background:radial-gradient(circle at 100% 0%,rgba(88,232,255,.08),transparent 25%),radial-gradient(circle at 85% 15%,rgba(157,109,255,.1),transparent 36%),#0b0a10}.fd-signal-card-top em{margin-left:4px;padding:3px 5px;border:1px solid rgba(88,232,255,.18);border-radius:999px;color:#75eaff;font-size:5px;font-style:normal;letter-spacing:.08em}.fd-signal-card.intensity-major .fd-signal-card-top em{border-color:rgba(190,123,255,.28);color:#caa8ff}@media(max-width:760px){.fd-alerts-feedhead{align-items:flex-start;gap:10px;flex-direction:column}.fd-alert-feed-actions{justify-content:flex-start}}`}</style>
   </section>;
 }
