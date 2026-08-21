@@ -6,7 +6,8 @@ import { NetworkProof } from "@/components/network-proof";
 import { FinalCta, SiteShell } from "@/components/page-shell";
 import { WhyFateDrop } from "@/components/why-fatedrop";
 import { FateSignalField } from "@/components/fate-signal-field";
-import { KoruAppSection, KoruFriendsHomeTeaser, KoruHomeHero, KoruVoiceSection } from "@/components/koru-home-sections";
+import { KoruAppSection } from "@/components/koru-home-sections";
+import { KoruReferenceLanding } from "@/components/koru-home-reference";
 import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, TRIAL_DAYS } from "@/lib/membership";
 
 export const metadata: Metadata = {
@@ -17,13 +18,10 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <SiteShell>
-      <KoruHomeHero />
-
-      <section className="manifesto-strip" aria-label="FateDrop principles"><div><span>YOU GET THE SIGNAL.</span><span>SUPPORT INDEPENDENTS.</span><span>COLLECT SMARTER.</span><span>YOU GET THE SIGNAL.</span></div></section>
+      <KoruReferenceLanding />
 
       <NetworkProof />
 
-      <KoruVoiceSection />
       <KoruAppSection />
 
       <section className="home-outcomes section-shell" aria-labelledby="home-outcomes-title">
@@ -75,7 +73,6 @@ export default function Home() {
       </section>
 
       <FutureExpansion />
-      <KoruFriendsHomeTeaser />
 
       <FinalCta />
     </SiteShell>
