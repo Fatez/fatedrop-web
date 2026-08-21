@@ -17,6 +17,7 @@ test("Koru remains the FateDrop mascot and approved artwork is present", () => {
   const brand = read("lib/koru-brand.ts");
   assert.ok(brand.includes('name: "Koru"'));
   assert.ok(brand.includes('role: "FateDrop Signal Companion"'));
+  assert.equal(brand.includes("modelUrl"), false, "3D registration must live in the companion contract only");
   for (const file of [
     "public/assets/companions/koru-portrait.webp",
     "public/assets/companions/koru-signal-companion.webp",
@@ -46,11 +47,20 @@ test("Kael and Nyra are archive-only and never active companion IDs", () => {
   assert.equal(activeLine.includes("nyra"), false);
 });
 
-test("retired Scout and Droid GLBs are absent from the active web tree", () => {
-  assert.equal(fs.existsSync(path.join(root, "public/assets/companions/fatedrop-male.glb")), false);
-  assert.equal(fs.existsSync(path.join(root, "public/assets/companions/fatedrop-droid.glb")), false);
-  assert.equal(fs.existsSync(path.join(root, "lib/companion-assets.ts")), false);
-  assert.equal(fs.existsSync(path.join(root, "components/companion-3d-stage.tsx")), false);
+test("retired companion and illustrated-avatar renderer experiments are absent", () => {
+  for (const file of [
+    "public/assets/companions/fatedrop-male.glb",
+    "public/assets/companions/fatedrop-droid.glb",
+    "lib/companion-assets.ts",
+    "components/companion-3d-stage.tsx",
+    "components/avatar-builder.tsx",
+    "components/avatar-preview.tsx",
+    "components/avatar-option-thumbnail.tsx",
+    "components/avatar-anime-character.tsx",
+    "components/avatar-layered-character.tsx",
+    "lib/avatar-assets.ts",
+    "public/assets/avatar-v2/avatar-sprites.svg",
+  ]) assert.equal(fs.existsSync(path.join(root, file)), false, `${file} should remain retired`);
 });
 
 test("no standalone HTML companion experiments remain in the website repository", () => {
@@ -69,13 +79,9 @@ test("companion reaction contract preserves all four public lifecycle meanings",
   assert.equal(contract.includes('kind === "manifested" || kind === "echo"'), false);
 });
 
-test("legacy mini-companions cannot return through active profile persistence", () => {
+test("legacy mini-companions cannot return through active persistence", () => {
   const loadout = read("lib/avatar-loadout.ts");
-  const assets = read("lib/avatar-assets.ts");
-  const layered = read("components/avatar-layered-character.tsx");
   for (const retired of ["radar-drone", "signal-orb", "mini-beacon"]) assert.equal(loadout.includes(retired), false);
-  assert.equal(assets.includes('"companion"'), false);
-  assert.equal(layered.includes('avatarLayerHref("companion"'), false);
 });
 
 test("dashboard selector exposes five active slots and profile renders the real companion", () => {
