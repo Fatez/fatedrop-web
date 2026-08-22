@@ -88,3 +88,16 @@ test("Koru and Friends is the merch bridge rather than a second product", () => 
   assert.ok(sections.includes('href="/merch"'));
   assert.ok(merch.includes("The culture around the signal."));
 });
+
+test("merch page uses the approved campaign, two collection drops and Stripe-ready product slots", () => {
+  const merch = read("app/merch/page.tsx");
+  const brand = read("lib/koru-brand.ts");
+  assert.ok(fs.existsSync("public/assets/merch/koru-friends-merch-hero.png"));
+  assert.ok(brand.includes("/assets/merch/koru-friends-merch-hero.png"));
+  assert.ok(merch.includes("Koru &amp; Friends"));
+  assert.ok(merch.includes("FateDrop Signal Collection"));
+  assert.ok(merch.includes("Oru Wanderer Tee"));
+  assert.ok(merch.includes("five active companion slots"));
+  assert.ok(merch.includes("Buy via Stripe"));
+  assert.ok(merch.includes("Price + Stripe checkout to be connected"));
+});
