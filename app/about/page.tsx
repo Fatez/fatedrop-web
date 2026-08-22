@@ -17,8 +17,8 @@ export default function AboutPage() {
         eyebrow="Why FateDrop exists"
         title="A better bridge between collectors and the stores holding the stock."
         description="Collectors face fragmented stock, noisy alerts and weak price context. Independent TCG retailers can hold exactly the right product and still be difficult to discover. FateDrop is being built between those two problems."
-        image="/assets/home/koru-home-hero.png?v=20260822-about"
-        alt="Koru overlooking the FateDrop landscape and wider collector-retailer network"
+        image="/assets/market/about.png"
+        alt="FateDrop companions overlooking a distant city and mountain landscape at sunrise"
         proof={["Collector clarity", "Independent visibility", "Evidence-led signals", "One connected TCG network"]}
         focal="right"
       >
