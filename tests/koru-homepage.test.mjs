@@ -110,11 +110,22 @@ test("merch page uses one approved campaign, two closed drops and Stripe-ready p
   assert.ok(nav.includes('href="/merch#signal-collection"'));
 });
 
-test("collector and retailer pages stay visibly grounded in the TCG market", () => {
+test("market-facing pages use one split cinematic hero system instead of mixed generic headers", () => {
   const hero = read("components/market-story-hero.tsx");
+  assert.ok(hero.includes("market-story-copy"));
+  assert.ok(hero.includes("market-story-visual"));
+  assert.ok(hero.includes("market-story-proof"));
+  assert.ok(hero.includes("grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr)"));
+  for (const path of ["app/collectors/page.tsx", "app/businesses/page.tsx", "app/events/page.tsx", "app/trust/page.tsx", "app/about/page.tsx", "app/subscriptions/page.tsx"]) {
+    const source = read(path);
+    assert.ok(source.includes("MarketStoryHero"), `${path} should use MarketStoryHero`);
+    assert.equal(source.includes("<PageHero"), false, `${path} should not use the retired generic page header`);
+  }
+});
+
+test("collector and retailer pages stay visibly grounded in the TCG market", () => {
   const collectors = read("app/collectors/page.tsx");
   const retailers = read("app/businesses/page.tsx");
-  assert.ok(hero.includes("market-story-hero"));
   assert.ok(fs.existsSync("public/assets/market/collectors-hero.jpg"));
   assert.ok(fs.existsSync("public/assets/market/retailers-hero.jpg"));
   assert.ok(collectors.includes("Find the cards. Know the price. Catch the signal."));
@@ -125,12 +136,13 @@ test("collector and retailer pages stay visibly grounded in the TCG market", () 
   assert.ok(retailers.includes("Keep your checkout"));
 });
 
-test("events page fails open when the hosted encounters service is slow", () => {
+test("events page uses the rebuilt hero and fails open when the hosted encounters service is slow", () => {
   const nav = read("lib/site-data.ts");
   const events = read("app/events/page.tsx");
   const encounters = read("lib/encounters.ts");
   assert.ok(nav.includes('{ label: "Events", href: "/events" }'));
-  assert.ok(events.includes("Find the TCG scene around you."));
+  assert.ok(events.includes("Find the events. Find your people."));
+  assert.ok(events.includes("<MarketStoryHero"));
   assert.ok(encounters.includes("ENCOUNTERS_TIMEOUT_MS"));
   assert.ok(encounters.includes("AbortSignal.timeout(ENCOUNTERS_TIMEOUT_MS)"));
   assert.ok(encounters.includes("return { live: false, events: [] as EncounterEvent[] }"));
