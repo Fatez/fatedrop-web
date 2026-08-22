@@ -14,11 +14,11 @@ export default function TrustPage() {
     <SiteShell>
       <MarketStoryHero
         eyebrow="Trust by design"
-        title="Built on evidence. Clear enough to question."
-        description="FateDrop should never need manufactured urgency. Signal states, True Price and retailer evidence are only useful when the rules behind them stay visible and consistent."
+        title="Evidence first. Urgency only when it’s earned."
+        description="FateDrop separates early movement from confirmed stock, keeps price context transparent and makes the rules behind every signal clear enough to question."
         image="/assets/home/koru-home-section.png?v=20260822-trust"
         alt="Koru in the FateDrop landscape representing trust, evidence and the signal network"
-        proof={["Four lifecycle states", "Evidence before urgency", "True Price rules", "Trust cannot be bought"]}
+        proof={["Four signal states", "Evidence before urgency", "True Price transparency", "Trust cannot be bought"]}
         focal="right"
       >
         <div className="button-row"><Link className="button button-primary" href="#stock-lifecycle">See the signal lifecycle <span>↓</span></Link><Link className="button button-secondary" href="/collectors">Explore collector tools</Link></div>
