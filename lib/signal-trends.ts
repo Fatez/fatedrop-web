@@ -27,35 +27,40 @@ export async function getSignalLifecycleSummary(days = 7, now = Math.floor(Date.
   const databaseUrl = getPostgresUrl();
   if (!databaseUrl) return null;
 
-  const sql = neon(databaseUrl);
-  const rows = await sql`
-    SELECT
-      state,
-      (FLOOR(detected_at / 86400.0) * 86400)::bigint AS measured_at,
-      COUNT(*)::int AS count
-    FROM fatedrop_signals
-    WHERE detected_at >= ${day0}
-      AND state IN ('whisper', 'echo', 'manifested', 'vanished')
-    GROUP BY state, measured_at
-    ORDER BY measured_at ASC
-  `;
+  try {
+    const sql = neon(databaseUrl);
+    const rows = await sql`
+      SELECT
+        state,
+        (FLOOR(detected_at / 86400.0) * 86400)::bigint AS measured_at,
+        COUNT(*)::int AS count
+      FROM fatedrop_signals
+      WHERE detected_at >= ${day0}
+        AND state IN ('whisper', 'echo', 'manifested', 'vanished')
+      GROUP BY state, measured_at
+      ORDER BY measured_at ASC
+    `;
 
-  const summary = emptySummary(day0, safeDays);
-  for (const row of rows as Array<Record<string, unknown>>) {
-    const state = String(row.state) as LifecycleState;
-    if (!lifecycleStates.includes(state)) continue;
-    const measuredAt = Number(row.measured_at);
-    const value = Number(row.count);
-    if (!Number.isFinite(measuredAt) || !Number.isFinite(value)) continue;
-    const index = Math.floor((measuredAt - day0) / 86_400);
-    if (index < 0 || index >= safeDays) continue;
-    summary[state].trend[index] = { measuredAt: day0 + index * 86_400, value };
+    const summary = emptySummary(day0, safeDays);
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const state = String(row.state) as LifecycleState;
+      if (!lifecycleStates.includes(state)) continue;
+      const measuredAt = Number(row.measured_at);
+      const value = Number(row.count);
+      if (!Number.isFinite(measuredAt) || !Number.isFinite(value)) continue;
+      const index = Math.floor((measuredAt - day0) / 86_400);
+      if (index < 0 || index >= safeDays) continue;
+      summary[state].trend[index] = { measuredAt: day0 + index * 86_400, value };
+    }
+
+    for (const state of lifecycleStates) {
+      summary[state].total = summary[state].trend.reduce((sum, point) => sum + point.value, 0);
+      summary[state].today = summary[state].trend.at(-1)?.value ?? 0;
+    }
+
+    return summary;
+  } catch (error) {
+    console.error("[dashboard] signal trend aggregation unavailable", String(error instanceof Error ? error.message : error));
+    return null;
   }
-
-  for (const state of lifecycleStates) {
-    summary[state].total = summary[state].trend.reduce((sum, point) => sum + point.value, 0);
-    summary[state].today = summary[state].trend.at(-1)?.value ?? 0;
-  }
-
-  return summary;
 }
