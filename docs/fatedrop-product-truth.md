@@ -72,12 +72,13 @@ The public website should explain the product quickly rather than reproduce the 
 Home should remain short:
 
 1. approved Koru hero;
-2. Koru & Friends / merch bridge;
-3. Signals, True Price, FateFind → FateMatch and independent discovery;
-4. interactive product/phone preview;
-5. collector ↔ FateDrop ↔ independent retailer bridge;
-6. Events/Fate Encounters entry point;
-7. final CTA.
+2. Signals, True Price, FateFind → FateMatch and independent discovery;
+3. Koru & Friends / merch bridge after the product explanation;
+4. collector ↔ FateDrop ↔ independent retailer bridge;
+5. Events/Fate Encounters entry point;
+6. membership/final CTA.
+
+The interactive phone does **not** belong in the homepage hero or core landing flow. It lives on the dedicated `/demo` page so the landing page can explain FateDrop before asking someone to explore a sample interface.
 
 ### Collectors
 
@@ -98,6 +99,14 @@ Explain the signal lifecycle, True Price evidence rules and the separation betwe
 ### About / Vision
 
 Hold planned concepts and wider TCG expansion so the future remains visible without burying the current product.
+
+### Demo
+
+The `/demo` page may use controlled sample data to explain the product journey. It must remain visibly labelled as an interactive preview/sample and must never masquerade as current network activity.
+
+### Merch
+
+Merch is a supporter/culture layer around FateDrop and Koru & Friends, not a second product or a substitute for the signal-intelligence proposition.
 
 ### Free Drops
 
@@ -312,7 +321,7 @@ Event Vendor Mode remains **HOLD / FOUNDATION** until enough real organiser/vend
 
 ## Koru & Friends — BRAND + COMPANION LAYER
 
-**Status: BETA presentation / FOUNDATION for incoming 3D models.**
+**Status: BETA presentation / BETA Web renderer / asset handoff ongoing.**
 
 Koru & Friends is the character, culture and companion layer around FateDrop. It must strengthen the product identity rather than replace the serious intelligence platform underneath it.
 
@@ -332,11 +341,17 @@ Kael (`K-01`) and Nyra (`N-02`) remain legacy/archive character references only.
 
 Retired Droid, Scout, radar-drone, signal-orb and mini-beacon companion concepts are not part of the active companion architecture.
 
-### Five stable model slots
+### Five stable character slots
 
-Each active companion owns one GLB registration slot. The stable paths and registration process are documented in `docs/companion-model-slots.md`.
+Each active companion owns one stable character slot behind the shared renderer contract. A character may use one approved GLB or an approved reaction-specific GLB pack. The stable paths and registration process are documented in `docs/companion-model-slots.md`.
 
-The selector and account persistence must work before all models arrive. A missing model renders an honest fallback/placeholder rather than inventing a shipped 3D asset.
+The selector and account persistence work independently of model availability. A missing or failed model renders an honest fallback/placeholder rather than inventing a shipped 3D asset or blocking account functionality.
+
+On Web, registered assets render their real mesh and texture through the lightweight WebGL boundary. Aeris, Nyxen and Solix are currently registered; Fenn's verified reaction pack still requires its final binary handoff/registration, and Koru keeps the approved 2D mascot fallback until the correct production GLB is recovered and verified.
+
+The current WebGL viewer may use restrained rotation, bob and state tinting as presentation. It does **not** make skeletal animation playback a shipped claim. A source GLB containing clips is not enough: skeletal clip playback must be implemented and visually verified for the character before public copy describes that animation as active.
+
+Reduced-motion preference must retain the real model while stopping continuous presentation motion; it must not hide the companion or substitute false content.
 
 ### Shared reaction rule
 
@@ -447,5 +462,6 @@ Anything marked **DEMO** or sample must be visibly labelled. Demo signal buttons
 - Stable systems are not redesigned merely for novelty.
 - Risky changes remain isolated until tests and visual QA pass.
 - Main is not merged/deployed merely because a branch builds.
-- The approved Koru hero and Koru & Friends section artwork must be visually verified on the final branch before public merge.
-- Incoming 3D models are registered one at a time and verified against the shared five-slot contract.
+- The approved Koru hero, Koru & Friends artwork and final market-story PNGs must be visually verified on the final branch before public merge.
+- Companion assets are registered one character at a time through the shared five-slot contract; a character may use one GLB or a verified reaction-specific pack.
+- Source animation clips must never be advertised as active Web animation until playback is implemented and visually verified.
