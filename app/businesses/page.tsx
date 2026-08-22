@@ -31,8 +31,8 @@ export default function BusinessesPage() {
         eyebrow="For independent TCG retailers"
         title="The bridge between indie stores and collector demand."
         description="Bring your catalogue into FateDrop so collectors can discover your products while they are already searching the market. We provide the discovery, signals and price context; the customer still buys directly from you."
-        image="/assets/dashboard/koru-network-guide.png?v=20260822-retailers-png"
-        alt="Koru overlooking the FateDrop network, representing the bridge between independent retailers and collector demand"
+        image="/assets/market/retailers.png"
+        alt="FateDrop retailer artwork showing an independent trading-card store"
         proof={["Surface live products", "Reach active collectors", "Keep your checkout", "Join the indie network"]}
       >
         <div className="button-row"><Link className="button button-primary" href="/join?type=business">Connect your catalogue <span>↗</span></Link><Link className="text-link" href="#how-it-works">See how the bridge works <span>↓</span></Link></div>
