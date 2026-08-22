@@ -48,7 +48,11 @@ Strong celebration remains reserved for genuinely confirmed/high-value Manifeste
 
 Do not relabel legacy Scout, Warden, Droid or TCG-themed GLBs as Koru or any of the active Koru & Friends characters.
 
-The web companion contract owns exactly five GLB registration slots. Until an approved model exists for a slot, that character uses an honest fallback/placeholder. Models are integrated one at a time and must re-prove rendering, lifecycle reactions, fallback behaviour and reduced-motion behaviour before being treated as active.
+The Web companion contract owns exactly **five stable character slots**. A slot may be backed by one approved GLB or a verified reaction-specific GLB pack without creating extra companion identities. Until an approved model exists for a slot, that character uses an honest fallback/placeholder.
+
+Registered assets render their real mesh/texture through the current lightweight WebGL boundary. Reduced-motion preference keeps the real character visible while stopping continuous presentation motion. Source animation clips may be recorded as verified metadata, but skeletal animation playback is not treated as shipped until it is separately implemented and visually proven.
+
+Current Web registration is Aeris, Nyxen and Solix. Fenn's source reaction pack is verified and awaits final optimized-binary handoff/registration. Koru keeps the approved 2D mascot fallback until the correct Koru production GLB is recovered and verified.
 
 The stable model handoff paths and registration procedure are documented in `docs/companion-model-slots.md`.
 
