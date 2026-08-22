@@ -1,0 +1,11 @@
+@media (min-width: 721px) {
+  .merch-campaign {
+    min-height: 0 !important;
+    height: clamp(500px, 35vw, 620px) !important;
+  }
+
+  .merch-campaign-image {
+    object-fit: cover !important;
+    object-position: center center !important;
+  }
+}
