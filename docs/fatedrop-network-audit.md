@@ -104,14 +104,13 @@ FateDrop helps the collector find and understand the offer. It does not pretend 
 The homepage is intentionally short and product-led:
 
 1. approved Koru dusk hero;
-2. Koru & Friends / merch bridge;
-3. core FateDrop value: Signals, True Price, FateFind → FateMatch and independent discovery;
-4. interactive phone/product demonstration;
-5. collector ↔ FateDrop ↔ indie retailer bridge;
-6. Events/Fate Encounters entry point;
-7. final join CTA.
+2. core FateDrop value: Signals, True Price, FateFind → FateMatch and independent discovery;
+3. Koru & Friends / merch bridge after the product explanation;
+4. collector ↔ FateDrop ↔ indie retailer bridge;
+5. Events/Fate Encounters entry point;
+6. membership/final join CTA.
 
-Roadmap, speculative future features and long-form product explanations do not belong on Home.
+The interactive phone is deliberately kept off Home and lives on the dedicated `/demo` page. Roadmap, speculative future features and long-form product explanations do not belong on Home.
 
 ### Collectors
 
@@ -133,6 +132,14 @@ Explains the final four-stage lifecycle, True Price evidence rules and the princ
 
 Holds the wider multi-TCG direction and planned concepts so future thinking remains visible without burying the current product.
 
+### Demo
+
+Holds the controlled interactive phone/product demonstration. Sample content remains visibly labelled and cannot masquerade as live network activity.
+
+### Merch
+
+Supports FateDrop and Koru & Friends culture without becoming a second product or weakening the signal-intelligence proposition.
+
 ### Free Drops
 
 Retired from public discovery. The old route redirects home and is absent from navigation and sitemap.
@@ -149,9 +156,19 @@ The active roster is exactly:
 4. **Nyxen**;
 5. **Solix**.
 
-Each has one stable companion slot and one future GLB registration point.
+Each has one stable character slot behind the shared renderer contract. A character may use one approved GLB or a verified reaction-specific GLB pack without creating another companion identity.
 
 Koru remains FateDrop's mascot and signal voice regardless of which personal companion a collector selects.
+
+Current Web model state is explicit:
+
+- Koru — approved 2D fallback active while the correct production GLB is recovered/verified;
+- Fenn — source reaction pack verified and optimized for Web; final binary repository handoff/registration remains;
+- Aeris — GLB registered;
+- Nyxen — GLB registered;
+- Solix — GLB registered.
+
+Registered Web assets render their real mesh/texture through the lightweight WebGL boundary. Reduced-motion preference keeps the real model visible but stops continuous presentation motion. Skeletal animation playback is not claimed merely because source GLBs contain clips; it must be implemented and visually verified before public copy describes those animations as active.
 
 All five use the same underlying reaction contract:
 
@@ -161,7 +178,7 @@ All five use the same underlying reaction contract:
 - Vanished — lost-signal reaction;
 - FateMatch — personal successful-hunt reaction.
 
-Character personality may affect presentation or animation. It must never change the evidence, confidence or meaning of the underlying signal.
+Character personality may affect presentation or verified animation. It must never change the evidence, confidence or meaning of the underlying signal.
 
 ### Legacy archive
 
@@ -262,12 +279,13 @@ These concepts can remain documented and architecturally possible without compet
 
 The intentional remaining work after this website pass is narrow:
 
-- sync the two approved Koru PNG assets from the working Codespace onto the final revamp branch;
+- complete the final Fenn binary handoff/registration and recover/verify the correct Koru GLB;
 - visually QA the rebuilt public pages and dashboard on desktop/mobile;
-- register and validate Koru/Fenn/Aeris/Nyxen/Solix GLBs as the approved models arrive;
-- reconcile the mobile app companion implementation to the same five-slot contract;
+- visually QA registered 3D companions for identity, texture, framing, fallback and reduced-motion behavior;
+- implement skeletal animation playback only if/when it is deliberately promoted from the current state-presentation boundary;
+- reconcile the mobile app companion implementation to the same five-slot contract before mobile parity is claimed;
 - continue Cloud retailer/event/RRP coverage improvements;
-- perform final browser smoke testing before any production merge/deploy.
+- perform final production-like browser smoke testing before any production merge/deploy.
 
 ## Non-goals / release protection
 
