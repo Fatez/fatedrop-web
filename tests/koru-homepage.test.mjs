@@ -12,6 +12,10 @@ test("homepage keeps the approved Koru landing as the visual anchor", () => {
   assert.ok(reference.includes("You get the signal."));
   assert.ok(reference.includes("THE NETWORK LANGUAGE"));
   assert.ok(reference.includes("MEET THE VOICE OF FATEDROP"));
+  assert.ok(reference.includes("/assets/home/koru-home-hero.png"));
+  assert.ok(fs.existsSync("public/assets/home/koru-home-hero.png"));
+  assert.ok(fs.existsSync("public/assets/home/koru-home-section.png"));
+  assert.equal(reference.includes("koru-home-hero.avif"), false);
 });
 
 test("homepage is intentionally short and product-led", () => {
