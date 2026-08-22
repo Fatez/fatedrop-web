@@ -13,6 +13,7 @@ export type CompanionDefinition = {
   isMascot: boolean;
   fallbackArtwork: string | null;
   modelUrl: string | null;
+  reactionModelUrls?: Partial<Record<CompanionReaction, string>>;
   modelFormat: "glb" | null;
   animationClips: Partial<Record<CompanionReaction, string>>;
 };
@@ -27,9 +28,19 @@ const CANONICAL_CLIPS: Partial<Record<CompanionReaction, string>> = {
   major: "FateMatch",
 };
 
+const FENN_VERIFIED_CLIPS: Partial<Record<CompanionReaction, string>> = {
+  idle: "Armature|Idle|baselayer",
+  watching: "Armature|Listening_Gesture|baselayer",
+  echo: "Armature|Alert|baselayer",
+  manifested: "Armature|mage_soell_cast_1|baselayer",
+  vanished: "Armature|Sneaky_Walk|baselayer",
+  fatematch: "Armature|Victory_Cheer|baselayer",
+  major: "Armature|Victory_Cheer|baselayer",
+};
+
 export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
   { id: "koru", name: "Koru", slot: 1, isMascot: true, fallbackArtwork: "/assets/companions/koru-signal-companion.webp", modelUrl: null, modelFormat: null, animationClips: {} },
-  { id: "fenn", name: "Fenn", slot: 2, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: {} },
+  { id: "fenn", name: "Fenn", slot: 2, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: FENN_VERIFIED_CLIPS },
   { id: "aeris", name: "Aeris", slot: 3, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/aeris/aeris.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
   { id: "nyxen", name: "Nyxen", slot: 4, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/nyxen/nyxen.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
   { id: "solix", name: "Solix", slot: 5, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/solix/solix.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
@@ -59,8 +70,15 @@ export function companionDefinition(id: CompanionId): CompanionDefinition {
   return ACTIVE_COMPANION_ROSTER.find((companion) => companion.id === id) ?? ACTIVE_COMPANION_ROSTER[0];
 }
 
+export function companionModelUrl(definition: CompanionDefinition, reaction: CompanionReaction): string | null {
+  const reactionUrl = definition.reactionModelUrls?.[reaction]
+    ?? (reaction === "major" ? definition.reactionModelUrls?.fatematch : undefined);
+  return reactionUrl ?? definition.modelUrl;
+}
+
 export function companionRendererMode(definition: CompanionDefinition): CompanionRenderMode {
-  return definition.modelUrl && definition.modelFormat === "glb" ? "webgl-3d" : "fallback-2d";
+  const hasReactionModel = Object.keys(definition.reactionModelUrls ?? {}).length > 0;
+  return definition.modelFormat === "glb" && (Boolean(definition.modelUrl) || hasReactionModel) ? "webgl-3d" : "fallback-2d";
 }
 
 export function companionReactionFromSignal(input: { kind?: string | null; state?: string | null; fateMatch?: boolean; major?: boolean }): CompanionReaction {
