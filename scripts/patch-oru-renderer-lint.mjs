@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
+// Deterministic retry-safe patch for the isolated Oru & Friends branch.
 const path = 'components/companion-renderer.tsx';
 let source = readFileSync(path, 'utf8');
 
