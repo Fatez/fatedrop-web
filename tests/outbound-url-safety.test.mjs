@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { safeExternalHttpsUrl } from "../lib/external-url.ts";
-import { retailerRegistry } from "../lib/retailer-registry.ts";
 
 const read = (file) => fs.readFileSync(file, "utf8");
 
@@ -24,8 +23,11 @@ test("external retailer URL guard accepts only credential-free HTTPS destination
 });
 
 test("every static retailer registry handoff is valid HTTPS", () => {
-  for (const retailer of retailerRegistry) {
-    assert.equal(safeExternalHttpsUrl(retailer.website), new URL(retailer.website).toString(), `${retailer.name} has an unsafe registry website`);
+  const registry = read("lib/retailer-registry.ts");
+  const websites = [...registry.matchAll(/website:\s*"([^"]+)"/g)].map((match) => match[1]);
+  assert.ok(websites.length > 0, "retailer registry must contain website handoffs");
+  for (const website of websites) {
+    assert.equal(safeExternalHttpsUrl(website), new URL(website).toString(), `${website} is an unsafe registry website`);
   }
 });
 
@@ -48,4 +50,11 @@ test("Cloud catalogue and True Price handoffs are sanitized before dashboard ren
   assert.ok(search.includes('target="_blank" rel="noreferrer"'));
   assert.ok(truePrice.includes('target="_blank" rel="noreferrer"'));
   assert.ok(stores.includes('target="_blank" rel="noreferrer"'));
+});
+
+test("lead website and ticket submissions share the HTTPS-only URL guard", () => {
+  const leads = read("app/api/leads/route.ts");
+  assert.ok(leads.includes('safeExternalHttpsUrl'));
+  assert.ok(leads.includes('assertSameOrigin(request)'));
+  assert.ok(!leads.includes('url.protocol === "https:" || url.protocol === "http:"'));
 });
