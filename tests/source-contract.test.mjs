@@ -11,6 +11,7 @@ test("all current FateDrop routes and core project files are present", async () 
     "app/businesses/page.tsx",
     "app/collectors/page.tsx",
     "app/cookies/page.tsx",
+    "app/demo/page.tsx",
     "app/events/page.tsx",
     "app/free-drops/page.tsx",
     "app/join/page.tsx",
@@ -19,6 +20,8 @@ test("all current FateDrop routes and core project files are present", async () 
     "app/subscriptions/page.tsx",
     "app/terms/page.tsx",
     "app/trust/page.tsx",
+    "app/sitemap.ts",
+    "app/robots.ts",
     "app/api/leads/route.ts",
     "app/dashboard/page.tsx",
     "app/api/dashboard/activity/route.ts",
@@ -32,6 +35,30 @@ test("all current FateDrop routes and core project files are present", async () 
   ]) {
     await access(new URL(file, root));
   }
+});
+
+test("first-class public routes remain discoverable while private surfaces stay out of search", async () => {
+  const sitemap = await readFile(new URL("app/sitemap.ts", root), "utf8");
+  const robots = await readFile(new URL("app/robots.ts", root), "utf8");
+
+  for (const route of [
+    "/about",
+    "/businesses",
+    "/collectors",
+    "/demo",
+    "/events",
+    "/join",
+    "/merch",
+    "/subscriptions",
+    "/trust",
+    "/privacy",
+    "/terms",
+    "/cookies",
+  ]) assert.ok(sitemap.includes(`\"${route}\"`), `${route} must remain in the public sitemap`);
+
+  assert.equal(sitemap.includes('"/free-drops"'), false, "retired Free Drops must not return to public discovery");
+  assert.ok(robots.includes('disallow: ["/api/", "/account", "/dashboard"]'));
+  assert.ok(robots.includes('allow: "/"'));
 });
 
 test("interactive phone preview retains every controlled screen and safeguard", async () => {
