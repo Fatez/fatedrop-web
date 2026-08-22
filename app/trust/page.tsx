@@ -16,8 +16,8 @@ export default function TrustPage() {
         eyebrow="Trust by design"
         title="Evidence first. Urgency only when it’s earned."
         description="FateDrop separates early movement from confirmed stock, keeps price context transparent and makes the rules behind every signal clear enough to question."
-        image="/assets/home/koru-home-section.png?v=20260822-trust"
-        alt="Koru in the FateDrop landscape representing trust, evidence and the signal network"
+        image="/assets/market/trust.png"
+        alt="FateDrop trust network artwork with a compass-like signal mark above a dark mountain landscape"
         proof={["Four signal states", "Evidence before urgency", "True Price transparency", "Trust cannot be bought"]}
         focal="right"
       >
