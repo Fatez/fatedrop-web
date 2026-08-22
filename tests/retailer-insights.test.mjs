@@ -15,6 +15,15 @@ test("retailer insights aggregate handoffs without exposing individual collector
   assert.ok(!insights.includes("email"));
 });
 
+test("retailer-facing recency is bucketed to a day instead of exposing an exact collector click time", () => {
+  const insights = read("lib/retailer-insights.ts");
+
+  assert.ok(insights.includes("lastHandoffDay: string"));
+  assert.ok(insights.includes("dayBucket(lastHandoffAt)"));
+  assert.ok(insights.includes("toISOString().slice(0, 10)"));
+  assert.ok(!insights.includes("lastHandoffAt: Math.floor(lastHandoffAt)"));
+});
+
 test("retailer insight API is bearer protected, no-store and never claims a sale", () => {
   const route = read("app/api/retailer-insights/route.ts");
 
