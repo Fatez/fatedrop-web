@@ -18,17 +18,10 @@ export type CompanionDefinition = {
   animationClips: Partial<Record<CompanionReaction, string>>;
 };
 
-const CANONICAL_CLIPS: Partial<Record<CompanionReaction, string>> = {
-  idle: "Idle",
-  watching: "Whisper",
-  echo: "Echo",
-  manifested: "Manifested",
-  vanished: "Vanished",
-  fatematch: "FateMatch",
-  major: "FateMatch",
-};
-
-const FENN_VERIFIED_CLIPS: Partial<Record<CompanionReaction, string>> = {
+// Verified directly against the supplied Aeris, Nyxen, Solix and Fenn state exports.
+// These names describe source animation metadata only; the lightweight WebGL viewer
+// does not claim skeletal clip playback until that capability is separately shipped.
+const VERIFIED_STATE_CLIPS: Partial<Record<CompanionReaction, string>> = {
   idle: "Armature|Idle|baselayer",
   watching: "Armature|Listening_Gesture|baselayer",
   echo: "Armature|Alert|baselayer",
@@ -40,10 +33,10 @@ const FENN_VERIFIED_CLIPS: Partial<Record<CompanionReaction, string>> = {
 
 export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
   { id: "koru", name: "Koru", slot: 1, isMascot: true, fallbackArtwork: "/assets/companions/koru-signal-companion.webp", modelUrl: null, modelFormat: null, animationClips: {} },
-  { id: "fenn", name: "Fenn", slot: 2, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: FENN_VERIFIED_CLIPS },
-  { id: "aeris", name: "Aeris", slot: 3, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/aeris/aeris.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
-  { id: "nyxen", name: "Nyxen", slot: 4, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/nyxen/nyxen.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
-  { id: "solix", name: "Solix", slot: 5, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/solix/solix.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
+  { id: "fenn", name: "Fenn", slot: 2, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: VERIFIED_STATE_CLIPS },
+  { id: "aeris", name: "Aeris", slot: 3, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/aeris/aeris.glb", modelFormat: "glb", animationClips: VERIFIED_STATE_CLIPS },
+  { id: "nyxen", name: "Nyxen", slot: 4, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/nyxen/nyxen.glb", modelFormat: "glb", animationClips: VERIFIED_STATE_CLIPS },
+  { id: "solix", name: "Solix", slot: 5, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/solix/solix.glb", modelFormat: "glb", animationClips: VERIFIED_STATE_CLIPS },
 ] as const;
 
 export const LEGACY_COMPANION_ARCHIVE = [
