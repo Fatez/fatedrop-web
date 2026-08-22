@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
 
 const retailerBenefits = [
   ["01", "Relevant discovery", "Appear when collectors are already searching for products your connected catalogue can genuinely offer."],
@@ -26,14 +27,16 @@ export const metadata: Metadata = {
 export default function BusinessesPage() {
   return (
     <SiteShell>
-      <PageHero
-        motif="market"
-        eyebrow="For independent retailers & vendors"
-        title="Be found by collectors already looking."
-        description="Connect your catalogue to FateDrop and become visible inside relevant collector journeys. We help with discovery and context; the customer still buys from you."
+      <MarketStoryHero
+        eyebrow="For independent TCG retailers"
+        title="The bridge between independent stock and collector demand."
+        description="Bring your catalogue into FateDrop so collectors can discover your products while they are already searching the market. We provide the discovery, signals and price context; the customer still buys directly from you."
+        image="/assets/market/retailers-hero.jpg"
+        alt="A premium independent trading card shop with collectors browsing shelves and subtle FateDrop branding"
+        proof={["Surface live products", "Reach active collectors", "Keep your checkout", "Join the indie network"]}
       >
         <div className="button-row"><Link className="button button-primary" href="/join?type=business">Connect your catalogue <span>↗</span></Link><Link className="text-link" href="#how-it-works">See how the bridge works <span>↓</span></Link></div>
-      </PageHero>
+      </MarketStoryHero>
 
       <section className="content-section section-shell split-section" id="how-it-works">
         <div className="copy-stack">
