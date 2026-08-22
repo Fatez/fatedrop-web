@@ -10,24 +10,49 @@ test("homepage keeps the approved Koru landing as the visual anchor", () => {
   assert.ok(home.includes("<KoruReferenceLanding"));
   assert.ok(reference.includes("You don&apos;t chase drops."));
   assert.ok(reference.includes("You get the signal."));
-  assert.ok(reference.includes("THE NETWORK LANGUAGE"));
   assert.ok(reference.includes("MEET THE VOICE OF FATEDROP"));
+  assert.ok(reference.includes('href="/demo"'));
   assert.ok(reference.includes("/assets/home/koru-home-hero.png"));
   assert.ok(fs.existsSync("public/assets/home/koru-home-hero.png"));
   assert.ok(fs.existsSync("public/assets/home/koru-home-section.png"));
   assert.equal(reference.includes("koru-home-hero.avif"), false);
 });
 
-test("homepage is intentionally short and product-led", () => {
+test("homepage explains the product before the brand world and keeps the phone off home", () => {
   const home = read("app/page.tsx");
-  assert.ok(home.includes("<KoruFriendsMerchSection"));
-  assert.ok(home.includes("<FateDropPillars"));
-  assert.ok(home.includes("<FateDropPhoneSection"));
+  const valuePosition = home.indexOf("<FateDropValueSection");
+  const koruPosition = home.indexOf("<KoruFriendsMerchSection");
+  assert.ok(valuePosition >= 0);
+  assert.ok(koruPosition > valuePosition);
   assert.ok(home.includes("<IndieBridgeSection"));
   assert.ok(home.includes("<EventsHomeLink"));
+  assert.ok(home.includes("<MembershipConversionSection"));
+  assert.equal(home.includes("<FateDropPhoneSection"), false);
   assert.equal(home.includes("<FutureExpansion"), false);
-  assert.equal(home.includes("<NetworkProof"), false);
-  assert.equal(home.includes("<WhyFateDrop"), false);
+});
+
+test("homepage sells the four core FateDrop USPs accurately", () => {
+  const sections = read("components/koru-final-sections.tsx");
+  assert.ok(sections.includes("WHAT FATEDROP DOES"));
+  assert.ok(sections.includes("FateDrop does the work before checkout."));
+  assert.ok(sections.includes("Product or catalogue movement. Something may be coming."));
+  assert.ok(sections.includes("Queue, traffic or security conditions changed. Get ready."));
+  assert.ok(sections.includes("Confirmed purchasable stock is live."));
+  assert.ok(sections.includes("Previously confirmed availability is gone."));
+  assert.ok(sections.includes("OFFICIAL RRP"));
+  assert.ok(sections.includes("FateFind"));
+  assert.ok(sections.includes("FateMatch"));
+  assert.ok(sections.includes("buy direct from the store"));
+  assert.ok(sections.includes("£4.99"));
+});
+
+test("interactive phone has moved to a dedicated demo page", () => {
+  const demo = read("app/demo/page.tsx");
+  const sections = read("components/koru-final-sections.tsx");
+  const sitemap = read("app/sitemap.ts");
+  assert.ok(demo.includes("<FateDropDemoSection"));
+  assert.ok(sections.includes("<InteractivePhoneDemo"));
+  assert.ok(sitemap.includes('"/demo"'));
 });
 
 test("public product language preserves FateFind to FateMatch and the final lifecycle", () => {
@@ -41,6 +66,8 @@ test("public product language preserves FateFind to FateMatch and the final life
   assert.ok(layout.includes("FateMatch results"));
   assert.ok(trust.includes("Whisper. Echo. Manifested. Vanished."));
   assert.ok(collectors.includes("Whisper → Echo → Manifested → Vanished"));
+  assert.ok(collectors.includes("A FateFind is the hunt you create."));
+  assert.ok(collectors.includes("the result is a FateMatch"));
 });
 
 test("free drops are removed from public discovery", () => {
