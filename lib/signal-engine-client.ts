@@ -8,7 +8,7 @@ export type SignalCatalogueOffer = {
   retailerKey: string;
   retailer: string;
   title: string;
-  url: string | null;
+  url: string;
   image?: string | null;
   price?: number;
   shippingGbp?: number;
@@ -41,7 +41,7 @@ export type SignalTruePriceOffer = {
   totalDeliveredGbp?: number;
   deliveryKnown: boolean;
   collectionAvailable: boolean;
-  productUrl: string | null;
+  productUrl: string;
   imageUrl?: string | null;
   lastCheckedAt?: string;
   stockStatus: "IN_STOCK" | "PREORDER" | "OUT_OF_STOCK" | "UNKNOWN";
@@ -113,6 +113,16 @@ async function signalFetch<T>(pathname: string, params?: URLSearchParams, timeou
   }
 }
 
+function safeCatalogueOffer(offer: SignalCatalogueOffer): SignalCatalogueOffer | null {
+  const url = safeExternalHttpsUrl(offer.url);
+  return url ? { ...offer, url } : null;
+}
+
+function safeTruePriceOffer(offer: SignalTruePriceOffer): SignalTruePriceOffer | null {
+  const productUrl = safeExternalHttpsUrl(offer.productUrl);
+  return productUrl ? { ...offer, productUrl } : null;
+}
+
 export async function searchSignalCatalogue(query: string, options: {
   inStock?: boolean;
   limit?: number;
@@ -135,9 +145,16 @@ export async function searchSignalCatalogue(query: string, options: {
   if (options.cursor) params.set("cursor", options.cursor);
   const result = await signalFetch<SignalCatalogueResponse>("/api/catalogue", params);
   if (!result) return null;
+  const products = result.products.flatMap((offer) => {
+    const safe = safeCatalogueOffer(offer);
+    return safe ? [safe] : [];
+  });
+  const blocked = Math.max(0, result.products.length - products.length);
   return {
     ...result,
-    products: result.products.map((offer) => ({ ...offer, url: safeExternalHttpsUrl(offer.url) })),
+    products,
+    count: products.length,
+    total: Math.max(products.length, result.total - blocked),
   };
 }
 
@@ -146,13 +163,14 @@ export async function searchSignalTruePrice(query: string) {
   if (clean.length < 2) return null;
   const result = await signalFetch<SignalTruePriceResponse>("/api/true-price", new URLSearchParams({ q: clean }));
   if (!result) return null;
-  return {
-    ...result,
-    groups: result.groups.map((group) => ({
-      ...group,
-      offers: group.offers.map((offer) => ({ ...offer, productUrl: safeExternalHttpsUrl(offer.productUrl) })),
-    })),
-  };
+  const groups = result.groups.flatMap((group) => {
+    const offers = group.offers.flatMap((offer) => {
+      const safe = safeTruePriceOffer(offer);
+      return safe ? [safe] : [];
+    });
+    return offers.length ? [{ ...group, offers, retailerCount: offers.length }] : [];
+  });
+  return { ...result, groups, count: groups.length };
 }
 
 export function getSignalEngineStatus(timeoutMs = 8_000) {
