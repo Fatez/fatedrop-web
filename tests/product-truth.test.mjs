@@ -28,8 +28,8 @@ test("canonical dashboard language is Search, FateFind and Koru & Friends", asyn
   assert.ok(nav.includes('"FateFind", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
   assert.ok(fateFind.includes('title="FateFind"'));
-  assert.ok(fateFind.includes("FateFind</b> is the hunt"));
-  assert.ok(fateFind.includes("successful result is a <b>FateMatch</b>"));
+  assert.ok(fateFind.includes("A FateFind is just a saved hunt"));
+  assert.ok(fateFind.includes("that result is your FateMatch"));
   assert.ok(companion.includes('title: "Koru & Friends | FateDrop Dashboard"'));
   assert.ok(companion.includes("Koru, Fenn, Aeris, Nyxen or Solix"));
   assert.ok(companion.includes("Koru remains the mascot and signal voice of FateDrop"));
@@ -44,7 +44,9 @@ test("dashboard Search and True Price use the canonical Signal Engine", async ()
   assert.ok(search.includes("searchSignalCatalogue"));
   assert.ok(search.includes("CREATE FATEFIND"));
   assert.ok(truePrice.includes("searchSignalTruePrice"));
-  assert.ok(truePrice.includes("same canonical offer network"));
+  assert.ok(truePrice.includes("ITEM PRICE"));
+  assert.ok(truePrice.includes("KNOWN DELIVERY"));
+  assert.ok(truePrice.includes("TRUE PRICE"));
   assert.ok(client.includes('"/api/catalogue"'));
   assert.ok(client.includes('"/api/true-price"'));
   assert.ok(client.includes("FATEDROP_SIGNAL_ENGINE_URL"));
