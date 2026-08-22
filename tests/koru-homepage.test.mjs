@@ -110,12 +110,13 @@ test("merch page uses one approved campaign, two closed drops and Stripe-ready p
   assert.ok(nav.includes('href="/merch#signal-collection"'));
 });
 
-test("market-facing pages use one split cinematic hero system instead of mixed generic headers", () => {
+test("market-facing pages use one full-bleed cinematic hero system instead of mixed generic headers", () => {
   const hero = read("components/market-story-hero.tsx");
   assert.ok(hero.includes("market-story-copy"));
   assert.ok(hero.includes("market-story-visual"));
   assert.ok(hero.includes("market-story-proof"));
-  assert.ok(hero.includes("grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr)"));
+  assert.ok(hero.includes("position:absolute;z-index:0;inset:0"));
+  assert.equal(hero.includes("grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr)"), false);
   for (const path of ["app/collectors/page.tsx", "app/businesses/page.tsx", "app/events/page.tsx", "app/trust/page.tsx", "app/about/page.tsx", "app/subscriptions/page.tsx"]) {
     const source = read(path);
     assert.ok(source.includes("MarketStoryHero"), `${path} should use MarketStoryHero`);
