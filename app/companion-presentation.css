@@ -1,0 +1,20 @@
+/* Companion-page visual corrections shared across dashboard/profile surfaces. */
+
+.koru-mascot .koru-frame img {
+  object-position: 66% center !important;
+}
+
+.companion-webgl canvas {
+  filter: brightness(1.24) saturate(1.08) contrast(1.03);
+}
+
+.companion-webgl.compact canvas {
+  transform: scale(1.08);
+  transform-origin: center 44%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companion-webgl.compact canvas {
+    transform: none;
+  }
+}
