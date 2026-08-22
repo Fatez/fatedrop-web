@@ -1,15 +1,20 @@
 # FateDrop Web Launch Checklist
 
-_Last reviewed: 19 August 2026_
+_Last reviewed: 22 August 2026_
 
 This checklist is intentionally conservative. A green build is necessary but is not by itself permission to publish commercial claims or enable integrations whose production credentials have not been verified.
 
 ## 1. Product truth
 
 - [ ] `docs/fatedrop-product-truth.md` reviewed against the current app/Cloud/Discord state.
-- [ ] Public lifecycle uses **Echo / Manifested / Vanished**; `Whisper` is not promoted as a headline consumer state.
+- [ ] Public lifecycle uses **Whisper → Echo → Manifested → Vanished** with the final meanings preserved.
+- [ ] Whisper = product/catalogue/metadata movement; stock not confirmed.
+- [ ] Echo = queue/traffic/security/access readiness; stock not confirmed.
+- [ ] Manifested = confirmed purchasable availability.
+- [ ] Vanished = previously confirmed availability no longer observed/verified.
 - [ ] FateFind = saved hunt; FateMatch = successful qualifying result.
 - [ ] Universal Wishlist remains distinct from FateFind.
+- [ ] Drop Pulse remains contextual evidence rather than a fifth lifecycle state.
 - [ ] FateWindow / FateScore / FateFair remain HOLD/PLANNED unless a later evidence review promotes them.
 - [ ] Demo/static/event/storefront data is labelled as such.
 
@@ -21,7 +26,7 @@ Set:
 
 `NEXT_PUBLIC_SITE_URL=https://fatedrop.co.uk`
 
-until the custom domain is active, the code safely falls back to the current Worker URL for production metadata. The custom domain should become canonical before SEO promotion.
+Until the custom domain is active, the code safely falls back to the current Worker URL for production metadata. The custom domain should become canonical before SEO promotion.
 
 ### Signal Engine
 
@@ -40,8 +45,9 @@ Production should use persistent PostgreSQL rather than local files:
 - `FATEDROP_METRIC_STORE=postgres`
 - `DATABASE_URL=<protected Neon connection string>`
 
-Run the existing production schema plus reviewed additive migrations against the intended database before enabling dependent writes. The current website branch adds:
+Run the existing production schema plus reviewed additive migrations against the intended database before enabling dependent writes. Relevant migrations include:
 
+- `database/2026-08-18-avatar-system.sql` — historical storage table now used only for the selected Koru & Friends companion plus retained compatibility data.
 - `database/2026-08-19-user-preferences.sql` — Universal Wishlist + shared notification preference tables.
 
 Do not silently apply production migrations from a build/deploy job.
@@ -103,7 +109,7 @@ Do not merge a branch whose final head has not passed both the normal verificati
 
 ## 4. Runtime smoke test
 
-Before deployment/merge approval verify representative routes in an OpenNext preview or production-like environment:
+Before deployment/merge approval verify representative routes in an OpenNext preview or production-like environment.
 
 Public:
 
@@ -139,7 +145,7 @@ API:
 - `/api/events`
 - `/api/wishlist`
 - `/api/notification-preferences`
-- authenticated account/profile routes
+- authenticated account/profile/companion routes
 - FateFind create/list route
 - Stripe/Discord routes only when configured
 
@@ -163,31 +169,60 @@ API:
 - [ ] Local Radar uses location only on demand; no unadvertised coordinate persistence is introduced.
 - [ ] Wishlist and notification preference records are covered by final retention/deletion policy before scaled launch.
 
-## 7. Companion
+## 7. Koru & Friends companion system
 
-The current persistent loadout is safe to launch as a foundation if desired. The real 3D launch additionally requires:
+The active companion roster is fixed to:
 
-- production GLB character asset
-- production GLB droid asset
-- approved animation clip names/states
-- performance budget for mobile/WebGL
-- fallback behaviour when WebGL/model loading fails
-- accessible reduced-motion behaviour
-- cross-platform mapping to the same account loadout schema
+1. Koru
+2. Fenn
+3. Aeris
+4. Nyxen
+5. Solix
 
-`lib/companion-contract.ts` is the web-side renderer boundary. Do not redesign account persistence merely to insert the final model.
+Koru remains FateDrop's mascot and signal voice regardless of the collector's selected personal companion. Kael and Nyra are archive-only references and must not appear as active selector slots.
 
-## 8. Events
+The web selector and persistence layer are allowed to ship before every 3D model is available. A missing model must render an honest fallback/placeholder.
+
+Before an individual 3D companion is treated as production-ready, verify:
+
+- approved GLB at that character's stable path from `docs/companion-model-slots.md`;
+- the model is registered only in `lib/companion-contract.ts`;
+- approved animation clip names/states are verified against the real asset;
+- Whisper/Echo/Manifested/Vanished meanings remain unchanged by animation personality;
+- FateMatch reaction remains a successful-hunt treatment rather than a fifth lifecycle state;
+- performance budget is acceptable on target browsers/devices;
+- fallback behaviour works when WebGL/model loading fails;
+- accessible reduced-motion behaviour works;
+- account selection persists without overwriting profile data;
+- mobile reconciliation maps to the same five IDs before a mobile release claims companion parity.
+
+Do **not** add a separate Droid, Scout, TCG-themed or floating-familiar model slot. The retired layered-avatar/sprite system must stay absent from the active tree.
+
+## 8. Exact public artwork gate
+
+The final homepage visual approval is separate from code/CI approval.
+
+Before merge:
+
+- [ ] approved Koru hero PNG is committed at the final stable homepage path;
+- [ ] approved Koru & Friends section PNG is committed at its final stable path;
+- [ ] no AVIF/WebP workaround is being relied on for the approved hero after PNG handoff;
+- [ ] desktop hero composition is visually checked;
+- [ ] mobile crop is visually checked;
+- [ ] interactive phone remains below the landing section rather than returning to the hero;
+- [ ] no production merge occurs until visual approval is explicit.
+
+## 9. Events
 
 `/api/events` provides the canonical website migration path from persisted Cloud `upcomingEvents` data. The existing dashboard static-sourced directory must remain labelled static until Cloud ingestion actually publishes events.
 
-## 9. Owner decisions that do not belong in an autonomous code guess
+## 10. Owner decisions that do not belong in an autonomous code guess
 
 - final Plus vs Pro pricing and capability split
 - final FateScore policy and inputs
 - whether/when FateWindow returns from HOLD
 - final retailer paid-plan structure
-- final 3D Companion cosmetic/progression economy
+- final Koru & Friends cosmetic/progression economy
 - final Event Vendor Mode commercial rules
 - final UK legal text / data retention periods
 - production database migration approval
