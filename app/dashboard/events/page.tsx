@@ -12,8 +12,8 @@ export default async function DashboardEventsPage() {
   const feed = await loadUpcomingEncounters(1000);
   const events = feed.events;
   const upcoming = events;
-  const venues = new Set(upcoming.map((event) => event.venue || event.location).filter(Boolean));
-  const withVendors = upcoming.filter((event) => (event.vendorCount ?? 0) > 0).length;
+  const locations = new Set(upcoming.map((event) => event.venueName || event.townCity || event.postcode).filter(Boolean));
+  const organisers = new Set(upcoming.map((event) => event.organiserName).filter(Boolean));
 
   return <DashboardPageShell title="Events" eyebrow="FATE ENCOUNTERS · UK TCG EVENTS">
     <div className="fd-events-live-page">
@@ -26,8 +26,8 @@ export default async function DashboardEventsPage() {
         </div>
         <div className="fd-events-live-stats">
           <div><strong>{feed.live ? upcoming.length : "—"}</strong><span>UPCOMING EVENTS</span><small>Source-backed listings</small></div>
-          <div><strong>{feed.live ? venues.size : "—"}</strong><span>VENUES / LOCATIONS</span><small>Across the current feed</small></div>
-          <div><strong>{feed.live ? withVendors : "—"}</strong><span>WITH VENDOR DATA</span><small>Only where evidence exists</small></div>
+          <div><strong>{feed.live ? locations.size : "—"}</strong><span>LOCATIONS</span><small>Venue, town or postcode evidence</small></div>
+          <div><strong>{feed.live ? organisers.size : "—"}</strong><span>ORGANISERS NAMED</span><small>Only where the source provides one</small></div>
         </div>
       </section>
 
