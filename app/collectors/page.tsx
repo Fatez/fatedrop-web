@@ -4,9 +4,9 @@ import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page
 import { StockLifecycle } from "@/components/stock-lifecycle";
 
 const coreTools = [
-  ["01", "Signal intelligence", "Whisper tells you something changed. Echo says activity is building. Manifested confirms stock is live. Vanished closes the loop when it is gone."],
+  ["01", "Signal intelligence", "Whisper tells you something changed. Echo says access, traffic or security activity is building. Manifested confirms purchasable stock is live. Vanished closes the loop when previously confirmed availability is gone."],
   ["02", "True Price", "See observed price against official RRP, known mandatory delivery and the percentage above or below RRP where the evidence is available."],
-  ["03", "FateMatch", "Tell FateDrop what you are hunting for and let the network surface qualifying options across participating retailers."],
+  ["03", "FateFind → FateMatch", "Create a FateFind with the product and limits that matter. When an observed active offer qualifies, that successful result becomes a FateMatch."],
   ["04", "Independent discovery", "Find stock beyond the obvious major retailers and continue directly to the independent store that actually has the product."],
 ] as const;
 
@@ -18,7 +18,7 @@ const supportingTools = [
 
 export const metadata: Metadata = {
   title: "For Collectors | FateDrop",
-  description: "Follow stock signals, compare True Price, use FateMatch and discover independent TCG retailers and events through FateDrop.",
+  description: "Follow stock signals, compare True Price, create FateFind hunts, receive FateMatch results and discover independent TCG retailers and events through FateDrop.",
 };
 
 export default function CollectorsPage() {
@@ -28,7 +28,7 @@ export default function CollectorsPage() {
         motif="radar"
         eyebrow="For collectors"
         title="Find the right drop. Know the price. Know where to buy."
-        description="FateDrop turns fragmented retailer browsing into one clearer journey: follow the signal, understand the price context, find a FateMatch and buy directly from the retailer."
+        description="FateDrop turns fragmented retailer browsing into one clearer journey: follow the signal, understand the price context, create a FateFind, receive qualifying FateMatches and buy directly from the retailer."
       >
         <div className="button-row">
           <Link className="button button-primary" href="/join?type=collector">Join the collector beta <span>↗</span></Link>
@@ -55,20 +55,21 @@ export default function CollectorsPage() {
 
       <section className="content-section section-shell split-section">
         <div className="copy-stack">
-          <p className="eyebrow"><span />FateMatch</p>
+          <p className="eyebrow"><span />FateFind → FateMatch</p>
           <h2>Your hunt should search the network, not your patience.</h2>
-          <p>FateMatch is the collector-intent layer. You define what you want and the limits that matter; FateDrop evaluates observed retailer offers and surfaces qualifying matches instead of making you repeat the same search across dozens of tabs.</p>
+          <p>A FateFind is the hunt you create. Choose the product, price limits, RRP limits and online or local scope that matter to you. FateDrop evaluates observed retailer offers against that intent; when an active offer genuinely qualifies, the result is a FateMatch.</p>
           <div className="point-list">
-            <div><span>01</span><p>Choose the product or product family you are looking for.</p></div>
+            <div><span>01</span><p>Create a FateFind for the product or product family you are looking for.</p></div>
             <div><span>02</span><p>Add useful price or RRP limits and online/local scope.</p></div>
-            <div><span>03</span><p>Open the retailer directly when a qualifying offer is found.</p></div>
+            <div><span>03</span><p>Receive a FateMatch only when an observed active offer satisfies those criteria.</p></div>
+            <div><span>04</span><p>Open the retailer directly to confirm final stock, delivery and checkout.</p></div>
           </div>
         </div>
         <div className="insight-panel collector-radar-panel">
-          <small>FATEMATCH / COLLECTOR INTENT</small>
-          <div className="collector-discovery-rail" aria-label="FateMatch journey"><span>Your hunt</span><i /><span>Network evidence</span><i /><span>Qualifying offer</span><i /><span>Retailer</span></div>
+          <small>FATEFIND → FATEMATCH / COLLECTOR INTENT</small>
+          <div className="collector-discovery-rail" aria-label="FateFind to FateMatch journey"><span>Your FateFind</span><i /><span>Network evidence</span><i /><span>Qualifying offer</span><i /><span>FateMatch</span></div>
           <div className="search-journey">
-            <div className="search-query">⌕ Wanted: selected product</div>
+            <div className="search-query">⌕ FateFind: selected product + limits</div>
             <div className="journey-result"><span className="journey-thumb" /><div><b>Offer observed</b><small>Price + availability + retailer evidence</small></div><span>Check</span></div>
             <div className="journey-result"><span className="journey-thumb" /><div><b>FateMatch</b><small>Your chosen criteria are met</small></div><span>Match</span></div>
             <div className="journey-arrow" />
@@ -90,7 +91,7 @@ export default function CollectorsPage() {
         <SectionHeading
           eyebrow="The wider network"
           title="Useful extras, without burying the core product."
-          body="Wishlist, nearby discovery and real-world events support the collecting journey without competing with Signals, True Price and FateMatch."
+          body="Wishlist, nearby discovery and real-world events support the collecting journey without competing with Signals, True Price and FateFind → FateMatch."
         />
         <div className="value-network-grid" style={{ marginTop: 42 }}>
           {supportingTools.map(([title, body]) => <article key={title}><span>NETWORK TOOL</span><h3>{title}</h3><p>{body}</p></article>)}
