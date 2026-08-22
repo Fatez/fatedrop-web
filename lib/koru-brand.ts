@@ -3,8 +3,10 @@ export const KORU_BRAND = {
   code: "K-09",
   role: "FateDrop Signal Companion",
   voice: "The mascot and signal voice of FateDrop",
-  portrait: "/assets/companions/koru-portrait.webp",
-  fullArtwork: "/assets/companions/koru-signal-companion.webp",
+  // Use the approved current Koru artwork. The legacy companion WebPs depict an
+  // earlier creature concept and must never be presented as Koru again.
+  portrait: "/assets/home/koru-home-hero.png?v=20260822-koru-final",
+  fullArtwork: "/assets/home/koru-home-hero.png?v=20260822-koru-final",
   friendsArtwork: "/assets/home/koru-home-section.png",
 } as const;
 
