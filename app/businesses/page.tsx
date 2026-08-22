@@ -31,7 +31,7 @@ export default function BusinessesPage() {
         eyebrow="For independent TCG retailers"
         title="The bridge between indie stores and collector demand."
         description="Bring your catalogue into FateDrop so collectors can discover your products while they are already searching the market. We provide the discovery, signals and price context; the customer still buys directly from you."
-        image="/assets/market/retailers-hero.jpg"
+        image="/assets/market/retailers-hero.jpg?v=20260822-market2"
         alt="A premium independent trading card shop with collectors browsing shelves and subtle FateDrop branding"
         proof={["Surface live products", "Reach active collectors", "Keep your checkout", "Join the indie network"]}
       >
