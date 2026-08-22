@@ -33,3 +33,22 @@ test("dashboard snapshot keeps public lifecycle and exact cause as separate dime
   assert.ok(route.includes("state, kind, intensity"));
   assert.ok(route.includes('new Set<SignalLifecycle>(["whisper", "manifested", "vanished", "echo"])'));
 });
+
+test("dashboard grouping uses lifecycle state rather than precise cause", async () => {
+  const dashboard = await source("lib/dashboard.ts");
+  assert.ok(dashboard.includes('filter((signal) => signal.state === "manifested")'));
+  assert.ok(dashboard.includes('filter((signal) => signal.state === "whisper" || signal.state === "echo")'));
+  assert.equal(dashboard.includes('const kind = signal.kind ?? signal.state;\n    return kind === "manifested";'), false);
+});
+
+test("dashboard signal labels can show exact cause without replacing lifecycle", async () => {
+  const dashboard = await source("lib/dashboard.ts");
+  for (const pair of [
+    ['"queue"', '"Queue"'],
+    ['"security"', '"Security"'],
+    ['"restock"', '"Restock"'],
+    ['"sold_out"', '"Sold out"'],
+    ['"catalogue_new"', '"Catalogue new"'],
+  ]) assert.ok(dashboard.includes(`if (kind === ${pair[0]}) return ${pair[1]};`));
+  assert.ok(dashboard.includes('return cause ? `${lifecycle} · ${cause}` : lifecycle;'));
+});
