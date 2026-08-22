@@ -42,6 +42,12 @@ export async function setFateMatchEnabled(userId: string, matchId: string, enabl
   return rows[0] ? mapFateMatch(rows[0] as Record<string, unknown>) : null;
 }
 
+export async function deleteFateMatch(userId: string, matchId: string) {
+  const sql = await fateDropPostgres();
+  const rows = await sql`DELETE FROM fatedrop_fate_matches WHERE id=${matchId} AND user_id=${userId} RETURNING id`;
+  return Boolean(rows[0]);
+}
+
 export async function listActiveFateMatches(productIdentityId?: string | null) {
   const sql = await fateDropPostgres();
   const rows = productIdentityId
