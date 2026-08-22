@@ -6,8 +6,9 @@ This checklist is a production-readiness control, not legal advice. A successful
 
 - ✅ Account passwords use scrypt hashing and opaque sessions.
 - ✅ Browser session cookies are HttpOnly, SameSite=Lax and Secure in production.
-- ✅ Sampled account/auth mutation routes use the shared same-origin guard.
+- ✅ All current browser-facing API mutation routes are automatically audited for the shared same-origin guard; signed/bearer server-to-server endpoints are explicit exceptions with their own verification.
 - ✅ Stripe webhook verification and idempotent billing-event storage have automated coverage.
+- ✅ Current-tree secret hygiene has an automated guard for obvious production credential patterns; repository-history and deployed-secret review remain separate production tasks.
 - ✅ Public signal language is Whisper → Echo → Manifested → Vanished, with Drop Pulse kept as supporting evidence/context.
 - ✅ Source-level CSP, HSTS, private no-cache/noindex, crawler controls and Sec-Fetch-Site hardening are automated-test guarded; deployed response verification remains open.
 - ✅ The current Web companion renderer has source-level reduced-motion behaviour and honest model/animation-state wording; browser/device QA remains open.
@@ -17,10 +18,10 @@ This checklist is a production-readiness control, not legal advice. A successful
 ## P0 — required before scaled paid launch
 
 ### Security
-- [ ] Verify all authentication and account mutation routes for authorization and same-origin/CSRF controls.
+- [x] Browser-facing authentication/account/API mutation routes are automatically audited for `assertSameOrigin(request)`. Native `/api/mobile` endpoints remain a separate bearer-session security boundary; Stripe webhook and Cloud metric ingestion retain signed/timing-safe server-to-server verification.
 - [ ] Configure Cloudflare rate limiting for login, registration and other abuse-sensitive endpoints.
 - [ ] Configure Turnstile or an equivalent challenge for abusive authentication/registration traffic if required, including server-side verification.
-- [ ] Confirm production secrets exist only in protected environment/secrets storage and check repository history for accidental exposure.
+- [ ] Confirm production secrets exist only in protected environment/secrets storage and check repository history for accidental exposure. Current-tree obvious credential patterns are already test-guarded.
 - [ ] Confirm PostgreSQL production credentials use encrypted transport and the least privilege practical for the deployed service.
 - [ ] Verify private account/dashboard/API responses are not publicly cached or indexed in the deployed environment. Source headers/robots are already guarded.
 - [ ] Verify CSP, HSTS and the remaining security headers against the deployed Cloudflare site and required integrations. Source policy is already guarded, including GLB/texture compatibility.
