@@ -64,6 +64,25 @@ test("retired companion and illustrated-avatar renderer experiments are absent",
   ]) assert.equal(fs.existsSync(path.join(root, file)), false, `${file} should remain retired`);
 });
 
+test("final-roster registered GLBs render through the current WebGL boundary", () => {
+  const contract = read("lib/companion-contract.ts");
+  const renderer = read("components/companion-renderer.tsx");
+  const webgl = read("components/companion-webgl-model.tsx");
+  assert.ok(renderer.includes("CompanionWebglModel"));
+  assert.ok(renderer.includes('mode === "webgl-3d" && definition.modelUrl'));
+  assert.equal(renderer.includes("renderer validation pending"), false);
+  assert.ok(webgl.includes("Companion asset is not GLB v2"));
+  assert.ok(webgl.includes("baseColorTexture"));
+  assert.ok(webgl.includes("WebGL is unavailable on this device"));
+  for (const id of ["aeris", "nyxen", "solix"]) {
+    assert.ok(contract.includes(`/assets/companions/${id}/${id}.glb`));
+    assert.equal(fs.existsSync(path.join(root, `public/assets/companions/${id}/${id}.glb`)), true, `${id} GLB missing`);
+  }
+  for (const retired of ["Signal Scout", "Signal Warden", "Signal Droid", "floating signal familiar"]) {
+    assert.equal(webgl.includes(retired), false, `${retired} must not return through the new renderer`);
+  }
+});
+
 test("no standalone HTML companion experiments remain in the website repository", () => {
   const html = walk(root).filter((file) => file.endsWith(".html") && !file.includes(`${path.sep}node_modules${path.sep}`) && !file.includes(`${path.sep}.next${path.sep}`));
   assert.deepEqual(html, []);
@@ -113,6 +132,7 @@ test("dashboard selector exposes five active slots and profile renders the real 
   const profile = read("app/dashboard/profile/page.tsx");
   assert.ok(selector.includes("ACTIVE_COMPANION_ROSTER.map"));
   assert.ok(selector.includes("5 ACTIVE SLOTS"));
+  assert.ok(selector.includes("Registered character packs render as live 3D previews"));
   assert.ok(page.includes("Koru, Fenn, Aeris, Nyxen or Solix"));
   assert.ok(page.includes("LEGACY_COMPANION_ARCHIVE"));
   assert.equal(page.includes("AvatarBuilder"), false);
