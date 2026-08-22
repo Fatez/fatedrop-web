@@ -11,10 +11,18 @@ const kindMeta: Record<SignalKind, { label: string; glyph: string; context?: str
   manifested: { label: "MANIFESTED", glyph: "M", context: "confirmed availability" },
   vanished: { label: "VANISHED", glyph: "V", context: "confirmed availability lost" },
   echo: { label: "ECHO", glyph: "E", context: "access readiness changed" },
-  price_change: { label: "PRICE CHANGE", glyph: "£" },
-  launch_date_change: { label: "LAUNCH CHANGE", glyph: "D" },
+  catalogue_new: { label: "WHISPER", glyph: "W", context: "new catalogue entry observed" },
+  catalogue_state_change: { label: "WHISPER", glyph: "W", context: "catalogue state changed" },
+  price_change: { label: "PRICE CHANGE", glyph: "£", context: "observed offer price changed" },
+  launch_date_change: { label: "LAUNCH CHANGE", glyph: "D", context: "observed launch information changed" },
   queue: { label: "ECHO", glyph: "E", context: "queue condition observed" },
   security: { label: "ECHO", glyph: "E", context: "security / traffic condition observed" },
+  access_blocked: { label: "ECHO", glyph: "E", context: "access-control condition observed" },
+  new_listing_live: { label: "MANIFESTED", glyph: "M", context: "new listing confirmed purchasable" },
+  availability_live: { label: "MANIFESTED", glyph: "M", context: "availability confirmed live" },
+  restock: { label: "MANIFESTED", glyph: "M", context: "restock confirmed live" },
+  sold_out: { label: "VANISHED", glyph: "V", context: "confirmed availability sold out" },
+  lifecycle_unspecified: { label: "SIGNAL", glyph: "◇", context: "exact historical cause unavailable" },
   drop_pulse: { label: "DROP PULSE", glyph: "P", context: "evidence-backed activity context" },
 };
 
@@ -35,8 +43,8 @@ function signalKind(signal: NetworkSignal): SignalKind { return signal.kind ?? s
 function signalIntensity(signal: NetworkSignal): SignalIntensity {
   if (signal.intensity) return signal.intensity;
   const kind = signalKind(signal);
-  if (kind === "security" || kind === "queue") return "major";
-  if (kind === "manifested" || kind === "echo" || kind === "drop_pulse") return "standard";
+  if (kind === "security" || kind === "queue" || kind === "access_blocked") return "major";
+  if (kind === "manifested" || kind === "new_listing_live" || kind === "availability_live" || kind === "restock" || kind === "echo" || kind === "drop_pulse") return "standard";
   return "subtle";
 }
 
