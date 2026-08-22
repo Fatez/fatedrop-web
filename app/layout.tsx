@@ -4,6 +4,7 @@ import "./globals.css";
 import "./accessibility.css";
 import "./koru-theme.css";
 import "./koru-product-theme.css";
+import "./companion-presentation.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalSiteUrl()),
