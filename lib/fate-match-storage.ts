@@ -1,6 +1,7 @@
 import type { FateMatch } from "@/lib/fate-match";
 import { fateDropPostgres } from "@/lib/postgres";
 import { safeExternalHttpsUrl } from "@/lib/external-url";
+import { calculateTruePrice } from "@/lib/true-price";
 
 function stringArray(value: unknown) {
   if (Array.isArray(value)) return value.map(String);
@@ -49,10 +50,15 @@ function mapFateMatchHit(row: Record<string, unknown>): FateMatchHitView {
   const itemPricePence = nullableNumber(row.item_price_pence);
   const postagePence = nullableNumber(row.mandatory_postage_pence);
   const feesPence = nullableNumber(row.mandatory_fees_pence);
+  const officialRrpPence = nullableNumber(row.official_rrp_pence);
   const deliveryKnown = row.delivery_known === true;
-  const truePricePence = deliveryKnown && itemPricePence !== null && postagePence !== null && feesPence !== null
-    ? itemPricePence + postagePence + feesPence
-    : null;
+  const price = itemPricePence === null ? null : calculateTruePrice({
+    itemPricePence,
+    mandatoryPostagePence: postagePence,
+    mandatoryFeesPence: feesPence,
+    deliveryKnown,
+    officialRrpPence,
+  });
 
   return {
     id: String(row.id),
@@ -66,8 +72,8 @@ function mapFateMatchHit(row: Record<string, unknown>): FateMatchHitView {
     productUrl: safeExternalHttpsUrl(row.offer_url),
     itemPricePence,
     deliveryKnown,
-    truePricePence,
-    officialRrpPence: nullableNumber(row.official_rrp_pence),
+    truePricePence: price?.deliveredTruePricePence ?? null,
+    officialRrpPence,
     stockState: nullableString(row.stock_state),
     reasons: stringArray(row.reasons_json),
     occurredAt: Number(row.occurred_at),
