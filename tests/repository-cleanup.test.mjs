@@ -26,6 +26,13 @@ test("superseded homepage and companion implementations stay removed", () => {
   ]) assert.equal(fs.existsSync(path.join(root, file)), false, `${file} should remain removed`);
 });
 
+test("superseded JPG market heroes stay removed after the final PNG handoff", () => {
+  for (const file of [
+    "public/assets/market/collectors-hero.jpg",
+    "public/assets/market/retailers-hero.jpg",
+  ]) assert.equal(fs.existsSync(path.join(root, file)), false, `${file} should remain removed`);
+});
+
 test("current homepage has one explicit composition path", () => {
   const page = fs.readFileSync(path.join(root, "app/page.tsx"), "utf8");
   assert.ok(page.includes('from "@/components/koru-home-reference"'));
