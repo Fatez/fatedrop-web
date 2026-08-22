@@ -22,27 +22,28 @@ test("every retained dashboard destination has a real page", () => {
   for (const route of dashboardRoutes) assert.equal(fs.existsSync(route), true, `${route} is missing`);
 });
 
-test("core dashboard navigation follows Discover Track Network Account structure", () => {
+test("core dashboard navigation keeps every collector destination in the approved workspace rail", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
-  for (const group of ["DISCOVER", "TRACK", "NETWORK", "ACCOUNT"]) assert.ok(nav.includes(group));
-  for (const href of ["/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/notifications", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/notifications", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
-  assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'));
-  assert.ok(nav.includes('["☆", "Wishlist", "/dashboard/wishlist"]'));
-  assert.ok(nav.includes('["≋", "Preferences", "/dashboard/notifications"]'));
-  assert.ok(nav.includes('["◇", "Koru & Friends", "/dashboard/avatar"]'));
+  assert.ok(nav.includes('"FateFind", "/dashboard/watchlist"'));
+  assert.ok(nav.includes('"Watchlist", "/dashboard/wishlist"'));
+  assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
+  assert.ok(nav.includes('"True Price", "/dashboard/true-price"'));
+  assert.ok(nav.includes('"Indies", "/dashboard/stores"'));
 });
 
 test("dashboard home uses the shared shell and retains personal collector identity", () => {
   const root = fs.readFileSync("app/dashboard/page.tsx", "utf8");
+  const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
   assert.ok(root.includes("DashboardPageShell"));
   assert.equal(root.includes("fd-dashboard-sidebar"), false);
-  assert.ok(root.includes("MEMBER SINCE"));
-  assert.ok(root.includes("TIME IN NETWORK"));
+  assert.ok(root.includes("snapshot.account.displayName"));
   assert.ok(root.includes('href="/dashboard/avatar"'));
-  assert.ok(root.includes('href="/dashboard/search"'));
-  assert.ok(root.includes("KORU &amp; FRIENDS"));
-  assert.ok(root.includes("5 ACTIVE COMPANIONS"));
+  assert.ok(root.includes('href="/dashboard/alerts"'));
+  assert.ok(root.includes("KORU · NETWORK GUIDE"));
+  assert.ok(shell.includes("snapshot.account.displayName"));
+  assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.equal(root.includes("floating signal droid"), false);
 });
 
