@@ -46,7 +46,7 @@ function titleInitials(title: string) {
 function truePriceGroup(signals: NetworkSignal[]) {
   const groups = new Map<string, NetworkSignal[]>();
   for (const signal of signals) {
-    if ((signal.kind ?? signal.state) !== "manifested" || signal.deliveredPricePence === null) continue;
+    if (signal.state !== "manifested" || signal.deliveredPricePence === null) continue;
     const key = signal.title.trim().toLowerCase();
     groups.set(key, [...(groups.get(key) ?? []), signal]);
   }
@@ -57,6 +57,7 @@ function truePriceGroup(signals: NetworkSignal[]) {
 export default async function DashboardPage() {
   const snapshot = await getCurrentSnapshot();
   if (!snapshot) redirect("/account/login?next=/dashboard");
+
   const data = await buildDashboardData(snapshot);
   const premium = hasPremiumAccess(snapshot.membership);
   const network = data.network;
@@ -66,8 +67,12 @@ export default async function DashboardPage() {
   const recentDrops = data.recentManifested.slice(0, 4);
   const fateFinds = data.personal.watchlist.slice(0, 3);
   const stores = data.personal.favoriteStores.slice(0, 5);
-
-  const series = Object.fromEntries(lifecycle.map(([key]) => [key, history.map((item) => item.metrics[key]).filter((value): value is number => typeof value === "number").slice(-12)])) as Record<LifecycleKey, number[]>;
+  const series = Object.fromEntries(
+    lifecycle.map(([key]) => [
+      key,
+      history.map((item) => item.metrics[key]).filter((value): value is number => typeof value === "number").slice(-12),
+    ]),
+  ) as Record<LifecycleKey, number[]>;
 
   return <DashboardPageShell title={`Dashboard · ${snapshot.account.displayName}`} eyebrow="COLLECTOR WORKSPACE">
     <div className="fd-reference-home">
@@ -82,9 +87,11 @@ export default async function DashboardPage() {
             const delta = values.length > 1 ? values[values.length - 1] - values[values.length - 2] : null;
             return <article className={`fd-lifecycle-card ${key}`} key={key}>
               <div><small>{label}</small><span>{description}</span></div>
-              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true"/></div>
-              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path d={sparkPath(values)}/></svg>
-              {delta !== null ? <p className={delta < 0 ? "down" : "up"}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} {Math.abs(delta)} latest snapshot</p> : <p>Waiting for trend history</p>}
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
+              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path d={sparkPath(values)} /></svg>
+              {delta !== null
+                ? <p className={delta < 0 ? "down" : "up"}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} {Math.abs(delta)} latest snapshot</p>
+                : <p>Waiting for trend history</p>}
             </article>;
           })}
         </div>
@@ -123,14 +130,14 @@ export default async function DashboardPage() {
 
         <article className="fd-ref-card fd-network-pulse-card">
           <div className="fd-ref-card-head compact"><div><h2>Network Pulse</h2><p>Live scale across the network.</p></div></div>
-          <DashboardNetworkPulse retailers={network?.metrics.catalogueRetailers} products={network?.metrics.productsTracked}/>
+          <DashboardNetworkPulse retailers={network?.metrics.catalogueRetailers} products={network?.metrics.productsTracked} />
           <Link className="fd-card-link" href="/dashboard/stores">View network <span>→</span></Link>
         </article>
 
         <article className="fd-ref-card fd-recent-drops">
           <div className="fd-ref-card-head compact"><div><h2>Recent Manifested Drops</h2><p>Confirmed purchasable availability.</p></div></div>
           <div className="fd-drop-grid">
-            {recentDrops.length ? recentDrops.map((item) => <div className="fd-drop-mini" key={item.id}><span className="fd-drop-art"><i/>{titleInitials(item.title)}</span><strong>{premium ? item.title : "Premium product"}</strong><small>{premium ? (item.retailer || "Retailer pending") : "Retailer hidden"}</small><b>{premium ? (moneyFromPence(item.deliveredPricePence) || "LIVE") : "LOCKED"}</b></div>) : <div className="fd-ref-empty"><strong>No Manifested drops yet.</strong><span>Confirmed live products will appear here.</span></div>}
+            {recentDrops.length ? recentDrops.map((item) => <div className="fd-drop-mini" key={item.id}><span className="fd-drop-art"><i />{titleInitials(item.title)}</span><strong>{premium ? item.title : "Premium product"}</strong><small>{premium ? (item.retailer || "Retailer pending") : "Retailer hidden"}</small><b>{premium ? (moneyFromPence(item.deliveredPricePence) || "LIVE") : "LOCKED"}</b></div>) : <div className="fd-ref-empty"><strong>No Manifested drops yet.</strong><span>Confirmed live products will appear here.</span></div>}
           </div>
           <Link className="fd-card-link" href="/dashboard/alerts">View all drops <span>→</span></Link>
         </article>
@@ -143,10 +150,8 @@ export default async function DashboardPage() {
           <Link className="fd-card-link" href="/dashboard/stores">Manage retailers <span>→</span></Link>
         </article>
 
-        <article className="fd-koru-dashboard-card">
-          <div className="fd-koru-shade" aria-hidden="true"/>
-          <div className="fd-koru-copy"><small>KORU · NETWORK GUIDE</small><h2>The signal moves.<br/>The bond remains.</h2><p>Stay ahead.<br/>Trust the signal.</p><Link href="/dashboard/avatar">Choose your companion <span>→</span></Link></div>
-          <div className="fd-koru-brand"><b>FATEDROP</b><span>TRUST THE SIGNAL.</span></div>
+        <article className="fd-koru-dashboard-card" aria-label="Koru FateDrop network guide artwork">
+          <Link className="fd-koru-action" href="/dashboard/avatar" aria-label="Choose your Koru and Friends companion">Choose your companion <span>→</span></Link>
         </article>
       </section>
     </div>
@@ -156,10 +161,10 @@ export default async function DashboardPage() {
       .fd-reference-grid{display:grid;grid-template-columns:1.05fr 1.05fr .82fr 1.18fr;gap:10px;align-items:stretch}.fd-recent-signals,.fd-true-price-card,.fd-fatefind-card,.fd-network-pulse-card{min-height:350px}.fd-ref-list{display:grid;padding:0 12px}.fd-signal-row{min-height:55px;padding:8px 3px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:9px;align-items:center;border-top:1px solid rgba(221,203,188,.055)}.fd-signal-row:first-child{border-top:0}.fd-mini-thumb{width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(158,113,194,.18);border-radius:7px;background:radial-gradient(circle at 50% 35%,rgba(139,77,190,.18),transparent 55%),#13161b;color:#ab83c7;font-family:Georgia,serif;font-size:10px}.fd-mini-thumb.manifested{color:#89aa7a;border-color:rgba(133,168,118,.18)}.fd-mini-thumb.vanished{color:#bb5a61;border-color:rgba(179,78,86,.2)}.fd-mini-thumb.echo{color:#9871cd}.fd-signal-row>div{display:grid;gap:3px;min-width:0}.fd-signal-row>div small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6f686d;font-size:6px}.fd-signal-row>div strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.fd-signal-row aside{display:grid;justify-items:end;gap:4px}.fd-signal-row aside b{padding:3px 5px;border-radius:999px;background:rgba(158,102,205,.08);color:#9870c0;font-size:5px;font-weight:900;text-transform:uppercase}.fd-signal-row aside b.manifested{color:#7fa272;background:rgba(127,162,114,.08)}.fd-signal-row aside b.vanished{color:#b3585f;background:rgba(179,88,95,.08)}.fd-signal-row aside small{color:#625c61;font-size:6px}.fd-card-link{position:absolute;left:15px;bottom:12px;color:#a66fd0;font-size:7px;font-weight:750;text-decoration:none}.fd-ref-empty{padding:16px;display:grid;gap:5px;color:#6f686d}.fd-ref-empty strong{color:#bcb3b0;font-size:9px}.fd-ref-empty span{font-size:7px;line-height:1.5}.fd-ref-empty.tall{min-height:205px;align-content:center}
       .fd-price-table{padding:2px 14px 42px}.fd-price-head,.fd-price-row{display:grid;grid-template-columns:minmax(0,1fr) 95px 70px;gap:8px;align-items:center}.fd-price-head{padding:10px 5px 7px;color:#625c61;font-size:6px}.fd-price-row{min-height:43px;padding:0 5px;border-top:1px solid rgba(221,203,188,.055)}.fd-price-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#bdb4b1;font-size:8px}.fd-price-row b{color:#d8d0ca;font-size:8px}.fd-price-row small{color:#635d61;font-size:6px;text-align:right}.fd-price-table>p{margin:10px 5px 0;color:#5f595e;font-size:6px;line-height:1.5}.fd-fatefind-list{display:grid;padding:2px 12px 42px}.fd-fatefind-list>div:not(.fd-ref-empty){min-height:60px;padding:9px 10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid rgba(221,203,188,.055);border-radius:8px;background:#0f1317;margin-top:7px}.fd-fatefind-list span{display:grid;gap:4px;min-width:0}.fd-fatefind-list strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.fd-fatefind-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b6469;font-size:6px}.fd-fatefind-list b{min-width:25px;height:25px;padding:0 7px;display:grid;place-items:center;border-radius:9px;background:rgba(129,74,174,.16);color:#c09add;font-size:7px}.fd-network-pulse-card{padding-bottom:35px}.fd-network-pulse-card>.fd-pulse-layout{padding:0 8px}
       .fd-recent-drops,.fd-retailer-card{min-height:270px}.fd-drop-grid{padding:0 12px 40px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.fd-drop-mini{min-width:0;display:grid;gap:4px}.fd-drop-art{position:relative;aspect-ratio:.8/1;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(221,203,188,.08);border-radius:7px;background:radial-gradient(circle at 50% 25%,rgba(141,86,178,.18),transparent 44%),linear-gradient(155deg,#17181b,#0c1014);color:#c1a4d2;font-family:Georgia,serif;font-size:13px}.fd-drop-art i{position:absolute;width:54%;height:54%;border:1px solid rgba(190,151,213,.13);transform:rotate(45deg)}.fd-drop-mini strong{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#c8bfba;font-size:7px;line-height:1.3}.fd-drop-mini small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#655f63;font-size:5px}.fd-drop-mini>b{color:#d9d0ca;font-size:7px}.fd-retailer-list{display:grid;padding:0 12px 40px}.fd-retailer-list>div:not(.fd-ref-empty){min-height:42px;display:grid;grid-template-columns:26px minmax(0,1fr) auto auto;gap:8px;align-items:center;border-top:1px solid rgba(221,203,188,.055)}.fd-retailer-list>div:first-child{border-top:0}.fd-store-mark{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:rgba(150,96,184,.09);color:#9f79ba;font-size:10px}.fd-retailer-list strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px}.fd-retailer-list small{color:#655f64;font-size:6px}.fd-retailer-list b{color:#927d6d;font-size:6px;font-weight:650}
-      .fd-koru-dashboard-card{position:relative;grid-column:3 / 5;min-height:270px;overflow:hidden;border:1px solid rgba(181,151,128,.13);border-radius:11px;background:linear-gradient(90deg,rgba(8,10,12,.98),rgba(8,10,12,.62) 46%,rgba(8,10,12,.12)),url('/assets/home/koru-home-section.png') center 54%/cover no-repeat}.fd-koru-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,9,11,.88) 0%,rgba(7,9,11,.6) 43%,rgba(7,9,11,.1) 75%),linear-gradient(180deg,transparent 46%,rgba(7,9,11,.58))}.fd-koru-copy{position:relative;z-index:2;width:48%;height:100%;padding:25px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}.fd-koru-copy>small{color:#a1846e;font-size:6px;font-weight:900;letter-spacing:.16em}.fd-koru-copy h2{margin:10px 0 12px;color:#dcccbc;font-family:Georgia,'Times New Roman',serif;font-size:clamp(1.8rem,2.4vw,2.8rem);font-weight:500;line-height:.98;letter-spacing:-.04em}.fd-koru-copy p{margin:0;color:#aa9790;font-family:Georgia,serif;font-size:15px;line-height:1.35}.fd-koru-copy a{margin-top:20px;color:#b584d4;font-size:7px;font-weight:800;text-decoration:none}.fd-koru-brand{position:absolute;z-index:2;right:22px;bottom:17px;display:grid;gap:3px;text-align:right;color:#987d63}.fd-koru-brand b{font-family:Georgia,serif;font-size:12px;font-weight:500;letter-spacing:.22em}.fd-koru-brand span{font-size:5px;font-weight:900;letter-spacing:.2em}
+      .fd-koru-dashboard-card{position:relative;grid-column:3 / 5;min-height:270px;overflow:hidden;border:1px solid rgba(181,151,128,.16);border-radius:11px;background:#090d11 url('/assets/dashboard/koru-network-guide.png') center center/cover no-repeat;box-shadow:inset 0 1px rgba(255,255,255,.02)}.fd-koru-action{position:absolute;z-index:2;left:14px;top:14px;padding:8px 10px;border:1px solid rgba(215,190,166,.18);border-radius:8px;background:rgba(6,10,14,.66);backdrop-filter:blur(10px);color:#d4bea8;font-size:7px;font-weight:800;text-decoration:none;letter-spacing:.02em;transition:.16s ease}.fd-koru-action:hover{border-color:rgba(215,190,166,.32);background:rgba(6,10,14,.82);transform:translateY(-1px)}.fd-koru-action span{margin-left:5px}
       @media(max-width:1320px){.fd-reference-grid{grid-template-columns:1fr 1fr}.fd-network-pulse-card,.fd-fatefind-card,.fd-recent-signals,.fd-true-price-card{min-height:330px}.fd-koru-dashboard-card{grid-column:1 / 3}.fd-drop-grid{grid-template-columns:repeat(4,1fr)}}
-      @media(max-width:820px){.fd-lifecycle-grid{grid-template-columns:1fr 1fr}.fd-reference-grid{grid-template-columns:1fr}.fd-koru-dashboard-card{grid-column:auto}.fd-koru-copy{width:68%}.fd-drop-grid{grid-template-columns:repeat(2,1fr)}.fd-recent-signals,.fd-true-price-card,.fd-fatefind-card,.fd-network-pulse-card{min-height:310px}}
-      @media(max-width:520px){.fd-overview-card{padding:14px 12px}.fd-ref-card-head{flex-direction:column}.fd-lifecycle-grid{grid-template-columns:1fr}.fd-lifecycle-card{min-height:115px}.fd-koru-dashboard-card{min-height:330px;background-position:58% center}.fd-koru-copy{width:100%;justify-content:flex-end;padding:22px;background:linear-gradient(0deg,rgba(7,9,11,.96),rgba(7,9,11,.15) 80%)}.fd-koru-brand{display:none}.fd-price-head,.fd-price-row{grid-template-columns:1fr 82px}.fd-price-head span:last-child,.fd-price-row small{display:none}.fd-retailer-list>div:not(.fd-ref-empty){grid-template-columns:26px minmax(0,1fr) auto}.fd-retailer-list small{display:none}}
+      @media(max-width:820px){.fd-lifecycle-grid{grid-template-columns:1fr 1fr}.fd-reference-grid{grid-template-columns:1fr}.fd-koru-dashboard-card{grid-column:auto;min-height:260px;background-position:center}.fd-drop-grid{grid-template-columns:repeat(2,1fr)}.fd-recent-signals,.fd-true-price-card,.fd-fatefind-card,.fd-network-pulse-card{min-height:310px}}
+      @media(max-width:520px){.fd-overview-card{padding:14px 12px}.fd-ref-card-head{flex-direction:column}.fd-lifecycle-grid{grid-template-columns:1fr}.fd-lifecycle-card{min-height:115px}.fd-koru-dashboard-card{min-height:190px;aspect-ratio:1916/821;background-position:center}.fd-koru-action{left:9px;top:9px;padding:7px 8px;font-size:6px}.fd-price-head,.fd-price-row{grid-template-columns:1fr 82px}.fd-price-head span:last-child,.fd-price-row small{display:none}.fd-retailer-list>div:not(.fd-ref-empty){grid-template-columns:26px minmax(0,1fr) auto}.fd-retailer-list small{display:none}}
     `}</style>
   </DashboardPageShell>;
 }
