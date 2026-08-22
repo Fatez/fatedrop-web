@@ -109,3 +109,31 @@ test("merch page uses one approved campaign, two closed drops and Stripe-ready p
   assert.ok(nav.includes('href="/merch#koru-friends"'));
   assert.ok(nav.includes('href="/merch#signal-collection"'));
 });
+
+test("collector and retailer pages stay visibly grounded in the TCG market", () => {
+  const hero = read("components/market-story-hero.tsx");
+  const collectors = read("app/collectors/page.tsx");
+  const retailers = read("app/businesses/page.tsx");
+  assert.ok(hero.includes("market-story-hero"));
+  assert.ok(fs.existsSync("public/assets/market/collectors-hero.jpg"));
+  assert.ok(fs.existsSync("public/assets/market/retailers-hero.jpg"));
+  assert.ok(collectors.includes("Find the cards. Know the price. Catch the signal."));
+  assert.ok(collectors.includes("Search the network"));
+  assert.ok(collectors.includes("Buy direct from stores"));
+  assert.ok(retailers.includes("The bridge between independent stock and collector demand."));
+  assert.ok(retailers.includes("Surface live products"));
+  assert.ok(retailers.includes("Keep your checkout"));
+});
+
+test("dashboard home is a collector workspace first and companion layer second", () => {
+  const dashboard = read("app/dashboard/page.tsx");
+  assert.ok(dashboard.includes("FATEDROP · COLLECTOR INTELLIGENCE"));
+  assert.ok(dashboard.includes("Search. Understand. Track. Buy."));
+  assert.ok(dashboard.includes("Network Search"));
+  assert.ok(dashboard.includes("True Price"));
+  assert.ok(dashboard.includes("FateFind"));
+  assert.ok(dashboard.includes("Signal Feed"));
+  assert.ok(dashboard.includes("Your companion is part of the journey."));
+  assert.ok(dashboard.includes("Not the product."));
+  assert.equal(dashboard.includes("COLLECTOR COMMAND CENTRE"), false);
+});
