@@ -41,6 +41,12 @@ test("dashboard grouping uses lifecycle state rather than precise cause", async 
   assert.equal(dashboard.includes('const kind = signal.kind ?? signal.state;\n    return kind === "manifested";'), false);
 });
 
+test("dashboard home True Price summary also groups by lifecycle state", async () => {
+  const page = await source("app/dashboard/page.tsx");
+  assert.ok(page.includes('if (signal.state !== "manifested" || signal.deliveredPricePence === null) continue;'));
+  assert.equal(page.includes('(signal.kind ?? signal.state) !== "manifested"'), false);
+});
+
 test("dashboard signal labels can show exact cause without replacing lifecycle", async () => {
   const dashboard = await source("lib/dashboard.ts");
   for (const pair of [
@@ -51,4 +57,12 @@ test("dashboard signal labels can show exact cause without replacing lifecycle",
     ['"catalogue_new"', '"Catalogue new"'],
   ]) assert.ok(dashboard.includes(`if (kind === ${pair[0]}) return ${pair[1]};`));
   assert.ok(dashboard.includes('return cause ? `${lifecycle} · ${cause}` : lifecycle;'));
+});
+
+test("dashboard guide card uses the final supplied Koru artwork without duplicating its baked-in copy", async () => {
+  const page = await source("app/dashboard/page.tsx");
+  assert.ok(page.includes("/assets/dashboard/koru-network-guide.png"));
+  assert.ok(page.includes('className="fd-koru-action"'));
+  assert.equal(page.includes("The signal moves.<br/>The bond remains."), false);
+  assert.equal(page.includes('<div className="fd-koru-brand">'), false);
 });
