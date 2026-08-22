@@ -7,8 +7,10 @@ const read = (file) => fs.readFileSync(file, "utf8");
 test("dashboard instruments the collector to indie retailer handoff without rewriting stable offer pages", () => {
   const layout = read("app/dashboard/layout.tsx");
   const observer = read("components/retailer-handoff-observer.tsx");
+  const alerts = read("app/dashboard/alerts/page.tsx");
 
   assert.ok(layout.includes("RetailerHandoffObserver"));
+  assert.ok(observer.includes('pathname === "/dashboard/alerts"'));
   assert.ok(observer.includes('pathname === "/dashboard/search"'));
   assert.ok(observer.includes('pathname === "/dashboard/true-price"'));
   assert.ok(observer.includes('pathname === "/dashboard/stores"'));
@@ -17,6 +19,8 @@ test("dashboard instruments the collector to indie retailer handoff without rewr
   assert.ok(observer.includes('subtitle: `Retailer handoff · ${context}`'));
   assert.ok(observer.includes('keepalive: true'));
   assert.ok(observer.includes('credentials: "same-origin"'));
+  assert.ok(alerts.includes('href={alert.productUrl}'));
+  assert.ok(alerts.includes('target="_blank" rel="noreferrer"'));
 });
 
 test("retailer handoff evidence remains a referral signal rather than a purchase claim", () => {
