@@ -147,7 +147,9 @@ test("dashboard home matches the approved evidence-backed collector workspace", 
   assert.ok(dashboard.includes("Network Pulse"));
   assert.ok(dashboard.includes("Recent Manifested Drops"));
   assert.ok(dashboard.includes("Retailers You Track"));
-  assert.ok(dashboard.includes("KORU · NETWORK GUIDE"));
+  assert.ok(dashboard.includes("/assets/dashboard/koru-network-guide.png"));
+  assert.ok(dashboard.includes("Choose your companion"));
+  assert.ok(fs.existsSync("public/assets/dashboard/koru-network-guide.png"));
   assert.ok(shell.includes("Search cards, sets or retailers"));
   assert.ok(pulse.includes("Products"));
   assert.equal(dashboard.includes("COLLECTOR COMMAND CENTRE"), false);
