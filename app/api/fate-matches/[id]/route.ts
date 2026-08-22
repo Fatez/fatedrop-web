@@ -1,7 +1,22 @@
 import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
-import { setFateMatchEnabled } from "@/lib/fate-match-storage";
+import { getLatestUserFateMatchHit, setFateMatchEnabled } from "@/lib/fate-match-storage";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+  const snapshot = await getCurrentSnapshot();
+  if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
+  const { id: rawId } = await context.params;
+  const id = rawId.trim().slice(0, 180);
+  if (!id) return Response.json({ error: "FateFind id is required." }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
+  try {
+    const latestHit = await getLatestUserFateMatchHit(snapshot.account.id, id);
+    return Response.json({ latestHit }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch {
+    return Response.json({ error: "FateMatch evidence is temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
+  }
+}
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
