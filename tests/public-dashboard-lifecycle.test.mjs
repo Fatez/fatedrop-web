@@ -17,7 +17,7 @@ test("dashboard keeps all four canonical lifecycle counters distinct", () => {
 });
 
 test("dashboard exposes the final four-stage lifecycle terminology", () => {
-  assert.match(dashboardPage, /Whisper, Echo, Manifested and Vanished lifecycle intelligence/);
+  assert.match(dashboardPage, /Whisper, Echo, Manifested and Vanished with one consistent meaning/);
   assert.match(dashboardPage, /Whisper and Echo activity will surface here/);
   assert.match(dashboardData, /if \(kind === "whisper"\) return "Whisper"/);
   assert.match(dashboardData, /kind === "echo" \|\| kind === "queue" \|\| kind === "security"/);
