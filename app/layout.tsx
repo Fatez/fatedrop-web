@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { canonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 import "./koru-theme.css";
+import "./koru-product-theme.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalSiteUrl()),
