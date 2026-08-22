@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AvatarPreview } from "@/components/avatar-preview";
+import { CompanionRenderer } from "@/components/companion-renderer";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { FateMatchBuilder } from "@/components/fate-match-builder";
 import { getCurrentSnapshot } from "@/lib/auth";
@@ -31,7 +31,7 @@ export default async function DashboardFateFindPage({ searchParams }: { searchPa
     <div className="fd-fatematch-page">
       <section className="fd-dash-card fd-fm-hero">
         <div className="fd-dash-card-head"><span>FATEFIND</span><i className={premium ? "live" : "pending"}>{premium ? "● ACTIVE ENTITLEMENT" : "○ PREMIUM MONITORING"}</i></div>
-        <div className="fd-fm-hero-grid"><div><div className="fd-network-message"><h1>Tell FateDrop what you want.<br/>Let the network do the hunting.</h1><p><b>FateFind</b> is the hunt: product plus limits such as maximum delivered True Price, RRP premium and online/local scope. When a real observed offer satisfies those conditions, that successful result is a <b>FateMatch</b>. A Universal Wishlist remains a separate, simpler “I want this” product save.</p></div><FateMatchBuilder premium={premium} initialQuery={initialQuery}/></div>{avatar ? <aside className="fd-fm-companion"><div><span>YOUR COMPANION</span><small>Watching the network with you</small></div><AvatarPreview loadout={avatar.loadout} mood={matches.some((match)=>match.enabled) ? "watching" : "idle"} compact label="FateFind companion"/><Link href="/dashboard/avatar">CUSTOMISE →</Link></aside> : null}</div>
+        <div className="fd-fm-hero-grid"><div><div className="fd-network-message"><h1>Tell FateDrop what you want.<br/>Let the network do the hunting.</h1><p><b>FateFind</b> is the hunt: product plus limits such as maximum delivered True Price, RRP premium and online/local scope. When a real observed offer satisfies those conditions, that successful result is a <b>FateMatch</b>. A Universal Wishlist remains a separate, simpler “I want this” product save.</p></div><FateMatchBuilder premium={premium} initialQuery={initialQuery}/></div>{avatar ? <aside className="fd-fm-companion"><div><span>YOUR KORU &amp; FRIENDS COMPANION</span><small>Watching the network with you</small></div><CompanionRenderer request={{ companionId: avatar.loadout.companion, reaction: matches.some((match)=>match.enabled) ? "watching" : "idle", compact: true, label: "FateFind companion" }}/><Link href="/dashboard/avatar">CHOOSE COMPANION →</Link></aside> : null}</div>
       </section>
 
       <div className="fd-fm-grid">
