@@ -71,23 +71,32 @@ test("public signal labels preserve the final four-stage lifecycle", async () =>
   assert.equal(dashboard.includes('kind === "drop_pulse" || kind === "whisper"'), false);
 });
 
-test("Koru and Friends has a versioned five-slot renderer boundary for future 3D assets", async () => {
-  const [contract, renderer, selector] = await Promise.all([
+test("Koru and Friends has one versioned five-slot renderer boundary for current 3D assets", async () => {
+  const [contract, renderer, selector, truth] = await Promise.all([
     source("lib/companion-contract.ts"),
     source("components/companion-renderer.tsx"),
     source("components/companion-selector.tsx"),
+    source("docs/fatedrop-product-truth.md"),
   ]);
   assert.ok(contract.includes("COMPANION_SCHEMA_VERSION = 2"));
   assert.ok(contract.includes('ACTIVE_COMPANION_IDS = ["koru", "fenn", "aeris", "nyxen", "solix"]'));
   assert.ok(contract.includes('modelFormat: "glb" | null'));
+  assert.ok(contract.includes("reactionModelUrls"));
+  assert.ok(contract.includes("companionModelUrl"));
   assert.ok(contract.includes("companionReactionFromSignal"));
   assert.ok(contract.includes('"fallback-2d"'));
   assert.ok(contract.includes('"webgl-3d"'));
   assert.equal(contract.includes("droidModelUrl"), false);
   assert.equal(contract.includes("AvatarLoadout"), false);
   assert.ok(renderer.includes("companionRendererMode"));
+  assert.ok(renderer.includes("companionModelUrl"));
   assert.ok(renderer.includes("KoruMascot"));
   assert.ok(selector.includes("ACTIVE_COMPANION_ROSTER.map"));
+  assert.ok(selector.includes("SIGNAL STATE PREVIEW"));
+  assert.ok(truth.includes("BETA Web renderer / asset handoff ongoing"));
+  assert.ok(truth.includes("A character may use one approved GLB or an approved reaction-specific GLB pack"));
+  assert.ok(truth.includes("does **not** make skeletal animation playback a shipped claim"));
+  assert.ok(truth.includes("Reduced-motion preference must retain the real model"));
 });
 
 test("FateFind API uses same-origin writes while keeping legacy client response compatibility", async () => {
@@ -140,8 +149,11 @@ test("Product Spec v1 remains the repository authority", async () => {
   assert.ok(truth.includes("Whisper — product / catalogue movement"));
   assert.ok(truth.includes("Echo — access readiness"));
   assert.ok(truth.includes("Whisper is a real public lifecycle state. Do not collapse it into Echo."));
+  assert.ok(truth.includes("The interactive phone does **not** belong in the homepage hero or core landing flow"));
+  assert.ok(truth.includes("It lives on the dedicated `/demo` page"));
   assert.equal(truth.includes("Whisper — internal"), false);
   assert.ok(audit.includes("RESOLVED — FateFind / FateMatch naming collision"));
   assert.ok(audit.includes("FateFind = the hunt the collector creates"));
   assert.ok(audit.includes("FateMatch = the successful observed result"));
+  assert.ok(audit.includes("The interactive phone is deliberately kept off Home"));
 });
