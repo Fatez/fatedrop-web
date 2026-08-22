@@ -1,0 +1,256 @@
+/* Shared FateDrop / Koru visual language.
+   This layer intentionally changes presentation only; product logic and signal semantics stay untouched. */
+
+:root {
+  --koru-ink: #070809;
+  --koru-ink-soft: #0b0d0f;
+  --koru-panel: #101216;
+  --koru-panel-soft: #0c0e11;
+  --koru-cream: #eee5dd;
+  --koru-muted: #9a9090;
+  --koru-dim: #70686a;
+  --koru-mauve: #a887a7;
+  --koru-violet: #846e91;
+  --koru-earth: #b29278;
+  --koru-line: rgba(221, 203, 188, .11);
+  --koru-line-strong: rgba(221, 203, 188, .2);
+}
+
+html, body {
+  background: var(--koru-ink);
+}
+
+body {
+  background:
+    radial-gradient(circle at 74% -10%, rgba(126, 91, 118, .10), transparent 32rem),
+    radial-gradient(circle at 12% 20%, rgba(112, 86, 74, .045), transparent 28rem),
+    var(--koru-ink);
+  color: var(--koru-cream);
+}
+
+/* Shared site chrome */
+.nav-shell {
+  border-color: var(--koru-line) !important;
+  background: rgba(7, 8, 10, .82) !important;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, .30) !important;
+}
+.nav-links > a:not(.button),
+.merch-menu-trigger,
+.account-menu-trigger {
+  color: #c9c0bc !important;
+}
+.nav-links > a:not(.button):hover,
+.nav-links > a.active,
+.merch-menu.active .merch-menu-trigger,
+.merch-menu.is-open .merch-menu-trigger,
+.account-menu.active .account-menu-trigger,
+.account-menu.is-open .account-menu-trigger {
+  color: var(--koru-cream) !important;
+  background: rgba(196, 164, 146, .075) !important;
+}
+.merch-menu-popover,
+.account-menu-popover {
+  border-color: rgba(183, 151, 127, .22) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(135, 96, 124, .10), transparent 42%),
+    rgba(9, 10, 12, .985) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .52), 0 0 34px rgba(127, 94, 119, .055) !important;
+}
+.merch-menu-popover a:hover,
+.merch-menu-popover a:focus-visible,
+.account-menu-popover a:hover,
+.account-menu-popover a:focus-visible {
+  border-color: rgba(183, 151, 127, .18) !important;
+  background: rgba(183, 151, 127, .055) !important;
+}
+.merch-menu-popover i,
+.account-menu-popover i {
+  border-color: rgba(183, 151, 127, .18) !important;
+  color: #b79a89 !important;
+  background: rgba(183, 151, 127, .045) !important;
+}
+.brand-logo-image {
+  border-color: rgba(168, 135, 167, .26) !important;
+  box-shadow: 0 0 24px rgba(130, 90, 134, .10) !important;
+}
+.brand-word b { color: var(--koru-cream) !important; }
+.brand-word em { color: #b792b7 !important; }
+
+.button-primary {
+  color: #0b0b0c !important;
+  border-color: rgba(255,255,255,.1) !important;
+  background: linear-gradient(135deg, #f1e9e1 0%, #decfc6 56%, #b89dbc 100%) !important;
+  box-shadow: 0 12px 34px rgba(151, 115, 142, .12) !important;
+}
+.button-primary:hover {
+  box-shadow: 0 16px 42px rgba(151, 115, 142, .20) !important;
+}
+.button-secondary {
+  border-color: var(--koru-line-strong) !important;
+  background: rgba(220, 201, 188, .035) !important;
+  color: var(--koru-cream) !important;
+}
+.button-secondary:hover {
+  border-color: rgba(221, 203, 188, .32) !important;
+  background: rgba(220, 201, 188, .065) !important;
+}
+.text-link span { color: #b993b8 !important; }
+.eyebrow { color: #b09aa9 !important; }
+.eyebrow span {
+  background: linear-gradient(90deg, #b3947f, #9e809f) !important;
+}
+
+/* Shared public-page surfaces */
+.koru-page-hero {
+  border-color: rgba(221, 203, 188, .12) !important;
+  background:
+    radial-gradient(circle at 80% 28%, rgba(126, 91, 118, .16), transparent 27%),
+    radial-gradient(circle at 58% 86%, rgba(147, 104, 81, .08), transparent 25%),
+    linear-gradient(145deg, #111317 0%, #0b0d10 58%, #080a0c 100%) !important;
+}
+.koru-page-hero-copy h1,
+.final-koru-cta h2 {
+  color: var(--koru-cream) !important;
+}
+.koru-page-hero-copy .lede,
+.section-heading > p:last-child,
+.final-cta-inner > p {
+  color: var(--koru-muted) !important;
+}
+.koru-page-hero .page-hero-signal-field {
+  filter: saturate(.28) sepia(.14) !important;
+}
+.final-koru-cta .final-cta-inner {
+  border-color: rgba(221, 203, 188, .11) !important;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(125, 91, 117, .13), transparent 28%),
+    linear-gradient(145deg, #111317, #090b0d) !important;
+}
+
+/* Merch hero: preserve the artwork's built-in FATEDROP wordmark in the upper-left. */
+.merch-campaign-shade {
+  background:
+    linear-gradient(180deg, rgba(4,5,7,.01) 0%, rgba(4,5,7,.03) 30%, rgba(4,5,7,.18) 58%, rgba(4,5,7,.48) 100%),
+    linear-gradient(90deg, rgba(5,7,9,.12) 0%, rgba(5,7,9,.22) 18%, rgba(5,7,9,.08) 48%, rgba(5,7,9,.08) 100%) !important;
+}
+.merch-campaign-copy {
+  top: 58% !important;
+  transform: translateY(-39%) !important;
+}
+.merch-campaign-copy::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -46px -74px -46px -42px;
+  border-radius: 42%;
+  background: radial-gradient(ellipse at 28% 52%, rgba(5,7,9,.78) 0%, rgba(5,7,9,.55) 42%, rgba(5,7,9,.12) 67%, transparent 78%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* Dashboard: same FateDrop world, denser and more functional. */
+.fd-collector-dashboard {
+  background: #070809 !important;
+  color: var(--koru-cream) !important;
+}
+.fd-dashboard-atmosphere {
+  background:
+    linear-gradient(90deg, rgba(7,8,9,.99) 0 22%, rgba(7,8,9,.94) 42%, rgba(7,8,9,.78)),
+    radial-gradient(circle at 82% 12%, rgba(127, 91, 119, .16), transparent 28%),
+    radial-gradient(circle at 72% 74%, rgba(148, 107, 81, .07), transparent 26%) !important;
+  opacity: 1 !important;
+}
+.fd-dashboard-atmosphere::after {
+  background:
+    radial-gradient(circle at 80% 8%, rgba(126, 91, 118, .10), transparent 30%),
+    linear-gradient(180deg, rgba(7,8,9,.08), rgba(7,8,9,.68) 88%) !important;
+}
+.fd-dashboard-atmosphere i {
+  background: linear-gradient(90deg, transparent, rgba(183,151,127,.08), rgba(157,126,158,.13), transparent) !important;
+}
+.fd-dashboard-atmosphere span {
+  border-color: rgba(183,151,127,.045) !important;
+  box-shadow: -34px 26px 0 -1px rgba(183,151,127,.018), -68px 52px 0 -1px rgba(157,126,158,.02) !important;
+}
+.fd-collector-dashboard .fd-dashboard-sidebar {
+  background: linear-gradient(180deg, rgba(12,13,15,.99), rgba(8,9,11,.985)) !important;
+  border-right-color: rgba(183,151,127,.12) !important;
+}
+.fd-collector-dashboard .fd-dashboard-brand small {
+  color: #857a77 !important;
+}
+.fd-dashboard-page-id > span {
+  color: #b89b89 !important;
+}
+.fd-dashboard-page-id > p {
+  color: var(--koru-cream) !important;
+}
+.fd-dashboard-page-id > small {
+  color: #686164 !important;
+}
+.fd-dashboard-live-link {
+  border-color: rgba(183,151,127,.16) !important;
+  background: linear-gradient(135deg, rgba(183,151,127,.045), rgba(137,104,132,.055)) !important;
+}
+.fd-dashboard-live-link strong { color: #b999b6 !important; }
+.fd-dashboard-live-link small { color: #766d70 !important; }
+.fd-dashboard-live-link > i {
+  background: #8fa48a !important;
+  box-shadow: 0 0 12px rgba(143,164,138,.46) !important;
+}
+.fd-dashboard-content-frame::before {
+  background: linear-gradient(110deg, rgba(137,104,132,.035), transparent 36%, rgba(183,151,127,.024)) !important;
+}
+.fd-collector-dashboard .fd-dash-card,
+.fd-personal-card,
+.fd-companion-home,
+.fd-core-actions > a {
+  border-color: rgba(221,203,188,.08) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(137,104,132,.045), transparent 29%),
+    linear-gradient(145deg, rgba(17,18,21,.94), rgba(10,11,13,.96)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.025), 0 18px 50px rgba(0,0,0,.14) !important;
+}
+.fd-collector-dashboard .fd-dash-card::after {
+  background: linear-gradient(90deg, transparent, rgba(183,151,127,.10), rgba(157,126,158,.14), transparent) !important;
+}
+.fd-core-actions > a > span {
+  border-color: rgba(157,126,158,.18) !important;
+  color: #c4aabf !important;
+  background: rgba(137,104,132,.055) !important;
+}
+.fd-core-actions > a:hover {
+  border-color: rgba(183,151,127,.18) !important;
+}
+.fd-personal-card-head small,
+.fd-companion-home > div > span,
+.fd-personal-card > a,
+.fd-companion-home > a {
+  color: #b89b89 !important;
+}
+.fd-personal-card-head > span {
+  border-color: rgba(157,126,158,.18) !important;
+  color: #c1a5bd !important;
+}
+.fd-organised-nav .fd-nav-group > small {
+  color: #655d60 !important;
+}
+.fd-organised-nav .fd-nav-group a.active em {
+  background: #b997b5 !important;
+  box-shadow: 0 0 12px rgba(185,151,181,.42) !important;
+}
+.fd-dashboard-trial-card {
+  border-color: rgba(183,151,127,.12) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(137,104,132,.08), transparent 42%),
+    rgba(13,14,16,.84) !important;
+}
+.fd-dashboard-trial-card > span { color: #b99a87 !important; }
+
+@media (max-width: 720px) {
+  .merch-campaign-copy {
+    top: auto !important;
+    transform: none !important;
+  }
+  .merch-campaign-copy::before { display: none; }
+}
