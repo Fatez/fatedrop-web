@@ -1,5 +1,6 @@
 import type { AccountSnapshot } from "./account-storage";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal } from "./dashboard-storage";
+import { getSignalLifecycleSummary } from "./signal-trends";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
 
@@ -43,10 +44,11 @@ export function signalCauseLabel(signal: NetworkSignal) {
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
-  const [activity, network, history] = await Promise.all([
+  const [activity, network, history, signalSummary] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
     getLatestNetworkMetricSnapshot(),
     listNetworkMetricSnapshots(30),
+    getSignalLifecycleSummary(7),
   ]);
 
   const stores = new Map<string, { name: string; count: number; latestAt: number }>();
@@ -90,12 +92,13 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     generatedAt: now,
     network,
     networkHistory: history,
+    signalSummary,
     publishedBaseline,
     publicSignalMetrics: {
-      whisper: network?.metrics.whisper ?? null,
-      echo: network?.metrics.echo ?? null,
-      manifested: network?.metrics.manifested ?? null,
-      vanished: network?.metrics.vanished ?? null,
+      whisper: signalSummary?.whisper.total ?? network?.metrics.whisper ?? null,
+      echo: signalSummary?.echo.total ?? network?.metrics.echo ?? null,
+      manifested: signalSummary?.manifested.total ?? network?.metrics.manifested ?? null,
+      vanished: signalSummary?.vanished.total ?? network?.metrics.vanished ?? null,
     },
     personal: {
       signalsSeen,
@@ -131,9 +134,9 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
       },
       {
         label: "Network lifecycle metrics",
-        source: network ? network.source : "Awaiting FateDrop Cloud metric feed",
-        updatedAt: network?.measuredAt ?? null,
-        note: network ? "Derived from the latest persisted network snapshot. Whisper, Echo, Manifested and Vanished retain the same meanings as the production Signal Engine." : "Until a live feed is connected, lifecycle and catalogue counters remain unavailable rather than falling back to stale values.",
+        source: signalSummary ? "FateDrop signal ledger" : network ? network.source : "Awaiting FateDrop Cloud metric feed",
+        updatedAt: signalSummary ? now : network?.measuredAt ?? null,
+        note: signalSummary ? "The four dashboard lifecycle cards are aggregated directly from persisted Whisper, Echo, Manifested and Vanished signal rows over the last seven UTC days, including zero-activity days." : network ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle counters remain unavailable rather than falling back to invented values.",
       },
     ],
   };

@@ -43,17 +43,6 @@ function sparkPath(points: TrendPoint[], width = 120, height = 32) {
   }).join(" ");
 }
 
-function trendSpan(points: TrendPoint[]) {
-  if (points.length < 2) return "waiting for trend";
-  const seconds = Math.max(0, points[points.length - 1].measuredAt - points[0].measuredAt);
-  if (seconds < 3_600) return `${Math.max(1, Math.round(seconds / 60))}m trend`;
-  if (seconds < 86_400) {
-    const hours = seconds / 3_600;
-    return `${hours < 2 ? hours.toFixed(1) : Math.round(hours)}h trend`;
-  }
-  return `${Math.max(1, Math.round(seconds / 86_400))}d trend`;
-}
-
 function titleInitials(title: string) {
   return title.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "FD";
 }
@@ -77,42 +66,33 @@ export default async function DashboardPage() {
   const premium = hasPremiumAccess(snapshot.membership);
   const network = data.network;
   const recentSignals = [...(network?.recentSignals ?? [])].sort((a, b) => b.occurredAt - a.occurredAt).slice(0, 5);
-  const history = [...data.networkHistory].sort((a, b) => a.measuredAt - b.measuredAt);
   const priceGroup = truePriceGroup(network?.recentSignals ?? []);
   const recentDrops = data.recentManifested.slice(0, 4);
   const fateFinds = data.personal.watchlist.slice(0, 3);
   const stores = data.personal.favoriteStores.slice(0, 5);
   const series = Object.fromEntries(
-    lifecycle.map(([key]) => [
-      key,
-      history
-        .map((item) => typeof item.metrics[key] === "number" ? { measuredAt: item.measuredAt, value: item.metrics[key] as number } : null)
-        .filter((point): point is TrendPoint => point !== null)
-        .slice(-30),
-    ]),
+    lifecycle.map(([key]) => [key, data.signalSummary?.[key].trend ?? []]),
   ) as Record<LifecycleKey, TrendPoint[]>;
 
   return <DashboardPageShell title={`Dashboard · ${snapshot.account.displayName}`} eyebrow="COLLECTOR WORKSPACE">
     <div className="fd-reference-home">
       <section className="fd-overview-card fd-ref-card">
         <div className="fd-ref-card-head">
-          <div><h1>Signals Overview</h1><p>Exact rolling 24-hour lifecycle activity from persisted network snapshots.</p></div>
+          <div><h1>Signals Overview</h1><p>Daily Whisper, Echo, Manifested and Vanished alerts recorded across the last seven days.</p></div>
           <Link href="/dashboard/alerts">View all signals <span>→</span></Link>
         </div>
         <div className="fd-lifecycle-grid">
           {lifecycle.map(([key, label, description]) => {
             const points = series[key];
-            const latest = points[points.length - 1]?.value ?? null;
-            const previous = points[points.length - 2]?.value ?? null;
-            const delta = latest !== null && previous !== null ? latest - previous : null;
+            const today = data.signalSummary?.[key].today ?? null;
             return <article className={`fd-lifecycle-card ${key}`} key={key}>
               <div><small>{label}</small><span>{description}</span></div>
-              <em className="fd-lifecycle-window">24H ACTIVITY · {trendSpan(points)}</em>
+              <em className="fd-lifecycle-window">7D ALERTS</em>
               <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
-              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-label={`${label} rolling 24-hour activity trend`} role="img"><path d={sparkPath(points)} /></svg>
-              {delta !== null
-                ? <p className={delta < 0 ? "down" : "up"}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} {Math.abs(delta)} vs previous snapshot</p>
-                : <p>Waiting for enough persisted snapshots</p>}
+              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-label={`${label} alerts per day over the last seven days`} role="img"><path d={sparkPath(points)} /></svg>
+              {today !== null
+                ? <p className={today > 0 ? "up" : undefined}>{today > 0 ? "↑" : "→"} {metric(today)} today</p>
+                : <p>Waiting for signal history</p>}
             </article>;
           })}
         </div>
