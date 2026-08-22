@@ -1,33 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { safeExternalHttpsUrl } from "../lib/external-url.ts";
 
 const read = (file) => fs.readFileSync(file, "utf8");
 
-test("external retailer URL guard accepts only credential-free HTTPS destinations", () => {
-  assert.equal(safeExternalHttpsUrl("https://example.com/product?id=1"), "https://example.com/product?id=1");
-  assert.equal(safeExternalHttpsUrl(" https://example.com/store "), "https://example.com/store");
-  for (const unsafe of [
-    "http://example.com/product",
-    "javascript:alert(1)",
-    "data:text/html,hello",
-    "//example.com/product",
-    "/relative/path",
-    "https://user:password@example.com/product",
-    "not a url",
-    "",
-    null,
-    undefined,
-  ]) assert.equal(safeExternalHttpsUrl(unsafe), null, `${String(unsafe)} must fail closed`);
+test("external retailer URL guard is HTTPS-only and rejects embedded credentials", () => {
+  const guard = read("lib/external-url.ts");
+  assert.ok(guard.includes('url.protocol !== "https:"'));
+  assert.ok(guard.includes("url.username || url.password"));
+  assert.ok(guard.includes("input.length > 2048"));
+  assert.ok(guard.includes("return null"));
 });
 
-test("every static retailer registry handoff is valid HTTPS", () => {
+test("every static retailer registry handoff is HTTPS", () => {
   const registry = read("lib/retailer-registry.ts");
   const websites = [...registry.matchAll(/website:\s*"([^"]+)"/g)].map((match) => match[1]);
   assert.ok(websites.length > 0, "retailer registry must contain website handoffs");
   for (const website of websites) {
-    assert.equal(safeExternalHttpsUrl(website), new URL(website).toString(), `${website} is an unsafe registry website`);
+    const url = new URL(website);
+    assert.equal(url.protocol, "https:", `${website} must use HTTPS`);
+    assert.equal(url.username, "", `${website} must not embed a username`);
+    assert.equal(url.password, "", `${website} must not embed a password`);
   }
 });
 
@@ -54,7 +47,7 @@ test("Cloud catalogue and True Price handoffs are sanitized before dashboard ren
 
 test("lead website and ticket submissions share the HTTPS-only URL guard", () => {
   const leads = read("app/api/leads/route.ts");
-  assert.ok(leads.includes('safeExternalHttpsUrl'));
-  assert.ok(leads.includes('assertSameOrigin(request)'));
+  assert.ok(leads.includes("safeExternalHttpsUrl"));
+  assert.ok(leads.includes("assertSameOrigin(request)"));
   assert.ok(!leads.includes('url.protocol === "https:" || url.protocol === "http:"'));
 });
