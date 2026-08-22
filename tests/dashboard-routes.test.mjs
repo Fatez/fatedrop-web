@@ -41,7 +41,8 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes("TIME IN NETWORK"));
   assert.ok(root.includes('href="/dashboard/avatar"'));
   assert.ok(root.includes('href="/dashboard/search"'));
-  assert.ok(root.includes("KORU &amp; FRIENDS · FIVE ACTIVE SLOTS"));
+  assert.ok(root.includes("KORU &amp; FRIENDS"));
+  assert.ok(root.includes("5 ACTIVE COMPANIONS"));
   assert.equal(root.includes("floating signal droid"), false);
 });
 
