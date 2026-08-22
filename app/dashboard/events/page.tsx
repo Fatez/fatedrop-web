@@ -11,8 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardEventsPage() {
   const feed = await loadUpcomingEncounters(1000);
   const events = feed.events;
-  const now = Date.now();
-  const upcoming = events.filter((event) => new Date(event.startsAt * 1000).getTime() >= now - 86_400_000);
+  const upcoming = events;
   const venues = new Set(upcoming.map((event) => event.venue || event.location).filter(Boolean));
   const withVendors = upcoming.filter((event) => (event.vendorCount ?? 0) > 0).length;
 
