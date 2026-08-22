@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { DashboardNetworkPulse } from "@/components/dashboard-network-pulse";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
-import { SignalBeam } from "@/components/signal-beam";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { buildDashboardData, moneyFromPence, relativeTime, signalLabel } from "@/lib/dashboard";
-import { formatMemberSince, hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
+import type { NetworkSignal } from "@/lib/dashboard-storage";
+import { hasPremiumAccess } from "@/lib/membership";
 
 export const metadata: Metadata = {
   title: "Dashboard | FateDrop",
@@ -13,8 +14,44 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+const lifecycle = [
+  ["whisper", "Whisper", "Early movement detected."],
+  ["echo", "Echo", "Access or traffic is building."],
+  ["manifested", "Manifested", "Confirmed live. Get in."],
+  ["vanished", "Vanished", "Confirmed availability is gone."],
+] as const;
+
+type LifecycleKey = typeof lifecycle[number][0];
+
 function metric(value: number | null | undefined) {
   return value === null || value === undefined ? "—" : new Intl.NumberFormat("en-GB").format(value);
+}
+
+function sparkPath(values: number[], width = 120, height = 32) {
+  if (!values.length) return `M0 ${height / 2} L${width} ${height / 2}`;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const spread = Math.max(1, max - min);
+  return values.map((value, index) => {
+    const x = values.length === 1 ? width : (index / (values.length - 1)) * width;
+    const y = height - 4 - ((value - min) / spread) * (height - 8);
+    return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(" ");
+}
+
+function titleInitials(title: string) {
+  return title.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "FD";
+}
+
+function truePriceGroup(signals: NetworkSignal[]) {
+  const groups = new Map<string, NetworkSignal[]>();
+  for (const signal of signals) {
+    if ((signal.kind ?? signal.state) !== "manifested" || signal.deliveredPricePence === null) continue;
+    const key = signal.title.trim().toLowerCase();
+    groups.set(key, [...(groups.get(key) ?? []), signal]);
+  }
+  return [...groups.values()]
+    .sort((a, b) => b.length - a.length || (b[0]?.occurredAt ?? 0) - (a[0]?.occurredAt ?? 0))[0] ?? null;
 }
 
 export default async function DashboardPage() {
@@ -22,88 +59,107 @@ export default async function DashboardPage() {
   if (!snapshot) redirect("/account/login?next=/dashboard");
   const data = await buildDashboardData(snapshot);
   const premium = hasPremiumAccess(snapshot.membership);
-  const plan = membershipLabel(snapshot.membership);
   const network = data.network;
-  const latestSignal = [...(network?.recentSignals ?? [])].sort((a, b) => b.occurredAt - a.occurredAt)[0] ?? null;
+  const recentSignals = [...(network?.recentSignals ?? [])].sort((a, b) => b.occurredAt - a.occurredAt).slice(0, 5);
+  const history = [...data.networkHistory].sort((a, b) => a.measuredAt - b.measuredAt);
+  const priceGroup = truePriceGroup(network?.recentSignals ?? []);
+  const recentDrops = data.recentManifested.slice(0, 4);
+  const fateFinds = data.personal.watchlist.slice(0, 3);
+  const stores = data.personal.favoriteStores.slice(0, 5);
 
-  return <DashboardPageShell title={`Welcome back, ${snapshot.account.displayName}`} eyebrow="YOUR FATEDROP">
-    <div className="fd-era-home">
-      <section className="fd-era-hero">
-        <div className="fd-era-copy">
-          <span>FATEDROP · COLLECTOR INTELLIGENCE</span>
-          <h1>{latestSignal ? <>The market moved.<br/><em>Here&apos;s the signal.</em></> : <>Your route into<br/><em>the TCG market.</em></>}</h1>
-          <p>{latestSignal ? `${signalLabel(latestSignal)} detected ${relativeTime(latestSignal.occurredAt, data.generatedAt)}${latestSignal.retailer ? ` at ${latestSignal.retailer}` : ""}. Search the network, check True Price and move to the retailer only when the evidence makes sense.` : "Search participating retailers, compare price context, track the products you actually want and let the network surface meaningful changes without inventing noise."}</p>
-          <div className="fd-era-actions">
-            <Link href="/dashboard/search">Search the network <span>→</span></Link>
-            <Link href="/dashboard/alerts">Open live signals <span>→</span></Link>
+  const series = Object.fromEntries(lifecycle.map(([key]) => [key, history.map((item) => item.metrics[key]).filter((value): value is number => typeof value === "number").slice(-12)])) as Record<LifecycleKey, number[]>;
+
+  return <DashboardPageShell title={`Dashboard · ${snapshot.account.displayName}`} eyebrow="COLLECTOR WORKSPACE">
+    <div className="fd-reference-home">
+      <section className="fd-overview-card fd-ref-card">
+        <div className="fd-ref-card-head">
+          <div><h1>Signals Overview</h1><p>Live market signals across the network.</p></div>
+          <Link href="/dashboard/alerts">View all signals <span>→</span></Link>
+        </div>
+        <div className="fd-lifecycle-grid">
+          {lifecycle.map(([key, label, description]) => {
+            const values = series[key];
+            const delta = values.length > 1 ? values[values.length - 1] - values[values.length - 2] : null;
+            return <article className={`fd-lifecycle-card ${key}`} key={key}>
+              <div><small>{label}</small><span>{description}</span></div>
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true"/></div>
+              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path d={sparkPath(values)}/></svg>
+              {delta !== null ? <p className={delta < 0 ? "down" : "up"}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"} {Math.abs(delta)} latest snapshot</p> : <p>Waiting for trend history</p>}
+            </article>;
+          })}
+        </div>
+      </section>
+
+      <section className="fd-reference-grid">
+        <article className="fd-ref-card fd-recent-signals">
+          <div className="fd-ref-card-head compact"><div><h2>Recent Signals</h2><p>Newest observed movement.</p></div></div>
+          <div className="fd-ref-list">
+            {recentSignals.length ? recentSignals.map((item) => <div className="fd-signal-row" key={item.id}>
+              <span className={`fd-mini-thumb ${item.state}`}>{titleInitials(item.title)}</span>
+              <div><small>{premium ? (item.retailer || signalLabel(item)) : signalLabel(item)}</small><strong>{premium ? item.title : "Premium signal detail"}</strong></div>
+              <aside><b className={item.state}>{signalLabel(item)}</b><small>{relativeTime(item.occurredAt, data.generatedAt)}</small></aside>
+            </div>) : <div className="fd-ref-empty"><strong>No persisted signals yet.</strong><span>The feed stays empty until the network records real evidence.</span></div>}
           </div>
-        </div>
-
-        <aside className="fd-era-latest" aria-label="Latest network signal">
-          <div className="fd-era-latest-head"><span>LATEST NETWORK STATE</span><i className={latestSignal ? latestSignal.state : "manifested"}>{latestSignal ? signalLabel(latestSignal) : "READY"}</i></div>
-          <div className="fd-era-beam"><SignalBeam pulseKey={latestSignal?.id || "network-ready"} state={latestSignal?.state || "manifested"}/></div>
-          <div className="fd-era-latest-copy"><small>{latestSignal?.retailer || "CONNECTED RETAILER NETWORK"}</small><strong>{latestSignal ? (premium ? latestSignal.title : "Premium signal detail") : "Waiting for observed movement"}</strong><p>{latestSignal ? (premium ? (latestSignal.detail || "Open the signal feed for the full evidence trail.") : "Upgrade for full product and retailer detail.") : "Whisper, Echo, Manifested and Vanished will resolve here when evidence is persisted."}</p></div>
-        </aside>
-
-        <div className="fd-era-metrics">
-          <span><small>WHISPER</small><b>{metric(data.publicSignalMetrics.whisper)}</b></span>
-          <span><small>ECHO</small><b>{metric(data.publicSignalMetrics.echo)}</b></span>
-          <span><small>MANIFESTED</small><b>{metric(data.publicSignalMetrics.manifested)}</b></span>
-          <span><small>24H CHANGES</small><b>{metric(network?.metrics.changes24h)}</b></span>
-          <span><small>YOUR PLAN</small><b>{plan}</b></span>
-        </div>
-      </section>
-
-      <section className="fd-era-route" aria-label="Core collector journey">
-        <div className="fd-era-route-copy"><small>YOUR COLLECTOR ROUTE</small><h2>Search. Understand. Track. Buy.</h2><p>The dashboard follows the same journey FateDrop is built around: find the product, understand the offer, watch for meaningful movement and continue directly to the retailer.</p></div>
-        <div className="fd-era-route-rail"><span>Search</span><i/><span>True Price</span><i/><span>FateFind</span><i/><span>Retailer</span></div>
-      </section>
-
-      <section className="fd-era-tools" aria-label="Core FateDrop tools">
-        <Link href="/dashboard/search"><small>01 · DISCOVER</small><strong>Network Search</strong><p>Search connected catalogue evidence across the FateDrop retailer network.</p><span>⌕</span></Link>
-        <Link href="/dashboard/true-price"><small>02 · COMPARE</small><strong>True Price</strong><p>See item price, official RRP context and known mandatory delivery separately.</p><span>⇄</span></Link>
-        <Link href="/dashboard/watchlist"><small>03 · TRACK</small><strong>FateFind</strong><p>Tell FateDrop exactly what you want and the limits that matter to you.</p><span>♡</span></Link>
-        <Link href="/dashboard/alerts"><small>04 · DETECT</small><strong>Signal Feed</strong><p>Follow Whisper, Echo, Manifested and Vanished with one consistent meaning.</p><span>◉</span></Link>
-      </section>
-
-      <section className="fd-era-intelligence">
-        <article className="fd-era-panel">
-          <div className="fd-era-panel-head"><div><small>CONFIRMED AVAILABILITY</small><h2>Recent Manifested</h2></div><Link href="/dashboard/alerts">View all →</Link></div>
-          <div className="fd-era-feed">{data.recentManifested.length ? data.recentManifested.map((item)=><article key={item.id}><span className="fd-era-state manifested">M</span><div><strong>{premium ? item.title : "Premium signal detail"}</strong><small>{premium ? (item.retailer || "Retailer pending") : "Retailer hidden"}</small></div><aside><b>{premium ? (moneyFromPence(item.deliveredPricePence) || "LIVE") : "LOCKED"}</b><small>{relativeTime(item.occurredAt,data.generatedAt)}</small></aside></article>) : <div className="fd-era-empty"><strong>No Manifested signals yet.</strong><span>Confirmed purchasable availability will appear here when the evidence supports it.</span></div>}</div>
+          <Link className="fd-card-link" href="/dashboard/alerts">View all signals <span>→</span></Link>
         </article>
 
-        <article className="fd-era-panel">
-          <div className="fd-era-panel-head"><div><small>BEFORE STOCK CONFIRMATION</small><h2>Early intelligence</h2></div><Link href="/dashboard/alerts">Open feed →</Link></div>
-          <div className="fd-era-feed">{data.echoWhispers.length ? data.echoWhispers.map((item)=><article key={item.id}><span className={`fd-era-state ${item.state}`}>{signalLabel(item).slice(0,1)}</span><div><strong>{premium ? item.title : "Premium signal detail"}</strong><small>{premium ? (item.detail || item.retailer || signalLabel(item)) : "Actionable context locked"}</small></div><aside><b>{signalLabel(item)}</b><small>{relativeTime(item.occurredAt,data.generatedAt)}</small></aside></article>) : <div className="fd-era-empty"><strong>No early intelligence yet.</strong><span>Whisper and Echo activity will surface here only when observed evidence supports it.</span></div>}</div>
-        </article>
-      </section>
-
-      <section className="fd-era-personal">
-        <article className="fd-era-identity">
-          <div className="fd-era-personal-head"><div><small>YOUR FATEDROP ID</small><h2>{snapshot.account.displayName}</h2><p>@{snapshot.account.username} · {plan}</p></div><span>{premium ? "PREMIUM" : "FREE"}</span></div>
-          <div className="fd-era-facts"><div><small>MEMBER SINCE</small><strong>{formatMemberSince(snapshot.account.createdAt)}</strong></div><div><small>TIME IN NETWORK</small><strong>{networkAge(snapshot.account.createdAt, data.generatedAt)}</strong></div><div><small>FATEDROP ID</small><strong>{snapshot.account.fateId}</strong></div><div><small>DISCORD</small><strong>{snapshot.discord ? "Linked" : "Not linked"}</strong></div></div>
-          <div className="fd-era-activity"><div><b>{data.personal.signalsSeen}</b><span>Signals seen</span></div><div><b>{data.personal.wishlistHits}</b><span>FateFind hits</span></div><div><b>{data.personal.storesTracked}</b><span>Stores tracked</span></div><div><b>{moneyFromPence(data.personal.savedPence) || "£0.00"}</b><span>Recorded saving</span></div></div>
-          <Link href="/dashboard/profile">Open your identity →</Link>
+        <article className="fd-ref-card fd-true-price-card">
+          <div className="fd-ref-card-head compact"><div><h2>True Price Comparison</h2><p>{priceGroup?.[0]?.title || "Latest evidence-backed comparison"}</p></div></div>
+          {priceGroup ? <div className="fd-price-table">
+            <div className="fd-price-head"><span>Store</span><span>Known true price</span><span>Observed</span></div>
+            {priceGroup.slice(0, 4).map((item) => <div className="fd-price-row" key={item.id}><strong>{item.retailer || "Retailer pending"}</strong><b>{moneyFromPence(item.deliveredPricePence) || "—"}</b><small>{relativeTime(item.occurredAt, data.generatedAt)}</small></div>)}
+            <p>Dashboard summaries only show the delivered value persisted with the signal. Item price and postage remain separate on the full True Price view where the source provides them.</p>
+          </div> : <div className="fd-ref-empty tall"><strong>No comparable delivered prices yet.</strong><span>FateDrop will not manufacture retailer rows to make this card look busy.</span></div>}
+          <Link className="fd-card-link" href="/dashboard/true-price">View full comparison <span>→</span></Link>
         </article>
 
-        <article className="fd-era-companion">
-          <div className="fd-era-companion-mark" aria-hidden="true"><span>◇</span></div>
-          <div><small>KORU &amp; FRIENDS</small><h2>Your companion is part of the journey.<br/><em>Not the product.</em></h2><p>Koru remains FateDrop&apos;s mascot and network voice. Choose Koru, Fenn, Aeris, Nyxen or Solix for your own FateDrop ID while the dashboard stays focused on search, price and signals.</p></div>
-          <div className="fd-era-companion-tags"><span>5 ACTIVE COMPANIONS</span><span>ONE SIGNAL LANGUAGE</span><span>3D READY</span></div>
-          <Link href="/dashboard/avatar">Choose your companion →</Link>
+        <article className="fd-ref-card fd-fatefind-card">
+          <div className="fd-ref-card-head compact"><div><h2>FateFind</h2><p>Your saved product intent.</p></div></div>
+          <div className="fd-fatefind-list">
+            {fateFinds.length ? fateFinds.map((item) => <div key={item.id}><span><strong>{item.title || "Saved FateFind"}</strong><small>{item.subtitle || item.retailer || "Network-wide hunt"}</small></span><b>{item.amountPence ? moneyFromPence(item.amountPence) : "•"}</b></div>) : <div className="fd-ref-empty"><strong>No FateFind activity yet.</strong><span>Create a hunt and qualifying results will surface here.</span></div>}
+          </div>
+          <Link className="fd-card-link" href="/dashboard/watchlist">Manage searches <span>→</span></Link>
+        </article>
+
+        <article className="fd-ref-card fd-network-pulse-card">
+          <div className="fd-ref-card-head compact"><div><h2>Network Pulse</h2><p>Live scale across the network.</p></div></div>
+          <DashboardNetworkPulse retailers={network?.metrics.catalogueRetailers} products={network?.metrics.productsTracked}/>
+          <Link className="fd-card-link" href="/dashboard/stores">View network <span>→</span></Link>
+        </article>
+
+        <article className="fd-ref-card fd-recent-drops">
+          <div className="fd-ref-card-head compact"><div><h2>Recent Manifested Drops</h2><p>Confirmed purchasable availability.</p></div></div>
+          <div className="fd-drop-grid">
+            {recentDrops.length ? recentDrops.map((item) => <div className="fd-drop-mini" key={item.id}><span className="fd-drop-art"><i/>{titleInitials(item.title)}</span><strong>{premium ? item.title : "Premium product"}</strong><small>{premium ? (item.retailer || "Retailer pending") : "Retailer hidden"}</small><b>{premium ? (moneyFromPence(item.deliveredPricePence) || "LIVE") : "LOCKED"}</b></div>) : <div className="fd-ref-empty"><strong>No Manifested drops yet.</strong><span>Confirmed live products will appear here.</span></div>}
+          </div>
+          <Link className="fd-card-link" href="/dashboard/alerts">View all drops <span>→</span></Link>
+        </article>
+
+        <article className="fd-ref-card fd-retailer-card">
+          <div className="fd-ref-card-head compact"><div><h2>Retailers You Track</h2><p>Stores connected to your activity.</p></div></div>
+          <div className="fd-retailer-list">
+            {stores.length ? stores.map((store) => <div key={`${store.name}-${store.latestAt}`}><span className="fd-store-mark">◇</span><strong>{store.name}</strong><small>{store.count} tracked action{store.count === 1 ? "" : "s"}</small><b>{relativeTime(store.latestAt, data.generatedAt)}</b></div>) : <div className="fd-ref-empty"><strong>No tracked retailers yet.</strong><span>Stores you interact with through FateDrop will appear here.</span></div>}
+          </div>
+          <Link className="fd-card-link" href="/dashboard/stores">Manage retailers <span>→</span></Link>
+        </article>
+
+        <article className="fd-koru-dashboard-card">
+          <div className="fd-koru-shade" aria-hidden="true"/>
+          <div className="fd-koru-copy"><small>KORU · NETWORK GUIDE</small><h2>The signal moves.<br/>The bond remains.</h2><p>Stay ahead.<br/>Trust the signal.</p><Link href="/dashboard/avatar">Choose your companion <span>→</span></Link></div>
+          <div className="fd-koru-brand"><b>FATEDROP</b><span>TRUST THE SIGNAL.</span></div>
         </article>
       </section>
     </div>
 
     <style>{`
-      .fd-era-home{display:grid;gap:18px;padding-bottom:46px}.fd-era-hero{position:relative;min-height:520px;padding:42px 42px 104px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.55fr);gap:44px;overflow:hidden;border:1px solid rgba(221,203,188,.1);border-radius:28px;background:radial-gradient(circle at 78% 22%,rgba(137,104,132,.12),transparent 25%),radial-gradient(circle at 58% 90%,rgba(155,113,82,.055),transparent 28%),linear-gradient(145deg,#111317,#090b0d 62%,#08090b);box-shadow:0 28px 80px rgba(0,0,0,.2)}.fd-era-hero:after{content:"";position:absolute;right:-6%;top:-24%;width:52%;aspect-ratio:1;border:1px solid rgba(190,158,139,.055);border-radius:46% 54% 38% 62%;transform:rotate(24deg);box-shadow:0 0 0 44px rgba(147,113,137,.018),0 0 0 88px rgba(190,158,139,.012)}.fd-era-copy{position:relative;z-index:2;align-self:center;max-width:750px}.fd-era-copy>span,.fd-era-panel-head small,.fd-era-route-copy small,.fd-era-personal-head small,.fd-era-companion small{color:#b29278;font-size:8px;font-weight:900;letter-spacing:.17em}.fd-era-copy h1{margin:14px 0 20px;color:#efe6df;font-family:Georgia,'Times New Roman',serif;font-size:clamp(3.5rem,5.4vw,6.25rem);font-weight:500;line-height:.9;letter-spacing:-.058em}.fd-era-copy h1 em{color:#b99bb8;font-style:normal}.fd-era-copy p{max-width:650px;margin:0;color:#9f9695;font-size:14px;line-height:1.74}.fd-era-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}.fd-era-actions a{min-height:44px;padding:0 15px;display:flex;align-items:center;gap:18px;border:1px solid rgba(221,203,188,.13);border-radius:12px;background:rgba(221,203,188,.035);color:#ddd2ca;font-size:9px;font-weight:850}.fd-era-actions a:first-child{border-color:rgba(183,151,127,.22);background:linear-gradient(135deg,rgba(183,151,127,.085),rgba(137,104,132,.075))}.fd-era-actions span{color:#b99bb8}.fd-era-latest{position:relative;z-index:2;align-self:center;min-height:330px;padding:20px;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(221,203,188,.11);border-radius:22px;background:linear-gradient(145deg,rgba(19,19,21,.9),rgba(10,11,13,.96));box-shadow:0 24px 55px rgba(0,0,0,.23)}.fd-era-latest-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.fd-era-latest-head>span{color:#746c6c;font-size:6px;font-weight:900;letter-spacing:.15em}.fd-era-latest-head i{padding:6px 8px;border:1px solid rgba(183,151,127,.13);border-radius:999px;color:#ad9688;font-size:6px;font-style:normal;font-weight:900;letter-spacing:.09em}.fd-era-beam{height:150px;margin:12px -10px 4px;overflow:hidden;opacity:.64}.fd-era-latest-copy{margin-top:auto}.fd-era-latest-copy small{display:block;color:#7d7270;font-size:6px;font-weight:900;letter-spacing:.12em}.fd-era-latest-copy strong{display:block;margin:7px 0;color:#e6dcd4;font-family:Georgia,serif;font-size:20px;font-weight:500;line-height:1.08}.fd-era-latest-copy p{margin:0;color:#837b7b;font-size:9px;line-height:1.55}.fd-era-metrics{position:absolute;z-index:3;left:42px;right:42px;bottom:27px;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid rgba(221,203,188,.08)}.fd-era-metrics span{padding:13px 14px 0;border-left:1px solid rgba(221,203,188,.065)}.fd-era-metrics span:first-child{padding-left:0;border-left:0}.fd-era-metrics small{display:block;color:#655f60;font-size:6px;font-weight:900;letter-spacing:.11em}.fd-era-metrics b{display:block;margin-top:5px;color:#ded4cd;font-size:16px;letter-spacing:-.03em}
-      .fd-era-route{padding:30px 32px;display:grid;grid-template-columns:.9fr 1.1fr;gap:38px;align-items:center;border:1px solid rgba(221,203,188,.08);border-radius:20px;background:linear-gradient(110deg,rgba(17,18,20,.9),rgba(10,11,13,.94))}.fd-era-route-copy h2{margin:7px 0;color:#e7ded7;font-family:Georgia,serif;font-size:clamp(2rem,3vw,3.2rem);font-weight:500;letter-spacing:-.045em}.fd-era-route-copy p{max-width:560px;margin:0;color:#817a7a;font-size:10px;line-height:1.65}.fd-era-route-rail{display:grid;grid-template-columns:auto 1fr auto 1fr auto 1fr auto;gap:11px;align-items:center}.fd-era-route-rail span{padding:10px 12px;border:1px solid rgba(183,151,127,.11);border-radius:999px;color:#aa9990;background:rgba(183,151,127,.025);font-size:7px;font-weight:850;letter-spacing:.08em;text-align:center}.fd-era-route-rail i{height:1px;background:linear-gradient(90deg,rgba(183,151,127,.1),rgba(157,126,158,.18))}
-      .fd-era-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.fd-era-tools>a{position:relative;min-height:170px;padding:22px;overflow:hidden;border:1px solid rgba(221,203,188,.075);border-radius:18px;background:radial-gradient(circle at 100% 0%,rgba(137,104,132,.045),transparent 31%),#0d0f11;transition:.2s ease}.fd-era-tools>a:hover{transform:translateY(-2px);border-color:rgba(183,151,127,.18);box-shadow:0 16px 44px rgba(0,0,0,.18)}.fd-era-tools small{color:#746969;font-size:6px;font-weight:900;letter-spacing:.14em}.fd-era-tools strong{display:block;margin:12px 0 8px;color:#e4dad3;font-family:Georgia,serif;font-size:22px;font-weight:500}.fd-era-tools p{max-width:250px;margin:0;color:#81797a;font-size:9px;line-height:1.55}.fd-era-tools>a>span{position:absolute;right:18px;bottom:15px;color:#957b8f;font-family:Georgia,serif;font-size:34px;opacity:.72}
-      .fd-era-intelligence{display:grid;grid-template-columns:1fr 1fr;gap:18px}.fd-era-panel{padding:25px;min-width:0;border:1px solid rgba(221,203,188,.08);border-radius:20px;background:linear-gradient(145deg,#101214,#0a0b0d)}.fd-era-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}.fd-era-panel-head h2{margin:6px 0 0;color:#e6dcd4;font-family:Georgia,serif;font-size:28px;font-weight:500;letter-spacing:-.04em}.fd-era-panel-head>a{color:#9d8498;font-size:8px;font-weight:850}.fd-era-feed{display:grid}.fd-era-feed>article{min-height:76px;padding:13px 0;display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;border-top:1px solid rgba(221,203,188,.06)}.fd-era-feed>article:first-child{border-top:0}.fd-era-state{width:32px;height:32px;display:grid;place-items:center;border:1px solid rgba(221,203,188,.09);border-radius:10px;color:#a69083;background:rgba(221,203,188,.025);font-size:8px;font-weight:900}.fd-era-state.echo{color:#a18fa5}.fd-era-state.manifested{color:#92a889}.fd-era-state.vanished{color:#a87979}.fd-era-feed article>div strong{display:block;color:#dcd2cb;font-size:11px;line-height:1.35}.fd-era-feed article>div small{display:block;margin-top:4px;color:#716a6b;font-size:8px}.fd-era-feed aside{text-align:right}.fd-era-feed aside b{display:block;color:#aa9690;font-size:8px}.fd-era-feed aside small{display:block;margin-top:4px;color:#5f595b;font-size:7px}.fd-era-empty{min-height:120px;display:flex;flex-direction:column;justify-content:center;border-top:1px solid rgba(221,203,188,.06)}.fd-era-empty strong{color:#b9aba5;font-family:Georgia,serif;font-size:18px;font-weight:500}.fd-era-empty span{margin-top:6px;color:#746d6e;font-size:9px;line-height:1.5}
-      .fd-era-personal{display:grid;grid-template-columns:1.08fr .92fr;gap:18px}.fd-era-identity,.fd-era-companion{position:relative;overflow:hidden;padding:26px;border:1px solid rgba(221,203,188,.08);border-radius:20px;background:radial-gradient(circle at 100% 0%,rgba(137,104,132,.04),transparent 30%),#0d0f11}.fd-era-personal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.fd-era-personal-head h2{margin:6px 0 2px;color:#e5dbd4;font-family:Georgia,serif;font-size:30px;font-weight:500;letter-spacing:-.04em}.fd-era-personal-head p{margin:0;color:#776f70;font-size:9px}.fd-era-personal-head>span{padding:6px 9px;border:1px solid rgba(157,126,158,.14);border-radius:999px;color:#ae94aa;font-size:6px;font-weight:900;letter-spacing:.09em}.fd-era-facts{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:18px 0}.fd-era-facts div{padding:11px;border:1px solid rgba(221,203,188,.055);border-radius:10px;background:rgba(0,0,0,.13)}.fd-era-facts small{display:block;color:#615b5d;font-size:6px;font-weight:900;letter-spacing:.1em}.fd-era-facts strong{display:block;margin-top:4px;color:#c5b9b2;font-size:10px}.fd-era-activity{display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;margin-bottom:16px;border:1px solid rgba(221,203,188,.055);border-radius:11px}.fd-era-activity div{padding:11px;border-left:1px solid rgba(221,203,188,.055)}.fd-era-activity div:first-child{border-left:0}.fd-era-activity b{display:block;color:#ddd3cc;font-size:17px}.fd-era-activity span{color:#6e6768;font-size:6px}.fd-era-identity>a,.fd-era-companion>a{color:#aa8fa6;font-size:8px;font-weight:850}.fd-era-companion{display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(circle at 80% 18%,rgba(119,96,111,.1),transparent 28%),radial-gradient(circle at 20% 100%,rgba(154,113,80,.045),transparent 30%),#0d0f11}.fd-era-companion-mark{position:absolute;right:24px;top:20px;width:96px;height:96px;display:grid;place-items:center;border:1px solid rgba(157,126,158,.08);border-radius:48% 52% 42% 58%;transform:rotate(18deg)}.fd-era-companion-mark span{color:#897486;font-size:30px;transform:rotate(-18deg)}.fd-era-companion h2{position:relative;z-index:2;max-width:520px;margin:8px 0;color:#e4dad3;font-family:Georgia,serif;font-size:clamp(1.8rem,2.5vw,2.8rem);font-weight:500;line-height:1;letter-spacing:-.045em}.fd-era-companion h2 em{color:#aa8fa6;font-style:normal}.fd-era-companion p{position:relative;z-index:2;max-width:560px;color:#81797a;font-size:9px;line-height:1.6}.fd-era-companion-tags{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:6px;margin:18px 0}.fd-era-companion-tags span{padding:6px 8px;border:1px solid rgba(221,203,188,.065);border-radius:999px;color:#887c79;font-size:6px;font-weight:850;letter-spacing:.07em}
-      @media(max-width:1180px){.fd-era-hero{grid-template-columns:1fr}.fd-era-latest{max-width:650px}.fd-era-tools{grid-template-columns:1fr 1fr}.fd-era-personal{grid-template-columns:1fr}.fd-era-route{grid-template-columns:1fr}.fd-era-route-rail{max-width:760px}}
-      @media(max-width:850px){.fd-era-intelligence{grid-template-columns:1fr}.fd-era-metrics{grid-template-columns:repeat(3,1fr);row-gap:9px}.fd-era-hero{padding-bottom:130px}.fd-era-activity{grid-template-columns:1fr 1fr}}
-      @media(max-width:620px){.fd-era-hero{padding:27px 22px 175px;border-radius:20px}.fd-era-copy h1{font-size:3rem}.fd-era-copy p{font-size:11px}.fd-era-metrics{left:22px;right:22px;grid-template-columns:1fr 1fr}.fd-era-tools{grid-template-columns:1fr}.fd-era-route{padding:24px 20px}.fd-era-route-rail{grid-template-columns:1fr 1fr}.fd-era-route-rail i{display:none}.fd-era-facts,.fd-era-activity{grid-template-columns:1fr}.fd-era-activity div{border-left:0;border-top:1px solid rgba(221,203,188,.055)}.fd-era-activity div:first-child{border-top:0}.fd-era-panel,.fd-era-identity,.fd-era-companion{padding:21px}.fd-era-feed>article{grid-template-columns:32px 1fr}.fd-era-feed aside{grid-column:2;text-align:left}.fd-era-latest{min-height:300px}}
+      .fd-reference-home{display:grid;gap:10px;max-width:1600px;margin:0 auto}.fd-ref-card{position:relative;min-width:0;overflow:hidden;border:1px solid rgba(221,203,188,.085);border-radius:11px;background:linear-gradient(145deg,#0e1216,#0a0d11 72%);box-shadow:inset 0 1px rgba(255,255,255,.018)}.fd-overview-card{padding:18px 18px 16px}.fd-ref-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.fd-ref-card-head h1,.fd-ref-card-head h2{margin:0;color:#eee5dd;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:700;letter-spacing:-.02em}.fd-ref-card-head h1{font-size:15px}.fd-ref-card-head p{margin:3px 0 0;color:#777074;font-size:8px;line-height:1.45}.fd-ref-card-head>a{color:#aa72d5;font-size:8px;font-weight:750;text-decoration:none}.fd-ref-card-head>a span,.fd-card-link span{margin-left:6px}.fd-ref-card-head.compact{padding:16px 16px 10px}.fd-lifecycle-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.fd-lifecycle-card{position:relative;min-height:126px;padding:14px;overflow:hidden;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:linear-gradient(145deg,#101419,#0b0f13)}.fd-lifecycle-card>div:first-child{display:grid;gap:2px}.fd-lifecycle-card small{font-size:9px;font-weight:700}.fd-lifecycle-card>div:first-child span{color:#736d72;font-size:7px}.fd-lifecycle-value{position:relative;z-index:2;margin-top:15px;display:flex;align-items:center;justify-content:space-between}.fd-lifecycle-value strong{font-family:Georgia,serif;font-size:26px;font-weight:500}.fd-lifecycle-value i{width:33px;height:33px;border:1px solid currentColor;border-radius:50%;opacity:.45;box-shadow:0 0 18px currentColor}.fd-lifecycle-card svg{position:absolute;right:12px;bottom:27px;width:45%;height:30px;overflow:visible}.fd-lifecycle-card svg path{fill:none;stroke:currentColor;stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.8}.fd-lifecycle-card>p{position:absolute;left:14px;bottom:10px;margin:0;color:#676168;font-size:6px}.fd-lifecycle-card>p.up{color:#839f7b}.fd-lifecycle-card>p.down{color:#a96b6b}.fd-lifecycle-card.whisper{color:#9f64dc}.fd-lifecycle-card.echo{color:#8c66c5}.fd-lifecycle-card.manifested{color:#85a876}.fd-lifecycle-card.vanished{color:#b34e56}
+      .fd-reference-grid{display:grid;grid-template-columns:1.05fr 1.05fr .82fr 1.18fr;gap:10px;align-items:stretch}.fd-recent-signals,.fd-true-price-card,.fd-fatefind-card,.fd-network-pulse-card{min-height:350px}.fd-ref-list{display:grid;padding:0 12px}.fd-signal-row{min-height:55px;padding:8px 3px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:9px;align-items:center;border-top:1px solid rgba(221,203,188,.055)}.fd-signal-row:first-child{border-top:0}.fd-mini-thumb{width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(158,113,194,.18);border-radius:7px;background:radial-gradient(circle at 50% 35%,rgba(139,77,190,.18),transparent 55%),#13161b;color:#ab83c7;font-family:Georgia,serif;font-size:10px}.fd-mini-thumb.manifested{color:#89aa7a;border-color:rgba(133,168,118,.18)}.fd-mini-thumb.vanished{color:#bb5a61;border-color:rgba(179,78,86,.2)}.fd-mini-thumb.echo{color:#9871cd}.fd-signal-row>div{display:grid;gap:3px;min-width:0}.fd-signal-row>div small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6f686d;font-size:6px}.fd-signal-row>div strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.fd-signal-row aside{display:grid;justify-items:end;gap:4px}.fd-signal-row aside b{padding:3px 5px;border-radius:999px;background:rgba(158,102,205,.08);color:#9870c0;font-size:5px;font-weight:900;text-transform:uppercase}.fd-signal-row aside b.manifested{color:#7fa272;background:rgba(127,162,114,.08)}.fd-signal-row aside b.vanished{color:#b3585f;background:rgba(179,88,95,.08)}.fd-signal-row aside small{color:#625c61;font-size:6px}.fd-card-link{position:absolute;left:15px;bottom:12px;color:#a66fd0;font-size:7px;font-weight:750;text-decoration:none}.fd-ref-empty{padding:16px;display:grid;gap:5px;color:#6f686d}.fd-ref-empty strong{color:#bcb3b0;font-size:9px}.fd-ref-empty span{font-size:7px;line-height:1.5}.fd-ref-empty.tall{min-height:205px;align-content:center}
+      .fd-price-table{padding:2px 14px 42px}.fd-price-head,.fd-price-row{display:grid;grid-template-columns:minmax(0,1fr) 95px 70px;gap:8px;align-items:center}.fd-price-head{padding:10px 5px 7px;color:#625c61;font-size:6px}.fd-price-row{min-height:43px;padding:0 5px;border-top:1px solid rgba(221,203,188,.055)}.fd-price-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#bdb4b1;font-size:8px}.fd-price-row b{color:#d8d0ca;font-size:8px}.fd-price-row small{color:#635d61;font-size:6px;text-align:right}.fd-price-table>p{margin:10px 5px 0;color:#5f595e;font-size:6px;line-height:1.5}.fd-fatefind-list{display:grid;padding:2px 12px 42px}.fd-fatefind-list>div:not(.fd-ref-empty){min-height:60px;padding:9px 10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid rgba(221,203,188,.055);border-radius:8px;background:#0f1317;margin-top:7px}.fd-fatefind-list span{display:grid;gap:4px;min-width:0}.fd-fatefind-list strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.fd-fatefind-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b6469;font-size:6px}.fd-fatefind-list b{min-width:25px;height:25px;padding:0 7px;display:grid;place-items:center;border-radius:9px;background:rgba(129,74,174,.16);color:#c09add;font-size:7px}.fd-network-pulse-card{padding-bottom:35px}.fd-network-pulse-card>.fd-pulse-layout{padding:0 8px}
+      .fd-recent-drops,.fd-retailer-card{min-height:270px}.fd-drop-grid{padding:0 12px 40px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.fd-drop-mini{min-width:0;display:grid;gap:4px}.fd-drop-art{position:relative;aspect-ratio:.8/1;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(221,203,188,.08);border-radius:7px;background:radial-gradient(circle at 50% 25%,rgba(141,86,178,.18),transparent 44%),linear-gradient(155deg,#17181b,#0c1014);color:#c1a4d2;font-family:Georgia,serif;font-size:13px}.fd-drop-art i{position:absolute;width:54%;height:54%;border:1px solid rgba(190,151,213,.13);transform:rotate(45deg)}.fd-drop-mini strong{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#c8bfba;font-size:7px;line-height:1.3}.fd-drop-mini small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#655f63;font-size:5px}.fd-drop-mini>b{color:#d9d0ca;font-size:7px}.fd-retailer-list{display:grid;padding:0 12px 40px}.fd-retailer-list>div:not(.fd-ref-empty){min-height:42px;display:grid;grid-template-columns:26px minmax(0,1fr) auto auto;gap:8px;align-items:center;border-top:1px solid rgba(221,203,188,.055)}.fd-retailer-list>div:first-child{border-top:0}.fd-store-mark{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:rgba(150,96,184,.09);color:#9f79ba;font-size:10px}.fd-retailer-list strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px}.fd-retailer-list small{color:#655f64;font-size:6px}.fd-retailer-list b{color:#927d6d;font-size:6px;font-weight:650}
+      .fd-koru-dashboard-card{position:relative;grid-column:3 / 5;min-height:270px;overflow:hidden;border:1px solid rgba(181,151,128,.13);border-radius:11px;background:linear-gradient(90deg,rgba(8,10,12,.98),rgba(8,10,12,.62) 46%,rgba(8,10,12,.12)),url('/assets/home/koru-home-section.png') center 54%/cover no-repeat}.fd-koru-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,9,11,.88) 0%,rgba(7,9,11,.6) 43%,rgba(7,9,11,.1) 75%),linear-gradient(180deg,transparent 46%,rgba(7,9,11,.58))}.fd-koru-copy{position:relative;z-index:2;width:48%;height:100%;padding:25px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}.fd-koru-copy>small{color:#a1846e;font-size:6px;font-weight:900;letter-spacing:.16em}.fd-koru-copy h2{margin:10px 0 12px;color:#dcccbc;font-family:Georgia,'Times New Roman',serif;font-size:clamp(1.8rem,2.4vw,2.8rem);font-weight:500;line-height:.98;letter-spacing:-.04em}.fd-koru-copy p{margin:0;color:#aa9790;font-family:Georgia,serif;font-size:15px;line-height:1.35}.fd-koru-copy a{margin-top:20px;color:#b584d4;font-size:7px;font-weight:800;text-decoration:none}.fd-koru-brand{position:absolute;z-index:2;right:22px;bottom:17px;display:grid;gap:3px;text-align:right;color:#987d63}.fd-koru-brand b{font-family:Georgia,serif;font-size:12px;font-weight:500;letter-spacing:.22em}.fd-koru-brand span{font-size:5px;font-weight:900;letter-spacing:.2em}
+      @media(max-width:1320px){.fd-reference-grid{grid-template-columns:1fr 1fr}.fd-network-pulse-card,.fd-fatefind-card,.fd-recent-signals,.fd-true-price-card{min-height:330px}.fd-koru-dashboard-card{grid-column:1 / 3}.fd-drop-grid{grid-template-columns:repeat(4,1fr)}}
+      @media(max-width:820px){.fd-lifecycle-grid{grid-template-columns:1fr 1fr}.fd-reference-grid{grid-template-columns:1fr}.fd-koru-dashboard-card{grid-column:auto}.fd-koru-copy{width:68%}.fd-drop-grid{grid-template-columns:repeat(2,1fr)}.fd-recent-signals,.fd-true-price-card,.fd-fatefind-card,.fd-network-pulse-card{min-height:310px}}
+      @media(max-width:520px){.fd-overview-card{padding:14px 12px}.fd-ref-card-head{flex-direction:column}.fd-lifecycle-grid{grid-template-columns:1fr}.fd-lifecycle-card{min-height:115px}.fd-koru-dashboard-card{min-height:330px;background-position:58% center}.fd-koru-copy{width:100%;justify-content:flex-end;padding:22px;background:linear-gradient(0deg,rgba(7,9,11,.96),rgba(7,9,11,.15) 80%)}.fd-koru-brand{display:none}.fd-price-head,.fd-price-row{grid-template-columns:1fr 82px}.fd-price-head span:last-child,.fd-price-row small{display:none}.fd-retailer-list>div:not(.fd-ref-empty){grid-template-columns:26px minmax(0,1fr) auto}.fd-retailer-list small{display:none}}
     `}</style>
   </DashboardPageShell>;
 }
