@@ -151,6 +151,26 @@ function parseGlb(buffer: ArrayBuffer): ParsedModel {
   return { positions, normals, uvs, indices, indexComponentType: indexAccessor.componentType, imageBlob, baseColor };
 }
 
+function companionSiblingTextureUrl(modelUrl: string): string | null {
+  const clean = modelUrl.split("?", 1)[0];
+  const segments = clean.split("/").filter(Boolean);
+  if (segments.length < 2) return null;
+  const characterId = segments[segments.length - 2];
+  const directory = clean.slice(0, clean.lastIndexOf("/"));
+  return `${directory}/${characterId}-texture.jpg`;
+}
+
+async function optionalSiblingTexture(modelUrl: string): Promise<Blob | null> {
+  const textureUrl = companionSiblingTextureUrl(modelUrl);
+  if (!textureUrl) return null;
+  try {
+    const response = await fetch(textureUrl, { cache: "force-cache" });
+    return response.ok ? await response.blob() : null;
+  } catch {
+    return null;
+  }
+}
+
 function compile(gl: GL, type: number, source: string) {
   const shader = gl.createShader(type);
   if (!shader) throw new Error("Could not create Companion shader.");
@@ -343,12 +363,18 @@ export function CompanionWebglModel({ name, modelUrl, reaction, compact = false 
     let cleanup: (() => void) | undefined;
     setLoading(true);
     setError(null);
-    fetch(modelUrl, { cache: "force-cache" })
-      .then((response) => {
+    Promise.all([
+      fetch(modelUrl, { cache: "force-cache" }).then((response) => {
         if (!response.ok) throw new Error(`Companion model returned ${response.status}.`);
         return response.arrayBuffer();
+      }),
+      optionalSiblingTexture(modelUrl),
+    ])
+      .then(([buffer, siblingTexture]) => {
+        const model = parseGlb(buffer);
+        if (!model.imageBlob && siblingTexture) model.imageBlob = siblingTexture;
+        return model;
       })
-      .then(parseGlb)
       .then((model) => renderModel(canvas, model, reaction, stopped))
       .then((dispose) => {
         if (stopped()) { dispose(); return; }
