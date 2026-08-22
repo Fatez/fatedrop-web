@@ -160,6 +160,7 @@ test("True Price is canonical Cloud comparison and FateWindow stays out of the a
   assert.ok(page.includes("ITEM PRICE"));
   assert.ok(page.includes("KNOWN DELIVERY"));
   assert.ok(page.includes("TRUE PRICE"));
+  assert.ok(page.includes("Unknown never means free"));
   assert.ok(page.includes("CREATE A FATEFIND"));
   assert.equal(page.toUpperCase().includes("FATEWINDOW"), false);
   assert.ok(client.includes('"/api/true-price"'));
