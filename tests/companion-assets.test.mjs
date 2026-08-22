@@ -84,16 +84,28 @@ test("final-roster registered GLBs render through the current WebGL boundary", (
   }
 });
 
+test("verified source clip metadata replaces generic guessed animation names", () => {
+  const contract = read("lib/companion-contract.ts");
+  const handoff = read("docs/companion-model-slots.md");
+  assert.ok(contract.includes("VERIFIED_STATE_CLIPS"));
+  assert.equal(contract.includes("CANONICAL_CLIPS"), false);
+  for (const clip of [
+    'idle: "Armature|Idle|baselayer"',
+    'watching: "Armature|Listening_Gesture|baselayer"',
+    'echo: "Armature|Alert|baselayer"',
+    'manifested: "Armature|mage_soell_cast_1|baselayer"',
+    'vanished: "Armature|Sneaky_Walk|baselayer"',
+    'fatematch: "Armature|Victory_Cheer|baselayer"',
+  ]) assert.ok(contract.includes(clip), `${clip} missing from verified source metadata`);
+  for (const name of ["Aeris", "Nyxen", "Solix", "Fenn"]) assert.ok(handoff.includes(name));
+  assert.ok(handoff.includes("does **not** yet play the skinned animation channels above"));
+  assert.ok(contract.includes("does not claim skeletal clip playback"));
+});
+
 test("reaction-specific packs are supported without changing the five-slot roster", () => {
   const contract = read("lib/companion-contract.ts");
   assert.ok(contract.includes("reactionModelUrls?: Partial<Record<CompanionReaction, string>>"));
   assert.ok(contract.includes("export function companionModelUrl"));
-  assert.ok(contract.includes('idle: "Armature|Idle|baselayer"'));
-  assert.ok(contract.includes('watching: "Armature|Listening_Gesture|baselayer"'));
-  assert.ok(contract.includes('echo: "Armature|Alert|baselayer"'));
-  assert.ok(contract.includes('manifested: "Armature|mage_soell_cast_1|baselayer"'));
-  assert.ok(contract.includes('vanished: "Armature|Sneaky_Walk|baselayer"'));
-  assert.ok(contract.includes('fatematch: "Armature|Victory_Cheer|baselayer"'));
   const fennLine = contract.split("\n").find((line) => line.includes('id: "fenn"')) || "";
   assert.ok(fennLine.includes("modelUrl: null"), "Fenn must stay unregistered until its binaries are actually in the web repo");
 });
