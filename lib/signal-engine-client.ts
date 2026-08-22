@@ -1,4 +1,5 @@
 import { safeExternalHttpsUrl } from "./external-url";
+import { retailerRegistry } from "./retailer-registry";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 
@@ -123,6 +124,13 @@ function safeTruePriceOffer(offer: SignalTruePriceOffer): SignalTruePriceOffer |
   return productUrl ? { ...offer, productUrl } : null;
 }
 
+function retailerFilterForQuery(query: string) {
+  const normalized = query.trim().toLocaleLowerCase("en-GB");
+  if (!normalized) return null;
+  const retailer = retailerRegistry.find((item) => item.name.toLocaleLowerCase("en-GB") === normalized);
+  return retailer ? (retailer.cloudRetailerId ?? retailer.id) : null;
+}
+
 export async function searchSignalCatalogue(query: string, options: {
   inStock?: boolean;
   limit?: number;
@@ -134,11 +142,19 @@ export async function searchSignalCatalogue(query: string, options: {
   cursor?: string;
 } = {}) {
   const clean = query.trim();
-  if (clean.length < 2) return null;
-  const params = new URLSearchParams({ q: clean, limit: String(Math.min(Math.max(options.limit ?? 50, 1), 100)) });
+  const inferredRetailer = options.retailer ? null : retailerFilterForQuery(clean);
+  const retailerFilter = options.retailer ?? inferredRetailer;
+  if (clean.length < 2 && !retailerFilter) return null;
+
+  const params = new URLSearchParams({ limit: String(Math.min(Math.max(options.limit ?? 50, 1), 100)) });
+  // Store cards currently open Search using the retailer display name. Cloud's q
+  // field searches product title/SKU, while retailer is the actual catalogue
+  // filter. Resolve an exact known retailer name to that filter instead of
+  // pretending the shop name is a product keyword.
+  if (clean.length >= 2 && !inferredRetailer) params.set("q", clean);
+  if (retailerFilter) params.set("retailer", retailerFilter);
   if (options.inStock) params.set("inStock", "true");
   if (options.sort) params.set("sort", options.sort);
-  if (options.retailer) params.set("retailer", options.retailer);
   if (options.category) params.set("category", options.category);
   if (typeof options.minPrice === "number" && Number.isFinite(options.minPrice)) params.set("minPrice", String(options.minPrice));
   if (typeof options.maxPrice === "number" && Number.isFinite(options.maxPrice)) params.set("maxPrice", String(options.maxPrice));
