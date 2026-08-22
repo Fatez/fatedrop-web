@@ -1,3 +1,5 @@
+import { safeExternalHttpsUrl } from "./external-url";
+
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 
 export type SignalCatalogueOffer = {
@@ -6,7 +8,7 @@ export type SignalCatalogueOffer = {
   retailerKey: string;
   retailer: string;
   title: string;
-  url: string;
+  url: string | null;
   image?: string | null;
   price?: number;
   shippingGbp?: number;
@@ -39,7 +41,7 @@ export type SignalTruePriceOffer = {
   totalDeliveredGbp?: number;
   deliveryKnown: boolean;
   collectionAvailable: boolean;
-  productUrl: string;
+  productUrl: string | null;
   imageUrl?: string | null;
   lastCheckedAt?: string;
   stockStatus: "IN_STOCK" | "PREORDER" | "OUT_OF_STOCK" | "UNKNOWN";
@@ -131,13 +133,26 @@ export async function searchSignalCatalogue(query: string, options: {
   if (typeof options.minPrice === "number" && Number.isFinite(options.minPrice)) params.set("minPrice", String(options.minPrice));
   if (typeof options.maxPrice === "number" && Number.isFinite(options.maxPrice)) params.set("maxPrice", String(options.maxPrice));
   if (options.cursor) params.set("cursor", options.cursor);
-  return signalFetch<SignalCatalogueResponse>("/api/catalogue", params);
+  const result = await signalFetch<SignalCatalogueResponse>("/api/catalogue", params);
+  if (!result) return null;
+  return {
+    ...result,
+    products: result.products.map((offer) => ({ ...offer, url: safeExternalHttpsUrl(offer.url) })),
+  };
 }
 
 export async function searchSignalTruePrice(query: string) {
   const clean = query.trim();
   if (clean.length < 2) return null;
-  return signalFetch<SignalTruePriceResponse>("/api/true-price", new URLSearchParams({ q: clean }));
+  const result = await signalFetch<SignalTruePriceResponse>("/api/true-price", new URLSearchParams({ q: clean }));
+  if (!result) return null;
+  return {
+    ...result,
+    groups: result.groups.map((group) => ({
+      ...group,
+      offers: group.offers.map((offer) => ({ ...offer, productUrl: safeExternalHttpsUrl(offer.productUrl) })),
+    })),
+  };
 }
 
 export function getSignalEngineStatus(timeoutMs = 8_000) {
