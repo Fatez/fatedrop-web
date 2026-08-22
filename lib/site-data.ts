@@ -91,14 +91,14 @@ export const siteConfig = {
       number: "01",
       title: "Signal Intelligence",
       description:
-        "Use Whisper, Echo, Manifested and Vanished as one consistent lifecycle from early movement through confirmed stock and sell-out.",
+        "Whisper catches product or catalogue movement. Echo says access, queue, traffic or security conditions changed. Manifested confirms purchasable stock is live. Vanished closes the loop when previously confirmed availability is gone.",
       meta: "Four states / one meaning",
     },
     {
       number: "02",
       title: "True Price",
       description:
-        "Compare item price, official RRP and known mandatory delivery, including the percentage above or below RRP where supported.",
+        "Compare an observed offer with official RRP and known mandatory delivery, including the £ and percentage difference above or below RRP where the evidence supports it.",
       meta: "Price + RRP + known delivery",
     },
     {
@@ -112,7 +112,7 @@ export const siteConfig = {
       number: "04",
       title: "Independent Discovery",
       description:
-        "Find products through participating independents and continue to the retailer's own product page and checkout.",
+        "Find products through participating independents and continue to the retailer's own product page and checkout. FateDrop helps with discovery and context; the retailer remains the seller.",
       meta: "Discover here / buy direct",
     },
     {
