@@ -9,6 +9,7 @@ on:
       - package-lock.json
       - components/companion-renderer.tsx
       - lib/companion-contract.ts
+      - scripts/patch-oru-renderer-lint.mjs
       - .github/workflows/verify-oru-friends-integration.yml
 
 permissions:
@@ -28,6 +29,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Apply deterministic renderer lint patch
+        run: node scripts/patch-oru-renderer-lint.mjs
       - name: Verify and record proof
         shell: bash
         run: |
@@ -87,7 +90,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/oru-friends-ci-proof.md
-          git commit -m "Record Oru & Friends integration verification" || true
+          git add components/companion-renderer.tsx docs/oru-friends-ci-proof.md
+          git commit -m "Fix and verify Oru & Friends renderer" || true
           git push
           exit "$overall"
