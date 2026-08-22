@@ -22,9 +22,12 @@ test("every retained dashboard destination has a real page", () => {
   for (const route of dashboardRoutes) assert.equal(fs.existsSync(route), true, `${route} is missing`);
 });
 
-test("core dashboard navigation keeps every collector destination in the approved workspace rail", () => {
+test("core dashboard navigation keeps every collector destination in the approved workspace", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
-  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/notifications", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/profile", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  assert.ok(shell.includes('href="/dashboard/notifications"'));
+  assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
   assert.ok(nav.includes('"FateFind", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Watchlist", "/dashboard/wishlist"'));
