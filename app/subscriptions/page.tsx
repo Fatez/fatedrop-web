@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StartMembershipButton } from "@/components/membership-actions";
-import { PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { SectionHeading, SiteShell } from "@/components/page-shell";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { hasPremiumAccess, TRIAL_DAYS } from "@/lib/membership";
 import type { MembershipRecord } from "@/lib/account-storage";
@@ -40,9 +41,17 @@ export default async function SubscriptionsPage() {
 
   return (
     <SiteShell>
-      <PageHero eyebrow="One membership across the network" title="Your FateDrop ID follows you." description="Start free, then unlock deeper stock intelligence through one collector membership foundation designed to carry across the website, app and Premium Discord as each integration is connected.">
+      <MarketStoryHero
+        eyebrow="One FateDrop ID across the network"
+        title="Start free. Add signal depth when you need it."
+        description="Your FateDrop ID carries the same collector identity and entitlement foundation across the website, app and Premium Discord as each integration is verified. Membership should unlock useful depth, not split the product into three unrelated accounts."
+        image="/assets/fatedrop-header.png?v=20260822-membership"
+        alt="FateDrop signal artwork representing one connected membership across the network"
+        proof={["One FateDrop ID", "Free discovery", "Plus from £4.99", "Cross-platform foundation"]}
+        focal="right"
+      >
         <div className="button-row"><Link className="button button-primary" href="#collectors">Collector membership <span>↓</span></Link><Link className="button button-secondary" href="/account">My FateDrop ID</Link></div>
-      </PageHero>
+      </MarketStoryHero>
       <section className={`billing-warning section-shell${stripeReady ? " billing-ready" : ""}`} role="status"><span>{stripeReady ? "TRIAL READY" : "BILLING FOUNDATION"}</span><p>{stripeReady ? `${TRIAL_DAYS}-day collector trials are connected to Stripe on this deployment. Membership events update the website entitlement record used by account and Discord foundations.` : `The ${TRIAL_DAYS}-day trial, checkout, customer portal and subscription webhook flow are built. Checkout remains disabled until the Stripe account, prices and webhook secret are added.`}</p></section>
       <section className="membership-flow section-shell"><div><span>01</span><b>Create FateDrop ID</b><small>Your permanent network identity.</small></div><i>→</i><div><span>02</span><b>Start free trial</b><small>When billing is connected.</small></div><i>→</i><div><span>03</span><b>Entitlement activates</b><small>Shared network-access foundation.</small></div></section>
       <section className="plan-section section-shell" id="collectors"><SectionHeading eyebrow="Collector membership" title="Free discovery. Premium signal depth." body={`Every collector starts with a FateDrop ID and permanent member-since history. Plus and Pro sit on the same Premium entitlement foundation today; the final higher-tier feature split is still being reviewed during the founding beta.`} /><CollectorPlanGrid plans={siteConfig.collectorPlans} signedIn={signedIn} membership={snapshot?.membership ?? null} /></section>
