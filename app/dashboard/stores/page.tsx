@@ -3,7 +3,7 @@ import Link from "next/link";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { getRetailerNetwork } from "@/lib/retailer-network";
 
-export const metadata: Metadata = { title: "Indies | FateDrop Dashboard", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Independent Stores | FateDrop Dashboard", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 const WISHLIST_BRAND_IMAGE = "https://www.wishlistcollectables.co.uk/cdn/shop/files/IMG_20231207_152535.jpg?v=1702206733&width=1500";
@@ -28,42 +28,42 @@ export default async function DashboardStoresPage() {
     { id: "cob-and-pip", name: "Cob & Pip", location: "UK · Online", tags: ["Pokémon", "TCG"], href: "/dashboard/stores/cob-and-pip", note: "Experimental storefront", image: COB_AND_PIP_LOGO, imageMode: "contain" },
   ];
 
-  return <DashboardPageShell title="Indies" eyebrow="THE BRIDGE TO INDEPENDENT TCG STORES">
+  return <DashboardPageShell title="Independent Stores" eyebrow="DISCOVER MORE PLACES TO BUY">
     <div className="fd-indies-page">
       <section className="fd-dash-card fd-indies-hero">
         <div className="fd-indies-copy">
-          <span>INDEPENDENT DISCOVERY</span>
-          <h1>Small stores should not be invisible.</h1>
-          <p>FateDrop helps collectors search beyond the obvious big retailers and helps independent TCG stores put their products in front of people already looking for them. FateDrop handles discovery and context; <b>the retailer still owns the product page, checkout and customer relationship.</b></p>
+          <span>INDEPENDENT STORE DISCOVERY</span>
+          <h1>More places to buy. More chances to find the right stock.</h1>
+          <p>Explore independent TCG retailers across the FateDrop network, compare their offers and continue directly to the store to buy. FateDrop helps with discovery and context; <b>the retailer still owns the product page, checkout and customer relationship.</b></p>
           <div className="fd-indies-actions"><Link href="/dashboard/search">Search the network →</Link><Link href="/dashboard/true-price">Compare True Price →</Link></div>
         </div>
         <div className="fd-indies-stats">
-          <div><strong>{monitored.length || "—"}</strong><span>CONNECTED RETAILERS</span><small>Observed by the Cloud network</small></div>
-          <div><strong>{monitored.length ? healthy : "—"}</strong><span>HEALTHY MONITORS</span><small>Current runtime evidence</small></div>
-          <div><strong>{storefronts.length}</strong><span>LAB STOREFRONT PREVIEWS</span><small>Deep catalogues load only when opened</small></div>
+          <div><strong>{monitored.length || "—"}</strong><span>RETAILERS ACTIVE</span><small>Currently observed by FateDrop</small></div>
+          <div><strong>{monitored.length ? healthy : "—"}</strong><span>MONITORS HEALTHY</span><small>Live connection status</small></div>
+          <div><strong>{storefronts.length}</strong><span>STORE PREVIEWS</span><small>Open a store to explore more</small></div>
         </div>
       </section>
 
       <section className="fd-dash-card fd-indies-flow">
-        <div><b>1</b><strong>COLLECTOR SEARCHES</strong><span>“Who has the card or sealed product I want?”</span></div>
+        <div><b>1</b><strong>COLLECTOR LOOKS</strong><span>“Who has the card or sealed product I want?”</span></div>
         <i>→</i>
-        <div><b>2</b><strong>FATEDROP CONNECTS THE DOTS</strong><span>Search, stock evidence, RRP and True Price make the options clearer.</span></div>
+        <div><b>2</b><strong>FATEDROP FINDS OPTIONS</strong><span>Search, stock evidence, RRP and True Price make the choices clearer.</span></div>
         <i>→</i>
-        <div className="retailer"><b>3</b><strong>BUY FROM THE INDIE</strong><span>You continue to the retailer. FateDrop is the bridge, not the marketplace.</span></div>
+        <div className="retailer"><b>3</b><strong>BUY FROM THE STORE</strong><span>You continue directly to the retailer. FateDrop is the bridge, not the marketplace.</span></div>
       </section>
 
       <section className="fd-dash-card fd-indies-network">
-        <div className="fd-indies-head"><div><span>LIVE NETWORK</span><h2>Retailers FateDrop can currently observe.</h2><p>A connected monitor means FateDrop has operational evidence from that retailer. It is not a paid ranking, endorsement or blanket trust badge.</p></div><Link href="/dashboard/search">Search observed offers →</Link></div>
+        <div className="fd-indies-head"><div><span>LIVE NETWORK</span><h2>Stores FateDrop can currently observe.</h2><p>These retailers have an active monitoring connection to FateDrop. That shows real network coverage; it is not a paid ranking, endorsement or blanket trust badge.</p></div><Link href="/dashboard/search">Search observed offers →</Link></div>
         {monitored.length ? <div className="fd-indies-network-grid">{monitored.map((retailer)=><article key={retailer.id}>
-          <div className="fd-indie-status"><span className={retailer.runtime.healthy ? "healthy" : "warning"}>{retailer.runtime.healthy ? "● LIVE" : "○ DEGRADED"}</span><small>{retailer.runtime.baselineCompleted ? "CATALOGUE BASELINE COMPLETE" : "BASELINE PENDING"}</small></div>
+          <div className="fd-indie-status"><span className={retailer.runtime.healthy ? "healthy" : "warning"}>{retailer.runtime.healthy ? "● LIVE" : "○ DEGRADED"}</span><small>{retailer.runtime.baselineCompleted ? "STOCK FEED READY" : "FEED STARTING"}</small></div>
           <h3>{retailer.name}</h3><p>{retailer.category.replaceAll("-"," ")}</p>
-          <dl><div><dt>PRODUCTS SEEN</dt><dd>{retailer.runtime.productsSeen ?? "—"}</dd></div><div><dt>LAST SUCCESS</dt><dd>{relative(retailer.runtime.lastSuccessAt)}</dd></div></dl>
+          <dl><div><dt>PRODUCTS TRACKED</dt><dd>{retailer.runtime.productsSeen ?? "—"}</dd></div><div><dt>LAST SUCCESS</dt><dd>{relative(retailer.runtime.lastSuccessAt)}</dd></div></dl>
           <div className="fd-indie-links">{retailer.website ? <a href={retailer.website} target="_blank" rel="noreferrer">VISIT STORE ↗</a> : null}<Link href={`/dashboard/search?q=${encodeURIComponent(retailer.name)}`}>SEARCH FATEDROP →</Link></div>
-        </article>)}</div> : <div className="fd-dashboard-empty"><strong>Live retailer health did not answer quickly enough.</strong><span>The page stays usable instead of waiting on the monitoring service. Refresh later for current runtime evidence.</span></div>}
+        </article>)}</div> : <div className="fd-dashboard-empty"><strong>Live retailer status did not answer quickly enough.</strong><span>The page stays usable instead of waiting on the monitoring service. Refresh later for the latest store connection status.</span></div>}
       </section>
 
       <section className="fd-dash-card fd-indies-lab">
-        <div className="fd-indies-head"><div><span>STOREFRONT LAB</span><h2>What participating indie pages can become.</h2><p>These experimental direct feeds are a preview of the retailer storefront experience. They are deliberately separated from the canonical Cloud network until their data path is formally connected.</p></div></div>
+        <div className="fd-indies-head"><div><span>STORE PREVIEWS</span><h2>Explore participating store experiences.</h2><p>These previews show what deeper independent-store discovery can look like. They stay separate from the live monitored network until their data connection is complete.</p></div></div>
         <div className="fd-indies-store-grid">{storefronts.map((store) => <article key={store.id}>
           <div className="fd-indies-store-image" style={{ backgroundImage: `url("${store.image}")`, backgroundSize: store.imageMode }} />
           <div className="fd-indies-store-body"><small>{store.note}</small><h3>{store.name}</h3><p>{store.location}</p><div className="fd-indies-tags">{store.tags.map((tag)=><span key={tag}>{tag}</span>)}</div><div className="fd-indies-store-metrics"><span><b>FAST PREVIEW</b> overview only</span><span><b>ON DEMAND</b> catalogue loads when opened</span></div><Link href={store.href}>Explore storefront preview →</Link></div>
@@ -71,7 +71,7 @@ export default async function DashboardStoresPage() {
       </section>
 
       <section className="fd-dash-card fd-indies-why">
-        <div><span>WHY FATEDROP BUILDS THIS</span><h2>Collectors get more choice. Indies get more visibility.</h2></div>
+        <div><span>WHY FATEDROP BUILDS THIS</span><h2>Collectors get more choice. Independent stores get more visibility.</h2></div>
         <p>The network works when both sides win: collectors can discover stock and compare the real buying context more easily, while smaller stores can be found without surrendering their checkout or brand to another marketplace.</p>
       </section>
     </div>
