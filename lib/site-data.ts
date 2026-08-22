@@ -9,6 +9,7 @@ export const siteConfig = {
     { label: "Retailers", href: "/businesses" },
     { label: "Events", href: "/events" },
     { label: "Trust", href: "/trust" },
+    { label: "About", href: "/about" },
     { label: "Merch", href: "/merch" },
   ],
   marketCategories: ["Major retail products", "Independent catalogues", "Singles", "Sealed products", "Graded cards", "Accessories", "Preorders", "Local stock", "Event-vendor inventory"],
