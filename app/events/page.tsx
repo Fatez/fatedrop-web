@@ -3,7 +3,8 @@ import Link from "next/link";
 import { AppScreen } from "@/components/app-screen";
 import { EventCalendar } from "@/components/event-calendar";
 import { FateEncountersLive } from "@/components/fate-encounters-live";
-import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
 import { FateSignalField } from "@/components/fate-signal-field";
 import { loadUpcomingEncounters } from "@/lib/encounters";
 
@@ -18,9 +19,17 @@ export default async function EventsPage() {
 
   return (
     <SiteShell>
-      <PageHero motif="events" eyebrow="Fate Encounters · live UK network" title="Find the TCG scene around you." description="Browse source-verified UK card shows, conventions, trade events and participating vendors, then use Local Radar to see what is happening near your postcode.">
+      <MarketStoryHero
+        eyebrow="Fate Encounters · live UK TCG network"
+        title="Find the events. Find your people."
+        description="Browse source-backed card shows, conventions, trade events and participating vendors, then use Local Radar to turn the wider TCG scene into somewhere you can actually go."
+        image="/assets/fatedrop-header.png?v=20260822-events"
+        alt="FateDrop signal artwork representing the connected TCG event network"
+        proof={["UK card shows", "Source-backed listings", "Vendor evidence", "Local Radar"]}
+        focal="right"
+      >
         <div className="button-row"><Link className="button button-primary" href="#live-encounters">Explore live events <span>↓</span></Link><Link className="text-link" href="/join?type=event">Bring your event to FateDrop <span>↗</span></Link></div>
-      </PageHero>
+      </MarketStoryHero>
 
       <section className="content-section section-shell" id="encounters-calendar">
         <SectionHeading eyebrow="UK event calendar" title="Real upcoming card events, in one calendar." body={feed.live ? `${eventCount} upcoming source-backed listings are currently available through the hosted Fate Encounters feed. Dates and venues remain linked to organiser or ticket-source evidence.` : "The hosted Fate Encounters feed is temporarily unavailable. FateDrop does not substitute demo events when the live feed cannot be reached."} />
