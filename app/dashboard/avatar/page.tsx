@@ -4,7 +4,7 @@ import { CompanionSelector } from "@/components/companion-selector";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { defaultAvatarRecord, getUserAvatar } from "@/lib/avatar-storage";
-import { ACTIVE_COMPANION_ROSTER, LEGACY_COMPANION_ARCHIVE } from "@/lib/companion-contract";
+import { ACTIVE_COMPANION_ROSTER, LEGACY_COMPANION_ARCHIVE, companionRendererMode } from "@/lib/companion-contract";
 import { KORU_LIFECYCLE } from "@/lib/koru-brand";
 
 export const metadata: Metadata = { title: "Koru & Friends | FateDrop Dashboard", robots: { index: false, follow: false } };
@@ -21,7 +21,7 @@ export default async function DashboardAvatarPage() {
     // Companion selection remains previewable while account storage is unavailable.
   }
 
-  const readyModels = ACTIVE_COMPANION_ROSTER.filter((companion) => companion.modelUrl).length;
+  const readyModels = ACTIVE_COMPANION_ROSTER.filter((companion) => companionRendererMode(companion) === "webgl-3d").length;
 
   return <DashboardPageShell title="Koru & Friends" eyebrow="FATEDROP · COMPANIONS">
     <div className="companions-page">
@@ -45,9 +45,9 @@ export default async function DashboardAvatarPage() {
         </div>
         <div className="model-system">
           <small>3D MODEL BOUNDARY</small>
-          <h2>Five slots are ready for the incoming GLBs.</h2>
-          <p>Each active character owns one model slot and the same reaction contract. Models can be registered one at a time without rebuilding the companion selection or bringing the retired Droid/Scout system back.</p>
-          <div className="model-list">{ACTIVE_COMPANION_ROSTER.map((companion) => <div key={companion.id}><span>{String(companion.slot).padStart(2,"0")}</span><b>{companion.name}</b><small>{companion.modelUrl ? "MODEL REGISTERED" : "AWAITING GLB"}</small></div>)}</div>
+          <h2>Five stable slots. One renderer contract.</h2>
+          <p>Registered GLBs render through the current Koru &amp; Friends WebGL boundary. A character can use one approved GLB or a verified reaction-specific pack without creating new companion IDs or bringing the retired Droid/Scout system back.</p>
+          <div className="model-list">{ACTIVE_COMPANION_ROSTER.map((companion) => <div key={companion.id}><span>{String(companion.slot).padStart(2,"0")}</span><b>{companion.name}</b><small>{companionRendererMode(companion) === "webgl-3d" ? "MODEL REGISTERED" : companion.isMascot ? "2D FALLBACK ACTIVE" : "AWAITING GLB"}</small></div>)}</div>
         </div>
       </section>
 
