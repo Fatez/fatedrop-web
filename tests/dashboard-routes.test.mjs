@@ -92,15 +92,59 @@ test("Koru and Friends is the only active companion system", () => {
   ]) assert.equal(fs.existsSync(retiredFile), false, `${retiredFile} should remain retired`);
 });
 
-test("Alerts is personal and links to shared notification preferences", () => {
+test("Alerts is a precise network ledger and keeps personal delivery controls separate", () => {
   const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
-  assert.ok(alerts.includes("YOUR HUNTS · YOUR NOTIFICATIONS"));
-  assert.ok(alerts.includes("ACTIVE FATEFINDS"));
-  assert.ok(alerts.includes("YOUR NOTIFICATION / HUNT HISTORY"));
+  assert.ok(alerts.includes("NETWORK FLIGHT RECORDER"));
+  assert.ok(alerts.includes("PRECISE SIGNAL ACTIVITY"));
+  assert.ok(alerts.includes("SIGNAL LEDGER"));
+  assert.ok(alerts.includes("EXACT CAUSE"));
+  for (const state of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) assert.ok(alerts.includes(`"${state}"`));
+  for (const cause of ["catalogue_new", "queue", "security", "restock", "sold_out", "lifecycle_unspecified"]) assert.ok(alerts.includes(`"${cause}"`));
   assert.ok(alerts.includes('/dashboard/notifications'));
-  assert.ok(alerts.includes("one account-level persistence model"));
+  assert.ok(alerts.includes('/dashboard/true-price?q='));
+  assert.ok(alerts.includes('/dashboard/watchlist?q='));
+  assert.ok(alerts.includes("CanonicalAlertSignalPack"));
+  assert.ok(alerts.includes("Cause unclassified"));
   assert.equal(alerts.includes("<LiveAlertFeed"), false);
-  assert.ok(alerts.includes("Open Network Activity"));
+});
+
+test("Search, True Price and FateFind form one working collector journey", () => {
+  const search = fs.readFileSync("app/dashboard/search/page.tsx", "utf8");
+  const truePrice = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
+  const fateFind = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
+  const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  assert.ok(search.includes("searchSignalCatalogue"));
+  assert.ok(search.includes('/dashboard/true-price?q='));
+  assert.ok(search.includes('/dashboard/watchlist?q='));
+  assert.ok(search.includes("BUY ↗"));
+  assert.ok(truePrice.includes("searchSignalTruePrice"));
+  assert.ok(truePrice.includes('/dashboard/watchlist?q='));
+  assert.ok(truePrice.includes("BUY AT RETAILER ↗"));
+  assert.ok(fateFind.includes("FateMatchBuilder"));
+  assert.ok(fateFind.includes("FateFindActions"));
+  assert.ok(client.includes('"/api/catalogue"'));
+  assert.ok(client.includes('"/api/true-price"'));
+});
+
+test("FateFind supports create pause resume delete and evidence-based local matching", () => {
+  const builder = fs.readFileSync("components/fate-match-builder.tsx", "utf8");
+  const actions = fs.readFileSync("components/fatefind-actions.tsx", "utf8");
+  const api = fs.readFileSync("app/api/fate-matches/route.ts", "utf8");
+  const storage = fs.readFileSync("lib/fate-match-storage.ts", "utf8");
+  assert.ok(builder.includes("navigator.geolocation"));
+  assert.ok(builder.includes("radiusKm"));
+  assert.ok(builder.includes("latitude"));
+  assert.ok(builder.includes("longitude"));
+  assert.ok(builder.includes("Use your location before saving a Local-only FateFind."));
+  assert.ok(api.includes("export async function POST"));
+  assert.ok(api.includes("export async function PATCH"));
+  assert.ok(api.includes("export async function DELETE"));
+  assert.ok(api.includes("Local FateFind monitoring requires a resolved location and radius."));
+  assert.ok(api.includes("assertSameOrigin(request)"));
+  assert.ok(storage.includes("setFateMatchEnabled"));
+  assert.ok(storage.includes("deleteFateMatch"));
+  assert.ok(actions.includes('method: "PATCH"'));
+  assert.ok(actions.includes('method: "DELETE"'));
 });
 
 test("Universal Wishlist is persistent, separate from FateFind and migration-safe", () => {
@@ -181,9 +225,13 @@ test("retailer discovery separates Cloud runtime health from storefront lab feed
 
 test("Events has a canonical network-feed migration endpoint", () => {
   const eventsApi = fs.readFileSync("app/api/events/route.ts", "utf8");
+  const dashboardEvents = fs.readFileSync("app/dashboard/events/page.tsx", "utf8");
   assert.ok(eventsApi.includes("getLatestNetworkMetricSnapshot"));
   assert.ok(eventsApi.includes('status: snapshot ? "network" : "awaiting-network-feed"'));
   assert.ok(eventsApi.includes("upcomingEvents"));
+  assert.ok(dashboardEvents.includes("loadUpcomingEncounters"));
+  assert.ok(dashboardEvents.includes("EventCalendar"));
+  assert.ok(dashboardEvents.includes("FateEncountersLive"));
 });
 
 test("baseline production security headers are configured", () => {
