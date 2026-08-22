@@ -1,0 +1,186 @@
+/* Koru-era product surfaces: dashboard, FateDrop ID and authenticated UI.
+   Functional lifecycle/status colours remain available; surrounding chrome is deliberately muted. */
+
+/* FateDrop ID / authentication */
+.identity-gate::before {
+  background:
+    radial-gradient(circle at 60% 46%, rgba(183,151,127,.055), transparent 24%),
+    radial-gradient(circle at 72% 50%, rgba(137,104,132,.14), transparent 43%) !important;
+}
+.identity-gate-field,
+.account-radar-field {
+  filter: saturate(.30) sepia(.12) !important;
+}
+.identity-gate-copy h1,
+.account-hero-copy h1 {
+  color: var(--koru-cream) !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-weight: 500 !important;
+}
+.identity-gate-copy h1 em {
+  background: linear-gradient(100deg,#f2e9e1 8%,#d5c1b5 44%,#b691b1 78%,#d3b8c9) !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+}
+.identity-gate-copy > p:not(.eyebrow),
+.account-hero-copy > p:not(.eyebrow) {
+  color: var(--koru-muted) !important;
+}
+.identity-gate-proof {
+  border-color: rgba(221,203,188,.09) !important;
+  background: rgba(221,203,188,.09) !important;
+}
+.identity-gate-proof span {
+  color: #9e9491 !important;
+  background: rgba(10,11,13,.93) !important;
+}
+.identity-gate-panel,
+.fate-id-card {
+  border-color: rgba(183,151,127,.18) !important;
+  background:
+    radial-gradient(circle at 94% 0%, rgba(137,104,132,.09), transparent 31%),
+    linear-gradient(145deg,rgba(18,18,21,.97),rgba(9,10,12,.98)) !important;
+  box-shadow: 0 42px 110px rgba(0,0,0,.40), inset 0 1px rgba(255,255,255,.03) !important;
+}
+.identity-gate-panel > small,
+.membership-timing span,
+.identity-auth-switch a {
+  color: #b99a87 !important;
+}
+.identity-auth-form label > span,
+.profile-editor label > span {
+  color: #948986 !important;
+}
+.identity-auth-form input,
+.profile-editor input,
+.profile-editor textarea,
+.profile-editor select {
+  border-color: rgba(221,203,188,.10) !important;
+  color: var(--koru-cream) !important;
+  background: rgba(221,203,188,.025) !important;
+}
+.identity-auth-form input:focus,
+.profile-editor input:focus,
+.profile-editor textarea:focus,
+.profile-editor select:focus {
+  border-color: rgba(168,135,167,.38) !important;
+  box-shadow: 0 0 0 3px rgba(137,104,132,.08) !important;
+  background: rgba(221,203,188,.04) !important;
+}
+.fate-id-card::before {
+  background: linear-gradient(115deg,transparent,rgba(183,151,127,.055),rgba(137,104,132,.10),transparent) !important;
+}
+.fate-id-card::after {
+  border-color: rgba(183,151,127,.09) !important;
+  box-shadow: 0 0 0 38px rgba(137,104,132,.018),0 0 0 78px rgba(183,151,127,.012) !important;
+}
+.account-notice {
+  border-color: rgba(183,151,127,.14) !important;
+  background: linear-gradient(90deg,rgba(183,151,127,.045),rgba(137,104,132,.035)) !important;
+}
+.account-notice p { color: #aaa09e !important; }
+.account-notice b { color: var(--koru-cream) !important; }
+.account-panel {
+  border-color: rgba(221,203,188,.085) !important;
+  background:
+    radial-gradient(circle at 100% 0%,rgba(137,104,132,.045),transparent 35%),
+    linear-gradient(145deg,rgba(16,17,19,.92),rgba(10,11,13,.96)) !important;
+}
+.account-panel::after {
+  background: radial-gradient(ellipse,rgba(183,151,127,.035),transparent 70%) !important;
+}
+.account-panel-head span,
+.account-panel > p {
+  color: #908786 !important;
+}
+.account-panel-head h2 { color: var(--koru-cream) !important; }
+.account-panel-head > i.state-free {
+  color: #c0a6bd !important;
+  border-color: rgba(157,126,158,.16) !important;
+}
+.membership-timing {
+  border-color: rgba(183,151,127,.12) !important;
+  background: rgba(183,151,127,.03) !important;
+}
+.membership-entitlements span {
+  border-color: rgba(221,203,188,.065) !important;
+  color: #8f8584 !important;
+  background: rgba(221,203,188,.015) !important;
+}
+.loyalty-orbit > span { border-color: rgba(183,151,127,.11) !important; }
+.loyalty-orbit > span:nth-child(2) { border-color: rgba(157,126,158,.15) !important; }
+.loyalty-orbit > span:nth-child(3) { border-color: rgba(183,151,127,.08) !important; }
+
+/* Dashboard home / command-centre content */
+.fd-command-hero {
+  border-color: rgba(183,151,127,.16) !important;
+  background:
+    linear-gradient(90deg,rgba(7,8,9,.96),rgba(9,10,12,.84) 55%,rgba(12,10,13,.58)),
+    radial-gradient(circle at 78% 18%,rgba(137,104,132,.14),transparent 30%),
+    radial-gradient(circle at 70% 82%,rgba(183,151,127,.055),transparent 25%) !important;
+  box-shadow: 0 30px 80px rgba(0,0,0,.25) !important;
+}
+.fd-command-copy > span {
+  color: #b99a87 !important;
+}
+.fd-command-copy h1 {
+  color: var(--koru-cream) !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-weight: 500 !important;
+}
+.fd-command-copy h1 em {
+  background: linear-gradient(90deg,#f0e7df,#d4c2b7 46%,#b492b2) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+.fd-command-copy p { color: #9b9191 !important; }
+.fd-command-actions a {
+  border-color: rgba(221,203,188,.10) !important;
+  background: rgba(221,203,188,.028) !important;
+  color: #d9cfca !important;
+}
+.fd-command-actions a:first-child {
+  border-color: rgba(183,151,127,.18) !important;
+  background: linear-gradient(135deg,rgba(183,151,127,.055),rgba(137,104,132,.065)) !important;
+}
+.fd-command-card {
+  border-color: rgba(168,135,167,.26) !important;
+  background:
+    radial-gradient(circle at 50% 38%,rgba(183,151,127,.065),transparent 31%),
+    linear-gradient(145deg,rgba(28,23,29,.92),rgba(9,10,12,.98)) !important;
+  box-shadow: 0 25px 60px rgba(0,0,0,.42),0 0 38px rgba(137,104,132,.08) !important;
+}
+.fd-command-card small { color: #b99a87 !important; }
+.fd-command-card span { color: #817778 !important; }
+.fd-command-metrics span { border-left-color: rgba(221,203,188,.075) !important; color: #756c6d !important; }
+.fd-command-metrics b { color: var(--koru-cream) !important; }
+.fd-core-actions > a::after,
+.fd-living-panel::after {
+  background: linear-gradient(100deg,transparent,rgba(183,151,127,.035),rgba(157,126,158,.045),transparent) !important;
+}
+.fd-core-actions small { color: #746a6c !important; }
+.fd-core-actions strong,
+.fd-personal-card-head h2,
+.fd-companion-home h2 { color: var(--koru-cream) !important; }
+.fd-core-actions p,
+.fd-personal-card-head p,
+.fd-companion-home p { color: #908688 !important; }
+.fd-companion-home h2 em { color: #b593b2 !important; }
+.fd-personal-facts div,
+.fd-personal-activity {
+  border-color: rgba(221,203,188,.055) !important;
+  background: rgba(0,0,0,.13) !important;
+}
+.fd-personal-activity div { border-left-color: rgba(221,203,188,.055) !important; }
+.fd-personal-facts small,
+.fd-personal-activity span { color: #746c6d !important; }
+
+/* Keep data/status semantics readable while toning down decorative neon. */
+.fd-signal-thumb,
+.fd-dashboard-list article,
+.fd-dashboard-empty {
+  border-color: rgba(221,203,188,.06) !important;
+}
+.fd-dashboard-list article small,
+.fd-dashboard-empty span { color: #81787a !important; }
