@@ -9,7 +9,8 @@ This checklist is a production-readiness control, not legal advice. A successful
 - ✅ Sampled account/auth mutation routes use the shared same-origin guard.
 - ✅ Stripe webhook verification and idempotent billing-event storage have automated coverage.
 - ✅ Public signal language is Whisper → Echo → Manifested → Vanished, with Drop Pulse kept as supporting evidence/context.
-- 🟠 CSP, HSTS, private no-cache/noindex and Sec-Fetch-Site hardening are in this release-gate branch and require deployed verification after merge.
+- ✅ Source-level CSP, HSTS, private no-cache/noindex, crawler controls and Sec-Fetch-Site hardening are automated-test guarded; deployed response verification remains open.
+- ✅ The current Web companion renderer has source-level reduced-motion behaviour and honest model/animation-state wording; browser/device QA remains open.
 - 🟠 Cloudflare authentication rate limiting / bot challenge still requires edge configuration and production proof.
 - 🟠 Final UK legal wording and operational data-rights processes require owner/legal review before scaled paid launch.
 
@@ -21,8 +22,8 @@ This checklist is a production-readiness control, not legal advice. A successful
 - [ ] Configure Turnstile or an equivalent challenge for abusive authentication/registration traffic if required, including server-side verification.
 - [ ] Confirm production secrets exist only in protected environment/secrets storage and check repository history for accidental exposure.
 - [ ] Confirm PostgreSQL production credentials use encrypted transport and the least privilege practical for the deployed service.
-- [ ] Verify private account/dashboard/API responses are not publicly cached or indexed.
-- [ ] Verify CSP, HSTS and the remaining security headers against the deployed Cloudflare site and required integrations.
+- [ ] Verify private account/dashboard/API responses are not publicly cached or indexed in the deployed environment. Source headers/robots are already guarded.
+- [ ] Verify CSP, HSTS and the remaining security headers against the deployed Cloudflare site and required integrations. Source policy is already guarded, including GLB/texture compatibility.
 - [ ] Verify Stripe webhook signatures, duplicate-event handling and billing environment configuration in production.
 - [ ] Document and test backup/restore and incident-response procedures.
 
@@ -36,7 +37,7 @@ This checklist is a production-readiness control, not legal advice. A successful
 - [ ] Make access, correction, deletion, objection/restriction and consent-withdrawal workflows operational where applicable.
 - [ ] Include the ICO complaint route in final privacy information.
 - [ ] Keep optional marketing consent separate from service/contact consent.
-- [ ] Keep precise location user-triggered and do not introduce location history without updating privacy information and controls first.
+- [x] Keep precise location user-triggered and do not introduce location history without updating privacy information and controls first. Current Web source/tests preserve this boundary.
 
 ### Consumer / subscription
 - [ ] Replace beta/placeholder consumer Terms with final UK consumer Terms before scaled paid subscriptions.
@@ -47,25 +48,25 @@ This checklist is a production-readiness control, not legal advice. A successful
 - [ ] Track relevant UK subscription-law changes and update the subscription UX before they become applicable.
 
 ### Marketplace / signal claims
-- [ ] Describe FateDrop consistently as intelligence/discovery unless it actually becomes merchant of record for a transaction.
-- [ ] Clearly attribute retailer checkout, fulfilment, returns and customer-service responsibility to the retailer where applicable.
-- [ ] Describe stock, RRP, postage and price data as observed/current-to-source rather than guaranteed.
-- [ ] Keep the final lifecycle definitions consistent everywhere: Whisper = product/catalogue movement; Echo = queue/traffic/security/access readiness; Manifested = confirmed purchasable stock; Vanished = confirmed availability lost.
-- [ ] Keep Drop Pulse as supporting evidence/context rather than a fifth lifecycle stage.
-- [ ] Visually distinguish demo/sample/planned data from live network data.
+- [x] Describe FateDrop consistently as intelligence/discovery unless it actually becomes merchant of record for a transaction. Guarded by current Product Spec/public-copy tests.
+- [x] Clearly attribute retailer checkout, fulfilment, returns and customer-service responsibility to the retailer where applicable. Guarded by current retailer/product-truth tests.
+- [x] Describe stock, RRP, postage and price data as observed/current-to-source rather than guaranteed. Current evidence/True Price guards fail closed on unknown RRP/delivery.
+- [x] Keep the final lifecycle definitions consistent everywhere: Whisper = product/catalogue movement; Echo = queue/traffic/security/access readiness; Manifested = confirmed purchasable stock; Vanished = confirmed availability lost. Guarded by lifecycle tests.
+- [x] Keep Drop Pulse as supporting evidence/context rather than a fifth lifecycle stage. Guarded by lifecycle/product-truth tests.
+- [x] Visually distinguish demo/sample/planned data from live network data in current source. Interactive demo/sample and planned feature wording are automated-test guarded; final visual QA remains required.
 
 ## P1 — required before wider beta acquisition
 
-- [ ] Homepage communicates the collector value proposition before secondary FateDrop terminology.
-- [ ] Companion wording matches its actual current production state.
-- [ ] Interactive demo controls either work or are clearly labelled examples.
-- [ ] Accessibility review covers keyboard navigation, focus visibility, semantic labels and reduced-motion behaviour.
+- [x] Homepage communicates the collector value proposition before the secondary Koru & Friends/merch layer. Source-order regression test exists.
+- [x] Companion wording matches its actual current Web state: registered assets are live 3D, missing assets fall back honestly, and skeletal animation playback is not claimed yet.
+- [x] Interactive demo controls are functional sample UI and are clearly labelled as sample/preview data in current source.
+- [ ] Accessibility review covers keyboard navigation, focus visibility, semantic labels and reduced-motion behaviour. Reduced-motion and state-button semantics are source-guarded; full browser review remains.
 - [ ] Mobile/responsive QA covers current iPhone and Android viewport classes.
-- [ ] Canonical production domain, metadata, sitemap, OpenGraph and robots behaviour are verified.
+- [ ] Canonical production domain, metadata, sitemap, OpenGraph and robots behaviour are verified in the deployed environment. Source route/sitemap/robots contracts are guarded.
 - [ ] Fresh-install mobile QA covers sign-in/out, notification denial, offline/API failure and outbound retailer links.
 
 ## Operational rule
 
-No P0 item should be marked complete without evidence: configuration, automated test, deployed response, documented procedure or professional legal review as appropriate. Security and legal readiness are ongoing controls rather than a one-time launch checkbox.
+No P0 item should be marked complete without evidence: configuration, automated test, deployed response, documented procedure or professional legal review as appropriate. A source-level check is only marked complete where the requirement itself can be proven from source; deployment-specific clauses remain open until deployed evidence exists. Security and legal readiness are ongoing controls rather than a one-time launch checkbox.
 
-A green GitHub/OpenNext build proves source compatibility only. The deployed Cloudflare response must still be inspected for effective headers, caching behaviour and integration compatibility before this gate is marked complete.
+A green GitHub/OpenNext build proves source compatibility only. The deployed Cloudflare response must still be inspected for effective headers, caching behaviour and integration compatibility before deployment-specific gates are marked complete.
