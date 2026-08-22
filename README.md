@@ -10,7 +10,7 @@ Standalone, maintainable source for the FateDrop website and authenticated colle
 - Tailwind CSS 4 processing plus the existing handcrafted FateDrop stylesheet
 - Next.js route handlers for beta lead capture, FateDrop ID authentication, billing and Discord linking
 - FateDrop ID profiles with permanent member-since history
-- Koru & Friends companion selection with five stable model slots: Koru, Fenn, Aeris, Nyxen and Solix
+- Koru & Friends companion selection with five stable character slots: Koru, Fenn, Aeris, Nyxen and Solix
 - Collector membership entitlement with Stripe-ready 14-day trials
 - Discord OAuth + Premium-role sync foundation
 - Authenticated FateDrop dashboard with auditable personal/network metrics
@@ -110,7 +110,11 @@ The website and Cloud backend have different responsibilities:
 
 The active companion roster is deliberately limited to **Koru, Fenn, Aeris, Nyxen and Solix**. Koru remains FateDrop's mascot and signal voice regardless of the user's selected personal companion. Kael and Nyra are retained only as legacy/archive references and do not occupy active slots.
 
-Each active character owns one stable GLB slot and shares the same Whisper → Echo → Manifested → Vanished reaction contract. Character personality may change presentation or animation; it must never change the meaning or evidence behind the signal.
+Each active character owns one stable character slot behind the shared renderer contract. A character can use one approved GLB or a verified reaction-specific GLB pack without creating extra companion identities. Registered assets render through the lightweight WebGL boundary; missing or failed assets use an honest fallback instead of breaking account functionality.
+
+The current WebGL viewer renders the real model and texture plus restrained state presentation. Skeletal animation playback is not considered shipped merely because animation clips exist in a source GLB; clip playback must be separately implemented and visually verified before it is advertised as active. Reduced-motion preference produces a static real 3D frame instead of a continuous presentation loop.
+
+All companions share the same Whisper → Echo → Manifested → Vanished evidence contract. Character personality may change presentation or a verified animation later; it must never change the meaning or evidence behind the signal. FateMatch remains a successful hunt result rather than a fifth lifecycle state.
 
 See [docs/companion-model-slots.md](docs/companion-model-slots.md) for the exact paths and registration process.
 
