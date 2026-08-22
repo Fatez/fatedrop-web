@@ -39,7 +39,7 @@ export function CompanionSelector({ initialCompanionId, persistent }: { initialC
 
   return <section className="companion-selector" aria-labelledby="companion-selector-title">
     <div className="selector-head">
-      <div><p className="eyebrow">YOUR KORU &amp; FRIENDS COMPANION</p><h2 id="companion-selector-title">Five characters. One clean companion system.</h2><p>Koru remains FateDrop&apos;s mascot and network voice. Your selection chooses which Koru &amp; Friends character accompanies your account as the richer 3D models arrive.</p></div>
+      <div><p className="eyebrow">YOUR KORU &amp; FRIENDS COMPANION</p><h2 id="companion-selector-title">Five characters. One clean companion system.</h2><p>Koru remains FateDrop&apos;s mascot and network voice. Registered character packs render as live 3D previews; any unavailable model falls back honestly without blocking your account.</p></div>
       <span>5 ACTIVE SLOTS</span>
     </div>
     <div className="companion-grid">
