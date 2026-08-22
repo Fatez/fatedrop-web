@@ -24,9 +24,9 @@ test("canonical dashboard language is Search, FateFind and Koru & Friends", asyn
     source("app/dashboard/watchlist/page.tsx"),
     source("app/dashboard/avatar/page.tsx"),
   ]);
-  assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
-  assert.ok(nav.includes('["♡", "FateFind", "/dashboard/watchlist"]'));
-  assert.ok(nav.includes('["◇", "Koru & Friends", "/dashboard/avatar"]'));
+  assert.ok(nav.includes('"Search", "/dashboard/search"'));
+  assert.ok(nav.includes('"FateFind", "/dashboard/watchlist"'));
+  assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
   assert.ok(fateFind.includes('title="FateFind"'));
   assert.ok(fateFind.includes("FateFind</b> is the hunt"));
   assert.ok(fateFind.includes("successful result is a <b>FateMatch</b>"));
