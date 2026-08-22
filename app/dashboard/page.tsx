@@ -73,12 +73,15 @@ export default async function DashboardPage() {
   const series = Object.fromEntries(
     lifecycle.map(([key]) => [key, data.signalSummary?.[key].trend ?? []]),
   ) as Record<LifecycleKey, TrendPoint[]>;
+  const signalActivity7d = lifecycle.every(([key]) => data.publicSignalMetrics[key] === null || data.publicSignalMetrics[key] === undefined)
+    ? null
+    : lifecycle.reduce((total, [key]) => total + (data.publicSignalMetrics[key] ?? 0), 0);
 
   return <DashboardPageShell title={`Dashboard · ${snapshot.account.displayName}`} eyebrow="COLLECTOR WORKSPACE">
     <div className="fd-reference-home">
       <section className="fd-overview-card fd-ref-card">
         <div className="fd-ref-card-head">
-          <div><h1>Signals Overview</h1><p>Daily Whisper, Echo, Manifested and Vanished alerts recorded across the last seven days.</p></div>
+          <div><h1>Signals Overview</h1><p>What’s changing across the network — Whisper, Echo, Manifested and Vanished activity recorded across the last seven days.</p></div>
           <Link href="/dashboard/alerts">View all signals <span>→</span></Link>
         </div>
         <div className="fd-lifecycle-grid">
@@ -100,7 +103,7 @@ export default async function DashboardPage() {
 
       <section className="fd-reference-grid">
         <article className="fd-ref-card fd-recent-signals">
-          <div className="fd-ref-card-head compact"><div><h2>Recent Signals</h2><p>Newest observed movement.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>Recent Signals</h2><p>Latest network movement.</p></div></div>
           <div className="fd-ref-list">
             {recentSignals.length ? recentSignals.map((item) => <div className="fd-signal-row" key={item.id}>
               <span className={`fd-mini-thumb ${item.state}`}>{titleInitials(item.title)}</span>
@@ -112,31 +115,31 @@ export default async function DashboardPage() {
         </article>
 
         <article className="fd-ref-card fd-true-price-card">
-          <div className="fd-ref-card-head compact"><div><h2>True Price Comparison</h2><p>{priceGroup?.[0]?.title || "Latest evidence-backed comparison"}</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>True Price Comparison</h2><p>What you really pay.</p></div></div>
           {priceGroup ? <div className="fd-price-table">
             <div className="fd-price-head"><span>Store</span><span>Known true price</span><span>Observed</span></div>
             {priceGroup.slice(0, 4).map((item) => <div className="fd-price-row" key={item.id}><strong>{item.retailer || "Retailer pending"}</strong><b>{moneyFromPence(item.deliveredPricePence) || "—"}</b><small>{relativeTime(item.occurredAt, data.generatedAt)}</small></div>)}
-            <p>Dashboard summaries only show the delivered value persisted with the signal. Item price and postage remain separate on the full True Price view where the source provides them.</p>
-          </div> : <div className="fd-ref-empty tall"><strong>No comparable delivered prices yet.</strong><span>FateDrop will not manufacture retailer rows to make this card look busy.</span></div>}
+            <p><b>{priceGroup[0]?.title}</b> · Item price + known mandatory delivery = True Price. Compare who is actually cheapest before checkout.</p>
+          </div> : <div className="fd-ref-empty tall"><strong>No comparable True Prices yet.</strong><span>FateDrop only compares delivered totals when the required price and delivery evidence is known.</span></div>}
           <Link className="fd-card-link" href="/dashboard/true-price">View full comparison <span>→</span></Link>
         </article>
 
         <article className="fd-ref-card fd-fatefind-card">
-          <div className="fd-ref-card-head compact"><div><h2>FateFind</h2><p>Your saved product intent.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>FateFind</h2><p>Your saved hunts — FateMatch is a live offer that matches your rules.</p></div></div>
           <div className="fd-fatefind-list">
-            {fateFinds.length ? fateFinds.map((item) => <div key={item.id}><span><strong>{item.title || "Saved FateFind"}</strong><small>{item.subtitle || item.retailer || "Network-wide hunt"}</small></span><b>{item.amountPence ? moneyFromPence(item.amountPence) : "•"}</b></div>) : <div className="fd-ref-empty"><strong>No FateFind activity yet.</strong><span>Create a hunt and qualifying results will surface here.</span></div>}
+            {fateFinds.length ? fateFinds.map((item) => <div key={item.id}><span><strong>{item.title || "Saved FateFind"}</strong><small>{item.subtitle || item.retailer || "Network-wide hunt"}</small></span><b>{item.amountPence ? moneyFromPence(item.amountPence) : "•"}</b></div>) : <div className="fd-ref-empty"><strong>No FateFind activity yet.</strong><span>Tell FateDrop what you want and what you’re willing to pay. We keep watching the network for you.</span></div>}
           </div>
-          <Link className="fd-card-link" href="/dashboard/watchlist">Manage searches <span>→</span></Link>
+          <Link className="fd-card-link" href="/dashboard/watchlist">Manage FateFinds <span>→</span></Link>
         </article>
 
         <article className="fd-ref-card fd-network-pulse-card">
-          <div className="fd-ref-card-head compact"><div><h2>Network Pulse</h2><p>Live scale across the network.</p></div></div>
-          <DashboardNetworkPulse retailers={network?.metrics.catalogueRetailers} products={network?.metrics.productsTracked} />
+          <div className="fd-ref-card-head compact"><div><h2>Network Pulse</h2><p>Live across the network.</p></div></div>
+          <DashboardNetworkPulse retailers={network?.metrics.catalogueRetailers} products={network?.metrics.productsTracked} signals={signalActivity7d} />
           <Link className="fd-card-link" href="/dashboard/stores">View network <span>→</span></Link>
         </article>
 
         <article className="fd-ref-card fd-recent-drops">
-          <div className="fd-ref-card-head compact"><div><h2>Recent Manifested Drops</h2><p>Confirmed purchasable availability.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>Recent Manifested Drops</h2><p>Confirmed live stock.</p></div></div>
           <div className="fd-drop-grid">
             {recentDrops.length ? recentDrops.map((item) => <div className="fd-drop-mini" key={item.id}><span className="fd-drop-art"><i />{titleInitials(item.title)}</span><strong>{premium ? item.title : "Premium product"}</strong><small>{premium ? (item.retailer || "Retailer pending") : "Retailer hidden"}</small><b>{premium ? (moneyFromPence(item.deliveredPricePence) || "LIVE") : "LOCKED"}</b></div>) : <div className="fd-ref-empty"><strong>No Manifested drops yet.</strong><span>Confirmed live products will appear here.</span></div>}
           </div>
@@ -144,11 +147,11 @@ export default async function DashboardPage() {
         </article>
 
         <article className="fd-ref-card fd-retailer-card">
-          <div className="fd-ref-card-head compact"><div><h2>Retailers You Track</h2><p>Stores connected to your activity.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>Independent Stores</h2><p>Discover more places to buy.</p></div></div>
           <div className="fd-retailer-list">
-            {stores.length ? stores.map((store) => <div key={`${store.name}-${store.latestAt}`}><span className="fd-store-mark">◇</span><strong>{store.name}</strong><small>{store.count} tracked action{store.count === 1 ? "" : "s"}</small><b>{relativeTime(store.latestAt, data.generatedAt)}</b></div>) : <div className="fd-ref-empty"><strong>No tracked retailers yet.</strong><span>Stores you interact with through FateDrop will appear here.</span></div>}
+            {stores.length ? stores.map((store) => <div key={`${store.name}-${store.latestAt}`}><span className="fd-store-mark">◇</span><strong>{store.name}</strong><small>{store.count} tracked action{store.count === 1 ? "" : "s"}</small><b>{relativeTime(store.latestAt, data.generatedAt)}</b></div>) : <div className="fd-ref-empty"><strong>No independent stores in your activity yet.</strong><span>Explore the FateDrop network to discover more places to buy directly from the retailer.</span></div>}
           </div>
-          <Link className="fd-card-link" href="/dashboard/stores">Manage retailers <span>→</span></Link>
+          <Link className="fd-card-link" href="/dashboard/stores">Explore Independent Stores <span>→</span></Link>
         </article>
 
         <article className="fd-koru-dashboard-card" aria-label="Koru FateDrop network guide artwork">
