@@ -17,7 +17,8 @@ test("live companion WebGL respects reduced-motion without replacing the real mo
 test("companion controls distinguish signal-state presentation from verified skeletal animation", () => {
   const selector = read("components/companion-selector.tsx");
   assert.ok(selector.includes("SIGNAL STATE PREVIEW"));
-  assert.ok(selector.includes("Skeletal animation clips are only treated as active after they are verified for that character."));
+  assert.ok(selector.includes("Skeletal clips are only treated as active after browser playback is verified."));
+  assert.ok(selector.includes("Registered GLBs render in 3D"));
   assert.ok(selector.includes("aria-pressed={reaction === item.id}"));
   assert.equal(selector.includes("LIVE REACTION PREVIEW"), false);
 });
