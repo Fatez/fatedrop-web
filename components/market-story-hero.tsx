@@ -1,6 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import type { ReactNode } from "react";
 
+const FALLBACK_HERO = "/assets/fatedrop-header.png?v=20260822-static-page-hero";
+
+function reliableHeroSource(image: string) {
+  return /\.png(?:\?|$)/i.test(image) ? image : FALLBACK_HERO;
+}
+
 export function MarketStoryHero({
   eyebrow,
   title,
@@ -20,10 +26,12 @@ export function MarketStoryHero({
   proof: readonly string[];
   focal?: "center" | "left" | "right";
 }) {
+  const heroImage = reliableHeroSource(image);
+
   return (
     <section className="prh-shell section-shell" aria-label={eyebrow}>
       <article className={`prh-hero prh-${focal}`}>
-        <img className="prh-image" src={image} alt={alt} loading="eager" />
+        <img className="prh-image" src={heroImage} alt={alt} />
         <div className="prh-shade" aria-hidden="true" />
 
         <div className="prh-copy">
