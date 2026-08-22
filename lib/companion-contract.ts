@@ -37,8 +37,12 @@ export type CompanionRenderRequest = {
   label?: string;
 };
 
+export function isCompanionId(value: unknown): value is CompanionId {
+  return typeof value === "string" && (ACTIVE_COMPANION_IDS as readonly string[]).includes(value);
+}
+
 export function normalizeCompanionId(value: unknown): CompanionId {
-  return typeof value === "string" && (ACTIVE_COMPANION_IDS as readonly string[]).includes(value) ? value as CompanionId : "koru";
+  return isCompanionId(value) ? value : "koru";
 }
 
 export function companionDefinition(id: CompanionId): CompanionDefinition {
