@@ -120,9 +120,20 @@ test("collector and retailer pages stay visibly grounded in the TCG market", () 
   assert.ok(collectors.includes("Find the cards. Know the price. Catch the signal."));
   assert.ok(collectors.includes("Search the network"));
   assert.ok(collectors.includes("Buy direct from stores"));
-  assert.ok(retailers.includes("The bridge between independent stock and collector demand."));
+  assert.ok(retailers.includes("The bridge between indie stores and collector demand."));
   assert.ok(retailers.includes("Surface live products"));
   assert.ok(retailers.includes("Keep your checkout"));
+});
+
+test("events page fails open when the hosted encounters service is slow", () => {
+  const nav = read("lib/site-data.ts");
+  const events = read("app/events/page.tsx");
+  const encounters = read("lib/encounters.ts");
+  assert.ok(nav.includes('{ label: "Events", href: "/events" }'));
+  assert.ok(events.includes("Find the TCG scene around you."));
+  assert.ok(encounters.includes("ENCOUNTERS_TIMEOUT_MS"));
+  assert.ok(encounters.includes("AbortSignal.timeout(ENCOUNTERS_TIMEOUT_MS)"));
+  assert.ok(encounters.includes("return { live: false, events: [] as EncounterEvent[] }"));
 });
 
 test("dashboard home is a collector workspace first and companion layer second", () => {
