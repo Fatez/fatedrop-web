@@ -69,7 +69,8 @@ test("final-roster registered GLBs render through the current WebGL boundary", (
   const renderer = read("components/companion-renderer.tsx");
   const webgl = read("components/companion-webgl-model.tsx");
   assert.ok(renderer.includes("CompanionWebglModel"));
-  assert.ok(renderer.includes('mode === "webgl-3d" && definition.modelUrl'));
+  assert.ok(renderer.includes("companionModelUrl"));
+  assert.ok(renderer.includes('mode === "webgl-3d" && modelUrl'));
   assert.equal(renderer.includes("renderer validation pending"), false);
   assert.ok(webgl.includes("Companion asset is not GLB v2"));
   assert.ok(webgl.includes("baseColorTexture"));
@@ -81,6 +82,20 @@ test("final-roster registered GLBs render through the current WebGL boundary", (
   for (const retired of ["Signal Scout", "Signal Warden", "Signal Droid", "floating signal familiar"]) {
     assert.equal(webgl.includes(retired), false, `${retired} must not return through the new renderer`);
   }
+});
+
+test("reaction-specific packs are supported without changing the five-slot roster", () => {
+  const contract = read("lib/companion-contract.ts");
+  assert.ok(contract.includes("reactionModelUrls?: Partial<Record<CompanionReaction, string>>"));
+  assert.ok(contract.includes("export function companionModelUrl"));
+  assert.ok(contract.includes('idle: "Armature|Idle|baselayer"'));
+  assert.ok(contract.includes('watching: "Armature|Listening_Gesture|baselayer"'));
+  assert.ok(contract.includes('echo: "Armature|Alert|baselayer"'));
+  assert.ok(contract.includes('manifested: "Armature|mage_soell_cast_1|baselayer"'));
+  assert.ok(contract.includes('vanished: "Armature|Sneaky_Walk|baselayer"'));
+  assert.ok(contract.includes('fatematch: "Armature|Victory_Cheer|baselayer"'));
+  const fennLine = contract.split("\n").find((line) => line.includes('id: "fenn"')) || "";
+  assert.ok(fennLine.includes("modelUrl: null"), "Fenn must stay unregistered until its binaries are actually in the web repo");
 });
 
 test("no standalone HTML companion experiments remain in the website repository", () => {
