@@ -89,15 +89,23 @@ test("Koru and Friends is the merch bridge rather than a second product", () => 
   assert.ok(merch.includes("The culture around the signal."));
 });
 
-test("merch page uses the approved campaign, two collection drops and Stripe-ready product slots", () => {
+test("merch page uses one approved campaign, two closed drops and Stripe-ready product slots", () => {
   const merch = read("app/merch/page.tsx");
   const brand = read("lib/koru-brand.ts");
+  const nav = read("components/nav.tsx");
   assert.ok(fs.existsSync("public/assets/merch/koru-friends-merch-hero.png"));
   assert.ok(brand.includes("/assets/merch/koru-friends-merch-hero.png"));
+  assert.equal((merch.match(/KORU_MERCH\.campaign/g) || []).length, 1);
+  assert.ok(merch.includes('id="koru-friends"'));
+  assert.ok(merch.includes('id="signal-collection"'));
+  assert.equal(merch.includes('<details className="merch-drop" open>'), false);
   assert.ok(merch.includes("Koru &amp; Friends"));
-  assert.ok(merch.includes("FateDrop Signal Collection"));
+  assert.ok(merch.includes("FateDrop Signal"));
   assert.ok(merch.includes("Oru Wanderer Tee"));
-  assert.ok(merch.includes("five active companion slots"));
+  assert.ok(merch.includes("five selectable app companions"));
   assert.ok(merch.includes("Buy via Stripe"));
   assert.ok(merch.includes("Price + Stripe checkout to be connected"));
+  assert.ok(nav.includes("merch-menu-trigger"));
+  assert.ok(nav.includes('href="/merch#koru-friends"'));
+  assert.ok(nav.includes('href="/merch#signal-collection"'));
 });
