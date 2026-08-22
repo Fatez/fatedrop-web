@@ -61,7 +61,7 @@ export function CompanionSelector({ initialCompanionId, persistent }: { initialC
       <aside className="preview-controls" aria-label={`${selectedCompanion.name} signal state preview controls`}>
         <small>SIGNAL STATE PREVIEW</small>
         <h3>{selectedCompanion.name}</h3>
-        <p>The live 3D stage changes presentation for each FateDrop state. Skeletal animation clips are only treated as active after they are verified for that character.</p>
+        <p>The companion stage changes its presentation for each FateDrop state. Registered GLBs render in 3D; Koru and any model still awaiting upload fall back honestly. Skeletal clips are only treated as active after browser playback is verified.</p>
         <div className="reaction-list">
           {REACTION_PREVIEWS.map((item) => <button type="button" key={item.id} data-active={reaction === item.id} aria-pressed={reaction === item.id} onClick={() => setReaction(item.id)}>
             <span>{item.label}</span><small>{item.helper}</small>
