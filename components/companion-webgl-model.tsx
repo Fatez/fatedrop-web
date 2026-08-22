@@ -207,7 +207,7 @@ function reactionTint(reaction: CompanionReaction): [number, number, number] {
   return [1, 1, 1];
 }
 
-async function renderModel(canvas: HTMLCanvasElement, model: ParsedModel, reaction: CompanionReaction, stopped: () => boolean) {
+async function renderModel(canvas: HTMLCanvasElement, model: ParsedModel, reaction: CompanionReaction, stopped: () => boolean, reducedMotion: boolean) {
   const gl = canvas.getContext("webgl2", { alpha: true, antialias: true })
     || canvas.getContext("webgl", { alpha: true, antialias: true });
   if (!gl) throw new Error("WebGL is unavailable on this device.");
@@ -326,20 +326,21 @@ async function renderModel(canvas: HTMLCanvasElement, model: ParsedModel, reacti
     const width = Math.max(1, Math.floor(canvas.clientWidth * ratio));
     const height = Math.max(1, Math.floor(canvas.clientHeight * ratio));
     if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
-    const elapsed = (now - started) / 1000;
+    const elapsed = reducedMotion ? 0 : (now - started) / 1000;
     gl.viewport(0, 0, width, height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.uniform1f(gl.getUniformLocation(program, "uAngle"), Math.sin(elapsed * 0.22) * 0.28);
+    gl.uniform1f(gl.getUniformLocation(program, "uAngle"), reducedMotion ? 0 : Math.sin(elapsed * 0.22) * 0.28);
     gl.uniform1f(gl.getUniformLocation(program, "uAspect"), width / Math.max(1, height));
-    gl.uniform1f(gl.getUniformLocation(program, "uBob"), Math.sin(elapsed * 1.25) * 0.012);
+    gl.uniform1f(gl.getUniformLocation(program, "uBob"), reducedMotion ? 0 : Math.sin(elapsed * 1.25) * 0.012);
     const indexType = model.indexComponentType === 5125 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
     gl.drawElements(gl.TRIANGLES, model.indices.length, indexType, 0);
-    frameId = requestAnimationFrame(frame);
+    if (!reducedMotion) frameId = requestAnimationFrame(frame);
   };
-  frameId = requestAnimationFrame(frame);
+  if (reducedMotion) frame(started);
+  else frameId = requestAnimationFrame(frame);
 
   return () => {
-    cancelAnimationFrame(frameId);
+    if (frameId) cancelAnimationFrame(frameId);
     textureDispose();
     gl.deleteTexture(texture);
     for (const buffer of buffers) gl.deleteBuffer(buffer);
@@ -360,6 +361,7 @@ export function CompanionWebglModel({ name, modelUrl, reaction, compact = false 
     if (!canvas) return;
     const mine = ++generation.current;
     const stopped = () => generation.current !== mine;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let cleanup: (() => void) | undefined;
     setLoading(true);
     setError(null);
@@ -375,7 +377,7 @@ export function CompanionWebglModel({ name, modelUrl, reaction, compact = false 
         if (!model.imageBlob && siblingTexture) model.imageBlob = siblingTexture;
         return model;
       })
-      .then((model) => renderModel(canvas, model, reaction, stopped))
+      .then((model) => renderModel(canvas, model, reaction, stopped, reducedMotion))
       .then((dispose) => {
         if (stopped()) { dispose(); return; }
         cleanup = dispose;
