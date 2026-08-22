@@ -13,7 +13,7 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
   if (!snapshot) redirect(`/account/login?next=/dashboard`);
   const plan = membershipLabel(snapshot.membership);
 
-  return <main className="fd-dashboard fd-reference-dashboard">
+  return <main className="fd-dashboard fd-collector-dashboard fd-reference-dashboard">
     <aside className="fd-ref-sidebar">
       <div className="fd-ref-brand"><BrandMark/></div>
       <DashboardNav/>
