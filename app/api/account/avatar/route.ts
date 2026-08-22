@@ -33,9 +33,9 @@ export async function PATCH(request: Request) {
       return Response.json({ avatar, companionId }, { status: 200, headers: { "Cache-Control": "private, no-store" } });
     }
 
-    // Legacy client compatibility: normalize any historical loadout down to the
-    // active companion field while preserving favourite-TCG data. New web UI
-    // writes should use companionId above.
+    // Legacy client compatibility: historical stored values are normalized by
+    // normalizeCompanionId inside normalizeAvatarLoadout. New writes must pass
+    // strict isCompanionId validation through the canonical companionId path.
     const loadout = normalizeAvatarLoadout(payload.loadout);
     const favouriteTcgs = normalizeFavouriteTcgs(payload.favouriteTcgs);
     const current = await getUserAvatar(snapshot.account.id).catch(() => null);
