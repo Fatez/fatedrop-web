@@ -17,12 +17,22 @@ export type CompanionDefinition = {
   animationClips: Partial<Record<CompanionReaction, string>>;
 };
 
+const CANONICAL_CLIPS: Partial<Record<CompanionReaction, string>> = {
+  idle: "Idle",
+  watching: "Whisper",
+  echo: "Echo",
+  manifested: "Manifested",
+  vanished: "Vanished",
+  fatematch: "FateMatch",
+  major: "FateMatch",
+};
+
 export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
   { id: "koru", name: "Koru", slot: 1, isMascot: true, fallbackArtwork: "/assets/companions/koru-signal-companion.webp", modelUrl: null, modelFormat: null, animationClips: {} },
   { id: "fenn", name: "Fenn", slot: 2, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: {} },
-  { id: "aeris", name: "Aeris", slot: 3, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: {} },
-  { id: "nyxen", name: "Nyxen", slot: 4, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: {} },
-  { id: "solix", name: "Solix", slot: 5, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: {} },
+  { id: "aeris", name: "Aeris", slot: 3, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/aeris/aeris.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
+  { id: "nyxen", name: "Nyxen", slot: 4, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/nyxen/nyxen.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
+  { id: "solix", name: "Solix", slot: 5, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/solix/solix.glb", modelFormat: "glb", animationClips: CANONICAL_CLIPS },
 ] as const;
 
 export const LEGACY_COMPANION_ARCHIVE = [
