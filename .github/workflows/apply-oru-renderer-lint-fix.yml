@@ -1,0 +1,34 @@
+name: Apply Oru renderer lint fix
+
+on:
+  push:
+    branches:
+      - agent/koru-friends-3d-integration-2026-08-22
+    paths:
+      - scripts/patch-oru-renderer-lint.mjs
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v7
+        with:
+          ref: agent/koru-friends-3d-integration-2026-08-22
+      - name: Apply deterministic renderer patch
+        run: node scripts/patch-oru-renderer-lint.mjs
+      - name: Commit renderer fix
+        shell: bash
+        run: |
+          if git diff --quiet -- components/companion-renderer.tsx; then
+            echo "Renderer already patched."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/companion-renderer.tsx
+          git commit -m "Fix Oru renderer React hook lint"
+          git push
