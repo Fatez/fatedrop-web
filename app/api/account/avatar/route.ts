@@ -34,8 +34,8 @@ export async function PATCH(request: Request) {
     }
 
     // Legacy client compatibility: historical stored values are normalized by
-    // normalizeCompanionId inside normalizeAvatarLoadout. New writes must pass
-    // strict isCompanionId validation through the canonical companionId path.
+    // normalizeCompanionId inside normalizeAvatarLoadout. New web UI writes must
+    // pass strict isCompanionId validation through the canonical companionId path.
     const loadout = normalizeAvatarLoadout(payload.loadout);
     const favouriteTcgs = normalizeFavouriteTcgs(payload.favouriteTcgs);
     const current = await getUserAvatar(snapshot.account.id).catch(() => null);
