@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 
-type HandoffContext = "search" | "true_price" | "independent_stores";
+type HandoffContext = "alerts" | "search" | "true_price" | "independent_stores";
 
 function contextForPath(pathname: string): HandoffContext | null {
+  if (pathname === "/dashboard/alerts") return "alerts";
   if (pathname === "/dashboard/search") return "search";
   if (pathname === "/dashboard/true-price") return "true_price";
   if (pathname === "/dashboard/stores") return "independent_stores";
@@ -16,6 +17,14 @@ function textFrom(root: Element | null, selector: string) {
 }
 
 function handoffDetails(anchor: HTMLAnchorElement, context: HandoffContext) {
+  if (context === "alerts") {
+    const row = anchor.closest(".fd-ledger-row");
+    return {
+      retailer: textFrom(row, ".fd-ledger-product > small"),
+      productTitle: textFrom(row, ".fd-ledger-product > strong"),
+    };
+  }
+
   if (context === "search") {
     const offer = anchor.closest(".fd-search-offer");
     const group = anchor.closest(".fd-search-group");
