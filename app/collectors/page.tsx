@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
 import { StockLifecycle } from "@/components/stock-lifecycle";
 
 const coreTools = [
@@ -24,17 +25,19 @@ export const metadata: Metadata = {
 export default function CollectorsPage() {
   return (
     <SiteShell>
-      <PageHero
-        motif="radar"
+      <MarketStoryHero
         eyebrow="For collectors"
-        title="Find the right drop. Know the price. Know where to buy."
-        description="FateDrop turns fragmented retailer browsing into one clearer journey: follow the signal, understand the price context, create a FateFind, receive qualifying FateMatches and buy directly from the retailer."
+        title="Find the cards. Know the price. Catch the signal."
+        description="Search participating TCG retailers, compare True Price, track the products that matter and let FateDrop surface the strongest route to buy — including independent stores you may never have found on your own."
+        image="/assets/market/collectors-hero.jpg"
+        alt="A mature TCG collector desk with trading cards, binders and FateDrop-inspired signal lighting"
+        proof={["Search the network", "Compare True Price", "Create FateFind hunts", "Buy direct from stores"]}
       >
         <div className="button-row">
           <Link className="button button-primary" href="/join?type=collector">Join the collector beta <span>↗</span></Link>
           <Link className="text-link" href="#collector-core">See the core tools <span>↓</span></Link>
         </div>
-      </PageHero>
+      </MarketStoryHero>
 
       <section className="content-section section-shell" id="collector-core">
         <SectionHeading
