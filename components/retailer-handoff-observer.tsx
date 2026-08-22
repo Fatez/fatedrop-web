@@ -2,10 +2,11 @@
 
 import { useEffect } from "react";
 
-type HandoffContext = "alerts" | "search" | "true_price" | "independent_stores";
+type HandoffContext = "alerts" | "fatefind" | "search" | "true_price" | "independent_stores";
 
 function contextForPath(pathname: string): HandoffContext | null {
   if (pathname === "/dashboard/alerts") return "alerts";
+  if (pathname === "/dashboard/watchlist") return "fatefind";
   if (pathname === "/dashboard/search") return "search";
   if (pathname === "/dashboard/true-price") return "true_price";
   if (pathname === "/dashboard/stores") return "independent_stores";
@@ -17,6 +18,14 @@ function textFrom(root: Element | null, selector: string) {
 }
 
 function handoffDetails(anchor: HTMLAnchorElement, context: HandoffContext) {
+  const explicitRetailer = anchor.dataset.fdRetailer?.trim() || null;
+  if (explicitRetailer) {
+    return {
+      retailer: explicitRetailer,
+      productTitle: anchor.dataset.fdProductTitle?.trim() || explicitRetailer,
+    };
+  }
+
   if (context === "alerts") {
     const row = anchor.closest(".fd-ledger-row");
     return {
@@ -42,6 +51,8 @@ function handoffDetails(anchor: HTMLAnchorElement, context: HandoffContext) {
       productTitle: textFrom(group, "header h2"),
     };
   }
+
+  if (context === "fatefind") return { retailer: null, productTitle: null };
 
   const card = anchor.closest(".fd-indies-network-grid article");
   const retailer = textFrom(card, "h3");
