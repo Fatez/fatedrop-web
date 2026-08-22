@@ -32,6 +32,8 @@ const CLIPS: Record<CompanionReaction, CompanionClipName> = {
   major: "FateMatch",
 };
 
+const ASSET_ROOT = "/assets/companions";
+
 export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
   {
     id: "oru",
@@ -40,9 +42,9 @@ export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
     role: "FateDrop guide",
     slot: 1,
     isMascot: true,
-    fallbackArtwork: "/assets/companions/koru-signal-companion.webp",
-    modelUrl: "/companions/oru/oru.glb",
-    textureUrl: "/companions/oru/oru-texture.jpg",
+    fallbackArtwork: `${ASSET_ROOT}/koru-signal-companion.webp`,
+    modelUrl: `${ASSET_ROOT}/oru/oru.glb`,
+    textureUrl: `${ASSET_ROOT}/oru/oru-texture.jpg`,
     modelFormat: "glb",
     animationClips: CLIPS,
   },
@@ -54,8 +56,8 @@ export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
     slot: 2,
     isMascot: false,
     fallbackArtwork: null,
-    modelUrl: "/companions/nyxen/nyxen.glb",
-    textureUrl: "/companions/nyxen/nyxen-texture.jpg",
+    modelUrl: `${ASSET_ROOT}/nyxen/nyxen.glb`,
+    textureUrl: `${ASSET_ROOT}/nyxen/nyxen-texture.jpg`,
     modelFormat: "glb",
     animationClips: CLIPS,
   },
@@ -67,8 +69,8 @@ export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
     slot: 3,
     isMascot: false,
     fallbackArtwork: null,
-    modelUrl: "/companions/solix/solix.glb",
-    textureUrl: "/companions/solix/solix-texture.jpg",
+    modelUrl: `${ASSET_ROOT}/solix/solix.glb`,
+    textureUrl: `${ASSET_ROOT}/solix/solix-texture.jpg`,
     modelFormat: "glb",
     animationClips: CLIPS,
   },
@@ -80,8 +82,8 @@ export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
     slot: 4,
     isMascot: false,
     fallbackArtwork: null,
-    modelUrl: "/companions/aeris/aeris.glb",
-    textureUrl: "/companions/aeris/aeris-texture.jpg",
+    modelUrl: `${ASSET_ROOT}/aeris/aeris.glb`,
+    textureUrl: `${ASSET_ROOT}/aeris/aeris-texture.jpg`,
     modelFormat: "glb",
     animationClips: CLIPS,
   },
