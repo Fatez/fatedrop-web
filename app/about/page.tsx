@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
 import { FutureExpansion } from "@/components/future-expansion";
 import { siteConfig } from "@/lib/site-data";
 
@@ -12,13 +13,17 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <SiteShell>
-      <PageHero
+      <MarketStoryHero
         eyebrow="Why FateDrop exists"
-        title="Build the bridge between collectors and independent TCG retail."
-        description="Collectors are surrounded by fragmented stock, noisy alerts and weak price context. Independent retailers can hold exactly the right product and still be hard to discover. FateDrop is being built between those two problems."
+        title="A better bridge between collectors and the stores holding the stock."
+        description="Collectors face fragmented stock, noisy alerts and weak price context. Independent TCG retailers can hold exactly the right product and still be hard to discover. FateDrop is being built between those two problems."
+        image="/assets/home/koru-home-hero.png?v=20260822-about"
+        alt="Koru overlooking the FateDrop landscape and wider collector-retailer network"
+        proof={["Collector clarity", "Independent visibility", "Evidence-led signals", "One connected TCG network"]}
+        focal="right"
       >
         <div className="button-row"><Link className="button button-primary" href="/join">Join the beta <span>↗</span></Link><Link className="text-link" href="#principles">See the principles <span>↓</span></Link></div>
-      </PageHero>
+      </MarketStoryHero>
 
       <section className="content-section section-shell"><div className="quote-band"><blockquote>Discovery should be useful for the collector and fair to the business holding the stock.</blockquote><p>That principle is why FateDrop sends customers to retailers instead of replacing them, why price context matters and why the signal lifecycle is designed to say only what the evidence supports.</p></div></section>
 
