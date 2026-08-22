@@ -2,7 +2,20 @@ import type { NeonQueryFunction } from "@neondatabase/serverless";
 
 export type DashboardActivityType = "signal_seen" | "wishlist_hit" | "store_tracked" | "market_saving";
 export type SignalLifecycle = "whisper" | "manifested" | "vanished" | "echo";
-export type SignalKind = SignalLifecycle | "price_change" | "launch_date_change" | "queue" | "security" | "drop_pulse";
+export type SignalKind = SignalLifecycle
+  | "catalogue_new"
+  | "catalogue_state_change"
+  | "price_change"
+  | "launch_date_change"
+  | "queue"
+  | "security"
+  | "access_blocked"
+  | "new_listing_live"
+  | "availability_live"
+  | "restock"
+  | "sold_out"
+  | "lifecycle_unspecified"
+  | "drop_pulse";
 export type SignalIntensity = "subtle" | "standard" | "major";
 
 export type DashboardActivityEvent = {
@@ -226,7 +239,7 @@ export async function recordBillingAudit(record: BillingAuditRecord) {
     return withFileWrite((state) => {
       if (state.billingAudit.some((item) => item.eventId === record.eventId)) return false;
       state.billingAudit.push(record);
-      state.billingAudit = state.billingAudit.slice(-3000);
+      state.billingAudit = state.billingAudit.slice(-5000);
       return true;
     });
   }
@@ -234,87 +247,73 @@ export async function recordBillingAudit(record: BillingAuditRecord) {
 }
 
 async function postgres(): Promise<NeonQueryFunction<false, false>> {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is required for PostgreSQL metric storage.");
-  const { neon } = await import("@neondatabase/serverless");
-  return neon(connectionString);
-}
-
-async function withFileWrite<T>(operation: (state: FileState) => Promise<T> | T): Promise<T> {
-  const run = fileQueue.then(async () => {
-    const state = await readFileState();
-    const result = await operation(state);
-    await writeFileState(state);
-    return result;
-  });
-  fileQueue = run.catch(() => undefined);
-  return run;
+  const [{ neon }, { getPostgresUrl }] = await Promise.all([import("@neondatabase/serverless"), import("./postgres-url")]);
+  const url = getPostgresUrl();
+  if (!url) throw new Error("Dashboard Postgres store requested but no database URL is configured.");
+  return neon(url);
 }
 
 async function readFileState(): Promise<FileState> {
-  const [{ readFile }, path] = await Promise.all([import("node:fs/promises"), import("node:path")]);
-  const filePath = path.resolve(process.cwd(), process.env.FATEDROP_METRIC_FILE ?? "data/dashboard-metrics.json");
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const file = process.env.FATEDROP_METRIC_FILE ?? process.env.FATEDROP_ACCOUNT_FILE ?? path.join(process.cwd(), "data", "fatedrop-dashboard.json");
   try {
-    const parsed = JSON.parse(await readFile(filePath, "utf8")) as Partial<FileState>;
-    return {
-      version: 1,
-      activity: Array.isArray(parsed.activity) ? parsed.activity : [],
-      networkSnapshots: Array.isArray(parsed.networkSnapshots) ? parsed.networkSnapshots : [],
-      billingAudit: Array.isArray(parsed.billingAudit) ? parsed.billingAudit : [],
-    };
-  } catch (error) {
-    if (isMissingFile(error)) return emptyState();
-    throw error;
+    const raw = await fs.readFile(file, "utf8");
+    const parsed = JSON.parse(raw) as FileState;
+    return parsed?.version === 1 ? parsed : emptyState();
+  } catch {
+    return emptyState();
   }
 }
 
 async function writeFileState(state: FileState) {
-  const [{ mkdir, writeFile, rename }, path] = await Promise.all([import("node:fs/promises"), import("node:path")]);
-  const filePath = path.resolve(process.cwd(), process.env.FATEDROP_METRIC_FILE ?? "data/dashboard-metrics.json");
-  const tempPath = `${filePath}.${process.pid}.tmp`;
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(tempPath, `${JSON.stringify(state, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  await rename(tempPath, filePath);
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const file = process.env.FATEDROP_METRIC_FILE ?? process.env.FATEDROP_ACCOUNT_FILE ?? path.join(process.cwd(), "data", "fatedrop-dashboard.json");
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify(state, null, 2), "utf8");
 }
+
+async function withFileWrite<T>(fn: (state: FileState) => T | Promise<T>) {
+  const operation = fileQueue.then(async () => {
+    const state = await readFileState();
+    const result = await fn(state);
+    await writeFileState(state);
+    return result;
+  });
+  fileQueue = operation.catch(() => undefined);
+  return operation;
+}
+
+function n(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+function s(value: unknown) { return typeof value === "string" && value ? value : null; }
 
 function mapActivity(row: Record<string, unknown>): DashboardActivityEvent {
   return {
     id: String(row.id),
     userId: String(row.user_id),
-    sourceEventId: nullableString(row.source_event_id),
-    type: String(row.event_type) as DashboardActivityType,
-    signalState: nullableString(row.signal_state) as SignalLifecycle | null,
-    title: nullableString(row.title),
-    subtitle: nullableString(row.subtitle),
-    retailer: nullableString(row.retailer),
-    storeId: nullableString(row.store_id),
-    amountPence: nullableNumber(row.amount_pence),
-    source: String(row.source) as DashboardActivityEvent["source"],
-    occurredAt: Number(row.occurred_at),
-    recordedAt: Number(row.recorded_at),
+    sourceEventId: s(row.source_event_id),
+    type: row.event_type as DashboardActivityType,
+    signalState: s(row.signal_state) as SignalLifecycle | null,
+    title: s(row.title), subtitle: s(row.subtitle), retailer: s(row.retailer), storeId: s(row.store_id),
+    amountPence: n(row.amount_pence), source: String(row.source) as DashboardActivityEvent["source"],
+    occurredAt: n(row.occurred_at) ?? 0, recordedAt: n(row.recorded_at) ?? 0,
   };
 }
 
+function parseJson<T>(value: unknown, fallback: T): T {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string") { try { return JSON.parse(value) as T; } catch { return fallback; } }
+  return value as T;
+}
 function mapNetworkSnapshot(row: Record<string, unknown>): NetworkMetricSnapshot {
   return {
-    id: String(row.id),
-    sourceEventId: String(row.source_event_id),
-    source: String(row.source),
-    measuredAt: Number(row.measured_at),
-    recordedAt: Number(row.recorded_at),
-    metrics: parseJson(row.metrics_json, {}) as NetworkMetricSnapshot["metrics"],
-    recentSignals: parseJson(row.recent_signals_json, []) as NetworkSignal[],
-    upcomingEvents: parseJson(row.upcoming_events_json, []) as NetworkEventListing[],
+    id: String(row.id), sourceEventId: String(row.source_event_id), source: String(row.source), measuredAt: n(row.measured_at) ?? 0, recordedAt: n(row.recorded_at) ?? 0,
+    metrics: parseJson(row.metrics_json, { whisper:null, manifested:null, vanished:null, echo:null, changes24h:null, productsTracked:null, inStock:null, catalogueRetailers:null, healthyMonitors:null }),
+    recentSignals: parseJson(row.recent_signals_json, []), upcomingEvents: parseJson(row.upcoming_events_json, []),
   };
 }
-
-function parseJson(value: unknown, fallback: unknown) {
-  if (typeof value === "string") {
-    try { return JSON.parse(value); } catch { return fallback; }
-  }
-  return value ?? fallback;
-}
-
-function nullableString(value: unknown) { return value === null || value === undefined ? null : String(value); }
-function nullableNumber(value: unknown) { return value === null || value === undefined ? null : Number(value); }
-function isMissingFile(error: unknown) { return Boolean(error && typeof error === "object" && "code" in error && error.code === "ENOENT"); }
