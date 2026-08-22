@@ -4,7 +4,7 @@ export type RetailerHandoffInsight = {
   storeId: string;
   retailer: string;
   handoffs: number;
-  lastHandoffAt: number;
+  lastHandoffDay: string;
 };
 
 type FileActivity = {
@@ -15,6 +15,13 @@ type FileActivity = {
   storeId?: unknown;
   occurred_at?: unknown;
   occurredAt?: unknown;
+};
+
+type FileAggregate = {
+  storeId: string;
+  retailer: string;
+  handoffs: number;
+  lastSeenAt: number;
 };
 
 function storageMode() {
@@ -28,6 +35,11 @@ function text(value: unknown) {
 function number(value: unknown) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function dayBucket(epochSeconds: number) {
+  const day = Math.floor(epochSeconds / 86_400) * 86_400;
+  return new Date(day * 1000).toISOString().slice(0, 10);
 }
 
 export async function listRetailerHandoffInsights(options: { days?: number; limit?: number } = {}): Promise<RetailerHandoffInsight[]> {
@@ -59,7 +71,7 @@ export async function listRetailerHandoffInsights(options: { days?: number; limi
       const handoffs = number(record.handoffs);
       const lastHandoffAt = number(record.last_handoff_at);
       return storeId && retailer && handoffs !== null && lastHandoffAt !== null
-        ? [{ storeId, retailer, handoffs: Math.max(0, Math.floor(handoffs)), lastHandoffAt: Math.floor(lastHandoffAt) }]
+        ? [{ storeId, retailer, handoffs: Math.max(0, Math.floor(handoffs)), lastHandoffDay: dayBucket(lastHandoffAt) }]
         : [];
     });
   }
@@ -76,7 +88,7 @@ async function fileInsights(since: number, limit: number) {
   try { parsed = JSON.parse(await fs.readFile(file, "utf8")) as { activity?: FileActivity[] }; }
   catch { return []; }
 
-  const grouped = new Map<string, RetailerHandoffInsight>();
+  const grouped = new Map<string, FileAggregate>();
   for (const item of parsed.activity ?? []) {
     const eventType = text(item.eventType ?? item.event_type);
     const occurredAt = number(item.occurredAt ?? item.occurred_at);
@@ -89,13 +101,14 @@ async function fileInsights(since: number, limit: number) {
       storeId,
       retailer,
       handoffs: (current?.handoffs ?? 0) + 1,
-      lastHandoffAt: Math.max(current?.lastHandoffAt ?? 0, Math.floor(occurredAt)),
+      lastSeenAt: Math.max(current?.lastSeenAt ?? 0, Math.floor(occurredAt)),
     });
   }
 
   return [...grouped.values()]
-    .sort((a, b) => b.handoffs - a.handoffs || b.lastHandoffAt - a.lastHandoffAt)
-    .slice(0, limit);
+    .sort((a, b) => b.handoffs - a.handoffs || b.lastSeenAt - a.lastSeenAt)
+    .slice(0, limit)
+    .map(({ storeId, retailer, handoffs, lastSeenAt }) => ({ storeId, retailer, handoffs, lastHandoffDay: dayBucket(lastSeenAt) }));
 }
 
 async function postgres(): Promise<NeonQueryFunction<false, false>> {
