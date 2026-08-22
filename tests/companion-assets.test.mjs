@@ -60,6 +60,7 @@ test("retired companion and illustrated-avatar renderer experiments are absent",
     "components/avatar-layered-character.tsx",
     "lib/avatar-assets.ts",
     "public/assets/avatar-v2/avatar-sprites.svg",
+    "public/assets/avatar-v2/catalogue.json",
   ]) assert.equal(fs.existsSync(path.join(root, file)), false, `${file} should remain retired`);
 });
 
@@ -79,9 +80,31 @@ test("companion reaction contract preserves all four public lifecycle meanings",
   assert.equal(contract.includes('kind === "manifested" || kind === "echo"'), false);
 });
 
-test("legacy mini-companions cannot return through active persistence", () => {
+test("legacy companion cosmetics cannot return through active persistence", () => {
   const loadout = read("lib/avatar-loadout.ts");
-  for (const retired of ["radar-drone", "signal-orb", "mini-beacon"]) assert.equal(loadout.includes(retired), false);
+  for (const retired of [
+    "radar-drone",
+    "signal-orb",
+    "mini-beacon",
+    "AVATAR_BASES",
+    "AVATAR_HAIR",
+    "AVATAR_OUTFITS",
+    "AVATAR_GEAR",
+    "AVATAR_AURAS",
+    "AVATAR_BACKGROUNDS",
+    "tcgStyle",
+  ]) assert.equal(loadout.includes(retired), false, `${retired} should not exist in active companion persistence`);
+  assert.ok(loadout.includes('companion: "koru"'));
+  assert.ok(loadout.includes("normalizeCompanionId(raw.companion)"));
+});
+
+test("profile picture language stays separate from Koru and Friends companions", () => {
+  const picker = read("components/avatar-picker.tsx");
+  assert.ok(picker.includes("Profile picture"));
+  assert.ok(picker.includes("separate from your Koru &amp; Friends companion"));
+  assert.ok(picker.includes("Preset profile images"));
+  assert.equal(picker.includes("Choose your signal."), false);
+  assert.equal(picker.includes("FateDrop avatar</span>"), false);
 });
 
 test("dashboard selector exposes five active slots and profile renders the real companion", () => {
