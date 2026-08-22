@@ -1,0 +1,61 @@
+import { neon } from "@neondatabase/serverless";
+import { getPostgresUrl } from "./postgres-url";
+
+export type LifecycleState = "whisper" | "echo" | "manifested" | "vanished";
+export type SignalTrendPoint = { measuredAt: number; value: number };
+export type SignalLifecycleSummary = Record<LifecycleState, {
+  total: number;
+  today: number;
+  trend: SignalTrendPoint[];
+}>;
+
+const lifecycleStates: LifecycleState[] = ["whisper", "echo", "manifested", "vanished"];
+
+function startOfUtcDay(timestamp: number) {
+  const date = new Date(timestamp * 1000);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000;
+}
+
+function emptySummary(day0: number, days: number): SignalLifecycleSummary {
+  const trend = Array.from({ length: days }, (_, index) => ({ measuredAt: day0 + index * 86_400, value: 0 }));
+  return Object.fromEntries(lifecycleStates.map((state) => [state, { total: 0, today: 0, trend: trend.map((point) => ({ ...point })) }])) as SignalLifecycleSummary;
+}
+
+export async function getSignalLifecycleSummary(days = 7, now = Math.floor(Date.now() / 1000)): Promise<SignalLifecycleSummary | null> {
+  const safeDays = Math.min(30, Math.max(2, Math.trunc(days)));
+  const day0 = startOfUtcDay(now) - ((safeDays - 1) * 86_400);
+  const databaseUrl = getPostgresUrl();
+  if (!databaseUrl) return null;
+
+  const sql = neon(databaseUrl);
+  const rows = await sql`
+    SELECT
+      state,
+      (FLOOR(detected_at / 86400.0) * 86400)::bigint AS measured_at,
+      COUNT(*)::int AS count
+    FROM fatedrop_signals
+    WHERE detected_at >= ${day0}
+      AND state IN ('whisper', 'echo', 'manifested', 'vanished')
+    GROUP BY state, measured_at
+    ORDER BY measured_at ASC
+  `;
+
+  const summary = emptySummary(day0, safeDays);
+  for (const row of rows as Array<Record<string, unknown>>) {
+    const state = String(row.state) as LifecycleState;
+    if (!lifecycleStates.includes(state)) continue;
+    const measuredAt = Number(row.measured_at);
+    const value = Number(row.count);
+    if (!Number.isFinite(measuredAt) || !Number.isFinite(value)) continue;
+    const index = Math.floor((measuredAt - day0) / 86_400);
+    if (index < 0 || index >= safeDays) continue;
+    summary[state].trend[index] = { measuredAt: day0 + index * 86_400, value };
+  }
+
+  for (const state of lifecycleStates) {
+    summary[state].total = summary[state].trend.reduce((sum, point) => sum + point.value, 0);
+    summary[state].today = summary[state].trend.at(-1)?.value ?? 0;
+  }
+
+  return summary;
+}
