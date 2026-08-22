@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
 import { StockLifecycle } from "@/components/stock-lifecycle";
 
 export const metadata: Metadata = {
@@ -11,13 +12,17 @@ export const metadata: Metadata = {
 export default function TrustPage() {
   return (
     <SiteShell>
-      <PageHero
+      <MarketStoryHero
         eyebrow="Trust by design"
-        title="Trust the signal because you can see what it means."
-        description="FateDrop should never need manufactured urgency. Signal states, price context and retailer evidence are useful only when the rules behind them stay clear."
+        title="Built on evidence. Clear enough to question."
+        description="FateDrop should never need manufactured urgency. Signal states, True Price and retailer evidence are only useful when the rules behind them stay visible and consistent."
+        image="/assets/home/koru-home-section.png?v=20260822-trust"
+        alt="Koru in the FateDrop landscape representing trust, evidence and the signal network"
+        proof={["Four lifecycle states", "Evidence before urgency", "True Price rules", "Trust cannot be bought"]}
+        focal="right"
       >
         <div className="button-row"><Link className="button button-primary" href="#stock-lifecycle">See the signal lifecycle <span>↓</span></Link><Link className="button button-secondary" href="/collectors">Explore collector tools</Link></div>
-      </PageHero>
+      </MarketStoryHero>
 
       <section className="content-section section-shell" id="stock-lifecycle">
         <SectionHeading
