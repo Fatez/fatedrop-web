@@ -9,6 +9,12 @@ function startOfUtcDay(timestamp: number) {
 }
 
 export function publicSignalLabel(signal: NetworkSignal) {
+  if (signal.state === "whisper") return "Whisper";
+  if (signal.state === "echo") return "Echo";
+  if (signal.state === "manifested") return "Manifested";
+  if (signal.state === "vanished") return "Vanished";
+
+  // Legacy fallback only. New network snapshots always carry a canonical lifecycle state.
   const kind = signal.kind ?? signal.state;
   if (kind === "whisper") return "Whisper";
   if (kind === "echo" || kind === "queue" || kind === "security") return "Echo";
@@ -18,6 +24,22 @@ export function publicSignalLabel(signal: NetworkSignal) {
   if (kind === "price_change") return "Price change";
   if (kind === "launch_date_change") return "Launch change";
   return "Signal";
+}
+
+export function signalCauseLabel(signal: NetworkSignal) {
+  const kind = String(signal.kind ?? "");
+  if (kind === "catalogue_new") return "Catalogue new";
+  if (kind === "catalogue_state_change") return "Catalogue change";
+  if (kind === "price_change") return "Price change";
+  if (kind === "launch_date_change") return "Launch change";
+  if (kind === "queue") return "Queue";
+  if (kind === "security") return "Security";
+  if (kind === "access_blocked") return "Access control";
+  if (kind === "new_listing_live") return "New listing live";
+  if (kind === "availability_live") return "Availability live";
+  if (kind === "restock") return "Restock";
+  if (kind === "sold_out") return "Sold out";
+  return null;
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
@@ -54,14 +76,8 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
   const favoriteStores = [...stores.values()].sort((a, b) => b.latestAt - a.latestAt).slice(0, 4);
   const watchlist = activity.filter((item) => item.type === "wishlist_hit").slice(0, 4);
   const personalRecent = activity.slice(0, 6);
-  const confirmed = (network?.recentSignals ?? []).filter((signal) => {
-    const kind = signal.kind ?? signal.state;
-    return kind === "manifested";
-  }).slice(0, 4);
-  const early = (network?.recentSignals ?? []).filter((signal) => {
-    const kind = signal.kind ?? signal.state;
-    return kind === "whisper" || kind === "echo" || kind === "queue" || kind === "security" || kind === "drop_pulse";
-  }).slice(0, 4);
+  const confirmed = (network?.recentSignals ?? []).filter((signal) => signal.state === "manifested").slice(0, 4);
+  const early = (network?.recentSignals ?? []).filter((signal) => signal.state === "whisper" || signal.state === "echo").slice(0, 4);
 
   const publishedBaseline = {
     productsTracked: network?.metrics.productsTracked ?? null,
@@ -137,7 +153,9 @@ export function relativeTime(timestamp: number, now = Math.floor(Date.now() / 10
 }
 
 export function signalLabel(signal: NetworkSignal) {
-  return publicSignalLabel(signal);
+  const lifecycle = publicSignalLabel(signal);
+  const cause = signalCauseLabel(signal);
+  return cause ? `${lifecycle} · ${cause}` : lifecycle;
 }
 
 export function activityLabel(event: DashboardActivityEvent) {
