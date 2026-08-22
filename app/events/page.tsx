@@ -23,8 +23,8 @@ export default async function EventsPage() {
         eyebrow="Fate Encounters · live UK TCG network"
         title="Find the events. Find your people."
         description="Browse source-backed card shows, conventions, trade events and participating vendors, then use Local Radar to turn the wider TCG scene into somewhere you can actually go."
-        image="/assets/fatedrop-header.png?v=20260822-events"
-        alt="FateDrop signal artwork representing the connected TCG event network"
+        image="/assets/market/events.png"
+        alt="FateDrop event artwork showing a dark trading-card convention hall"
         proof={["UK card shows", "Source-backed listings", "Vendor evidence", "Local Radar"]}
         focal="right"
       >
