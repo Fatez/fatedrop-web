@@ -18,4 +18,5 @@ export const KORU_LIFECYCLE = [
 export const KORU_MERCH = {
   hero: "/assets/merch/koru-crystal-jersey.webp",
   universe: "/assets/home/koru-home-section.png",
+  campaign: "/assets/merch/koru-friends-merch-hero.png",
 } as const;
