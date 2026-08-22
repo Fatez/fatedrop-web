@@ -1,6 +1,6 @@
-# Koru brand direction
+# Koru & Friends brand direction
 
-_Last reviewed: 21 August 2026_
+_Last reviewed: 22 August 2026_
 
 ## Canonical role
 
@@ -8,29 +8,52 @@ _Last reviewed: 21 August 2026_
 
 Koru is not a per-TCG skin and is not replaced by a collector's favourite game. The character gives FateDrop a recognisable owned identity across product surfaces, Discord, launch marketing and supporter merchandise.
 
+## Active Koru & Friends roster
+
+The active selectable companion roster is exactly:
+
+1. **Koru** — FateDrop mascot and network voice;
+2. **Fenn**;
+3. **Aeris**;
+4. **Nyxen**;
+5. **Solix**.
+
+Koru remains the FateDrop mascot and signal voice regardless of which personal companion a collector selects.
+
+Kael (`K-01`) and Nyra (`N-02`) remain legacy/archive FateDrop character references only. They do not occupy an active companion slot.
+
 ## Product separation
 
-- **Koru** — FateDrop mascot / signal voice.
-- **Collector profile avatar** — optional personal account cosmetic; separate from Koru.
-- **Favourite TCG preferences** — account/discovery context only; they do not change Koru.
-- **Koru & Friends** — an original FateDrop character universe for marketing, merchandise and future storytelling; it is not a requirement for the core alert engine.
+- **Koru** — fixed FateDrop mascot / signal voice.
+- **Koru & Friends companion** — the user's selected character from the final five-character roster.
+- **Collector profile picture** — optional personal account image; separate from Koru & Friends.
+- **Favourite TCG preferences** — account/discovery context only; they do not change the companion roster or signal meaning.
+- **Koru & Friends IP layer** — original FateDrop character universe for product personality, community culture, merchandise and future storytelling.
+
+Koru & Friends is a presentation/personality layer around FateDrop intelligence. It is not a replacement for the signal engine and never changes the evidence behind an alert.
 
 ## Signal behaviour
 
-Koru reflects the final evidence contract without changing it:
+Every active companion reflects the same final evidence contract:
 
-- Whisper → anticipation / watching.
-- Echo → readiness / get ready.
+- Whisper → anticipation / watching product or catalogue movement.
+- Echo → readiness / get ready for queue, traffic, security or access changes.
 - Manifested → confirmed-live reaction.
 - Vanished → lost-signal reaction.
-- Strong celebration remains reserved for high-value confirmed Manifested/FateMatch moments.
+- FateMatch → personal successful-hunt reaction.
+
+Strong celebration remains reserved for genuinely confirmed/high-value Manifested or FateMatch moments. Ordinary Whisper or Echo activity must not receive a false victory treatment.
 
 ## 3D rule
 
-Do not relabel legacy Scout, Warden, Droid or TCG-themed GLBs as Koru.
+Do not relabel legacy Scout, Warden, Droid or TCG-themed GLBs as Koru or any of the active Koru & Friends characters.
 
-Until an approved Koru GLB exists, web surfaces use the approved Koru artwork. A future Koru 3D asset must be added through an isolated branch and re-prove web/mobile rendering, lifecycle reactions and fallback behaviour.
+The web companion contract owns exactly five GLB registration slots. Until an approved model exists for a slot, that character uses an honest fallback/placeholder. Models are integrated one at a time and must re-prove rendering, lifecycle reactions, fallback behaviour and reduced-motion behaviour before being treated as active.
+
+The stable model handoff paths and registration procedure are documented in `docs/companion-model-slots.md`.
 
 ## Merchandise
 
-Koru-led merchandise is a supporter/brand extension, not a second marketplace. Current artwork is concept material only. Do not claim products are available until manufacturing, quality, pricing, fulfilment and checkout are genuinely ready.
+Koru & Friends merchandise is a supporter/brand extension, not a second marketplace. Current artwork remains concept material until manufacturing, quality, pricing, fulfilment and checkout are genuinely ready.
+
+The visual direction should stay mature, restrained and compatible with the approved dusk/editorial FateDrop identity rather than drifting into a childish mascot treatment.
