@@ -44,7 +44,8 @@ test("dashboard home uses the shared shell and retains personal collector identi
   assert.ok(root.includes("snapshot.account.displayName"));
   assert.ok(root.includes('href="/dashboard/avatar"'));
   assert.ok(root.includes('href="/dashboard/alerts"'));
-  assert.ok(root.includes("KORU · NETWORK GUIDE"));
+  assert.ok(root.includes("/assets/dashboard/koru-network-guide.png"));
+  assert.ok(root.includes("Choose your companion"));
   assert.ok(shell.includes("snapshot.account.displayName"));
   assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.equal(root.includes("floating signal droid"), false);
