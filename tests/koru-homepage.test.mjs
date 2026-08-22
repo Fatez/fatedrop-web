@@ -164,11 +164,15 @@ test("dashboard home matches the approved evidence-backed collector workspace", 
   assert.ok(dashboard.includes("FateFind"));
   assert.ok(dashboard.includes("Network Pulse"));
   assert.ok(dashboard.includes("Recent Manifested Drops"));
-  assert.ok(dashboard.includes("Retailers You Track"));
+  assert.ok(dashboard.includes("Independent Stores"));
+  assert.ok(dashboard.includes("Discover more places to buy"));
   assert.ok(dashboard.includes("/assets/dashboard/koru-network-guide.png"));
   assert.ok(dashboard.includes("Choose your companion"));
   assert.ok(fs.existsSync("public/assets/dashboard/koru-network-guide.png"));
   assert.ok(shell.includes("Search cards, sets or retailers"));
   assert.ok(pulse.includes("Products"));
+  assert.ok(pulse.includes("Signals"));
+  assert.ok(pulse.includes("Retailers"));
+  assert.ok(dashboard.includes("signals={signalActivity7d}"));
   assert.equal(dashboard.includes("COLLECTOR COMMAND CENTRE"), false);
 });
