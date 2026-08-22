@@ -29,8 +29,8 @@ export default function CollectorsPage() {
         eyebrow="For collectors"
         title="Find the cards. Know the price. Catch the signal."
         description="Search participating TCG retailers, compare True Price, track the products that matter and let FateDrop surface the strongest route to buy — including independent stores you may never have found on your own."
-        image="/assets/cardwave-bg.png?v=20260822-collectors-png"
-        alt="Abstract FateDrop card-wave artwork representing collector discovery across the TCG network"
+        image="/assets/market/collectors.png"
+        alt="FateDrop collector artwork showing a dark trading-card desk scene"
         proof={["Search the network", "Compare True Price", "Create FateFind hunts", "Buy direct from stores"]}
       >
         <div className="button-row">
