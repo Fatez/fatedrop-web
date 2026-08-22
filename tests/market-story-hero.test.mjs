@@ -33,17 +33,26 @@ test("public hero renderer refuses converted JPG WebP and AVIF artwork", async (
   assert.equal(hero.includes('loading="eager"'), false);
 });
 
-test("Collectors Retailers and Events use their final distinct full PNG hero sources", async () => {
+test("main market pages use their final distinct full PNG hero sources", async () => {
   const collectors = await source("app/collectors/page.tsx");
   const retailers = await source("app/businesses/page.tsx");
   const events = await source("app/events/page.tsx");
+  const trust = await source("app/trust/page.tsx");
+  const about = await source("app/about/page.tsx");
 
-  const images = [heroImage(collectors), heroImage(retailers), heroImage(events)];
+  const images = [heroImage(collectors), heroImage(retailers), heroImage(events), heroImage(trust), heroImage(about)];
   assert.deepEqual(images, [
     "/assets/market/collectors.png",
     "/assets/market/retailers.png",
     "/assets/market/events.png",
+    "/assets/market/trust.png",
+    "/assets/market/about.png",
   ]);
   for (const image of images) assert.match(image, /\.png(?:\?|$)/i);
-  assert.equal(new Set(images).size, 3);
+  assert.equal(new Set(images).size, 5);
+});
+
+test("About is discoverable from the primary public navigation", async () => {
+  const siteData = await source("lib/site-data.ts");
+  assert.ok(siteData.includes('{ label: "About", href: "/about" }'));
 });
