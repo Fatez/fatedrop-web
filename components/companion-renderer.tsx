@@ -2,7 +2,7 @@
 
 import { KoruMascot } from "@/components/koru-mascot";
 import { CompanionWebglModel } from "@/components/companion-webgl-model";
-import { companionDefinition, companionRendererMode, type CompanionRenderRequest } from "@/lib/companion-contract";
+import { companionDefinition, companionModelUrl, companionRendererMode, type CompanionRenderRequest } from "@/lib/companion-contract";
 
 function CompanionPlaceholder({ name, slot, compact = false }: { name: string; slot: number; compact?: boolean }) {
   return <div className={`companion-placeholder${compact ? " compact" : ""}`} aria-label={`${name} companion preview`}>
@@ -18,9 +18,10 @@ function CompanionPlaceholder({ name, slot, compact = false }: { name: string; s
 export function CompanionRenderer({ request }: { request: CompanionRenderRequest }) {
   const definition = companionDefinition(request.companionId);
   const mode = companionRendererMode(definition);
+  const modelUrl = companionModelUrl(definition, request.reaction);
 
-  if (mode === "webgl-3d" && definition.modelUrl) {
-    return <CompanionWebglModel name={definition.name} modelUrl={definition.modelUrl} reaction={request.reaction} compact={request.compact}/>;
+  if (mode === "webgl-3d" && modelUrl) {
+    return <CompanionWebglModel name={definition.name} modelUrl={modelUrl} reaction={request.reaction} compact={request.compact}/>;
   }
 
   if (definition.id === "koru" && mode === "fallback-2d") {
