@@ -7,16 +7,18 @@ This checklist is intentionally conservative. A green build is necessary but is 
 ## 1. Product truth
 
 - [ ] `docs/fatedrop-product-truth.md` reviewed against the current app/Cloud/Discord state.
-- [ ] Public lifecycle uses **Whisper → Echo → Manifested → Vanished** with the final meanings preserved.
-- [ ] Whisper = product/catalogue/metadata movement; stock not confirmed.
-- [ ] Echo = queue/traffic/security/access readiness; stock not confirmed.
-- [ ] Manifested = confirmed purchasable availability.
-- [ ] Vanished = previously confirmed availability no longer observed/verified.
-- [ ] FateFind = saved hunt; FateMatch = successful qualifying result.
-- [ ] Universal Wishlist remains distinct from FateFind.
-- [ ] Drop Pulse remains contextual evidence rather than a fifth lifecycle state.
-- [ ] FateWindow / FateScore / FateFair remain HOLD/PLANNED unless a later evidence review promotes them.
-- [ ] Demo/static/event/storefront data is labelled as such.
+- [x] Public lifecycle uses **Whisper → Echo → Manifested → Vanished** with the final meanings preserved in Web.
+- [x] Whisper = product/catalogue/metadata movement; stock not confirmed.
+- [x] Echo = queue/traffic/security/access readiness; stock not confirmed.
+- [x] Manifested = confirmed purchasable availability.
+- [x] Vanished = previously confirmed availability no longer observed/verified.
+- [x] FateFind = saved hunt; FateMatch = successful qualifying result.
+- [x] Universal Wishlist remains distinct from FateFind.
+- [x] Drop Pulse remains contextual evidence rather than a fifth lifecycle state.
+- [x] FateWindow / FateScore / FateFair remain HOLD/PLANNED unless a later evidence review promotes them.
+- [x] Demo/static/event/storefront data is labelled as such in current Web source/tests.
+
+The checked items above are Web source-contract results. They do not by themselves certify app/Cloud/Discord deployment parity.
 
 ## 2. Required production environment
 
@@ -89,7 +91,7 @@ until the actual community integration is ready. When enabling, also verify:
 
 ## 3. Required validation
 
-Run:
+Run after the last code/asset edit:
 
 ```bash
 npm ci
@@ -117,10 +119,14 @@ Public:
 - `/collectors`
 - `/businesses`
 - `/events`
-- `/subscriptions`
 - `/trust`
+- `/about`
+- `/demo`
+- `/merch`
+- `/subscriptions`
 - `/privacy`
 - `/terms`
+- `/cookies`
 
 Account/dashboard:
 
@@ -139,6 +145,16 @@ Account/dashboard:
 - `/dashboard/discord`
 - `/dashboard/membership`
 
+Companion runtime:
+
+- Aeris, Nyxen and Solix load from their registered GLBs;
+- their sibling JPEG textures resolve correctly;
+- the large companion preview renders without blocking the page;
+- Koru retains its approved 2D fallback until the correct GLB is verified;
+- Fenn remains an honest placeholder until the verified optimized pack is committed/registered;
+- WebGL/model failure falls back rather than taking down account functionality;
+- selected companion persists independently from profile picture data.
+
 API:
 
 - `/api/network-status`
@@ -151,22 +167,26 @@ API:
 
 ## 5. Evidence / pricing checks
 
-- [ ] Unknown delivery never renders as free.
-- [ ] Unknown delivery never produces a delivered True Price.
-- [ ] Unknown RRP never gets fabricated from a reseller price.
-- [ ] Compare Offers uses transparent objective ordering.
-- [ ] Cloud-monitored retailer status is not presented as partner/Verified status.
-- [ ] Direct Shopify storefront lab feeds are not presented as the complete FateDrop network.
-- [ ] Retailer checkout remains final purchase confirmation.
+These source-level rules are guarded by automated tests:
+
+- [x] Unknown delivery never renders as free.
+- [x] Unknown delivery never produces a delivered True Price.
+- [x] Unknown RRP never gets fabricated from a reseller price.
+- [x] Compare Offers uses transparent objective ordering rather than a paid trust ranking.
+- [x] Cloud-monitored retailer status is not presented as partner/Verified status.
+- [x] Direct Shopify storefront lab feeds are not presented as the complete FateDrop network.
+- [x] Retailer checkout remains final purchase confirmation.
+
+Production data quality and live endpoint behaviour still require runtime smoke.
 
 ## 6. Privacy / security
 
 - [ ] Production secrets exist only in protected environment variables.
-- [ ] No `.env.local`, account JSON, lead files or database exports are committed.
+- [x] Repository guards reject committed `.env.local`, account JSON, lead files and database exports.
 - [ ] Privacy notice receives final UK legal/data-controller/contact/retention review before scaled public acquisition.
-- [ ] Security headers are present in production responses.
-- [ ] `/api`, `/account` and `/dashboard` remain excluded from crawlers.
-- [ ] Local Radar uses location only on demand; no unadvertised coordinate persistence is introduced.
+- [ ] Security headers are confirmed in deployed production responses.
+- [x] `/api`, `/account` and `/dashboard` crawler/private-route controls exist in source.
+- [x] Local Radar remains user-triggered and no new unadvertised coordinate persistence is introduced by the current Web pass.
 - [ ] Wishlist and notification preference records are covered by final retention/deletion policy before scaled launch.
 
 ## 7. Koru & Friends companion system
@@ -181,13 +201,21 @@ The active companion roster is fixed to:
 
 Koru remains FateDrop's mascot and signal voice regardless of the collector's selected personal companion. Kael and Nyra are archive-only references and must not appear as active selector slots.
 
-The web selector and persistence layer are allowed to ship before every 3D model is available. A missing model must render an honest fallback/placeholder.
+The current Web renderer supports both an approved single GLB and a verified reaction-specific GLB pack behind the same five-slot contract. A missing model must render an honest fallback/placeholder.
+
+Current asset state:
+
+- Koru — approved 2D fallback active; correct production GLB still to be recovered/verified.
+- Fenn — real source pack verified; web-optimized binaries prepared, final repository handoff still required.
+- Aeris — GLB registered.
+- Nyxen — GLB registered.
+- Solix — GLB registered.
 
 Before an individual 3D companion is treated as production-ready, verify:
 
-- approved GLB at that character's stable path from `docs/companion-model-slots.md`;
+- approved GLB(s) at that character's stable path from `docs/companion-model-slots.md`;
 - the model is registered only in `lib/companion-contract.ts`;
-- approved animation clip names/states are verified against the real asset;
+- approved animation clip names/states are verified against the real asset where animation playback is claimed;
 - Whisper/Echo/Manifested/Vanished meanings remain unchanged by animation personality;
 - FateMatch reaction remains a successful-hunt treatment rather than a fifth lifecycle state;
 - performance budget is acceptable on target browsers/devices;
@@ -200,17 +228,18 @@ Do **not** add a separate Droid, Scout, TCG-themed or floating-familiar model sl
 
 ## 8. Exact public artwork gate
 
-The final homepage visual approval is separate from code/CI approval.
+The final public visual approval is separate from code/CI approval.
 
-Before merge:
+Current branch proof:
 
-- [ ] approved Koru hero PNG is committed at the final stable homepage path;
-- [ ] approved Koru & Friends section PNG is committed at its final stable path;
-- [ ] no AVIF/WebP workaround is being relied on for the approved hero after PNG handoff;
-- [ ] desktop hero composition is visually checked;
-- [ ] mobile crop is visually checked;
-- [ ] interactive phone remains below the landing section rather than returning to the hero;
-- [ ] no production merge occurs until visual approval is explicit.
+- [x] approved Koru hero PNG is committed at the final stable homepage path;
+- [x] approved Koru & Friends section PNG is committed at its final stable path;
+- [x] final Collectors / Retailers / Events / Trust / About market heroes are direct PNG assets;
+- [x] no AVIF/WebP workaround is relied on for the approved market-story hero boundary after PNG handoff;
+- [x] current desktop public composition has been visually approved;
+- [ ] mobile crop and responsive public-page composition are visually checked at final release head;
+- [x] interactive phone remains on the dedicated `/demo` page rather than returning to the homepage hero;
+- [ ] no production merge occurs until visual approval is explicit for the **complete final website release candidate**.
 
 ## 9. Events
 
