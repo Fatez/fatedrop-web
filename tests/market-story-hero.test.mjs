@@ -5,6 +5,12 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const source = (path) => readFile(new URL(path, root), "utf8");
 
+function heroImage(page) {
+  const match = page.match(/image="([^"]+)"/);
+  assert.ok(match, "page must declare a hero image");
+  return match[1];
+}
+
 test("public heroes use the same static artwork boundary that fixed Home", async () => {
   const hero = await source("components/market-story-hero.tsx");
   assert.ok(hero.includes("prh-image"));
@@ -27,9 +33,15 @@ test("public hero renderer refuses converted JPG WebP and AVIF artwork", async (
   assert.equal(hero.includes('loading="eager"'), false);
 });
 
-test("public market pages share the rebuilt static hero boundary", async () => {
-  for (const path of ["app/collectors/page.tsx", "app/businesses/page.tsx", "app/events/page.tsx"]) {
-    const page = await source(path);
-    assert.ok(page.includes("<MarketStoryHero"), `${path} must use MarketStoryHero`);
-  }
+test("Collectors Retailers and Events use distinct full PNG hero sources", async () => {
+  const collectors = await source("app/collectors/page.tsx");
+  const retailers = await source("app/businesses/page.tsx");
+  const events = await source("app/events/page.tsx");
+
+  const images = [heroImage(collectors), heroImage(retailers), heroImage(events)];
+  for (const image of images) assert.match(image, /\.png(?:\?|$)/i);
+  assert.equal(new Set(images).size, 3);
+  assert.ok(images[0].includes("cardwave-bg.png"));
+  assert.ok(images[1].includes("koru-network-guide.png"));
+  assert.ok(images[2].includes("fatedrop-header.png"));
 });
