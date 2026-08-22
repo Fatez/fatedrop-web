@@ -55,18 +55,19 @@ test("canonical release docs cannot resurrect retired Droid or layered-avatar re
   assert.ok(brand.includes("Do not relabel legacy Scout, Warden, Droid or TCG-themed GLBs"));
 });
 
-test("release authority explicitly marks mobile companion reconciliation as remaining work", () => {
+test("release authority keeps mobile companion reconciliation outside the current web pass", () => {
   const readiness = read("docs/release-readiness.md");
-  assert.ok(readiness.includes("PRODUCT RECONCILIATION REQUIRED"));
+  assert.ok(readiness.includes("Mobile code | **OUTSIDE CURRENT WEB PASS**"));
+  assert.ok(readiness.includes("Mobile is not being modified by the current website pass."));
   for (const id of ["koru", "fenn", "aeris", "nyxen", "solix"]) assert.ok(readiness.includes(`- \`${id}\``));
-  assert.ok(readiness.includes("Do not throw away stable Expo/renderer work"));
 });
 
-test("final artwork remains an explicit release gate until exact PNGs are synced", () => {
+test("final artwork is recorded as desktop-approved while runtime and mobile QA remain explicit gates", () => {
   const checklist = read("docs/launch-checklist.md");
   const readiness = read("docs/release-readiness.md");
   assert.ok(checklist.includes("approved Koru hero PNG"));
   assert.ok(checklist.includes("approved Koru & Friends section PNG"));
   assert.ok(checklist.includes("no production merge occurs until visual approval is explicit"));
-  assert.ok(readiness.includes("Exact approved Koru hero PNG and Koru & Friends section PNG still need final branch sync and visual QA."));
+  assert.ok(readiness.includes("Web public visual approval | **GREEN DESKTOP / MOBILE QA REMAINS**"));
+  assert.equal(readiness.includes("still need final branch sync and visual QA"), false);
 });
