@@ -30,7 +30,7 @@ function readBlobAsDataUrl(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Could not read the processed avatar."));
+    reader.onerror = () => reject(new Error("Could not read the processed profile picture."));
     reader.readAsDataURL(blob);
   });
 }
@@ -56,8 +56,8 @@ async function canvasBlob(canvas: HTMLCanvasElement, quality: number) {
 }
 
 async function prepareAvatar(file: File) {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error("Use a JPG, PNG or WEBP image.");
-  if (file.size > MAX_SOURCE_BYTES) throw new Error("Avatar uploads must be 5MB or smaller.");
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Use a JPG, PNG or WEBP image.");
+  if (file.size > MAX_SOURCE_BYTES) throw new Error("Profile picture uploads must be 5MB or smaller.");
 
   const image = await loadImage(file);
   const canvas = document.createElement("canvas");
@@ -94,9 +94,9 @@ export function AvatarPicker({ value, displayName, onChange }: { value: string; 
     setMessage("");
     try {
       onChange(await prepareAvatar(file));
-      setMessage("Custom avatar ready. Save profile to keep it.");
+      setMessage("Custom profile picture ready. Save profile to keep it.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Avatar could not be prepared.");
+      setMessage(error instanceof Error ? error.message : "Profile picture could not be prepared.");
     } finally {
       setBusy(false);
       event.target.value = "";
@@ -107,12 +107,12 @@ export function AvatarPicker({ value, displayName, onChange }: { value: string; 
     <section className={styles.picker} id="avatar-picker" aria-labelledby="avatar-picker-title">
       <div className={styles.header}>
         <div>
-          <span className={styles.kicker}>FateDrop avatar</span>
-          <h3 className={styles.title} id="avatar-picker-title">Choose your signal.</h3>
-          <p className={styles.copy}>Pick a FateDrop preset or upload your own image. Your avatar follows your FateDrop ID across your profile and dashboard.</p>
+          <span className={styles.kicker}>Profile picture</span>
+          <h3 className={styles.title} id="avatar-picker-title">Choose your profile image.</h3>
+          <p className={styles.copy}>Pick a FateDrop profile preset or upload your own image. This is your account picture across FateDrop and is separate from your Koru &amp; Friends companion.</p>
         </div>
         <div className={styles.previewWrap}>
-          <div className={styles.preview} aria-label="Current avatar preview">
+          <div className={styles.preview} aria-label="Current profile picture preview">
             {value ? <span className={styles.previewImage} style={{ backgroundImage: `url("${value}")` }} /> : <strong>{initials}</strong>}
           </div>
           <span className={styles.previewLabel}>Live preview</span>
@@ -120,8 +120,8 @@ export function AvatarPicker({ value, displayName, onChange }: { value: string; 
       </div>
 
       <div className={styles.divider} />
-      <div className={styles.sectionLabel}><strong>Preset avatars</strong><span>Choose one now · change anytime</span></div>
-      <div className={styles.grid} role="list" aria-label="FateDrop preset avatars">
+      <div className={styles.sectionLabel}><strong>Preset profile images</strong><span>Choose one now · change anytime</span></div>
+      <div className={styles.grid} role="list" aria-label="FateDrop preset profile images">
         {PRESETS.map((preset) => {
           const src = presetPath(preset.id);
           const active = value === src;
@@ -136,11 +136,11 @@ export function AvatarPicker({ value, displayName, onChange }: { value: string; 
       </div>
 
       <div className={styles.uploadPanel}>
-        <div className={styles.uploadCopy}><strong>Upload your own</strong><span>JPG, PNG or WEBP · max 5MB · automatically cropped square and compressed.</span></div>
+        <div className={styles.uploadCopy}><strong>Upload your own profile picture</strong><span>JPG, PNG or WEBP · max 5MB · automatically cropped square and compressed.</span></div>
         <div className={styles.actions}>
           <input ref={fileRef} className={styles.fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
           <button className={styles.uploadButton} type="button" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? "Preparing…" : "Choose image"}</button>
-          {value ? <button className={styles.removeButton} type="button" onClick={() => { onChange(""); setMessage("Avatar removed. Save profile to keep the change."); }}>Remove</button> : null}
+          {value ? <button className={styles.removeButton} type="button" onClick={() => { onChange(""); setMessage("Profile picture removed. Save profile to keep the change."); }}>Remove</button> : null}
         </div>
       </div>
       {message ? <p className={styles.status} role="status">{message}</p> : null}
