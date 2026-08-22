@@ -132,8 +132,8 @@ test("market-facing pages use the same simple full-image construction as the app
 test("collector and retailer pages stay visibly grounded in the TCG market", () => {
   const collectors = read("app/collectors/page.tsx");
   const retailers = read("app/businesses/page.tsx");
-  assert.ok(fs.existsSync("public/assets/market/collectors-hero.jpg"));
-  assert.ok(fs.existsSync("public/assets/market/retailers-hero.jpg"));
+  assert.ok(fs.existsSync("public/assets/market/collectors.png"));
+  assert.ok(fs.existsSync("public/assets/market/retailers.png"));
   assert.ok(collectors.includes("Find the cards. Know the price. Catch the signal."));
   assert.ok(collectors.includes("Search the network"));
   assert.ok(collectors.includes("Buy direct from stores"));
