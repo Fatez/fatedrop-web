@@ -95,14 +95,14 @@ function signalEngineBaseUrl() {
   return (process.env.FATEDROP_SIGNAL_ENGINE_URL || DEFAULT_SIGNAL_ENGINE_URL).replace(/\/+$/, "");
 }
 
-async function signalFetch<T>(pathname: string, params?: URLSearchParams): Promise<T | null> {
+async function signalFetch<T>(pathname: string, params?: URLSearchParams, timeoutMs = 8_000): Promise<T | null> {
   const url = new URL(pathname, `${signalEngineBaseUrl()}/`);
   if (params) url.search = params.toString();
   try {
     const response = await fetch(url, {
       cache: "no-store",
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(Math.max(250, timeoutMs)),
     });
     if (!response.ok) return null;
     return await response.json() as T;
@@ -140,6 +140,6 @@ export async function searchSignalTruePrice(query: string) {
   return signalFetch<SignalTruePriceResponse>("/api/true-price", new URLSearchParams({ q: clean }));
 }
 
-export function getSignalEngineStatus() {
-  return signalFetch<SignalEngineStatus>("/api/status");
+export function getSignalEngineStatus(timeoutMs = 8_000) {
+  return signalFetch<SignalEngineStatus>("/api/status", undefined, timeoutMs);
 }
