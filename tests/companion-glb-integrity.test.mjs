@@ -21,21 +21,28 @@ function glbJson(file) {
 }
 
 for (const id of ["aeris", "nyxen", "solix"]) {
-  test(`${id} registered GLB has a resolvable base-colour texture`, () => {
+  test(`${id} registered GLB has UVs and a resolvable FateDrop texture source`, () => {
     const file = `public/assets/companions/${id}/${id}.glb`;
     const document = glbJson(file);
     const primitive = document.meshes?.[0]?.primitives?.[0];
+    assert.notEqual(primitive?.attributes?.TEXCOORD_0, undefined, `${id} must retain texture coordinates`);
+
     const material = primitive?.material == null ? undefined : document.materials?.[primitive.material];
     const textureIndex = material?.pbrMetallicRoughness?.baseColorTexture?.index;
-    assert.notEqual(textureIndex, undefined, `${id} must declare a base-colour texture`);
-    const source = document.textures?.[textureIndex]?.source;
+    const source = textureIndex == null ? undefined : document.textures?.[textureIndex]?.source;
     const image = source == null ? undefined : document.images?.[source];
-    assert.ok(image, `${id} texture image must exist`);
-    assert.ok(image.bufferView != null || typeof image.uri === "string", `${id} texture must be embedded or URI-backed`);
-    if (typeof image.uri === "string" && !image.uri.startsWith("data:")) {
-      const texturePath = path.join(path.dirname(path.join(root, file)), image.uri);
-      assert.equal(fs.existsSync(texturePath), true, `${id} external texture ${image.uri} must exist beside the GLB`);
-    }
-    console.log(`COMPANION_TEXTURE_SOURCE ${id} ${image.bufferView != null ? "embedded" : image.uri}`);
+    const embeddedTexture = Boolean(image && image.bufferView != null);
+    const siblingTexture = path.join(root, `public/assets/companions/${id}/${id}-texture.jpg`);
+    const siblingExists = fs.existsSync(siblingTexture);
+
+    assert.ok(embeddedTexture || siblingExists, `${id} must have either an embedded texture or ${id}-texture.jpg`);
   });
 }
+
+test("web companion renderer supports the registered GLB plus sibling-JPEG package", () => {
+  const renderer = fs.readFileSync(path.join(root, "components/companion-webgl-model.tsx"), "utf8");
+  assert.ok(renderer.includes("companionSiblingTextureUrl"));
+  assert.ok(renderer.includes("optionalSiblingTexture"));
+  assert.ok(renderer.includes("if (!model.imageBlob && siblingTexture) model.imageBlob = siblingTexture"));
+  assert.ok(renderer.includes("-texture.jpg"));
+});
