@@ -1,92 +1,124 @@
 # FateDrop Release Readiness
 
-_Last reviewed: 21 August 2026_
+_Last reviewed: 22 August 2026_
 
-This is the canonical cross-platform release gate for FateDrop. It exists to stop completed work being rediscovered as “pending” and to keep beta work focused on production proof rather than redesign.
+This is the cross-platform release gate for FateDrop. It exists to stop completed work being rediscovered as “pending” and to stop stale architecture being mistaken for current product truth.
 
-A green CI build is necessary but does not by itself prove deployment, device behaviour, billing, Discord or push delivery.
+A green CI build is necessary but does not by itself prove deployment, browser/device behaviour, billing, Discord or push delivery.
 
 ## Current audit snapshot
 
 | Area | Status | Evidence / remaining proof |
 | --- | --- | --- |
-| Signal Engine reliability | **GREEN** | Core specialist retailer scans were production-proven healthy after lock, bulk-write/read and worker-pool fixes. |
-| Final signal vocabulary | **GREEN IN CODE** | Whisper → Echo → Manifested → Vanished is preserved across canonical web alerts/push and the protected mobile beta. Drop Pulse remains supporting context. |
-| Web lifecycle surfaces | **GREEN IN CI** | Lifecycle consistency PR and internal visualiser follow-up merged to web `main`. |
-| Web security baseline | **VALIDATING** | Fresh current-main CSP/HSTS/private-cache/Sec-Fetch hardening PR is in CI/deployed-proof flow; old stale draft is not the merge candidate. |
-| Production database schema | **GREEN** | Wishlist, notification preferences, hosted FateMatch, push/outbox and retailer-registry tables exist in the intended Neon database. |
-| True Price / RRP logic | **GREEN FOUNDATION** | RRP-first comparison and unknown-delivery fail-closed behaviour are implemented. Pokémon Center UK authoritative RRP data exists; broader Asmodee provenance remains unproven. |
-| Protected mobile beta code | **GREEN IN CI** | Companion beta branch has final lifecycle reconciliation, RRP-first True Price and stable native app identifiers. |
-| Native/EAS project link | **BLOCKER** | iOS/Android IDs and EAS build profiles exist, but Expo must issue and persist the real `extra.eas.projectId`. |
-| Production push | **BLOCKER** | Production currently has 0 push endpoints, 0 outbox rows and 0 delivery attempts. Real-device registration/delivery is not yet proven. |
-| Discord | **CONDITIONAL BLOCKER** | Treat as a blocker only if Premium Discord is advertised as live. Production send/entitlement proof must be captured before that claim. |
+| Signal Engine reliability | **GREEN FOUNDATION** | Core retailer monitoring architecture exists; continue measuring source health rather than redesigning stable paths without evidence. |
+| Final signal vocabulary | **GREEN IN WEB CODE** | Whisper → Echo → Manifested → Vanished is the locked public contract. Drop Pulse remains supporting context only. |
+| Web companion architecture | **GREEN RENDERER / ASSET HANDOFF OPEN** | Final roster is Koru, Fenn, Aeris, Nyxen and Solix. Aeris/Nyxen/Solix are registered on the web renderer. Fenn's supplied reaction pack is verified but its web binaries still need the final repo handoff. Koru retains the approved 2D fallback until the correct Koru GLB is recovered and verified. |
+| Web public visual approval | **GREEN DESKTOP / MOBILE QA REMAINS** | Final Collectors, Retailers, Events, Trust and About PNG heroes are committed and the current public desktop direction has been visually approved. Mobile crop/runtime smoke remains a release check. |
+| Web security baseline | **VALIDATING** | Security headers and private/no-store handling exist in source; deployed response/header smoke still required. |
+| Production database schema | **GREEN FOUNDATION** | Account, Wishlist, notification preference, FateMatch and related additive storage exists; operational usage still needs production proof per feature. |
+| True Price / RRP logic | **GREEN FOUNDATION** | RRP-first comparison and unknown-delivery fail-closed behaviour are implemented. Broader authoritative RRP coverage remains a data task. |
+| Mobile code | **OUTSIDE CURRENT WEB PASS** | Mobile reconciliation is intentionally separate from this website release branch. Companion parity must be proven before a mobile release claims the same five-character experience. |
+| Native/EAS project link | **BLOCKER FOR STANDALONE MOBILE** | Standalone iOS/Android proof requires the real EAS project link and signed builds. |
+| Production push | **BLOCKER IF ADVERTISED LIVE** | Real device endpoint registration and end-to-end delivery must be proven before push is advertised as operational. |
+| Discord | **CONDITIONAL BLOCKER** | Treat as a blocker only if Premium Discord is advertised as live. Production send/entitlement proof is required. |
 | Paid Stripe launch | **BLOCKER FOR PAID LAUNCH** | Do not claim live paid subscriptions until live-mode price/webhook/entitlement/cancellation behaviour is proven. |
-| Website production smoke | **BLOCKER** | Must be checked against the deployed release candidate, including effective headers and account flows. |
-| Physical mobile QA | **BLOCKER** | Expo Go boot is not a substitute for standalone EAS build, fresh install, notification and Android/iPhone proof. |
-| Local Radar / Fate Encounters | **SEPARATE WORKSTREAM** | Explicitly excluded from this audit pass; do not alter from this release checklist workstream. |
+| Website production smoke | **BLOCKER** | Must be checked against the deployed release candidate after the final web asset handoff. |
 
 ## 1. Canonical release lines
 
 ### Website
 
-Current `main` is the release source. Lifecycle consistency is reconciled. Do not resurrect old three-stage copy or the retired “Whisper is internal” contract.
+The current release candidate is isolated on:
+
+`agent/web-koru-final-revamp-2026-08-21`
+
+Draft PR #24 remains unmerged. `main` must stay untouched until exact-head CI and final runtime/visual QA are green and explicit merge approval is given.
 
 ### Mobile
 
-The protected beta line is:
+Mobile is not being modified by the current website pass. Before companion parity is claimed there, reconcile and prove these exact active IDs:
 
-`agent/mobile-production-companion-rescue`
+- `koru`
+- `fenn`
+- `aeris`
+- `nyxen`
+- `solix`
 
-It intentionally contains richer Companion/canonical-alert work than mobile `main`. Before an App Store/Play Store release, reconcile this protected beta into the chosen release branch with CI and physical-device proof. Do not blindly replace its canonical alert inbox with the older network-feed implementation from `main`.
-
-Current protected-beta release candidate includes:
-
-- direct `three` + `expo-gl` Companion renderer;
-- KAEL/NYRA Companion path;
-- final four-stage lifecycle semantics;
-- Whisper notification preference and development test notification;
-- RRP-first True Price;
-- stable `fatedrop` scheme/slug;
-- iOS bundle identifier `uk.co.fatedrop`;
-- Android application ID `uk.co.fatedrop`;
-- EAS preview/production build profiles.
+Koru remains the mascot and signal voice regardless of personal companion selection.
 
 ### Cloud
 
-Reliability fixes are merged/deployed. Do not reopen the solved deadlock/starvation/read-amplification work unless production evidence regresses.
+Cloud remains the canonical source for retailer/product/offer observations, lifecycle signals and network snapshots.
 
-Remaining Cloud work should focus on source coverage/health, RRP provenance and end-to-end delivery proof rather than reliability redesign.
+Remaining Cloud work should focus on retailer/source coverage, RRP provenance, health and end-to-end delivery proof rather than reopening solved architecture without evidence.
 
-## 2. Production database readiness — GREEN
-
-The intended Neon production database contains the additive release tables that the old 19 August checklist incorrectly described as missing, including:
-
-- `fatedrop_wishlist_items`
-- `fatedrop_notification_preferences`
-- `fatedrop_hosted_fate_matches`
-- `fatedrop_push_endpoints`
-- `fatedrop_notification_outbox`
-- `fatedrop_notification_delivery_attempts`
-- `fatedrop_retailer_registry`
-- `fatedrop_retailer_discovery_evidence`
-- `fatedrop_retailer_monitor_runs`
-
-Table existence is not the same as operational proof. In particular, the push tables currently contain no registered device or delivery history.
-
-## 3. Final signal contract — LOCKED
+## 2. Final signal contract — LOCKED
 
 Never drift from these public meanings:
 
 1. **Whisper** — product/catalogue/metadata movement; something may be coming.
-2. **Echo** — queue/traffic/security/access readiness changed; get ready.
+2. **Echo** — queue/traffic/security/access readiness changed; get ready; stock is not confirmed.
 3. **Manifested** — confirmed purchasable live stock.
-4. **Vanished** — confirmed availability has gone.
+4. **Vanished** — previously confirmed availability is gone or no longer verified.
 
 **Drop Pulse** is supporting evidence/context, not a fifth lifecycle stage.
 
-A legacy internal `echo` value must not automatically be interpreted as Manifested. Normalise legacy sources by their evidence meaning.
+Exact event cause remains separate from lifecycle state. A queue or restock cause must not replace the lifecycle grouping.
 
-## 4. True Price / RRP — BETA READY, COVERAGE EXPANDING
+## 3. Koru & Friends companion contract — FINAL FIVE
+
+The active companion roster is exactly:
+
+1. **Koru**
+2. **Fenn**
+3. **Aeris**
+4. **Nyxen**
+5. **Solix**
+
+Kael (`K-01`) and Nyra (`N-02`) are archive-only references. Retired Scout, Warden, Droid, radar-drone, signal-orb and mini-beacon concepts are not active companion architecture.
+
+The current web renderer supports the final roster without introducing a heavyweight 3D dependency. Registered GLBs render through `components/companion-webgl-model.tsx`; unavailable models retain an honest fallback instead of blocking account functionality.
+
+A character may use either:
+
+- one approved GLB registered at its stable character path; or
+- an approved reaction-specific GLB pack registered through the same companion contract.
+
+See `docs/companion-model-slots.md` for the exact asset boundary.
+
+### Current web model state
+
+- **Koru** — approved 2D mascot fallback active; correct production GLB still needs recovery/verification before registration.
+- **Fenn** — source reaction pack verified, including exact state animation names; optimized web binaries still need the final repository handoff before registration.
+- **Aeris** — GLB registered.
+- **Nyxen** — GLB registered.
+- **Solix** — GLB registered.
+
+The web companion page now provides a large selected-character preview plus Idle, Whisper, Echo, Manifested, Vanished and FateMatch preview controls. A green build proves the rendering code compiles; browser visual QA still proves that the actual mesh/texture framing is acceptable.
+
+### Model proof required per character
+
+- approved GLB(s) at the stable character path;
+- model registered only in the single companion contract;
+- real file structure/clip names verified rather than inferred from filenames;
+- fallback works when WebGL/model loading fails;
+- acceptable browser/device performance;
+- Whisper/Echo/Manifested/Vanished/FateMatch presentation remains semantically correct;
+- visual QA confirms the correct character, texture, crop and orientation.
+
+The strongest victory treatment belongs to FateMatch/major confirmed moments, not ordinary Whisper or Echo activity.
+
+## 4. Account/profile separation — LOCKED
+
+A collector profile picture is not a FateDrop companion.
+
+The account may retain a normal profile image/preset system. Koru & Friends companion choice is stored separately inside the legacy-compatible companion storage record.
+
+Saving a profile must not overwrite companion choice. Selecting a companion must not overwrite unrelated account/profile fields.
+
+Historical table/file names containing `avatar` are compatibility names, not permission to reintroduce the deleted layered-avatar companion system.
+
+## 5. True Price / RRP — BETA READY, COVERAGE EXPANDING
 
 Release rules:
 
@@ -97,179 +129,133 @@ Release rules:
 - delivered True Price is shown only when mandatory delivery/fees are known;
 - percentage deltas use the authoritative RRP reference.
 
-Production has Pokémon Center UK authoritative RRP coverage. Asmodee UK provenance remains a coverage task, not permission to weaken matching rules merely to create rows.
+Broader RRP provenance is a coverage task, not permission to weaken matching/evidence rules.
 
-## 5. Mobile EAS / standalone build — BLOCKER
+## 6. Website production QA — BLOCKER
 
-Repository identity is now prepared, but the Expo account must create/link the actual project.
+Run against the final release candidate or production-like preview, not merely a source build.
 
-Required proof sequence:
+Public surfaces:
 
-1. link/create FateDrop in EAS from the `mobile` directory;
-2. confirm Expo writes the real `extra.eas.projectId` into app configuration;
-3. run verification again;
-4. produce an internal iOS preview build;
-5. install it on a physical iPhone;
-6. produce an Android preview build and install on a physical Android device;
-7. confirm cold start, sign-in and Companion rendering outside Expo Go.
+- Home desktop/mobile;
+- Collectors;
+- Retailers;
+- Events;
+- Trust;
+- About;
+- Demo;
+- Merch;
+- Membership/subscriptions;
+- Privacy / Terms / Cookies.
 
-Do not invent the project UUID in source control.
+Functional/account surfaces:
 
-## 6. Production push — BLOCKER
+- create account / login / logout;
+- dashboard private caching/noindex response;
+- Koru/Fenn/Aeris/Nyxen/Solix selector and persistence;
+- live GLB rendering for every registered character;
+- honest fallback for any unregistered/failed model;
+- account/profile picture remains separate from companion;
+- Search → canonical product → offers → retailer;
+- True Price with known/unknown RRP and delivery;
+- Wishlist create/remove/sync;
+- FateFind create/list;
+- Alerts, signal lifecycle and exact-cause presentation;
+- notification preferences;
+- membership/error/empty/loading states;
+- external retailer links use HTTPS and the correct destination;
+- CSP does not break imagery, redirects, GLBs, textures or API calls;
+- canonical custom domain/metadata/robots behaviour.
 
-Current production state at this review:
+## 7. Production push — CONDITIONAL BLOCKER
 
-- enabled push endpoints: **0**
-- total push endpoints: **0**
-- notification outbox rows: **0**
-- delivery attempts: **0**
+The code path is not enough. If push is advertised as live, prove on real signed builds:
 
-The code path exists but has not been operationally exercised.
+1. real EAS project ID exists;
+2. physical device grants notification permission;
+3. push token registers to the authenticated FateDrop ID;
+4. one controlled eligible signal queues exactly one push;
+5. provider returns a successful ticket/identifier;
+6. delivery telemetry records the result;
+7. physical device receives it;
+8. tapping opens the intended FateDrop context;
+9. duplicate processing does not duplicate delivery;
+10. revoked/dead tokens disable safely.
 
-Required proof:
-
-1. EAS project ID is present;
-2. signed-in physical device explicitly grants notification permission;
-3. Expo push token registers to the authenticated FateDrop ID;
-4. production `fatedrop_push_endpoints` contains that enabled endpoint;
-5. one controlled eligible signal queues exactly one push;
-6. Expo returns a successful ticket/provider identifier;
-7. delivery-attempt telemetry records the result;
-8. the physical device receives it;
-9. tapping it opens the exact FateDrop alert/product context;
-10. duplicate signal processing does not duplicate delivery;
-11. revoked/dead tokens disable safely.
-
-Repeat core proof on Android before wider beta.
-
-## 7. Discord — CONDITIONAL BLOCKER
+## 8. Discord — CONDITIONAL BLOCKER
 
 Discord is not allowed to become a second membership authority.
 
 Before advertising Premium Discord as live, prove:
 
-- required production bot token/channel configuration is present;
-- one controlled FateDrop message is recorded as sent with provider message ID;
-- message visibly arrives in the intended channel;
-- bot permissions are least-privilege for required channel actions;
-- user/account link and premium entitlement behaviour work as advertised;
-- cancellation/expiry removes premium access where role gating is used;
+- required bot/channel configuration exists;
+- one controlled FateDrop message is recorded as sent and visibly arrives;
+- permissions are least-privilege;
+- account link and Premium entitlement work as advertised;
+- cancellation/expiry removes Premium access where role gating is used;
 - Discord failure cannot break web/push delivery.
 
-## 8. Stripe — BLOCKER FOR PAID LAUNCH ONLY
+## 9. Stripe — BLOCKER FOR PAID LAUNCH
 
 Do not open paid subscriptions solely because checkout code exists.
 
 Required live proof:
 
-- live Plus/Pro price IDs;
-- production Stripe secret/webhook configuration;
-- real low-risk subscription;
-- signature-verified webhook changes membership state;
-- web/mobile effective capabilities reflect backend membership truth;
+- final owner-approved Plus/Pro commercial split;
+- live price IDs and production secret/webhook configuration;
+- controlled real subscription;
+- signature-verified webhook updates membership;
+- effective capabilities reflect backend membership truth;
 - duplicate webhook is idempotent;
 - cancellation, failed payment and expiry return correct entitlement state;
 - checkout clearly states price, billing frequency, trial, renewal and cancellation.
 
-## 9. Web security / legal gate — VALIDATING
+## 10. Mobile physical QA — SEPARATE RELEASE GATE
 
-Current code already uses scrypt password hashing, opaque sessions and HttpOnly/SameSite/Secure production cookies. Sampled auth/account mutation routes use the shared same-origin guard.
-
-Fresh hardening is being validated against current `main`, not the stale early draft:
-
-- CSP;
-- HSTS;
-- explicit private no-store/noindex headers;
-- API no-store baseline;
-- Sec-Fetch-Site cross-site rejection before Origin fallback;
-- automated regression coverage;
-- tracked UK security/legal launch gate.
-
-Still required outside source code:
-
-- Cloudflare auth rate limiting;
-- Turnstile/equivalent abuse challenge if required;
-- deployed header/CSP inspection;
-- secret-history review;
-- backup/restore and incident-response procedure;
-- final privacy/controller/retention/processor information;
-- final UK consumer Terms and subscription-law review.
-
-## 10. Website production QA — BLOCKER
-
-Run against the deployed release candidate, not a local build:
-
-- homepage desktop/mobile visual smoke;
-- four-stage lifecycle wording;
-- interactive sample/demo labelling;
-- create account / login / logout;
-- dashboard private caching/noindex response;
-- Search → canonical product → offers → retailer;
-- True Price with known/unknown RRP and delivery;
-- Wishlist create/remove/sync;
-- FateFind create/list;
-- Alerts and signal packs;
-- notification preference persistence including Whisper;
-- membership/error/empty/loading states;
-- privacy / terms / trust routes;
-- external retailer links use HTTPS and correct destination;
-- CSP does not break Companion, imagery, Stripe redirects or API calls;
-- canonical custom domain/metadata/robots behaviour.
-
-## 11. Mobile physical QA — BLOCKER
-
-Run on standalone/internal EAS builds:
+Run on standalone/internal builds only after mobile companion reconciliation:
 
 - fresh install / cold start;
 - sign in / sign out / expired session;
-- offline cached identity and online recovery;
 - Home / Search / Indies / Alerts / More;
 - True Price and RRP-first comparison;
 - canonical Whisper / Echo / Manifested / Vanished presentation;
-- Companion selection and reactions;
+- exactly five Koru & Friends companion slots;
+- each approved mobile 3D model loads and reacts correctly;
 - notification permission allowed/denied;
 - push register / receive / tap-through;
 - retailer external checkout;
 - background/foreground recovery;
 - iPhone and Android core pass.
 
-## 12. Retailer health — BETA COVERAGE TASK
-
-Healthy specialist coverage has been production-proven for the core Shopify/specialist group after reliability fixes.
-
-Known inaccessible/unhealthy retailers must remain explicit and fail safely. Do not bypass security/access controls. Prefer public/approved feeds, APIs or partnerships for blocked national retailers.
-
-A retailer being inaccessible is a coverage limitation, not permission to fabricate stock state.
-
-## 13. Safe-to-defer product areas
+## 11. Safe-to-defer product areas
 
 These do not block the first solid beta unless marketed as live promises:
 
 - FateScore public scoring policy;
 - FateFair;
 - FateWindow;
-- Basket Breaker / basket optimisation;
+- basket optimisation;
 - Reserve & Collect;
 - Passport;
 - XP/tokens/progression;
 - broad multi-TCG expansion;
 - richer event/vendor expansion.
 
-Local Radar / Fate Encounters are handled in a separate active workstream and are intentionally not modified by this audit.
-
 ## Current release decision
 
-**Not ready for unrestricted public/paid launch yet.**
+**The website branch is materially closer to visual beta readiness, but unrestricted public/paid launch is not approved yet.**
 
-The codebase is substantially closer than the old 19 August checklist suggested. The remaining blockers are now mostly operational proof rather than feature architecture:
+The remaining website-specific gates are primarily proof and final binary handoff rather than another redesign:
 
-1. merge/deploy/verify current web security hardening;
-2. link the mobile app to a real EAS project;
-3. produce standalone iOS/Android beta builds;
-4. register the first production push endpoint and prove end-to-end delivery;
-5. run deployed browser and physical-device smoke tests;
-6. prove Discord only if it will be advertised as live;
-7. prove live Stripe only before taking real paid subscriptions;
-8. complete final security/legal deployment controls and review.
+1. keep the final PR head green after every remaining web edit;
+2. complete the Fenn optimized-binary handoff and register it;
+3. recover and visually verify the correct Koru GLB before replacing its safe 2D fallback;
+4. visually inspect the registered 3D models and companion reaction stage in-browser;
+5. run final desktop/mobile public-route smoke and core logged-in journeys;
+6. run deployed security/header/CSP/canonical-domain smoke;
+7. prove Stripe only before taking real paid subscriptions;
+8. prove Discord/push only if those channels are advertised live;
+9. complete final UK legal/data-controller/retention review before scaled acquisition;
+10. obtain explicit user approval before merging PR #24.
 
 Do not reopen completed product design unless a release test demonstrates a real functional, security or consistency defect.

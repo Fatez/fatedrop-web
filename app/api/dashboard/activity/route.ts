@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { getCurrentSnapshot } from "@/lib/auth";
+import { randomUUID, timingSafeEqual } from "node:crypto";
+import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
 import { recordDashboardActivity, type DashboardActivityEvent, type DashboardActivityType, type SignalLifecycle } from "@/lib/dashboard-storage";
 
 export const runtime = "nodejs";
@@ -10,12 +10,17 @@ const signalStates = new Set<SignalLifecycle>(["whisper", "manifested", "vanishe
 function text(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) || null : null; }
 function serviceAuthorized(request: Request) {
   const secret = process.env.FATEDROP_METRICS_INGEST_SECRET;
-  return Boolean(secret && request.headers.get("authorization") === `Bearer ${secret}`);
+  const authorization = request.headers.get("authorization") || "";
+  if (!secret || !authorization.startsWith("Bearer ")) return false;
+  const provided = Buffer.from(authorization.slice(7));
+  const expected = Buffer.from(secret);
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
 export async function POST(request: Request) {
   try {
     const service = serviceAuthorized(request);
+    if (!service) assertSameOrigin(request);
     const snapshot = service ? null : await getCurrentSnapshot();
     if (!service && !snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
     const payload = await request.json() as Record<string, unknown>;
@@ -48,7 +53,8 @@ export async function POST(request: Request) {
     };
     const inserted = await recordDashboardActivity(event);
     return Response.json({ stored: inserted, id: event.id }, { status: inserted ? 201 : 200 });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
     return Response.json({ error: "Dashboard activity could not be stored." }, { status: 500 });
   }
 }

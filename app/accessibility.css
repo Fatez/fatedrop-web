@@ -1,0 +1,14 @@
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+:where(input, select, textarea):focus-visible {
+  border-color: color-mix(in srgb, var(--cyan) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :focus-visible {
+    scroll-behavior: auto;
+  }
+}

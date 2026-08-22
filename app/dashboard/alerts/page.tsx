@@ -1,122 +1,170 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CanonicalAlertSignalPack } from "@/components/canonical-alert-signal-pack";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { StartMembershipButton } from "@/components/membership-actions";
 import { getCurrentSnapshot } from "@/lib/auth";
-import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
-import { activityLabel, buildDashboardData, moneyFromPence, relativeTime } from "@/lib/dashboard";
-import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
+import { listCanonicalAlerts, type CanonicalAlert, type CanonicalSignalStage } from "@/lib/canonical-alerts";
+import { activityLabel, buildDashboardData, moneyFromPence, relativeTime, signalCauseLabel } from "@/lib/dashboard";
+import type { NetworkSignal, SignalKind } from "@/lib/dashboard-storage";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
-import { serverNowSeconds } from "@/lib/server-time";
+import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
 
 export const metadata: Metadata = {
   title: "Alerts | FateDrop Dashboard",
-  description: "Your FateDrop hunts, notification history and alert access.",
+  description: "FateDrop's precise signal activity ledger: lifecycle, cause, retailer, product, price context and evidence.",
   robots: { index: false, follow: false },
 };
+
+const lifecycle = ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"] as const;
+type FilterStage = typeof lifecycle[number];
+
+const causeOptions: readonly [SignalKind, string][] = [
+  ["catalogue_new", "Catalogue new"],
+  ["catalogue_state_change", "Catalogue change"],
+  ["price_change", "Price change"],
+  ["launch_date_change", "Launch change"],
+  ["queue", "Queue"],
+  ["security", "Security"],
+  ["access_blocked", "Access control"],
+  ["new_listing_live", "New listing live"],
+  ["availability_live", "Availability live"],
+  ["restock", "Restock"],
+  ["sold_out", "Sold out"],
+  ["lifecycle_unspecified", "Cause unclassified"],
+] as const;
 
 function alertTime(alert: CanonicalAlert) {
   const timestamp = Math.floor(new Date(alert.detectedAt).getTime() / 1000);
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function rrpLine(alert: CanonicalAlert) {
-  const item = alert.product.pricePence == null ? null : moneyFromPence(alert.product.pricePence);
-  const delivered = alert.product.deliveredPricePence == null ? null : moneyFromPence(alert.product.deliveredPricePence);
-  const rrp = alert.priceIntelligence.rrpPence == null ? null : moneyFromPence(alert.priceIntelligence.rrpPence);
+function priceContext(alert: CanonicalAlert) {
+  const item = moneyFromPence(alert.product.pricePence);
+  const delivered = moneyFromPence(alert.product.deliveredPricePence);
+  const rrp = moneyFromPence(alert.priceIntelligence.rrpPence);
   const delta = alert.priceIntelligence.rrpDeltaPercent;
-  const pieces = [item ? `${item} item` : null, delivered && alert.product.deliveredPricePence !== alert.product.pricePence ? `${delivered} delivered` : null];
-  if (rrp) pieces.push(delta == null ? `RRP ${rrp}` : `${delta === 0 ? "At RRP" : delta > 0 ? `+${delta.toFixed(1)}% over RRP` : `${Math.abs(delta).toFixed(1)}% below RRP`} · RRP ${rrp}`);
+  const pieces = [item ? `${item} item` : null];
+  if (delivered && alert.product.deliveredPricePence !== alert.product.pricePence) pieces.push(`${delivered} True Price`);
+  if (rrp) pieces.push(delta == null ? `RRP ${rrp}` : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}% vs RRP · ${rrp}`);
   return pieces.filter(Boolean).join(" · ");
 }
 
-function verdictLine(alert: CanonicalAlert) {
-  const intel = alert.priceIntelligence;
-  if (alert.fateStage === "VANISHED") {
-    const alternatives = alert.preparedLinks.alternatives.length;
-    return alternatives
-      ? { tone: "better", text: `VANISHED · ${alternatives} LIVE ALTERNATIVE${alternatives === 1 ? "" : "S"} READY` }
-      : { tone: "unknown", text: "VANISHED · NO LIVE ALTERNATIVE CURRENTLY VERIFIED" };
-  }
-  if (alert.fateStage === "WHISPER") {
-    return intel.lowestKnown
-      ? { tone: "unknown", text: `WHISPER · PRODUCT MOVEMENT · ${intel.lowestKnown.retailer || "ALTERNATIVE"} ALREADY IN NETWORK` }
-      : { tone: "unknown", text: "WHISPER · PRODUCT / CATALOGUE MOVEMENT · STOCK NOT CONFIRMED" };
-  }
-  if (alert.fateStage === "ECHO") {
-    return intel.lowestKnown
-      ? { tone: "unknown", text: `ECHO · GET READY · ${intel.lowestKnown.retailer || "ALTERNATIVE"} ALREADY IN NETWORK` }
-      : { tone: "unknown", text: "ECHO · QUEUE / TRAFFIC / SECURITY READINESS · STOCK NOT CONFIRMED" };
-  }
-  if (intel.verdict === "BETTER_OFFER_FOUND" && intel.lowestKnown?.comparisonPricePence != null) {
-    const lowest = moneyFromPence(intel.lowestKnown.comparisonPricePence);
-    const saving = moneyFromPence(intel.savingsPence);
-    const basis = intel.comparisonBasis === "delivered" ? "delivered" : "item-price";
-    return {
-      tone: "better",
-      text: `BETTER OFFER FOUND · ${lowest} at ${intel.lowestKnown.retailer || "another retailer"}${saving ? ` · save ${saving}` : ""} · ${basis} comparison`,
-    };
-  }
-  if (intel.verdict === "LOWEST_KNOWN") return { tone: "lowest", text: `LOWEST KNOWN · Best comparable ${intel.comparisonBasis === "delivered" ? "delivered price" : "item price"}` };
-  return { tone: "unknown", text: "NO FAIR COMPARISON · Delivery or comparable pricing is incomplete" };
+function verdict(alert: CanonicalAlert) {
+  if (alert.fateStage === "WHISPER") return "Movement only · stock is not confirmed";
+  if (alert.fateStage === "ECHO") return "Get ready · stock is not confirmed";
+  if (alert.fateStage === "VANISHED") return alert.preparedLinks.alternatives.length ? `${alert.preparedLinks.alternatives.length} live alternative${alert.preparedLinks.alternatives.length === 1 ? "" : "s"} known` : "Previously confirmed availability is gone";
+  if (alert.priceIntelligence.verdict === "LOWEST_KNOWN") return "Lowest known comparable offer";
+  if (alert.priceIntelligence.verdict === "BETTER_OFFER_FOUND") return "A better comparable offer exists";
+  return "Live · fair price comparison incomplete";
 }
 
-function primaryActionLabel(alert: CanonicalAlert) {
-  if (alert.fateStage === "MANIFESTED") return "BUY / VIEW PRODUCT ↗";
-  if (alert.fateStage === "WHISPER" || alert.fateStage === "ECHO") return "INSPECT PAGE ↗";
-  if (alert.fateStage === "VANISHED") return "VIEW LAST PAGE ↗";
-  return "VIEW PRODUCT ↗";
+function primaryActionLabel(stage: CanonicalSignalStage) {
+  if (stage === "MANIFESTED") return "BUY / VIEW ↗";
+  if (stage === "VANISHED") return "LAST PAGE ↗";
+  return "INSPECT ↗";
 }
 
-export default async function AlertsPage() {
+function causeFor(alert: CanonicalAlert, exactSignals: Map<string, NetworkSignal>) {
+  const signal = exactSignals.get(alert.id);
+  const label = signal ? signalCauseLabel(signal) : null;
+  const kind = signal?.kind && signal.kind !== signal.state ? signal.kind : "lifecycle_unspecified";
+  return { key: kind as SignalKind, label: label ?? "Cause unclassified" };
+}
+
+function filterHref(input: { stage?: string; cause?: string; q?: string }) {
+  const params = new URLSearchParams();
+  if (input.stage) params.set("stage", input.stage);
+  if (input.cause) params.set("cause", input.cause);
+  if (input.q) params.set("q", input.q);
+  const query = params.toString();
+  return query ? `/dashboard/alerts?${query}` : "/dashboard/alerts";
+}
+
+export default async function AlertsPage({ searchParams }: { searchParams: Promise<{ stage?: string; cause?: string; q?: string }> }) {
   const snapshot = await getCurrentSnapshot();
-  const premium = snapshot ? hasPremiumAccess(snapshot.membership) : false;
-  const plan = snapshot ? membershipLabel(snapshot.membership) : "Free";
-  const data = snapshot ? await buildDashboardData(snapshot) : null;
-  let fateFinds: Awaited<ReturnType<typeof listUserFateMatches>> = [];
-  let canonicalAlerts: CanonicalAlert[] = [];
-  if (snapshot) {
-    try { fateFinds = await listUserFateMatches(snapshot.account.id); } catch { fateFinds = []; }
-    try { canonicalAlerts = await listCanonicalAlerts({ limit: 20 }); } catch { canonicalAlerts = []; }
-  }
-  const activeFateFinds = fateFinds.filter((item)=>item.enabled);
-  const personalHistory = data?.personal.recent ?? [];
-  const trialEligible = Boolean(snapshot && !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt);
-  const hasOpenSubscription = Boolean(snapshot?.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
-  const now = data?.generatedAt ?? serverNowSeconds();
+  if (!snapshot) redirect("/account/login?next=/dashboard/alerts");
+  const params = await searchParams;
+  const premium = hasPremiumAccess(snapshot.membership);
+  const plan = membershipLabel(snapshot.membership);
+  const data = await buildDashboardData(snapshot);
+  const stage = lifecycle.includes((params.stage ?? "").toUpperCase() as FilterStage) ? (params.stage ?? "").toUpperCase() as FilterStage : null;
+  const cause = causeOptions.some(([key]) => key === params.cause) ? params.cause as SignalKind : null;
+  const q = (params.q ?? "").trim().slice(0, 120);
 
-  return <DashboardPageShell title="Alerts" eyebrow="YOUR HUNTS · YOUR NOTIFICATIONS">
-    <div className="fd-personal-alerts">
-      <section className="fd-alert-personal-hero">
-        <div><span>FATEDROP // PERSONAL ALERT CENTRE</span><h1>Network activity is global.<br/><em>Alerts are yours.</em></h1><p>Alerts combines the live FateDrop signal inbox with the things FateDrop is watching or has delivered for you. Every canonical signal can carry its observed price, RRP context and the strongest comparable offer FateDrop currently knows.</p><div className="fd-alert-hero-actions"><Link href="/dashboard/watchlist">Create FateFind →</Link><Link href="/dashboard/notifications">Notification preferences →</Link><Link href="/dashboard">Open Network Activity →</Link></div></div>
-        <div className="fd-alert-personal-metrics"><span><b>{activeFateFinds.length}</b>ACTIVE FATEFINDS</span><span><b>{canonicalAlerts.length}</b>RECENT SIGNALS</span><span><b>{plan}</b>ACCESS</span></div>
+  let alerts: CanonicalAlert[] = [];
+  let fateFinds: Awaited<ReturnType<typeof listUserFateMatches>> = [];
+  try { alerts = await listCanonicalAlerts({ limit: 100 }); } catch { alerts = []; }
+  try { fateFinds = await listUserFateMatches(snapshot.account.id); } catch { fateFinds = []; }
+
+  const exactSignals = new Map((data.network?.recentSignals ?? []).map((signal) => [signal.id, signal]));
+  const stageCounts = Object.fromEntries(lifecycle.map((key) => [key, alerts.filter((alert) => alert.fateStage === key).length])) as Record<FilterStage, number>;
+  const filtered = alerts.filter((alert) => {
+    if (stage && alert.fateStage !== stage) return false;
+    const exactCause = causeFor(alert, exactSignals);
+    if (cause && exactCause.key !== cause) return false;
+    if (q) {
+      const haystack = `${alert.title} ${alert.retailer} ${alert.message}`.toLowerCase();
+      if (!haystack.includes(q.toLowerCase())) return false;
+    }
+    return lifecycle.includes(alert.fateStage as FilterStage);
+  });
+
+  const activeFateFinds = fateFinds.filter((item) => item.enabled);
+  const personalHistory = data.personal.recent;
+  const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
+  const hasOpenSubscription = Boolean(snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
+
+  return <DashboardPageShell title="Alerts" eyebrow="NETWORK FLIGHT RECORDER">
+    <div className="fd-ledger-page">
+      <section className="fd-ledger-hero fd-dash-card">
+        <div className="fd-ledger-intro"><span>PRECISE SIGNAL ACTIVITY</span><h1>Every alarm should tell you exactly what happened.</h1><p><b>Lifecycle</b> tells you where the opportunity is: Whisper, Echo, Manifested or Vanished. <b>Cause</b> tells you why that record exists: catalogue change, queue, security, restock, sold out and so on. They are recorded separately so the dashboard never turns every bit of activity into the same alarm.</p></div>
+        <div className="fd-ledger-stages">{lifecycle.map((key) => <Link className={stage === key ? `active ${key.toLowerCase()}` : key.toLowerCase()} key={key} href={filterHref({ stage: stage === key ? undefined : key, cause: cause ?? undefined, q: q || undefined })}><span>{key}</span><strong>{stageCounts[key]}</strong><small>{key === "WHISPER" ? "something changed" : key === "ECHO" ? "get ready" : key === "MANIFESTED" ? "confirmed live" : "confirmed gone"}</small></Link>)}</div>
       </section>
 
-      {!premium ? <section className="fd-alerts-gate"><div><span>PREMIUM MONITORING</span><h2>Free sees the movement. Premium gets the price intelligence.</h2><p>Canonical signals remain visible, while RRP deltas, cheapest-known comparable offers, prepared retailer links, priority delivery and FateFind automation form the deeper monitoring layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot?.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
+      {!premium ? <section className="fd-ledger-gate"><div><span>PREMIUM DETAIL</span><h2>Free can see movement. Premium gets the buying intelligence.</h2><p>Retailer identity, exact price/RRP context, prepared links, signal threads and active FateFind automation remain the deeper monitoring layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
 
-      <section className="fd-dash-card fd-canonical-alerts"><div className="fd-dash-card-head"><span>CANONICAL SIGNAL INBOX</span><small>{canonicalAlerts.length ? `${canonicalAlerts.length} recent` : "Awaiting signals"}</small></div>{canonicalAlerts.length ? <div className="fd-canonical-list">{canonicalAlerts.map((alert)=>{
-        const verdict = verdictLine(alert);
-        return <article key={alert.id} className={`fd-canonical-signal ${alert.fateStage.toLowerCase()}`}>
-          <div className="fd-canonical-stage"><i/><b>{alert.fateStage}</b><small>{relativeTime(alertTime(alert),now)}</small></div>
-          <div className="fd-canonical-copy"><strong>{alert.title}</strong><span>{premium ? `${alert.retailer} · ${alert.message}` : "Connected retailer · Premium price detail"}</span>{premium && rrpLine(alert) ? <em>{rrpLine(alert)}</em> : null}{premium ? <em className={`verdict ${verdict.tone}`}>{verdict.text}</em> : null}</div>
-          <div className="fd-canonical-action">{premium ? <a href={alert.productUrl} target="_blank" rel="noreferrer">{primaryActionLabel(alert)}</a> : <Link href="/dashboard/membership">UNLOCK →</Link>}</div>
-          {premium ? <CanonicalAlertSignalPack alert={alert} now={now}/> : null}
-        </article>;
-      })}</div> : <div className="fd-dashboard-empty"><strong>No canonical signals available.</strong><span>FateDrop does not fabricate an alert when the network has nothing real to report.</span></div>}</section>
+      <section className="fd-ledger-filter fd-dash-card">
+        <form action="/dashboard/alerts" method="get">
+          <label className="wide"><span>SEARCH ACTIVITY</span><input name="q" defaultValue={q} placeholder="Product, retailer or reason…" /></label>
+          <label><span>LIFECYCLE</span><select name="stage" defaultValue={stage ?? ""}><option value="">All four states</option>{lifecycle.map((key) => <option value={key} key={key}>{key}</option>)}</select></label>
+          <label><span>EXACT CAUSE</span><select name="cause" defaultValue={cause ?? ""}><option value="">All causes</option>{causeOptions.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
+          <button type="submit">FILTER →</button>
+          {(stage || cause || q) ? <Link href="/dashboard/alerts">CLEAR</Link> : null}
+        </form>
+        <p>Cause filters only use a precise cause when FateDrop actually received one. Older or incomplete records stay <b>Cause unclassified</b> rather than being guessed.</p>
+      </section>
 
-      <div className="fd-alert-personal-grid">
-        <section className="fd-dash-card fd-alert-finds"><div className="fd-dash-card-head"><span>ACTIVE FATEFINDS</span><Link href="/dashboard/watchlist">Manage hunts</Link></div>{activeFateFinds.length ? <div className="fd-dashboard-list">{activeFateFinds.slice(0,8).map((hunt)=><article key={hunt.id}><span className="fd-store-thumb">◎</span><div><strong>{hunt.query || "Resolved product"}</strong><small>{hunt.maxTruePricePence !== null ? `Max £${(hunt.maxTruePricePence/100).toFixed(2)} delivered` : "Any True Price"}{hunt.maxPercentAboveRrp !== null ? ` · max +${hunt.maxPercentAboveRrp}% RRP` : ""} · {hunt.scope}</small></div><aside>WATCHING<small>A qualifying result becomes a FateMatch</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>No active FateFinds yet.</strong><span>Create a structured product hunt and FateDrop can evaluate matching network opportunities.</span><Link className="fd-dashboard-wide-button" href="/dashboard/watchlist">Create FateFind →</Link></div>}</section>
+      <section className="fd-ledger-card fd-dash-card">
+        <header><div><span>SIGNAL LEDGER</span><h2>{filtered.length} record{filtered.length === 1 ? "" : "s"} in this view</h2></div><small>{plan} access · newest first</small></header>
+        {filtered.length ? <div className="fd-ledger-list">{filtered.map((alert) => {
+          const exactCause = causeFor(alert, exactSignals);
+          const stageClass = alert.fateStage.toLowerCase();
+          const context = priceContext(alert);
+          return <article className={`fd-ledger-row ${stageClass}`} key={alert.id}>
+            <div className="fd-ledger-state"><i/><b>{alert.fateStage}</b><em>{exactCause.label}</em><small>{relativeTime(alertTime(alert), data.generatedAt)}</small></div>
+            <div className="fd-ledger-product"><small>{premium ? alert.retailer : "Connected retailer"}</small><strong>{premium ? alert.title : "Premium signal detail"}</strong><p>{premium ? alert.message : alert.fateStage === "WHISPER" ? "Product or catalogue movement detected." : alert.fateStage === "ECHO" ? "Access, queue or security readiness changed." : alert.fateStage === "MANIFESTED" ? "Confirmed purchasable availability is live." : "Previously confirmed availability is gone."}</p>{premium && context ? <em>{context}</em> : null}<em className="verdict">{verdict(alert)}</em></div>
+            <div className="fd-ledger-actions">{premium ? <a className="primary" href={alert.productUrl} target="_blank" rel="noreferrer">{primaryActionLabel(alert.fateStage)}</a> : <Link className="primary" href="/dashboard/membership">UNLOCK →</Link>}<Link href={`/dashboard/true-price?q=${encodeURIComponent(alert.preparedLinks.compareQuery)}`}>TRUE PRICE</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(alert.preparedLinks.fateFindQuery)}`}>FATEFIND</Link></div>
+            {premium ? <CanonicalAlertSignalPack alert={alert} now={data.generatedAt}/> : null}
+          </article>;
+        })}</div> : <div className="fd-dashboard-empty"><strong>No signals match this view.</strong><span>Clear a filter or wait for new evidence. FateDrop does not create filler activity.</span></div>}
+      </section>
 
-        <section className="fd-dash-card fd-alert-delivery"><div className="fd-dash-card-head"><span>DELIVERY CHANNELS</span><Link href="/dashboard/notifications">Edit preferences</Link></div><div className="fd-delivery-list"><div><b>WEB</b><span>Canonical signal inbox plus account notification history.</span><i className="live">AVAILABLE</i></div><div><b>DISCORD</b><span>Shared account preference; delivery activates only when Discord is linked, enabled and entitled.</span><i className="pending">CONFIGURATION-DEPENDENT</i></div><div><b>APP PUSH</b><span>Device registration and exact-alert routing are connected; remote delivery remains feature-gated until controlled production testing.</span><i className="pending">VALIDATING</i></div></div><p>Whisper, Echo, Manifested, Vanished, price and FateMatch preferences share one account-level persistence model. FateDrop never treats an unconfigured channel as delivered.</p></section>
+      <div className="fd-ledger-support-grid">
+        <section className="fd-dash-card fd-ledger-hunts"><header><div><span>YOUR FATEFINDS</span><h2>{activeFateFinds.length} active hunt{activeFateFinds.length === 1 ? "" : "s"}</h2></div><Link href="/dashboard/watchlist">Manage →</Link></header><p>A FateFind is what you asked FateDrop to hunt. A FateMatch is a real observed offer that satisfies those rules.</p>{activeFateFinds.length ? <div>{activeFateFinds.slice(0,4).map((hunt) => <span key={hunt.id}><b>{hunt.query || "Resolved product"}</b><small>{hunt.maxTruePricePence !== null ? `Max £${(hunt.maxTruePricePence / 100).toFixed(2)} True Price` : "No True Price cap"}</small></span>)}</div> : <Link className="fd-ledger-wide-link" href="/dashboard/watchlist">Create your first FateFind →</Link>}</section>
+        <section className="fd-dash-card fd-ledger-delivery"><header><div><span>WHERE ALERTS REACH YOU</span><h2>One preference record.</h2></div><Link href="/dashboard/notifications">Edit →</Link></header><p>Website, app and Discord consume the same lifecycle preferences only when that channel is actually configured and entitled. An unavailable channel is never reported as delivered.</p><div><span><b>WEB</b><small>Available</small></span><span><b>APP PUSH</b><small>Controlled validation</small></span><span><b>DISCORD</b><small>Configuration dependent</small></span></div></section>
       </div>
 
-      <section className="fd-dash-card fd-alert-history"><div className="fd-dash-card-head"><span>YOUR NOTIFICATION / HUNT HISTORY</span><small>{personalHistory.length ? `${personalHistory.length} recent` : "No personal events yet"}</small></div>{personalHistory.length && data ? <div className="fd-dashboard-list">{personalHistory.map((event)=><article key={event.id}><span className="fd-store-thumb">◇</span><div><strong>{event.title || activityLabel(event)}</strong><small>{event.subtitle || event.retailer || activityLabel(event)}</small></div><aside>{event.amountPence ? moneyFromPence(event.amountPence) : activityLabel(event).toUpperCase()}<small>{relativeTime(event.occurredAt,data.generatedAt)}</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>Nothing has been sent to you yet.</strong><span>Network activity can still be happening above; this list only grows from real personal/account events.</span></div>}</section>
-
-      <section className="fd-dash-card fd-alert-model"><div><span>PUBLIC SIGNAL LANGUAGE</span><h2>Whisper sees movement. Echo says get ready. Manifested means live.</h2></div><p>Whisper is product or catalogue movement before confirmed live stock. Echo is reserved for queue, traffic, security or access-readiness changes. Manifested is confirmed purchasable availability. Vanished means previously confirmed availability is gone.</p></section>
+      <section className="fd-dash-card fd-ledger-personal"><header><div><span>YOUR PERSONAL HISTORY</span><h2>What FateDrop has recorded for your account.</h2></div><small>{personalHistory.length} recent</small></header>{personalHistory.length ? <div className="fd-dashboard-list">{personalHistory.map((event) => <article key={event.id}><span className="fd-store-thumb">◇</span><div><strong>{event.title || activityLabel(event)}</strong><small>{event.subtitle || event.retailer || activityLabel(event)}</small></div><aside>{event.amountPence ? moneyFromPence(event.amountPence) : activityLabel(event).toUpperCase()}<small>{relativeTime(event.occurredAt, data.generatedAt)}</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>No personal events yet.</strong><span>The network ledger above can still be active; this section only records events tied to your account.</span></div>}</section>
     </div>
+
     <style>{`
-      .fd-personal-alerts{display:grid;gap:20px}.fd-alert-personal-hero{position:relative;overflow:hidden;min-height:330px;padding:34px;border:1px solid rgba(157,109,255,.18);border-radius:24px;background:linear-gradient(90deg,rgba(6,7,13,.95),rgba(6,7,13,.66)),url('/assets/cardwave-bg.webp') center right/cover no-repeat}.fd-alert-personal-hero>div:first-child{max-width:720px}.fd-alert-personal-hero span{color:#73e9fb;font-size:9px;font-weight:900;letter-spacing:.18em}.fd-alert-personal-hero h1{margin:13px 0;font-size:clamp(2.5rem,4.5vw,4.7rem);line-height:.91;letter-spacing:-.055em}.fd-alert-personal-hero h1 em{font-style:normal;background:linear-gradient(90deg,#fff,#a5efff,#bd94ff);-webkit-background-clip:text;color:transparent}.fd-alert-personal-hero p{max-width:680px;color:#9c95a4;font-size:14px;line-height:1.65}.fd-alert-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.fd-alert-hero-actions a{padding:10px 13px;border:1px solid rgba(88,232,255,.18);border-radius:10px;color:#c9f7ff;font-size:8px;font-weight:900;text-decoration:none}.fd-alert-personal-metrics{position:absolute;left:34px;bottom:26px;display:flex;gap:28px}.fd-alert-personal-metrics span{color:#6d6774;font-size:7px}.fd-alert-personal-metrics b{display:block;color:#fff;font-size:17px;letter-spacing:0}.fd-alerts-gate{border:1px solid rgba(155,92,255,.3);background:linear-gradient(100deg,rgba(79,30,141,.17),rgba(10,9,15,.95));border-radius:18px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:24px}.fd-alerts-gate span{font-size:9px;letter-spacing:.16em;color:#ad77ff;font-weight:800}.fd-alerts-gate h2{font-size:19px;margin:6px 0}.fd-alerts-gate p{color:#918a99;margin:0;font-size:12px;max-width:780px}.fd-canonical-alerts{padding:24px}.fd-canonical-list{display:grid;gap:9px;margin-top:16px}.fd-canonical-signal{display:grid;grid-template-columns:120px 1fr auto;gap:18px;align-items:center;padding:15px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.018)}.fd-canonical-stage{display:grid;gap:4px}.fd-canonical-stage i{width:7px;height:7px;border-radius:50%;background:#8d6cff;box-shadow:0 0 14px #8d6cff}.fd-canonical-signal.whisper .fd-canonical-stage i{background:#70def0;box-shadow:0 0 14px #70def0}.fd-canonical-signal.manifested .fd-canonical-stage i{background:#54e5ab;box-shadow:0 0 14px #54e5ab}.fd-canonical-signal.vanished .fd-canonical-stage i{background:#ff6b79;box-shadow:0 0 14px #ff6b79}.fd-canonical-stage b{font-size:8px;letter-spacing:.1em;color:#c2afff}.fd-canonical-signal.whisper .fd-canonical-stage b{color:#86eefa}.fd-canonical-signal.manifested .fd-canonical-stage b{color:#68e8b7}.fd-canonical-stage small{color:#665f6c;font-size:7px}.fd-canonical-copy{display:grid;gap:4px;min-width:0}.fd-canonical-copy strong{color:#f5f3f8;font-size:12px}.fd-canonical-copy span{color:#827b89;font-size:9px}.fd-canonical-copy em{font-style:normal;color:#70def0;font-size:8px;font-weight:800}.fd-canonical-copy .verdict{font-weight:900;letter-spacing:.03em}.fd-canonical-copy .verdict.better{color:#ffbd62}.fd-canonical-copy .verdict.lowest{color:#62e9b1}.fd-canonical-copy .verdict.unknown{color:#706a77}.fd-canonical-action a{display:block;padding:9px 11px;border:1px solid rgba(116,225,244,.15);border-radius:9px;color:#9beeff;font-size:7px;font-weight:900;text-decoration:none;white-space:nowrap}.fd-alert-personal-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}.fd-alert-finds,.fd-alert-delivery,.fd-alert-history{padding:24px}.fd-delivery-list{display:grid;gap:8px;margin-top:16px}.fd-delivery-list>div{display:grid;grid-template-columns:75px 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.065);border-radius:11px;background:rgba(255,255,255,.02)}.fd-delivery-list b{font-size:9px}.fd-delivery-list span{color:#85808c;font-size:9px}.fd-delivery-list i{font-size:6px;font-style:normal;font-weight:900;letter-spacing:.08em}.fd-alert-delivery>p{color:#77717e;font-size:9px;line-height:1.55}.fd-alert-model{padding:24px 28px;display:grid;grid-template-columns:.8fr 1.2fr;gap:28px;align-items:center}.fd-alert-model span{color:#73e9fb;font-size:8px;font-weight:900;letter-spacing:.14em}.fd-alert-model h2{margin:7px 0 0;font-size:22px}.fd-alert-model p{margin:0;color:#908a97;font-size:11px;line-height:1.65}@media(max-width:900px){.fd-alert-personal-grid,.fd-alert-model{grid-template-columns:1fr}.fd-canonical-signal{grid-template-columns:90px 1fr}.fd-canonical-action{grid-column:2}.fd-alert-personal-metrics{gap:14px;flex-wrap:wrap}.fd-delivery-list>div{grid-template-columns:1fr}}@media(max-width:650px){.fd-alert-personal-hero{padding:25px;min-height:430px}.fd-alert-personal-metrics{left:25px}.fd-alerts-gate{display:block}.fd-canonical-alerts,.fd-alert-finds,.fd-alert-delivery,.fd-alert-history{padding:20px}.fd-canonical-signal{grid-template-columns:1fr}.fd-canonical-action{grid-column:1}}
+      .fd-ledger-page{display:grid;gap:12px;max-width:1600px;margin:0 auto}.fd-ledger-page .fd-dash-card{border-color:rgba(221,203,188,.085);background:linear-gradient(145deg,#0e1216,#090d11 74%);border-radius:12px}.fd-ledger-hero{padding:26px;background:radial-gradient(circle at 88% 6%,rgba(123,74,155,.13),transparent 30%),linear-gradient(145deg,#101318,#090c10 70%)!important}.fd-ledger-intro>span,.fd-ledger-card header span,.fd-ledger-hunts header span,.fd-ledger-delivery header span,.fd-ledger-personal header span{color:#aa886d;font-size:7px;font-weight:900;letter-spacing:.16em}.fd-ledger-intro h1{max-width:930px;margin:9px 0 13px;color:#eee4da;font-family:Georgia,'Times New Roman',serif;font-size:clamp(2.5rem,4vw,4.7rem);font-weight:500;line-height:.94;letter-spacing:-.05em}.fd-ledger-intro p{max-width:950px;margin:0;color:#918885;font-size:11px;line-height:1.72}.fd-ledger-intro p b{color:#d9cbc0}.fd-ledger-stages{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:22px}.fd-ledger-stages a{padding:12px;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:rgba(255,255,255,.016);text-decoration:none}.fd-ledger-stages a.active{background:rgba(121,78,149,.08);border-color:rgba(171,126,195,.22)}.fd-ledger-stages span{display:block;font-size:7px;font-weight:900;letter-spacing:.1em}.fd-ledger-stages strong{display:block;margin:5px 0;color:#e4dad2;font-family:Georgia,serif;font-size:25px;font-weight:500}.fd-ledger-stages small{color:#6f6868;font-size:6px}.fd-ledger-stages .whisper span{color:#a970d6}.fd-ledger-stages .echo span{color:#9574c7}.fd-ledger-stages .manifested span{color:#86a777}.fd-ledger-stages .vanished span{color:#b95a61}.fd-ledger-gate{padding:18px 20px;display:flex;justify-content:space-between;gap:24px;align-items:center;border:1px solid rgba(171,126,195,.17);border-radius:11px;background:linear-gradient(100deg,rgba(99,61,122,.08),#0b0e12)}.fd-ledger-gate span{color:#a785b1;font-size:7px;font-weight:900;letter-spacing:.14em}.fd-ledger-gate h2{margin:5px 0;color:#d9cfc7;font-size:16px}.fd-ledger-gate p{max-width:900px;margin:0;color:#7f7777;font-size:9px;line-height:1.55}
+      .fd-ledger-filter{padding:16px}.fd-ledger-filter form{display:grid;grid-template-columns:minmax(240px,1.4fr) 180px 190px auto auto;gap:8px;align-items:end}.fd-ledger-filter label{display:grid;gap:5px}.fd-ledger-filter label>span{color:#716a6b;font-size:6px;font-weight:900;letter-spacing:.11em}.fd-ledger-filter input,.fd-ledger-filter select{height:40px;padding:0 10px;border:1px solid rgba(221,203,188,.08);border-radius:8px;background:#0b0f13;color:#d8cec7}.fd-ledger-filter button,.fd-ledger-filter form>a{height:40px;padding:0 13px;display:grid;place-items:center;border:1px solid rgba(171,126,195,.18);border-radius:8px;background:rgba(117,74,143,.07);color:#c5a4d1;font-size:7px;font-weight:900;text-decoration:none}.fd-ledger-filter>p{margin:10px 1px 0;color:#6f6868;font-size:7px}.fd-ledger-filter>p b{color:#a89992}
+      .fd-ledger-card,.fd-ledger-personal,.fd-ledger-hunts,.fd-ledger-delivery{padding:20px}.fd-ledger-card>header,.fd-ledger-personal>header,.fd-ledger-hunts>header,.fd-ledger-delivery>header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.fd-ledger-card h2,.fd-ledger-personal h2,.fd-ledger-hunts h2,.fd-ledger-delivery h2{margin:5px 0 0;color:#ded4cc;font-family:Georgia,serif;font-size:21px;font-weight:500}.fd-ledger-card header small,.fd-ledger-personal header>small{color:#716a6b;font-size:7px}.fd-ledger-list{display:grid;gap:7px;margin-top:16px}.fd-ledger-row{display:grid;grid-template-columns:145px minmax(0,1fr) 124px;gap:14px;align-items:start;padding:14px;border:1px solid rgba(221,203,188,.065);border-radius:9px;background:#0b0f13}.fd-ledger-state{display:grid;gap:4px}.fd-ledger-state i{width:7px;height:7px;border-radius:50%;background:#956ac0;box-shadow:0 0 12px rgba(149,106,192,.48)}.fd-ledger-row.whisper .fd-ledger-state i{background:#9e69ce}.fd-ledger-row.manifested .fd-ledger-state i{background:#7fa170}.fd-ledger-row.vanished .fd-ledger-state i{background:#b6535a}.fd-ledger-state b{font-size:7px;letter-spacing:.1em}.fd-ledger-state em{font-style:normal;color:#aa886d;font-size:6px;font-weight:850;letter-spacing:.07em;text-transform:uppercase}.fd-ledger-state small{color:#625c5e;font-size:6px}.fd-ledger-product{display:grid;gap:4px;min-width:0}.fd-ledger-product>small{color:#756e6e;font-size:6px}.fd-ledger-product>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d7cdc5;font-size:10px}.fd-ledger-product p{margin:0;color:#7e7675;font-size:8px;line-height:1.45}.fd-ledger-product em{font-style:normal;color:#9b918c;font-size:7px}.fd-ledger-product em.verdict{color:#a78770}.fd-ledger-actions{display:grid;gap:6px}.fd-ledger-actions a{min-height:30px;padding:0 8px;display:grid;place-items:center;border:1px solid rgba(221,203,188,.07);border-radius:7px;color:#9d8ca5;font-size:6px;font-weight:900;text-decoration:none}.fd-ledger-actions a.primary{border-color:rgba(171,126,195,.19);color:#c5a2d2;background:rgba(112,70,140,.06)}.fd-ledger-row :global(.canonical-signal-pack){grid-column:1/-1}.fd-ledger-support-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fd-ledger-hunts header a,.fd-ledger-delivery header a{color:#b48ac3;font-size:7px;font-weight:900;text-decoration:none}.fd-ledger-hunts>p,.fd-ledger-delivery>p{color:#817978;font-size:9px;line-height:1.6}.fd-ledger-hunts>div{display:grid;gap:6px}.fd-ledger-hunts>div span{padding:9px;border:1px solid rgba(221,203,188,.055);border-radius:7px;display:flex;justify-content:space-between;gap:10px}.fd-ledger-hunts b{font-size:8px}.fd-ledger-hunts small{color:#706969;font-size:7px}.fd-ledger-wide-link{color:#b58ac6;font-size:8px;font-weight:900;text-decoration:none}.fd-ledger-delivery>div{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.fd-ledger-delivery>div span{padding:10px;border:1px solid rgba(221,203,188,.055);border-radius:7px}.fd-ledger-delivery b,.fd-ledger-delivery small{display:block}.fd-ledger-delivery b{font-size:7px}.fd-ledger-delivery small{margin-top:3px;color:#6e6768;font-size:6px}.fd-ledger-personal .fd-dashboard-list{margin-top:14px}
+      @media(max-width:1050px){.fd-ledger-filter form{grid-template-columns:1fr 1fr}.fd-ledger-filter .wide{grid-column:1/-1}.fd-ledger-row{grid-template-columns:120px minmax(0,1fr)}.fd-ledger-actions{grid-column:1/-1;grid-template-columns:repeat(3,1fr)}.fd-ledger-support-grid{grid-template-columns:1fr}}
+      @media(max-width:700px){.fd-ledger-stages{grid-template-columns:1fr 1fr}.fd-ledger-gate{align-items:flex-start;flex-direction:column}.fd-ledger-filter form{grid-template-columns:1fr}.fd-ledger-filter .wide{grid-column:auto}.fd-ledger-row{grid-template-columns:1fr}.fd-ledger-actions{grid-column:auto}.fd-ledger-delivery>div{grid-template-columns:1fr}.fd-ledger-hero,.fd-ledger-card,.fd-ledger-personal,.fd-ledger-hunts,.fd-ledger-delivery{padding:17px}}
     `}</style>
   </DashboardPageShell>;
 }

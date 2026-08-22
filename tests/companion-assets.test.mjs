@@ -13,12 +13,11 @@ function walk(dir) {
   });
 }
 
-test("Koru is the canonical web mascot and approved artwork is present", () => {
+test("Koru remains the FateDrop mascot and approved artwork is present", () => {
   const brand = read("lib/koru-brand.ts");
   assert.ok(brand.includes('name: "Koru"'));
-  assert.ok(brand.includes('code: "K-09"'));
   assert.ok(brand.includes('role: "FateDrop Signal Companion"'));
-  assert.ok(brand.includes("modelUrl: null"));
+  assert.equal(brand.includes("modelUrl"), false, "3D registration must live in the companion contract only");
   for (const file of [
     "public/assets/companions/koru-portrait.webp",
     "public/assets/companions/koru-signal-companion.webp",
@@ -27,11 +26,88 @@ test("Koru is the canonical web mascot and approved artwork is present", () => {
   ]) assert.equal(fs.existsSync(path.join(root, file)), true, `${file} missing`);
 });
 
-test("retired Scout and Droid GLBs are absent from the active web tree", () => {
-  assert.equal(fs.existsSync(path.join(root, "public/assets/companions/fatedrop-male.glb")), false);
-  assert.equal(fs.existsSync(path.join(root, "public/assets/companions/fatedrop-droid.glb")), false);
-  assert.equal(fs.existsSync(path.join(root, "lib/companion-assets.ts")), false);
-  assert.equal(fs.existsSync(path.join(root, "components/companion-3d-stage.tsx")), false);
+test("active companion roster is exactly the five Koru and Friends characters", () => {
+  const contract = read("lib/companion-contract.ts");
+  assert.ok(contract.includes('ACTIVE_COMPANION_IDS = ["koru", "fenn", "aeris", "nyxen", "solix"]'));
+  for (const name of ["Koru", "Fenn", "Aeris", "Nyxen", "Solix"]) assert.ok(contract.includes(`name: "${name}"`));
+  assert.ok(contract.includes("slot: 1"));
+  assert.ok(contract.includes("slot: 5"));
+  assert.equal(contract.includes("droidModelUrl"), false);
+  assert.equal(contract.includes("characterModelUrl"), false);
+  assert.equal(contract.includes("AvatarLoadout"), false);
+  assert.ok(contract.includes("COMPANION_SCHEMA_VERSION = 2"));
+});
+
+test("Kael and Nyra are archive-only and never active companion IDs", () => {
+  const contract = read("lib/companion-contract.ts");
+  assert.ok(contract.includes('id: "kael", name: "Kael", code: "K-01"'));
+  assert.ok(contract.includes('id: "nyra", name: "Nyra", code: "N-02"'));
+  const activeLine = contract.split("\n").find((line) => line.includes("ACTIVE_COMPANION_IDS")) || "";
+  assert.equal(activeLine.includes("kael"), false);
+  assert.equal(activeLine.includes("nyra"), false);
+});
+
+test("retired companion and illustrated-avatar renderer experiments are absent", () => {
+  for (const file of [
+    "public/assets/companions/fatedrop-male.glb",
+    "public/assets/companions/fatedrop-droid.glb",
+    "lib/companion-assets.ts",
+    "components/companion-3d-stage.tsx",
+    "components/avatar-builder.tsx",
+    "components/avatar-preview.tsx",
+    "components/avatar-option-thumbnail.tsx",
+    "components/avatar-anime-character.tsx",
+    "components/avatar-layered-character.tsx",
+    "lib/avatar-assets.ts",
+    "public/assets/avatar-v2/avatar-sprites.svg",
+    "public/assets/avatar-v2/catalogue.json",
+  ]) assert.equal(fs.existsSync(path.join(root, file)), false, `${file} should remain retired`);
+});
+
+test("final-roster registered GLBs render through the current WebGL boundary", () => {
+  const contract = read("lib/companion-contract.ts");
+  const renderer = read("components/companion-renderer.tsx");
+  const webgl = read("components/companion-webgl-model.tsx");
+  assert.ok(renderer.includes("CompanionWebglModel"));
+  assert.ok(renderer.includes("companionModelUrl"));
+  assert.ok(renderer.includes('mode === "webgl-3d" && modelUrl'));
+  assert.equal(renderer.includes("renderer validation pending"), false);
+  assert.ok(webgl.includes("Companion asset is not GLB v2"));
+  assert.ok(webgl.includes("baseColorTexture"));
+  assert.ok(webgl.includes("WebGL is unavailable on this device"));
+  for (const id of ["aeris", "nyxen", "solix"]) {
+    assert.ok(contract.includes(`/assets/companions/${id}/${id}.glb`));
+    assert.equal(fs.existsSync(path.join(root, `public/assets/companions/${id}/${id}.glb`)), true, `${id} GLB missing`);
+  }
+  for (const retired of ["Signal Scout", "Signal Warden", "Signal Droid", "floating signal familiar"]) {
+    assert.equal(webgl.includes(retired), false, `${retired} must not return through the new renderer`);
+  }
+});
+
+test("verified source clip metadata replaces generic guessed animation names", () => {
+  const contract = read("lib/companion-contract.ts");
+  const handoff = read("docs/companion-model-slots.md");
+  assert.ok(contract.includes("VERIFIED_STATE_CLIPS"));
+  assert.equal(contract.includes("CANONICAL_CLIPS"), false);
+  for (const clip of [
+    'idle: "Armature|Idle|baselayer"',
+    'watching: "Armature|Listening_Gesture|baselayer"',
+    'echo: "Armature|Alert|baselayer"',
+    'manifested: "Armature|mage_soell_cast_1|baselayer"',
+    'vanished: "Armature|Sneaky_Walk|baselayer"',
+    'fatematch: "Armature|Victory_Cheer|baselayer"',
+  ]) assert.ok(contract.includes(clip), `${clip} missing from verified source metadata`);
+  for (const name of ["Aeris", "Nyxen", "Solix", "Fenn"]) assert.ok(handoff.includes(name));
+  assert.ok(handoff.includes("does **not** yet play the skinned animation channels above"));
+  assert.ok(contract.includes("does not claim skeletal clip playback"));
+});
+
+test("reaction-specific packs are supported without changing the five-slot roster", () => {
+  const contract = read("lib/companion-contract.ts");
+  assert.ok(contract.includes("reactionModelUrls?: Partial<Record<CompanionReaction, string>>"));
+  assert.ok(contract.includes("export function companionModelUrl"));
+  const fennLine = contract.split("\n").find((line) => line.includes('id: "fenn"')) || "";
+  assert.ok(fennLine.includes("modelUrl: null"), "Fenn must stay unregistered until its binaries are actually in the web repo");
 });
 
 test("no standalone HTML companion experiments remain in the website repository", () => {
@@ -39,7 +115,7 @@ test("no standalone HTML companion experiments remain in the website repository"
   assert.deepEqual(html, []);
 });
 
-test("Koru reaction contract preserves all four public lifecycle meanings", () => {
+test("companion reaction contract preserves all four public lifecycle meanings", () => {
   const contract = read("lib/companion-contract.ts");
   assert.ok(contract.includes('kind === "whisper" || kind === "drop_pulse"'));
   assert.ok(contract.includes('return "watching"'));
@@ -50,11 +126,43 @@ test("Koru reaction contract preserves all four public lifecycle meanings", () =
   assert.equal(contract.includes('kind === "manifested" || kind === "echo"'), false);
 });
 
-test("profile avatar stays separate from the fixed Koru mascot", () => {
-  const builder = read("components/avatar-builder.tsx");
-  assert.ok(builder.includes("Collector avatar"));
-  assert.ok(builder.includes("Koru is not selectable"));
-  assert.ok(builder.includes("AvatarPreview"));
-  assert.equal(builder.includes("CompanionModelCanvas"), false);
-  assert.equal(builder.includes('tcgStyle: "TCG Style"'), false);
+test("legacy companion cosmetics cannot return through active persistence", () => {
+  const loadout = read("lib/avatar-loadout.ts");
+  for (const retired of [
+    "radar-drone",
+    "signal-orb",
+    "mini-beacon",
+    "AVATAR_BASES",
+    "AVATAR_HAIR",
+    "AVATAR_OUTFITS",
+    "AVATAR_GEAR",
+    "AVATAR_AURAS",
+    "AVATAR_BACKGROUNDS",
+    "tcgStyle",
+  ]) assert.equal(loadout.includes(retired), false, `${retired} should not exist in active companion persistence`);
+  assert.ok(loadout.includes('companion: "koru"'));
+  assert.ok(loadout.includes("normalizeCompanionId(raw.companion)"));
+});
+
+test("profile picture language stays separate from Koru and Friends companions", () => {
+  const picker = read("components/avatar-picker.tsx");
+  assert.ok(picker.includes("Profile picture"));
+  assert.ok(picker.includes("separate from your Koru &amp; Friends companion"));
+  assert.ok(picker.includes("Preset profile images"));
+  assert.equal(picker.includes("Choose your signal."), false);
+  assert.equal(picker.includes("FateDrop avatar</span>"), false);
+});
+
+test("dashboard selector exposes five active slots and profile renders the real companion", () => {
+  const selector = read("components/companion-selector.tsx");
+  const page = read("app/dashboard/avatar/page.tsx");
+  const profile = read("app/dashboard/profile/page.tsx");
+  assert.ok(selector.includes("ACTIVE_COMPANION_ROSTER.map"));
+  assert.ok(selector.includes("5 ACTIVE SLOTS"));
+  assert.ok(selector.includes("Registered character packs render as live 3D previews"));
+  assert.ok(page.includes("Koru, Fenn, Aeris, Nyxen or Solix"));
+  assert.ok(page.includes("LEGACY_COMPANION_ARCHIVE"));
+  assert.equal(page.includes("AvatarBuilder"), false);
+  assert.ok(profile.includes("CompanionRenderer"));
+  assert.equal(profile.includes("AvatarPreview"), false);
 });

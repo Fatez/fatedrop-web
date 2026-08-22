@@ -73,17 +73,17 @@ export function InteractivePhoneDemo() {
         <DashboardShowcase />
       </div>
 
-      <section className={styles.companionStrip} aria-label="FateDrop Companion preview">
-        <div className={styles.companionOrb}><span>FD</span><i /></div>
-        <div><small>COMPANION · 3D ASSET SLOT READY</small><h3>Your signal has a face.</h3><p>The production 3D Companion will react to Echo, Manifested, Vanished and FateMatch across mobile and dashboard. This slot uses the renderer contract now and will accept the final GLB character + signal droid without rebuilding the account system.</p></div>
-        <div className={styles.reactions}><span>ECHO <b>scanner wakes</b></span><span>MANIFESTED <b>strong confirm</b></span><span>FATEMATCH <b>hunt complete</b></span></div>
+      <section className={styles.companionStrip} aria-label="Koru and Friends companion preview">
+        <div className={styles.companionOrb}><span>K</span><i /></div>
+        <div><small>KORU &amp; FRIENDS · FIVE COMPANION SLOTS</small><h3>Choose who carries the signal with you.</h3><p>Koru, Fenn, Aeris, Nyxen and Solix share one companion contract. Each has a dedicated 3D model slot, while Koru remains FateDrop&apos;s mascot and network voice whichever companion you choose.</p></div>
+        <div className={styles.reactions}><span>WHISPER <b>movement noticed</b></span><span>ECHO <b>get ready</b></span><span>MANIFESTED <b>stock live</b></span><span>VANISHED <b>availability gone</b></span></div>
       </section>
     </div>
   );
 }
 
 function HomeScreen({ onSearch, onAlerts, onMore }: { onSearch: () => void; onAlerts: () => void; onMore: (view: MoreView) => void }) {
-  return <div className={styles.screen}><small>NETWORK ACTIVITY · SAMPLE</small><h3>Know what moved.</h3><div className={styles.signalCard}><b>MANIFESTED</b><strong>Journey Together ETB</strong><span>Confirmed example availability · 2m ago</span></div><div className={`${styles.signalCard} ${styles.echo}`}><b>ECHO</b><strong>Prismatic Evolutions Bundle</strong><span>Meaningful early catalogue movement · not confirmed stock</span></div><div className={styles.quickGrid}><button onClick={onSearch}>Search market</button><button onClick={onAlerts}>My alerts</button><button onClick={() => onMore("radar")}>Local Radar</button><button onClick={() => onMore("events")}>Events</button></div></div>;
+  return <div className={styles.screen}><small>NETWORK ACTIVITY · SAMPLE</small><h3>Know what moved.</h3><div className={styles.signalCard}><b>MANIFESTED</b><strong>Journey Together ETB</strong><span>Confirmed example availability · 2m ago</span></div><div className={`${styles.signalCard} ${styles.echo}`}><b>WHISPER</b><strong>Prismatic Evolutions Bundle</strong><span>Catalogue or product movement detected · stock not confirmed</span></div><div className={styles.quickGrid}><button onClick={onSearch}>Search market</button><button onClick={onAlerts}>My alerts</button><button onClick={() => onMore("radar")}>Local Radar</button><button onClick={() => onMore("events")}>Events</button></div></div>;
 }
 
 function SearchScreen({ truePrice, setTruePrice, saved, setSaved, openFateFind }: { truePrice: boolean; setTruePrice: (v: boolean) => void; saved: boolean; setSaved: (v: boolean) => void; openFateFind: () => void }) {
@@ -95,7 +95,7 @@ function IndiesScreen() {
 }
 
 function AlertsScreen({ huntActive, setHuntActive, matchSeen, setMatchSeen }: { huntActive: boolean; setHuntActive: (v: boolean) => void; matchSeen: boolean; setMatchSeen: (v: boolean) => void }) {
-  return <div className={styles.screen}><small>ALERTS · YOUR ACTIVITY</small><h3>FateFind + notification history.</h3><article className={styles.huntCard}><b>FATEFIND</b><strong>Journey Together ETB</strong><span>Max £55 delivered · UK · sealed</span><button onClick={() => setHuntActive(true)}>{huntActive ? "Watching in Cloud ✓" : "Activate sample hunt"}</button></article>{huntActive && <article className={styles.matchCard}><b>FATEMATCH</b><strong>Northstar Cards · £53.48 delivered</strong><span>Conditions satisfied · sample event</span><button onClick={() => setMatchSeen(true)}>{matchSeen ? "Viewed ✓" : "Open match"}</button></article>}<p className={styles.note}>Global Echo / Manifested / Vanished activity belongs on Home. Alerts is personal delivery and history.</p></div>;
+  return <div className={styles.screen}><small>ALERTS · YOUR ACTIVITY</small><h3>FateFind + notification history.</h3><article className={styles.huntCard}><b>FATEFIND</b><strong>Journey Together ETB</strong><span>Max £55 delivered · UK · sealed</span><button onClick={() => setHuntActive(true)}>{huntActive ? "Watching in Cloud ✓" : "Activate sample hunt"}</button></article>{huntActive && <article className={styles.matchCard}><b>FATEMATCH</b><strong>Northstar Cards · £53.48 delivered</strong><span>Conditions satisfied · sample event</span><button onClick={() => setMatchSeen(true)}>{matchSeen ? "Viewed ✓" : "Open match"}</button></article>}<p className={styles.note}>Global Whisper / Echo / Manifested / Vanished activity belongs on Home. Alerts is personal delivery and history.</p></div>;
 }
 
 function MoreScreen({ view, setView, saved }: { view: MoreView; setView: (v: MoreView) => void; saved: boolean }) {
@@ -103,5 +103,5 @@ function MoreScreen({ view, setView, saved }: { view: MoreView; setView: (v: Mor
 }
 
 function DashboardShowcase() {
-  return <aside className={styles.dashboard}><div className={styles.dashboardTop}><div><small>FATEDROP / COMMAND CENTRE</small><strong>Good afternoon, Collector.</strong></div><span>PREVIEW</span></div><div className={styles.dashboardStats}><article><small>ACTIVE FATEFINDS</small><b>04</b></article><article><small>FATEMATCHES TODAY</small><b>02</b></article><article><small>WISHLIST</small><b>17</b></article></div><div className={styles.dashboardColumns}><section><small>NETWORK ACTIVITY</small><article><b>MANIFESTED</b><span>Journey Together ETB</span><em>2m</em></article><article><b>ECHO</b><span>Catalogue movement detected</span><em>6m</em></article><article><b>VANISHED</b><span>Example stock no longer observed</span><em>19m</em></article></section><section><small>YOUR HUNTS</small><article><b>FATEFIND</b><span>Destined Rivals ETB · ≤ £65 delivered</span></article><article><b>FATEMATCH</b><span>Matched · £61.49 delivered</span></article></section></div><div className={styles.dashboardFooter}><span>One FateDrop ID</span><span>One entitlement</span><span>Web · App · Discord</span></div><Link href="/dashboard">Open dashboard preview →</Link></aside>;
+  return <aside className={styles.dashboard}><div className={styles.dashboardTop}><div><small>FATEDROP / COMMAND CENTRE</small><strong>Good afternoon, Collector.</strong></div><span>PREVIEW</span></div><div className={styles.dashboardStats}><article><small>ACTIVE FATEFINDS</small><b>04</b></article><article><small>FATEMATCHES TODAY</small><b>02</b></article><article><small>WISHLIST</small><b>17</b></article></div><div className={styles.dashboardColumns}><section><small>NETWORK ACTIVITY</small><article><b>MANIFESTED</b><span>Journey Together ETB</span><em>2m</em></article><article><b>ECHO</b><span>Queue/access readiness changed</span><em>6m</em></article><article><b>VANISHED</b><span>Example stock no longer observed</span><em>19m</em></article></section><section><small>YOUR HUNTS</small><article><b>FATEFIND</b><span>Destined Rivals ETB · ≤ £65 delivered</span></article><article><b>FATEMATCH</b><span>Matched · £61.49 delivered</span></article></section></div><div className={styles.dashboardFooter}><span>One FateDrop ID</span><span>One entitlement</span><span>Web · App · Discord</span></div><Link href="/dashboard">Open dashboard preview →</Link></aside>;
 }

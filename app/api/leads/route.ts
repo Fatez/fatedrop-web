@@ -1,3 +1,5 @@
+import { assertSameOrigin } from "@/lib/auth";
+import { safeExternalHttpsUrl } from "@/lib/external-url";
 import {
   DuplicateLeadError,
   LeadStorageUnavailableError,
@@ -38,12 +40,7 @@ function validEmail(value: string) {
 }
 
 function validUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
+  return Boolean(safeExternalHttpsUrl(value));
 }
 
 function validate(payload: LeadPayload, role: Role) {
@@ -58,7 +55,7 @@ function validate(payload: LeadPayload, role: Role) {
   if (!payload.contactConsent) errors.contactConsent = "Consent is required so FateDrop can reply to this enquiry.";
 
   if (role === "business") {
-    if (!validUrl(clean(payload.website, 500))) errors.website = "Enter a complete website address, including https://";
+    if (!validUrl(clean(payload.website, 500))) errors.website = "Enter a secure website address beginning with https://";
     if (!platformOptions.has(clean(payload.ecommercePlatform, 60))) errors.ecommercePlatform = "Choose a listed ecommerce platform.";
     if (!catalogueOptions.has(clean(payload.catalogueMethod, 60))) errors.catalogueMethod = "Choose a listed catalogue method.";
     if (!businessTypes.has(clean(payload.businessType, 60))) errors.businessType = "Choose a listed business type.";
@@ -66,8 +63,8 @@ function validate(payload: LeadPayload, role: Role) {
   }
 
   if (role === "event") {
-    if (!validUrl(clean(payload.website, 500))) errors.website = "Enter a complete website or social address, including https://";
-    if (!validUrl(clean(payload.ticketLink, 500))) errors.ticketLink = "Enter a complete ticket address, including https://";
+    if (!validUrl(clean(payload.website, 500))) errors.website = "Enter a secure website or social address beginning with https://";
+    if (!validUrl(clean(payload.ticketLink, 500))) errors.ticketLink = "Enter a secure ticket address beginning with https://";
     if (!/^\d{4}-\d{2}-\d{2}$/.test(clean(payload.eventDate, 10))) errors.eventDate = "Choose a valid event date.";
     if (typeof payload.eventVendorMode !== "boolean") errors.eventVendorMode = "Choose whether Event Vendor Mode interests you.";
   }
@@ -77,13 +74,9 @@ function validate(payload: LeadPayload, role: Role) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const contentLength = Number(request.headers.get("content-length") ?? "0");
     if (contentLength > 24_000) return Response.json({ error: "This submission is larger than expected." }, { status: 413 });
-
-    const requestOrigin = request.headers.get("origin");
-    if (requestOrigin && requestOrigin !== new URL(request.url).origin) {
-      return Response.json({ error: "This submission must come from the FateDrop website." }, { status: 403 });
-    }
 
     const payload = (await request.json()) as LeadPayload;
     const role = clean(payload.role, 20) as Role;
@@ -127,6 +120,7 @@ export async function POST(request: Request) {
 
     return Response.json({ stored: true, message: "Your details have been securely stored for the FateDrop founding beta." }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
     if (error instanceof DuplicateLeadError) return Response.json({ error: error.message }, { status: 409 });
     if (error instanceof LeadStorageUnavailableError) {
       return Response.json({ error: "Lead storage is temporarily unavailable. Nothing has been saved." }, { status: 503 });

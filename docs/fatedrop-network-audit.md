@@ -1,231 +1,300 @@
 # FateDrop Network Consistency Audit
 
-_Date: 19 August 2026_
+_Date: 22 August 2026_
 
-Branch: `fatedrop-network-consistency-audit`
+Branch: `agent/web-koru-final-revamp-2026-08-21`
 
-Scope: `Fatez/fatedrop-web` with read-only comparison against `Fatez/Fatedrop-Cloud`. The mobile app repository remains deliberately out of scope because it is being repaired and will be reconciled against `docs/fatedrop-product-truth.md` afterwards.
+Scope: FateDrop Web public site, authenticated dashboard, account surfaces, public product language and the website-side boundary to FateDrop Cloud, mobile and Discord.
+
+The canonical product authority remains `docs/fatedrop-product-truth.md`. This audit records the final website direction and the inconsistencies that have now been resolved around it.
 
 ## Executive summary
 
-The website has now moved from a collection of rapidly-added features toward one coherent FateDrop product model.
+FateDrop Web is being consolidated around one product story instead of a collection of separately named experiments.
 
-The canonical authority is now **FateDrop Product Spec v1** in `docs/fatedrop-product-truth.md`.
+The durable public proposition is:
 
-The highest-value changes in this branch are not cosmetic. They remove stale/fakeable proof, move Search and True Price toward canonical Cloud data, reconnect Search → Compare → FateFind, preserve FateMatch as the successful result, simplify public signal language, make Alerts personal rather than a duplicate global feed, separate Cloud retailer runtime state from storefront experiments, and create a stable renderer boundary for the real 3D Companion.
+**FateDrop is a TCG signal-intelligence and discovery layer that helps collectors understand what changed, what a product really costs, and which participating retailer can actually serve the demand — while sending the collector back to the retailer to complete the purchase.**
 
-## Resolved findings
+The final website brand layer is Koru & Friends: mature, dusk-toned, character-led and memorable without replacing the serious product underneath it.
 
-### RESOLVED — hard-coded network proof
+The launch focus remains Pokémon TCG in the UK. Wider TCG expansion is a future direction, not a homepage promise.
 
-Old fixed catalogue/in-stock/retailer/monitor figures are no longer used as live proof.
+## FINAL — public signal lifecycle
 
-Public network proof reads the latest persisted Cloud snapshot. If there is no measured snapshot, FateDrop says the measurement is unavailable instead of falling back to retired values.
+The public network language is permanently:
 
-### RESOLVED — FateFind / FateMatch naming collision
+**Whisper → Echo → Manifested → Vanished**
 
-The final product meaning is now:
+These are evidence states, not marketing urgency labels. A product does not have to pass through every stage.
+
+### Whisper — product / catalogue movement
+
+Whisper is a real public state.
+
+Use it when FateDrop observes meaningful product, catalogue or metadata movement that may be worth watching. Something may be coming, but purchasable stock is not confirmed.
+
+Examples include new catalogue objects, product appearances and meaningful metadata changes.
+
+**Whisper is not Echo and must never be collapsed into Echo.**
+
+### Echo — access readiness
+
+Echo means queue, traffic, security or access behaviour changed in a way that tells the collector to get ready.
+
+Stock is still not confirmed merely because an Echo exists.
+
+### Manifested — confirmed availability
+
+Manifested means purchasable availability has been confirmed from the observed evidence.
+
+### Vanished — confirmed availability lost
+
+Vanished means previously confirmed availability has gone, sold out or is no longer verified.
+
+Drop Pulse may summarise activity, but it is contextual evidence and not a fifth lifecycle state.
+
+## RESOLVED — FateFind / FateMatch naming collision
+
+The final product meaning is:
 
 - **FateFind = the hunt the collector creates.**
 - **FateMatch = the successful observed result that satisfies a FateFind.**
 - **Universal Wishlist = a separate simple product save.**
 
-Existing `fate_match` storage/API/types are retained for compatibility. The public FateFind API now returns both new and legacy response keys so old clients are not broken merely for branding.
+Existing internal compatibility keys may remain where removing them would break clients, but public copy must preserve this distinction.
 
-### RESOLVED — Search disconnected from the canonical network
+## FINAL — True Price
 
-Dashboard Search now uses the Signal Engine `/api/catalogue` endpoint and supports product-first grouping, availability/category/price filters, pagination, RRP context, known-delivery True Price context and direct hand-off to True Price or FateFind.
+True Price is a major FateDrop USP and should appear as context across Search, comparisons, FateFind/FateMatch and alerts where evidence supports it.
 
-No sample results are substituted when Cloud has no result.
+The hierarchy is:
 
-### RESOLVED — True Price depended on the storefront lab
+1. observed item price;
+2. authoritative/official RRP where known;
+3. £ / % difference from RRP where valid;
+4. known mandatory delivery/fees;
+5. delivered True Price where delivery is known.
 
-The main dashboard True Price comparison now uses Signal Engine `/api/true-price` groups rather than treating the two direct Shopify storefront feeds as the network.
+Unknown delivery remains unknown. Unknown RRP remains unknown. Neither is guessed.
 
-Unknown delivery remains structurally unknown and cannot masquerade as a delivered total.
+## FINAL — collector ↔ independent retailer bridge
 
-The current Cloud `/api/true-price` group response does not yet expose all RRP fields available in `/api/catalogue`; adding full RRP provenance to the Cloud True Price response is a future Cloud enhancement rather than a reason to fabricate it on the website.
+FateDrop is not being positioned as a marketplace.
 
-### RESOLVED — public signal terminology was too complex
+The intended journey is:
 
-The public model is now deliberately simpler:
+**collector intent → FateDrop intelligence/discovery → independent retailer → retailer checkout**
 
-- **Echo** = meaningful early/precursor intelligence; not confirmed stock.
-- **Manifested** = confirmed meaningful availability/restock event.
-- **Vanished** = previously confirmed availability is lost.
-- **Whisper** = internal engine terminology only.
+The retailer keeps:
 
-Internal queue/security/drop-pulse/whisper observations can map to public Echo. The Signal Engine's legacy `echo` lifecycle event currently means confirmed restock and therefore maps publicly to Manifested/restock confirmed.
+- its identity and brand;
+- its own product page;
+- pricing and checkout;
+- payments;
+- fulfilment and returns;
+- the customer relationship.
 
-The underlying storage schema is not destructively renamed.
+FateDrop helps the collector find and understand the offer. It does not pretend to be the stockist.
 
-### RESOLVED — Alerts duplicated global network activity
+## FINAL — public website information architecture
 
-Dashboard Alerts now focuses on the collector:
+### Home
 
-- active FateFinds;
-- personal notification/hunt history;
-- delivery-channel readiness;
-- Premium monitoring access.
+The homepage is intentionally short and product-led:
 
-Global network activity belongs on Home. Cross-platform per-signal preference persistence is not invented; the page explicitly leaves that for a shared account model that can serve web/app/Discord.
+1. approved Koru dusk hero;
+2. core FateDrop value: Signals, True Price, FateFind → FateMatch and independent discovery;
+3. Koru & Friends / merch bridge after the product explanation;
+4. collector ↔ FateDrop ↔ indie retailer bridge;
+5. Events/Fate Encounters entry point;
+6. membership/final join CTA.
 
-### RESOLVED — Companion architecture was tied to the illustrated avatar
+The interactive phone is deliberately kept off Home and lives on the dedicated `/demo` page. Roadmap, speculative future features and long-form product explanations do not belong on Home.
 
-Existing account loadout persistence remains intact.
+### Collectors
 
-`lib/companion-contract.ts` and `components/companion-renderer.tsx` now create an explicit renderer/asset boundary for:
+Explains the collector job: detect, compare, create FateFind hunts, receive FateMatch results, discover independents and use supporting Wishlist/Local Radar/Events tools.
 
-- current 2D fallback;
-- future GLB/WebGL character;
-- floating droid model;
-- reaction animation clips;
-- Echo / Manifested / Vanished / FateMatch / major activity reactions.
+### Retailers
 
-The final 3D assets are still not claimed as shipped.
+Explains relevant discovery, catalogue connection and direct hand-off to retailer checkout. Commercial placement must never purchase better verification or stronger evidence.
 
-### RESOLVED — retailer network and storefront lab were conflated
+### Events
 
-Static retailer metadata is now separated from Cloud runtime state.
+The existing Events/Fate Encounters structure remains intentionally intact. It focuses on source-backed events, locations, organisers/vendors and evidence-safe event inventory.
 
-`lib/retailer-network.ts` overlays Signal Engine `/api/status` retailer health onto known retailer metadata. The dashboard retailer page clearly distinguishes:
+### Trust
 
-- canonical Cloud-monitored retailers;
-- experimental direct storefront feeds;
-- future/static registry candidates.
+Explains the final four-stage lifecycle, True Price evidence rules and the principle that trust cannot be bought. FateScore remains planned rather than presented as a finished score.
 
-A healthy Cloud monitor is data-collection evidence, not a paid partnership or automatic FateDrop Verified badge.
+### About / Vision
 
-### RESOLVED — Events had no canonical migration path
+Holds the wider multi-TCG direction and planned concepts so future thinking remains visible without burying the current product.
 
-The existing sourced dashboard Events directory remains static/Beta because the Cloud publisher does not yet supply real event records.
+### Demo
 
-A new `/api/events` endpoint now reads persisted Cloud `upcomingEvents`, providing the migration target for automated Fate Encounters ingestion once Cloud starts publishing those records.
+Holds the controlled interactive phone/product demonstration. Sample content remains visibly labelled and cannot masquerade as live network activity.
 
-### RESOLVED — Plus/Pro marketing exceeded the entitlement implementation
+### Merch
 
-Public copy now acknowledges that the current code has one shared Premium capability envelope. The final Plus-vs-Pro commercial split remains an owner decision rather than an invented entitlement difference.
+Supports FateDrop and Koru & Friends culture without becoming a second product or weakening the signal-intelligence proposition.
 
-### RESOLVED — FateWindow / FateScore / FateFair prominence
+### Free Drops
 
-- FateWindow: **HOLD / experimental**.
-- FateScore: **PLANNED** until explainable evidence inputs exist.
-- FateFair: **PLANNED**.
+Retired from public discovery. The old route redirects home and is absent from navigation and sitemap.
 
-None should compete with Search, True Price, RRP, FateFind, Alerts or Indies for launch prominence.
+## FINAL — Koru & Friends companion system
 
-### RESOLVED — baseline production hardening gaps
+The old generic Companion/loadout/Droid architecture has been removed from the active companion experience.
 
-The branch now includes:
+The active roster is exactly:
 
-- constant-time Cloud→website ingest-secret comparison;
-- same-origin enforcement and bounded numeric validation on FateFind writes;
-- production security headers;
-- a route-level recovery error boundary;
-- private-surface crawler exclusions;
-- canonical site URL handling;
-- privacy copy for Companion and Local Radar;
-- a conservative launch checklist.
+1. **Koru** — FateDrop mascot and network voice;
+2. **Fenn**;
+3. **Aeris**;
+4. **Nyxen**;
+5. **Solix**.
 
-A strict Content Security Policy has not been blindly added because the existing site uses substantial inline styles and applying a CSP without a nonce/hash migration could break production rendering.
+Each has one stable character slot behind the shared renderer contract. A character may use one approved GLB or a verified reaction-specific GLB pack without creating another companion identity.
 
-## Actual Cloud capability verified in source
+Koru remains FateDrop's mascot and signal voice regardless of which personal companion a collector selects.
 
-The inspected Signal Engine supports:
+Current Web model state is explicit:
 
-- Pokémon Center UK, Smyths UK and Chaos Cards retailer configuration when enabled;
-- product / offer / observation persistence;
-- official-RRP provenance fields;
-- internal Whisper / Manifested / Vanished / Echo lifecycle derivation;
-- baseline signal suppression;
-- Discord signal dispatch foundations;
-- network snapshot persistence;
-- public `/api/catalogue` search with filters/pagination;
-- public `/api/true-price` grouped offer comparison;
-- public `/api/status` including retailer runtime health;
-- website snapshot publishing with measured metrics/signals/RRP references/opportunities;
-- queue/security/drop-pulse website signal schema;
-- upcoming-event schema, although the current publisher does not yet populate real upcoming events.
+- Koru — approved 2D fallback active while the correct production GLB is recovered/verified;
+- Fenn — source reaction pack verified and optimized for Web; final binary repository handoff/registration remains;
+- Aeris — GLB registered;
+- Nyxen — GLB registered;
+- Solix — GLB registered.
 
-Configured retailers are not automatically healthy monitors. Healthy monitors are not automatically verified/partner retailers.
+Registered Web assets render their real mesh/texture through the lightweight WebGL boundary. Reduced-motion preference keeps the real model visible but stops continuous presentation motion. Skeletal animation playback is not claimed merely because source GLBs contain clips; it must be implemented and visually verified before public copy describes those animations as active.
 
-## Transitional architecture that remains intentionally visible
+All five use the same underlying reaction contract:
 
-### Direct Shopify storefront lab
+- Whisper — notice / anticipation;
+- Echo — readiness / get ready;
+- Manifested — confirmed-stock reaction;
+- Vanished — lost-signal reaction;
+- FateMatch — personal successful-hunt reaction.
 
-Cob & Pip and Wishlist Collectables remain direct website catalogue experiments. They are useful for developing the Indie storefront UX, but they are not the canonical network source.
+Character personality may affect presentation or verified animation. It must never change the evidence, confidence or meaning of the underlying signal.
 
-The target architecture is:
+### Legacy archive
 
-**Cloud owns product/offer/stock/RRP/True Price network truth. Retailer storefronts present participating retailer identity/catalogue data.**
+Kael (`K-01`) and Nyra (`N-02`) remain legacy/archive FateDrop character references only. They do not occupy active Koru & Friends slots and are not selectable in the final five-character system.
 
-Do not add dozens more one-off website catalogue integrations if the same feed can be onboarded into the canonical retailer/offer model.
+Retired Droid, Scout, radar-drone, signal-orb and mini-beacon companion concepts are not active product architecture.
 
-### Dashboard Home
+Model handoff is documented in `docs/companion-model-slots.md`.
 
-The data helper now maps the simplified public signal model, but some static Home copy may still contain older lifecycle wording. This is a remaining presentation cleanup item, not a data-model blocker.
+## RESOLVED — profile and companion were conflated
 
-### Universal Wishlist
+Collector profile presentation and Koru & Friends companion choice are now separate concepts.
 
-Product Spec v1 deliberately separates Wishlist from FateFind. The website does not yet have the final persistent cross-retailer Universal Wishlist implementation. Existing historical `wishlist_hit` activity is not equivalent to a full Wishlist product model.
+The profile editor may change account presentation. It must preserve the stored companion choice.
 
-This should be built deliberately alongside the app reconciliation rather than disguised as complete in this branch.
+The companion selector changes only the selected Koru & Friends character and must not overwrite unrelated profile/account data.
 
-### Shared notification preferences
+## RESOLVED — interactive phone taught the wrong lifecycle
 
-The final account-level Echo / Manifested / price / push / web / Discord preference model is not yet persisted cross-platform. Alerts states this honestly.
+The public phone demonstration previously used Echo for catalogue movement. It now uses:
 
-## Cloudflare / deployment readiness
+- Whisper for catalogue/product movement;
+- Echo for queue/access readiness;
+- Manifested for confirmed availability;
+- Vanished for lost confirmed availability.
 
-The repository uses Next.js + OpenNext Cloudflare. Validation gates include:
+The phone also now introduces the same five Koru & Friends slots as the authenticated dashboard rather than a generic signal droid.
 
-1. `npm run verify`
-   - ESLint
-   - TypeScript
-   - automated tests
-   - Next production build
-2. `npx opennextjs-cloudflare build`
+## RESOLVED — Search and True Price use canonical network paths
 
-The live target remains `https://fatedrop-web.fatedrop-web.workers.dev`.
+Dashboard Search consumes the canonical Signal Engine catalogue path rather than creating a second search truth.
 
-No production deploy is performed by this audit branch.
+Main dashboard True Price comparison consumes the canonical network comparison path. Experimental direct storefront integrations are not treated as the entire network.
 
-## Remaining owner/product decisions
+## RESOLVED — Alerts is personal
 
-These should not be silently guessed in code:
+Global network activity belongs primarily on Home.
 
-- final Plus vs Pro prices/capability split;
-- final FateScore evidence model/publication policy;
-- whether/when FateWindow returns from HOLD;
-- final Universal Wishlist cross-platform persistence/notification behaviour;
-- final retailer paid plans;
-- Companion cosmetic/progression economy;
-- Event Vendor Mode commercial rules;
-- exact multi-TCG rollout order;
-- final UK privacy/consumer/legal text;
-- production merge/deployment approval.
+Alerts focuses on the collector's own FateFinds, FateMatches, notification history and delivery preferences. The four lifecycle states remain distinct in notification settings.
 
-## Remaining engineering work after this website pass
+## RESOLVED — mutable network proof is not hard-coded
 
-The next shared web/app phase should cover:
+Old fixed retailer/product/in-stock figures are not used as live public proof.
 
-- persistent Universal Wishlist;
-- shared cross-platform alert preferences;
-- app reconciliation against Product Spec v1;
-- richer Cloud True Price/RRP response where needed;
-- production event ingestion;
-- bringing experimental Indie storefront feeds into canonical Cloud onboarding;
-- final 3D Companion assets/renderer integration;
-- production browser smoke test on the final deployed Worker/custom domain.
+When current measured network state is unavailable, FateDrop reports unavailable state rather than substituting a retired static snapshot.
 
-## Non-goals / safety invariants
+## Retailer / backend systems that should remain behind the consumer story
+
+Keep these systems, but do not clutter public navigation with them:
+
+- retailer outbound attribution;
+- retailer analytics;
+- retailer plan/entitlement foundations;
+- Shopify/WooCommerce/CSV/feed onboarding;
+- monitor health;
+- catalogue health;
+- feature flags;
+- RRP provenance;
+- canonical product identity resolution;
+- offer matching;
+- event ingestion;
+- privacy-safe aggregate demand insight.
+
+## HOLD / PLANNED — do not promote as current launch pillars
+
+- FateScore;
+- FateFair;
+- FateWindow;
+- Reserve & Collect;
+- basket optimisation / Basket Breaker;
+- consumer Demand Signal UI;
+- Bounties / Priority One concepts;
+- Passport/progression/token systems;
+- expanded Event Vendor Mode;
+- wider multi-TCG rollout.
+
+These concepts can remain documented and architecturally possible without competing with the product that exists now.
+
+## Safety and evidence invariants
+
+- Incomplete catalogue walks never replace the last verified complete state.
+- Retailer access controls are not bypassed.
+- Whisper product/catalogue movement is not Echo access readiness.
+- Echo queue/security/traffic evidence is not a promise that stock is imminent.
+- Manifested requires confirmed availability evidence.
+- Vanished applies to previously confirmed availability that is no longer observed/verified.
+- A retailer listing is not guaranteed checkout success.
+- A click is not a sale.
+- A Places result is not verified stock.
+- Unknown delivery is not free delivery.
+- Unknown RRP is not guessed RRP.
+- Drop Pulse is context, not a fifth lifecycle state.
+- Demo data is visibly demo data.
+- Commercial placement cannot buy stronger trust or stock evidence.
+- No mutable product statistic or reliability claim is presented without a current evidence source.
+
+## Remaining engineering work
+
+The intentional remaining work after this website pass is narrow:
+
+- complete the final Fenn binary handoff/registration and recover/verify the correct Koru GLB;
+- visually QA the rebuilt public pages and dashboard on desktop/mobile;
+- visually QA registered 3D companions for identity, texture, framing, fallback and reduced-motion behavior;
+- implement skeletal animation playback only if/when it is deliberately promoted from the current state-presentation boundary;
+- reconcile the mobile app companion implementation to the same five-slot contract before mobile parity is claimed;
+- continue Cloud retailer/event/RRP coverage improvements;
+- perform final production-like browser smoke testing before any production merge/deploy.
+
+## Non-goals / release protection
 
 This branch does not:
 
-- edit the mobile app repository;
+- merge or deploy itself;
 - delete user/business data;
-- deploy production;
 - expose secrets;
-- invent retailer partnerships or verification;
-- invent stock, RRP, delivery or network metrics;
-- bypass retailer access controls.
+- invent partnerships, stock, RRP, delivery or network metrics;
+- change retailer checkout ownership;
+- turn Koru & Friends into a replacement for FateDrop's core product;
+- add a sixth active companion without an explicit future product decision.

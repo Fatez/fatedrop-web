@@ -28,6 +28,15 @@ test("production headers include CSP, HSTS and private route controls", () => {
   assert.ok(config.includes('source: "/api/:path*"'));
 });
 
+test("production CSP permits the approved live companion asset path without broadening script execution", () => {
+  assert.ok(config.includes("default-src 'self'"));
+  assert.ok(config.includes("img-src 'self' data: blob: https:"), "blob-backed fallback texture decoding must remain allowed");
+  assert.ok(config.includes("connect-src 'self' https:"), "same-origin GLB and approved HTTPS fetches must remain allowed");
+  assert.ok(config.includes("worker-src 'self' blob:"));
+  assert.ok(config.includes("script-src 'self' 'unsafe-inline'"));
+  assert.equal(config.includes("'unsafe-eval'"), false);
+});
+
 test("same-origin guard rejects explicit cross-site browser mutations", () => {
   assert.ok(auth.includes('request.headers.get("sec-fetch-site")'));
   assert.ok(auth.includes('fetchSite === "cross-site"'));

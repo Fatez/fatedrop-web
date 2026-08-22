@@ -1,15 +1,15 @@
 export const siteConfig = {
   name: "FateDrop",
-  title: "FateDrop — UK TCG Discovery Network",
+  title: "FateDrop — UK TCG Signal Intelligence & Indie Discovery",
   description:
-    "Search participating TCG catalogues, independent retailers and clearly labelled event discovery across the UK.",
-  tagline: "Find the drop. Support independents. Collect smarter.",
+    "Follow evidence-backed stock signals, understand True Price, create FateFind hunts, receive FateMatch results and discover independent TCG retailers and events across the UK.",
+  tagline: "Follow the signal. Find the retailer. Collect smarter.",
   nav: [
     { label: "Collectors", href: "/collectors" },
     { label: "Retailers", href: "/businesses" },
     { label: "Events", href: "/events" },
-    { label: "Free Drops", href: "/free-drops" },
     { label: "Trust", href: "/trust" },
+    { label: "About", href: "/about" },
     { label: "Merch", href: "/merch" },
   ],
   marketCategories: ["Major retail products", "Independent catalogues", "Singles", "Sealed products", "Graded cards", "Accessories", "Preorders", "Local stock", "Event-vendor inventory"],
@@ -30,7 +30,7 @@ export const siteConfig = {
       name: "FateDrop Plus",
       price: "£4.99 / month",
       featured: true,
-      features: ["Premium signal detail", "Echo, Manifested and Vanished lifecycle alerts", "FateFind saved intent", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
+      features: ["Premium signal detail", "Whisper, Echo, Manifested and Vanished lifecycle alerts", "FateFind saved hunts with FateMatch results", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
     },
     {
       name: "FateDrop Pro",
@@ -61,27 +61,27 @@ export const siteConfig = {
   audiences: [
     {
       eyebrow: "01 / Collectors",
-      title: "Spend less time searching and more time collecting.",
+      title: "Find the right drop with better context.",
       description:
-        "Search participating retailers, save wanted intent, compare the real cost, receive relevant signals and discover local shops and events.",
+        "Follow signals, compare True Price, create FateFind hunts, receive FateMatch results and discover independent retailers and events through one network.",
       cta: "Explore collector tools",
       href: "/collectors",
       accent: "cyan",
     },
     {
       eyebrow: "02 / Retailers & vendors",
-      title: "Put your products in front of collectors already looking.",
+      title: "Be found by collectors already looking.",
       description:
-        "Connect a catalogue, gain relevant discovery, send buyers to your checkout and build toward evidence-backed demand insight.",
+        "Connect a catalogue, keep your checkout and become visible inside relevant collector journeys without becoming a marketplace listing.",
       cta: "See retailer value",
       href: "/businesses",
       accent: "violet",
     },
     {
       eyebrow: "03 / Event organisers",
-      title: "Make every event discoverable before the doors open.",
+      title: "Make the real-world TCG scene easier to discover.",
       description:
-        "Build toward one journey for dates, tickets, vendors and clearly labelled temporary event inventory.",
+        "Bring source-backed dates, venues and participating vendors into the same wider FateDrop network.",
       cta: "Explore event discovery",
       href: "/events",
       accent: "green",
@@ -90,38 +90,38 @@ export const siteConfig = {
   features: [
     {
       number: "01",
-      title: "Unified Search",
+      title: "Signal Intelligence",
       description:
-        "Search products across connected catalogue offers through one network model as feeds come online.",
-      meta: "One query / connected sources",
+        "Whisper catches product or catalogue movement. Echo says access, queue, traffic or security conditions changed. Manifested confirms purchasable stock is live. Vanished closes the loop when previously confirmed availability is gone.",
+      meta: "Four states / one meaning",
     },
     {
       number: "02",
       title: "True Price",
       description:
-        "Compare item price, verified RRP and known mandatory delivery. Unknown delivery remains unknown.",
-      meta: "Item + RRP + known delivery",
+        "Compare an observed offer with official RRP and known mandatory delivery, including the £ and percentage difference above or below RRP where the evidence supports it.",
+      meta: "Price + RRP + known delivery",
     },
     {
       number: "03",
-      title: "Watchlist",
+      title: "FateFind → FateMatch",
       description:
-        "Keep wanted products in one account-level collector list as the shared save model develops.",
-      meta: "Saved products / account-wide",
+        "Create a FateFind hunt with the product and limits that matter. When an observed active offer qualifies, that successful result is a FateMatch.",
+      meta: "Wanted intent / qualifying result",
     },
     {
       number: "04",
-      title: "FateFind",
+      title: "Independent Discovery",
       description:
-        "Create a structured wanted search using product, maximum True Price or RRP premium and online/local scope.",
-      meta: "Saved intent / network monitoring",
+        "Find products through participating independents and continue to the retailer's own product page and checkout. FateDrop helps with discovery and context; the retailer remains the seller.",
+      meta: "Discover here / buy direct",
     },
     {
       number: "05",
-      title: "Drop Pulse",
+      title: "Universal Wishlist",
       description:
-        "Summarise timestamp-supported network movement without turning weak evidence into manufactured urgency.",
-      meta: "Evidence-supported context",
+        "Keep products you care about in one account-level list without turning every saved item into a live hunt.",
+      meta: "Saved products / account-wide",
     },
     {
       number: "06",
@@ -132,17 +132,17 @@ export const siteConfig = {
     },
     {
       number: "07",
-      title: "Events",
+      title: "Fate Encounters",
       description:
-        "Browse clearly labelled demonstration or sourced event information and verify organiser details before travel.",
-      meta: "Demo / sourced beta",
+        "Browse source-backed UK card shows, venues and participating vendors and verify organiser details before travel.",
+      meta: "Real-world network",
     },
     {
       number: "08",
-      title: "Event Vendor Mode",
+      title: "Drop Pulse",
       description:
-        "Planned temporary inventory search that stays clearly separate from ordinary shop stock.",
-      meta: "Planned event-stock layer",
+        "Summarise timestamp-supported network movement without turning weak evidence into manufactured urgency.",
+      meta: "Evidence-supported context",
     },
   ],
   roadmap: [

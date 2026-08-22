@@ -11,10 +11,18 @@ const kindMeta: Record<SignalKind, { label: string; glyph: string; context?: str
   manifested: { label: "MANIFESTED", glyph: "M", context: "confirmed availability" },
   vanished: { label: "VANISHED", glyph: "V", context: "confirmed availability lost" },
   echo: { label: "ECHO", glyph: "E", context: "access readiness changed" },
-  price_change: { label: "PRICE CHANGE", glyph: "£" },
-  launch_date_change: { label: "LAUNCH CHANGE", glyph: "D" },
+  catalogue_new: { label: "WHISPER", glyph: "W", context: "new catalogue entry observed" },
+  catalogue_state_change: { label: "WHISPER", glyph: "W", context: "catalogue state changed" },
+  price_change: { label: "PRICE CHANGE", glyph: "£", context: "observed offer price changed" },
+  launch_date_change: { label: "LAUNCH CHANGE", glyph: "D", context: "observed launch information changed" },
   queue: { label: "ECHO", glyph: "E", context: "queue condition observed" },
   security: { label: "ECHO", glyph: "E", context: "security / traffic condition observed" },
+  access_blocked: { label: "ECHO", glyph: "E", context: "access-control condition observed" },
+  new_listing_live: { label: "MANIFESTED", glyph: "M", context: "new listing confirmed purchasable" },
+  availability_live: { label: "MANIFESTED", glyph: "M", context: "availability confirmed live" },
+  restock: { label: "MANIFESTED", glyph: "M", context: "restock confirmed live" },
+  sold_out: { label: "VANISHED", glyph: "V", context: "confirmed availability sold out" },
+  lifecycle_unspecified: { label: "SIGNAL", glyph: "◇", context: "exact historical cause unavailable" },
   drop_pulse: { label: "DROP PULSE", glyph: "P", context: "evidence-backed activity context" },
 };
 
@@ -35,8 +43,8 @@ function signalKind(signal: NetworkSignal): SignalKind { return signal.kind ?? s
 function signalIntensity(signal: NetworkSignal): SignalIntensity {
   if (signal.intensity) return signal.intensity;
   const kind = signalKind(signal);
-  if (kind === "security" || kind === "queue") return "major";
-  if (kind === "manifested" || kind === "echo" || kind === "drop_pulse") return "standard";
+  if (kind === "security" || kind === "queue" || kind === "access_blocked") return "major";
+  if (kind === "manifested" || kind === "new_listing_live" || kind === "availability_live" || kind === "restock" || kind === "echo" || kind === "drop_pulse") return "standard";
   return "subtle";
 }
 
@@ -130,7 +138,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
   const majorFresh = Boolean(majorSignal && freshIds.has(majorSignal.id));
 
   return <section className="fd-alerts-feed">
-    <div className="fd-alerts-feedhead"><div><span>NETWORK SIGNAL CARDS</span><small>{source ? `Source: ${source} · checks every 10s` : "Awaiting FateDrop Cloud"}</small></div><div className="fd-alert-feed-actions"><button type="button" onClick={testMajorSignal}>TEST AVATAR SURGE</button><button type="button" onClick={testProductSignal}>TEST PRODUCT SIGNAL</button><b>{signals.length} SIGNAL{signals.length === 1 ? "" : "S"}</b></div></div>
+    <div className="fd-alerts-feedhead"><div><span>NETWORK SIGNAL CARDS</span><small>{source ? `Source: ${source} · checks every 10s` : "Awaiting FateDrop Cloud"}</small></div><div className="fd-alert-feed-actions"><button type="button" onClick={testMajorSignal}>TEST COMPANION SURGE</button><button type="button" onClick={testProductSignal}>TEST PRODUCT SIGNAL</button><b>{signals.length} SIGNAL{signals.length === 1 ? "" : "S"}</b></div></div>
     <div className="fd-alert-stage"><AvatarSignalCinematic signal={stageSignal} loadout={avatarLoadout} pulseKey={majorSignal?.id ?? "network-listening"} autoPulse={majorFresh}/></div>
     {signals.length ? <div className="fd-signal-grid">{signals.map((signal) => {
       const kind = signalKind(signal);
@@ -146,7 +154,7 @@ export function LiveAlertFeed({ initialSignals, initialNow, initialSource, unloc
         <footer><span><small>TRUE PRICE</small><b>{demo ? money(signal.deliveredPricePence) : unlocked ? money(signal.deliveredPricePence) : "£—.——"}</b></span><span><small>DETECTED</small><b>{relativeTime(signal.occurredAt, now)}</b></span><span><small>{confidence !== null ? "CONFIDENCE" : "SIGNAL"}</small><b>{confidence !== null ? `${confidence}%` : meta.label}</b></span></footer>
         {!unlocked && !demo ? <div className="fd-alert-lock">♛</div> : null}
       </article>;
-    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>Your FateDrop Companion remains on watch. Product/catalogue movement can surface as Whisper; queue, traffic or security readiness can surface as Echo; confirmed availability materialises separately as Manifested.</p><button type="button" onClick={testMajorSignal}>Test the avatar surge locally</button><button type="button" onClick={testProductSignal}>Test a product signal locally</button></div>}
+    })}</div> : <div className="fd-alerts-empty"><span>◇</span><h2>The network is quiet.</h2><p>Your selected Koru &amp; Friends companion remains on watch. Product/catalogue movement can surface as Whisper; queue, traffic or security readiness can surface as Echo; confirmed availability materialises separately as Manifested.</p><button type="button" onClick={testMajorSignal}>Test the companion surge locally</button><button type="button" onClick={testProductSignal}>Test a product signal locally</button></div>}
     <style jsx>{`.fd-alert-stage{padding:14px;border-bottom:1px solid #19161e;background:#08070c}.fd-alert-feed-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.fd-alert-feed-actions button,.fd-alerts-empty button{min-height:32px;padding:0 10px;border:1px solid rgba(88,232,255,.18);border-radius:9px;background:linear-gradient(135deg,rgba(88,232,255,.07),rgba(157,109,255,.08));color:#b9f3ff;font-size:7px;font-weight:900;letter-spacing:.09em;cursor:pointer}.fd-alerts-empty button+button{margin-left:7px}.fd-signal-card.demo{box-shadow:inset 0 0 0 1px rgba(88,232,255,.14)}.fd-signal-card.intensity-major{background:radial-gradient(circle at 100% 0%,rgba(88,232,255,.08),transparent 25%),radial-gradient(circle at 85% 15%,rgba(157,109,255,.1),transparent 36%),#0b0a10}.fd-signal-card-top em{margin-left:4px;padding:3px 5px;border:1px solid rgba(88,232,255,.18);border-radius:999px;color:#75eaff;font-size:5px;font-style:normal;letter-spacing:.08em}.fd-signal-card.intensity-major .fd-signal-card-top em{border-color:rgba(190,123,255,.28);color:#caa8ff}@media(max-width:760px){.fd-alerts-feedhead{align-items:flex-start;gap:10px;flex-direction:column}.fd-alert-feed-actions{justify-content:flex-start}}`}</style>
   </section>;
 }

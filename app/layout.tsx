@@ -1,24 +1,28 @@
 import type { Metadata } from "next";
 import { canonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
+import "./accessibility.css";
+import "./koru-theme.css";
+import "./koru-product-theme.css";
+import "./companion-presentation.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalSiteUrl()),
-  title: "FateDrop — UK TCG Discovery Network",
+  title: "FateDrop — UK TCG Signal Intelligence & Indie Discovery",
   description:
-    "A UK TCG founding-beta network for catalogue discovery, evidence-backed stock intelligence, independent retailers and events.",
+    "FateDrop connects collectors with evidence-backed stock signals, True Price context, FateFind hunts, FateMatch results, independent retailers and real-world TCG events.",
   openGraph: {
-    title: "FateDrop — Find stock. Support independents. Collect smarter.",
+    title: "FateDrop — You don't chase drops. You get the signal.",
     description:
-      "A founding-beta TCG discovery network connecting collector demand with participating catalogues, evidence-backed stock intelligence, independent retailers and events.",
+      "Follow the signal, understand the real price, create FateFind hunts and discover qualifying FateMatch results across independent UK TCG retailers.",
     type: "website",
-    images: [{ url: "/assets/fatedrop-header.webp", width: 1817, height: 866, alt: "FateDrop ultraviolet network artwork" }],
+    images: [{ url: "/assets/home/koru-home-hero.png", width: 1672, height: 941, alt: "Koru overlooking the FateDrop landscape at sunset" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "FateDrop — Find stock. Support independents. Collect smarter.",
-    description: "Search participating UK TCG catalogues, compare known costs and follow evidence-backed stock signals.",
-    images: ["/assets/fatedrop-header.webp"],
+    title: "FateDrop — You don't chase drops. You get the signal.",
+    description: "Signals, True Price, FateFind hunts, FateMatch results and independent-retailer discovery for TCG collectors.",
+    images: ["/assets/home/koru-home-hero.png"],
   },
   icons: {
     icon: "/favicon.svg",
@@ -27,11 +31,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className="antialiased">{children}</body>

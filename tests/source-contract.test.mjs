@@ -11,6 +11,7 @@ test("all current FateDrop routes and core project files are present", async () 
     "app/businesses/page.tsx",
     "app/collectors/page.tsx",
     "app/cookies/page.tsx",
+    "app/demo/page.tsx",
     "app/events/page.tsx",
     "app/free-drops/page.tsx",
     "app/join/page.tsx",
@@ -19,6 +20,8 @@ test("all current FateDrop routes and core project files are present", async () 
     "app/subscriptions/page.tsx",
     "app/terms/page.tsx",
     "app/trust/page.tsx",
+    "app/sitemap.ts",
+    "app/robots.ts",
     "app/api/leads/route.ts",
     "app/dashboard/page.tsx",
     "app/api/dashboard/activity/route.ts",
@@ -34,6 +37,30 @@ test("all current FateDrop routes and core project files are present", async () 
   }
 });
 
+test("first-class public routes remain discoverable while private surfaces stay out of search", async () => {
+  const sitemap = await readFile(new URL("app/sitemap.ts", root), "utf8");
+  const robots = await readFile(new URL("app/robots.ts", root), "utf8");
+
+  for (const route of [
+    "/about",
+    "/businesses",
+    "/collectors",
+    "/demo",
+    "/events",
+    "/join",
+    "/merch",
+    "/subscriptions",
+    "/trust",
+    "/privacy",
+    "/terms",
+    "/cookies",
+  ]) assert.ok(sitemap.includes(`\"${route}\"`), `${route} must remain in the public sitemap`);
+
+  assert.equal(sitemap.includes('"/free-drops"'), false, "retired Free Drops must not return to public discovery");
+  assert.ok(robots.includes('disallow: ["/api/", "/account", "/dashboard"]'));
+  assert.ok(robots.includes('allow: "/"'));
+});
+
 test("interactive phone preview retains every controlled screen and safeguard", async () => {
   const source = await readFile(new URL("components/interactive-phone-demo-v2.tsx", root), "utf8");
 
@@ -42,10 +69,9 @@ test("interactive phone preview retains every controlled screen and safeguard", 
     assert.match(source, new RegExp(`screen === \\"${screen}\\"`));
   }
 
-  for (const state of ["ECHO", "MANIFESTED", "VANISHED"]) {
+  for (const state of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) {
     assert.ok(source.includes(state), `${state} is missing from the public phone preview`);
   }
-  assert.ok(!source.includes("WHISPER"));
 
   for (const requirement of [
     "Interactive preview · sample data",
@@ -53,15 +79,19 @@ test("interactive phone preview retains every controlled screen and safeguard", 
     "Save to Wishlist",
     "Create FateFind",
     "FATEMATCH",
-    "Global Echo / Manifested / Vanished activity belongs on Home",
+    "Global Whisper / Echo / Manifested / Vanished activity belongs on Home",
     "Local Radar",
     "Fate Encounters",
     "FATEDROP / COMMAND CENTRE",
-    "COMPANION · 3D ASSET SLOT READY",
+    "KORU &amp; FRIENDS · FIVE COMPANION SLOTS",
+    "Koru, Fenn, Aeris, Nyxen and Solix",
   ]) {
     assert.ok(source.includes(requirement), `${requirement} is missing from the current product showcase`);
   }
 
+  assert.ok(source.includes("Catalogue or product movement detected · stock not confirmed"));
+  assert.ok(source.includes("Queue/access readiness changed"));
+  assert.equal(source.includes("signal droid"), false);
   assert.ok(!source.includes("navigator.geolocation"));
   assert.ok(!source.includes("localStorage"));
 });

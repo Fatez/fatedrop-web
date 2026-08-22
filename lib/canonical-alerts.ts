@@ -282,7 +282,7 @@ function signalThread(row: SignalRow): CanonicalSignalThreadEntry[] {
   });
 }
 
-function preparedLinks(row: SignalRow, stage: CanonicalSignalStage, priceIntelligence: CanonicalAlert["priceIntelligence"]): CanonicalPreparedLinks {
+function preparedLinks(row: SignalRow, stage: CanonicalSignalStage): CanonicalPreparedLinks {
   const primary: CanonicalPreparedLinks["primary"] = {
     offerId: row.offer_id,
     retailerId: row.retailer_id,
@@ -394,7 +394,7 @@ function toCanonicalAlert(row: SignalRow): CanonicalAlert {
   const fateStage = publicStage(row.state);
   const confirmed = fateStage === "MANIFESTED";
   const priceIntelligence = intelligence(row);
-  const links = preparedLinks(row, fateStage, priceIntelligence);
+  const links = preparedLinks(row, fateStage);
   return {
     id: row.id,
     type: row.state.toUpperCase(),

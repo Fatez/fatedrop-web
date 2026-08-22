@@ -1,3 +1,4 @@
+import { safeExternalHttpsUrl } from "./external-url";
 import { getSignalEngineStatus } from "./signal-engine-client";
 import { retailerByCloudId, retailerRegistry, type RetailerRecord } from "./retailer-registry";
 
@@ -18,8 +19,8 @@ export type RetailerNetworkRecord = {
   storefrontStatus: RetailerRecord["catalogueStatus"] | "unknown";
 };
 
-export async function getRetailerNetwork(): Promise<RetailerNetworkRecord[]> {
-  const status = await getSignalEngineStatus();
+export async function getRetailerNetwork(timeoutMs = 8_000): Promise<RetailerNetworkRecord[]> {
+  const status = await getSignalEngineStatus(timeoutMs);
   const cloud = status?.state?.retailers ?? [];
   const seen = new Set<string>();
   const rows: RetailerNetworkRecord[] = cloud.map((runtime) => {
@@ -28,7 +29,7 @@ export async function getRetailerNetwork(): Promise<RetailerNetworkRecord[]> {
     return {
       id: registry?.id ?? runtime.id,
       name: registry?.name ?? runtime.name,
-      website: registry?.website ?? null,
+      website: safeExternalHttpsUrl(registry?.website),
       category: registry?.category ?? "unknown",
       source: "cloud",
       runtime: {
@@ -48,7 +49,7 @@ export async function getRetailerNetwork(): Promise<RetailerNetworkRecord[]> {
     rows.push({
       id: registry.id,
       name: registry.name,
-      website: registry.website,
+      website: safeExternalHttpsUrl(registry.website),
       category: registry.category,
       source: "registry",
       runtime: { healthy: null, baselineCompleted: null, lastScanAt: null, lastSuccessAt: null, productsSeen: null },

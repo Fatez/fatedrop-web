@@ -51,9 +51,9 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
       if (value) {
         try {
           const url = new URL(value);
-          if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Invalid protocol");
+          if (url.protocol !== "https:") throw new Error("Invalid protocol");
         } catch {
-          nextErrors[field] = "Enter a complete address, including https://";
+          nextErrors[field] = "Enter a secure address beginning with https://";
         }
       }
     }
