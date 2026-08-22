@@ -18,8 +18,8 @@ export type RetailerNetworkRecord = {
   storefrontStatus: RetailerRecord["catalogueStatus"] | "unknown";
 };
 
-export async function getRetailerNetwork(): Promise<RetailerNetworkRecord[]> {
-  const status = await getSignalEngineStatus();
+export async function getRetailerNetwork(timeoutMs = 8_000): Promise<RetailerNetworkRecord[]> {
+  const status = await getSignalEngineStatus(timeoutMs);
   const cloud = status?.state?.retailers ?? [];
   const seen = new Set<string>();
   const rows: RetailerNetworkRecord[] = cloud.map((runtime) => {
