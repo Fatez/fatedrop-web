@@ -58,12 +58,12 @@ export function CompanionSelector({ initialCompanionId, persistent }: { initialC
       <div className="live-stage">
         <CompanionRenderer request={{ companionId: selectedCompanion.id, reaction, label: selectedCompanion.name }}/>
       </div>
-      <aside className="preview-controls" aria-label={`${selectedCompanion.name} reaction preview controls`}>
-        <small>LIVE REACTION PREVIEW</small>
+      <aside className="preview-controls" aria-label={`${selectedCompanion.name} signal state preview controls`}>
+        <small>SIGNAL STATE PREVIEW</small>
         <h3>{selectedCompanion.name}</h3>
-        <p>Preview the companion personality without changing what the underlying FateDrop signal means.</p>
+        <p>The live 3D stage changes presentation for each FateDrop state. Skeletal animation clips are only treated as active after they are verified for that character.</p>
         <div className="reaction-list">
-          {REACTION_PREVIEWS.map((item) => <button type="button" key={item.id} data-active={reaction === item.id} onClick={() => setReaction(item.id)}>
+          {REACTION_PREVIEWS.map((item) => <button type="button" key={item.id} data-active={reaction === item.id} aria-pressed={reaction === item.id} onClick={() => setReaction(item.id)}>
             <span>{item.label}</span><small>{item.helper}</small>
           </button>)}
         </div>
