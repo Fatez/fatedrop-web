@@ -33,15 +33,17 @@ test("public hero renderer refuses converted JPG WebP and AVIF artwork", async (
   assert.equal(hero.includes('loading="eager"'), false);
 });
 
-test("Collectors Retailers and Events use distinct full PNG hero sources", async () => {
+test("Collectors Retailers and Events use their final distinct full PNG hero sources", async () => {
   const collectors = await source("app/collectors/page.tsx");
   const retailers = await source("app/businesses/page.tsx");
   const events = await source("app/events/page.tsx");
 
   const images = [heroImage(collectors), heroImage(retailers), heroImage(events)];
+  assert.deepEqual(images, [
+    "/assets/market/collectors.png",
+    "/assets/market/retailers.png",
+    "/assets/market/events.png",
+  ]);
   for (const image of images) assert.match(image, /\.png(?:\?|$)/i);
   assert.equal(new Set(images).size, 3);
-  assert.ok(images[0].includes("cardwave-bg.png"));
-  assert.ok(images[1].includes("koru-network-guide.png"));
-  assert.ok(images[2].includes("fatedrop-header.png"));
 });
