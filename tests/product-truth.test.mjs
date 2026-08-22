@@ -47,6 +47,7 @@ test("dashboard Search and True Price use the canonical Signal Engine", async ()
   assert.ok(truePrice.includes("ITEM PRICE"));
   assert.ok(truePrice.includes("KNOWN DELIVERY"));
   assert.ok(truePrice.includes("TRUE PRICE"));
+  assert.ok(truePrice.includes("Unknown never means free"));
   assert.ok(client.includes('"/api/catalogue"'));
   assert.ok(client.includes('"/api/true-price"'));
   assert.ok(client.includes("FATEDROP_SIGNAL_ENGINE_URL"));
