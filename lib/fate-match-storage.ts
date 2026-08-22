@@ -1,5 +1,6 @@
 import type { FateMatch } from "@/lib/fate-match";
 import { fateDropPostgres } from "@/lib/postgres";
+import { safeExternalHttpsUrl } from "@/lib/external-url";
 
 function stringArray(value: unknown) {
   if (Array.isArray(value)) return value.map(String);
@@ -21,6 +22,56 @@ function mapFateMatch(row: Record<string, unknown>): FateMatch {
     scope: String(row.scope) as FateMatch["scope"], radiusKm: nullableNumber(row.radius_km), postcode: nullableString(row.postcode), latitude: nullableNumber(row.latitude), longitude: nullableNumber(row.longitude),
     preferredRetailerIds: stringArray(row.preferred_retailers_json), excludedRetailerIds: stringArray(row.excluded_retailers_json), stockRequirement: String(row.stock_requirement) as FateMatch["stockRequirement"],
     notificationPreferences: objectValue(row.notification_preferences_json), enabled: Boolean(row.enabled), createdAt: Number(row.created_at), updatedAt: Number(row.updated_at),
+  };
+}
+
+export type FateMatchHitView = {
+  id: string;
+  matchId: string;
+  offerId: string;
+  signalEventId: string | null;
+  query: string;
+  productTitle: string;
+  retailerId: string | null;
+  retailerName: string;
+  productUrl: string | null;
+  itemPricePence: number | null;
+  deliveryKnown: boolean;
+  truePricePence: number | null;
+  officialRrpPence: number | null;
+  stockState: string | null;
+  reasons: string[];
+  occurredAt: number;
+  offerObservedAt: number | null;
+};
+
+function mapFateMatchHit(row: Record<string, unknown>): FateMatchHitView {
+  const itemPricePence = nullableNumber(row.item_price_pence);
+  const postagePence = nullableNumber(row.mandatory_postage_pence);
+  const feesPence = nullableNumber(row.mandatory_fees_pence);
+  const deliveryKnown = row.delivery_known === true;
+  const truePricePence = deliveryKnown && itemPricePence !== null && postagePence !== null && feesPence !== null
+    ? itemPricePence + postagePence + feesPence
+    : null;
+
+  return {
+    id: String(row.id),
+    matchId: String(row.match_id),
+    offerId: String(row.offer_id),
+    signalEventId: nullableString(row.signal_event_id),
+    query: String(row.query_text ?? ""),
+    productTitle: String(row.offer_title ?? row.identity_title ?? row.query_text ?? "FateMatch"),
+    retailerId: nullableString(row.retailer_id),
+    retailerName: String(row.retailer_name ?? "Retailer"),
+    productUrl: safeExternalHttpsUrl(row.offer_url),
+    itemPricePence,
+    deliveryKnown,
+    truePricePence,
+    officialRrpPence: nullableNumber(row.official_rrp_pence),
+    stockState: nullableString(row.stock_state),
+    reasons: stringArray(row.reasons_json),
+    occurredAt: Number(row.occurred_at),
+    offerObservedAt: nullableNumber(row.observed_at),
   };
 }
 
@@ -60,6 +111,41 @@ export async function listUserFateMatches(userId: string) {
   const sql = await fateDropPostgres();
   const rows = await sql`SELECT * FROM fatedrop_fate_matches WHERE user_id=${userId} ORDER BY updated_at DESC`;
   return rows.map((row) => mapFateMatch(row as Record<string, unknown>));
+}
+
+export async function getLatestUserFateMatchHit(userId: string, matchId: string) {
+  const sql = await fateDropPostgres();
+  const rows = await sql`
+    SELECT
+      h.id,
+      h.match_id,
+      h.signal_event_id,
+      h.offer_id,
+      h.reasons_json,
+      h.occurred_at,
+      m.query_text,
+      o.title AS offer_title,
+      o.url AS offer_url,
+      o.retailer_id,
+      o.item_price_pence,
+      o.mandatory_postage_pence,
+      o.mandatory_fees_pence,
+      o.delivery_known,
+      o.stock_state,
+      o.observed_at,
+      r.name AS retailer_name,
+      p.title AS identity_title,
+      p.official_rrp_pence
+    FROM fatedrop_fate_match_hits h
+    JOIN fatedrop_fate_matches m ON m.id = h.match_id
+    LEFT JOIN fatedrop_offers o ON o.id = h.offer_id
+    LEFT JOIN fatedrop_retailers r ON r.id = o.retailer_id
+    LEFT JOIN fatedrop_product_identities p ON p.id = o.product_identity_id
+    WHERE m.user_id = ${userId} AND h.match_id = ${matchId}
+    ORDER BY h.occurred_at DESC
+    LIMIT 1
+  `;
+  return rows[0] ? mapFateMatchHit(rows[0] as Record<string, unknown>) : null;
 }
 
 export async function saveFateMatchHit(input: { id: string; matchId: string; signalEventId: string | null; offerId: string; reasons: string[]; occurredAt: number }) {
