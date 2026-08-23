@@ -16,6 +16,15 @@ test('seven-day lifecycle headline totals come only from the persisted signal le
   assert.doesNotMatch(dashboardSource, /signalSummary\?\.manifested\.total \?\? network/);
 });
 
+test('dashboard can use the live Signal Engine aggregate when local Neon credentials are unavailable', () => {
+  assert.match(trendSource, /defaultSignalEngineUrl = "https:\/\/fatedrop-cloud-production\.up\.railway\.app"/);
+  assert.match(trendSource, /\/api\/signal-health\?days=\$\{safeDays\}/);
+  assert.match(trendSource, /cache: "no-store"/);
+  assert.match(trendSource, /return \(await getRemoteSignalHealth\(safeDays\)\)\?\.lifecycle \?\? null/);
+  assert.match(trendSource, /return \(await getRemoteSignalHealth\(safeDays\)\)\?\.delivery \?\? null/);
+  assert.match(trendSource, /source\.available !== true/);
+});
+
 test('delivery ledger keeps sent, policy-disabled suppression and actual issues separate', () => {
   assert.match(trendSource, /if \(result === "sent"\) point\.sent \+= value/);
   assert.match(trendSource, /else if \(result === "skipped" && detail === "disabled"\) point\.policySkipped \+= value/);
@@ -40,7 +49,7 @@ test('dashboard chart uses a shared honest scale with a real zero baseline', () 
   assert.doesNotMatch(pageSource, /Math\.max\(1, \.\.\.points\.map\(\(point\) => point\.value\)\)/);
 });
 
-test('dashboard is explicit when either operational ledger is unavailable', () => {
+test('dashboard is explicit only when both operational ledger paths are unavailable', () => {
   assert.match(pageSource, /7D DETECTED/);
   assert.match(pageSource, /ALERTS SENT \/ UTC DAY/);
   assert.match(pageSource, /Signal ledger unavailable/);
