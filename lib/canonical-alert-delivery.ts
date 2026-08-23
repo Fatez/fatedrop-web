@@ -1,3 +1,4 @@
+import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { fateDropPostgres } from "@/lib/postgres";
 
 export type CanonicalAlertDelivery = {
@@ -6,6 +7,16 @@ export type CanonicalAlertDelivery = {
   detail: string | null;
   providerMessageId: string | null;
   attemptedAt: number;
+};
+
+export type CanonicalAlertWithDelivery = CanonicalAlert & {
+  delivery: {
+    discord: {
+      status: CanonicalAlertDelivery["result"];
+      attemptedAt: string;
+      issue: string | null;
+    };
+  };
 };
 
 export type CanonicalAlertState = "whisper" | "echo" | "manifested" | "vanished";
@@ -93,6 +104,31 @@ export async function listCanonicalAlertDeliveries({
     }))
     .filter((attempt) => isAlertWorthyAttempt(attempt.result, attempt.detail))
     .slice(0, safeLimit);
+}
+
+export async function listDeliveryBackedCanonicalAlerts({
+  id,
+  limit = 50,
+}: {
+  id?: string | null;
+  limit?: number;
+} = {}): Promise<CanonicalAlertWithDelivery[]> {
+  const deliveries = await listCanonicalAlertDeliveries({ id, limit });
+  const alerts = await Promise.all(deliveries.map(async (delivery) => {
+    const [alert] = await listCanonicalAlerts({ id: delivery.signalId, limit: 1 });
+    if (!alert) return null;
+    return {
+      ...alert,
+      delivery: {
+        discord: {
+          status: delivery.result,
+          attemptedAt: new Date(delivery.attemptedAt * 1000).toISOString(),
+          issue: delivery.result === "sent" ? null : delivery.detail,
+        },
+      },
+    } satisfies CanonicalAlertWithDelivery;
+  }));
+  return alerts.filter((alert): alert is CanonicalAlertWithDelivery => Boolean(alert));
 }
 
 export async function getCanonicalAlertDeliverySummary(days = 7): Promise<CanonicalAlertDeliverySummary> {
