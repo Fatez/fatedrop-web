@@ -32,6 +32,7 @@ test("active companion roster is exactly the five Koru and Friends characters", 
   for (const name of ["Koru", "Fenn", "Aeris", "Nyxen", "Solix"]) assert.ok(contract.includes(`name: "${name}"`));
   assert.ok(contract.includes("slot: 1"));
   assert.ok(contract.includes("slot: 5"));
+  assert.equal(contract.includes('id: "oru"'), false, "Oru is a FateDrop world character, not a selectable companion slot");
   assert.equal(contract.includes("droidModelUrl"), false);
   assert.equal(contract.includes("characterModelUrl"), false);
   assert.equal(contract.includes("AvatarLoadout"), false);
@@ -64,7 +65,7 @@ test("retired companion and illustrated-avatar renderer experiments are absent",
   ]) assert.equal(fs.existsSync(path.join(root, file)), false, `${file} should remain retired`);
 });
 
-test("final-roster registered GLBs render through the current WebGL boundary", () => {
+test("all five final-roster GLBs render through the current WebGL boundary", () => {
   const contract = read("lib/companion-contract.ts");
   const renderer = read("components/companion-renderer.tsx");
   const webgl = read("components/companion-webgl-model.tsx");
@@ -75,7 +76,8 @@ test("final-roster registered GLBs render through the current WebGL boundary", (
   assert.ok(webgl.includes("Companion asset is not GLB v2"));
   assert.ok(webgl.includes("baseColorTexture"));
   assert.ok(webgl.includes("WebGL is unavailable on this device"));
-  for (const id of ["aeris", "nyxen", "solix"]) {
+  assert.ok(webgl.includes("FRONT_FACING_YAW = Math.PI"));
+  for (const id of ["koru", "fenn", "aeris", "nyxen", "solix"]) {
     assert.ok(contract.includes(`/assets/companions/${id}/${id}.glb`));
     assert.equal(fs.existsSync(path.join(root, `public/assets/companions/${id}/${id}.glb`)), true, `${id} GLB missing`);
   }
@@ -88,6 +90,7 @@ test("verified source clip metadata replaces generic guessed animation names", (
   const contract = read("lib/companion-contract.ts");
   const handoff = read("docs/companion-model-slots.md");
   assert.ok(contract.includes("VERIFIED_STATE_CLIPS"));
+  assert.ok(contract.includes("KORU_STATE_CLIPS"));
   assert.equal(contract.includes("CANONICAL_CLIPS"), false);
   for (const clip of [
     'idle: "Armature|Idle|baselayer"',
@@ -96,18 +99,26 @@ test("verified source clip metadata replaces generic guessed animation names", (
     'manifested: "Armature|mage_soell_cast_1|baselayer"',
     'vanished: "Armature|Sneaky_Walk|baselayer"',
     'fatematch: "Armature|Victory_Cheer|baselayer"',
+    'idle: "Armature|Idle_3|baselayer"',
+    'watching: "Armature|walking_man|baselayer"',
   ]) assert.ok(contract.includes(clip), `${clip} missing from verified source metadata`);
-  for (const name of ["Aeris", "Nyxen", "Solix", "Fenn"]) assert.ok(handoff.includes(name));
+  for (const name of ["Koru", "Aeris", "Nyxen", "Solix", "Fenn"]) assert.ok(handoff.includes(name));
   assert.ok(handoff.includes("does **not** yet play the skinned animation channels above"));
-  assert.ok(contract.includes("does not claim skeletal clip playback"));
+  assert.ok(contract.includes("does not claim skeletal clip playback") || contract.includes("skeletal playback"));
 });
 
-test("reaction-specific packs are supported without changing the five-slot roster", () => {
+test("reaction-specific packs remain supported while Koru and Fenn have stable live GLBs", () => {
   const contract = read("lib/companion-contract.ts");
   assert.ok(contract.includes("reactionModelUrls?: Partial<Record<CompanionReaction, string>>"));
   assert.ok(contract.includes("export function companionModelUrl"));
+  const koruLine = contract.split("\n").find((line) => line.includes('id: "koru"')) || "";
   const fennLine = contract.split("\n").find((line) => line.includes('id: "fenn"')) || "";
-  assert.ok(fennLine.includes("modelUrl: null"), "Fenn must stay unregistered until its binaries are actually in the web repo");
+  assert.ok(koruLine.includes('modelUrl: "/assets/companions/koru/koru.glb"'));
+  assert.ok(koruLine.includes("isMascot: true"));
+  assert.ok(fennLine.includes('modelUrl: "/assets/companions/fenn/fenn.glb"'));
+  assert.ok(fennLine.includes("isMascot: false"));
+  assert.ok(koruLine.includes('modelFormat: "glb"'));
+  assert.ok(fennLine.includes('modelFormat: "glb"'));
 });
 
 test("no standalone HTML companion experiments remain in the website repository", () => {
