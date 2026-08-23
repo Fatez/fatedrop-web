@@ -23,8 +23,8 @@ jobs:
           mkdir -p public/assets/companions/koru public/assets/companions/fenn
           cat .handoff/companion/koru.part.* | tr -d '\n' | base64 --decode > public/assets/companions/koru/koru.glb
           cat .handoff/companion/fenn.part.* | tr -d '\n' | base64 --decode > public/assets/companions/fenn/fenn.glb
-          echo "ffa6c52bb4497a535db53d260c95a41d89e949ddce14f4be2dd1a3825e017a71  public/assets/companions/koru/koru.glb" | sha256sum --check
-          echo "8842593a3e653f0f8061f74014307b247ced3ec322d827b8c5b16045aca4d799  public/assets/companions/fenn/fenn.glb" | sha256sum --check
+          echo "489a2fc37e337d0af8590eeb8e53683c6d86c3d6968c51c1e435169e54f0224f  public/assets/companions/koru/koru.glb" | sha256sum --check
+          echo "214cc332650561ffb831a15423b676623e85276e2e653b44cd88a75273c897ca  public/assets/companions/fenn/fenn.glb" | sha256sum --check
           test "$(head -c 4 public/assets/companions/koru/koru.glb)" = "glTF"
           test "$(head -c 4 public/assets/companions/fenn/fenn.glb)" = "glTF"
       - name: Commit binary assets and clear handoff staging
