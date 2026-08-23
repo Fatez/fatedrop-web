@@ -95,10 +95,10 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     signalSummary,
     publishedBaseline,
     publicSignalMetrics: {
-      whisper: signalSummary?.whisper.total ?? network?.metrics.whisper ?? null,
-      echo: signalSummary?.echo.total ?? network?.metrics.echo ?? null,
-      manifested: signalSummary?.manifested.total ?? network?.metrics.manifested ?? null,
-      vanished: signalSummary?.vanished.total ?? network?.metrics.vanished ?? null,
+      whisper: signalSummary?.whisper.total ?? null,
+      echo: signalSummary?.echo.total ?? null,
+      manifested: signalSummary?.manifested.total ?? null,
+      vanished: signalSummary?.vanished.total ?? null,
     },
     personal: {
       signalsSeen,
