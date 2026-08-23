@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const ACTIVE_COMPANIONS = ["koru", "fenn", "aeris", "nyxen", "solix"];
 
 function glbJson(file) {
   const buffer = fs.readFileSync(path.join(root, file));
@@ -20,7 +21,7 @@ function glbJson(file) {
   throw new Error(`${file} has no GLB JSON chunk`);
 }
 
-for (const id of ["aeris", "nyxen", "solix"]) {
+for (const id of ACTIVE_COMPANIONS) {
   test(`${id} registered GLB has UVs and a resolvable FateDrop texture source`, () => {
     const file = `public/assets/companions/${id}/${id}.glb`;
     const document = glbJson(file);
