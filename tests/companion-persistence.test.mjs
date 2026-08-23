@@ -34,11 +34,15 @@ test("development companion selection follows the file-backed account store", as
   }
 });
 
-test("missing Koru GLB never falls back to homepage campaign artwork in the selector", () => {
+test("registered Koru and Fenn use live WebGL assets and never substitute homepage campaign artwork", () => {
   const renderer = read("components/companion-renderer.tsx");
+  const contract = read("lib/companion-contract.ts");
   assert.equal(renderer.includes("KoruMascot"), false);
   assert.ok(renderer.includes("Never substitute campaign/homepage artwork"));
+  assert.ok(renderer.includes("CompanionWebglModel"));
   assert.ok(renderer.includes("CompanionPlaceholder"));
+  assert.ok(contract.includes('modelUrl: "/assets/companions/koru/koru.glb"'));
+  assert.ok(contract.includes('modelUrl: "/assets/companions/fenn/fenn.glb"'));
 });
 
 test("local companion persistence files stay out of source control", () => {
