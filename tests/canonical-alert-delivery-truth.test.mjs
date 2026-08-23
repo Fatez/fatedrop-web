@@ -17,9 +17,11 @@ test('canonical alert inbox is derived from persisted Discord delivery attempts'
   assert.doesNotMatch(deliverySource, /reason !== "duplicate_batch_signal"/);
 });
 
-test('mobile alert API hydrates only canonical delivery-backed signal IDs', () => {
-  assert.match(routeSource, /listCanonicalAlertDeliveries/);
-  assert.match(routeSource, /listCanonicalAlerts\(\{ id: delivery\.signalId/);
-  assert.match(routeSource, /status: delivery\.result/);
-  assert.match(routeSource, /issue: delivery\.result === "sent" \? null : delivery\.detail/);
+test('shared canonical hydration attaches delivery truth before API redaction', () => {
+  assert.match(deliverySource, /listDeliveryBackedCanonicalAlerts/);
+  assert.match(deliverySource, /listCanonicalAlerts\(\{ id: delivery\.signalId/);
+  assert.match(deliverySource, /status: delivery\.result/);
+  assert.match(deliverySource, /issue: delivery\.result === "sent" \? null : delivery\.detail/);
+  assert.match(routeSource, /listDeliveryBackedCanonicalAlerts/);
+  assert.doesNotMatch(routeSource, /listCanonicalAlerts/);
 });
