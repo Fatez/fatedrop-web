@@ -42,6 +42,7 @@ type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 const BYTES: Record<number, number> = { 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 };
 const SIZES = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 } as const;
+const FRONT_FACING_YAW = Math.PI;
 
 function component(view: DataView, offset: number, type: number) {
   if (type === 5121) return view.getUint8(offset);
@@ -329,7 +330,7 @@ async function renderModel(canvas: HTMLCanvasElement, model: ParsedModel, reacti
     const elapsed = reducedMotion ? 0 : (now - started) / 1000;
     gl.viewport(0, 0, width, height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.uniform1f(gl.getUniformLocation(program, "uAngle"), reducedMotion ? 0 : Math.sin(elapsed * 0.22) * 0.28);
+    gl.uniform1f(gl.getUniformLocation(program, "uAngle"), FRONT_FACING_YAW + (reducedMotion ? 0 : Math.sin(elapsed * 0.22) * 0.28));
     gl.uniform1f(gl.getUniformLocation(program, "uAspect"), width / Math.max(1, height));
     gl.uniform1f(gl.getUniformLocation(program, "uBob"), reducedMotion ? 0 : Math.sin(elapsed * 1.25) * 0.012);
     const indexType = model.indexComponentType === 5125 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
