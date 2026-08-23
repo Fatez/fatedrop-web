@@ -31,9 +31,9 @@ const VERIFIED_STATE_CLIPS: Partial<Record<CompanionReaction, string>> = {
   major: "Armature|Victory_Cheer|baselayer",
 };
 
-// Koru arrived as five character-state exports. The optimized production GLB keeps
-// all five source clips. Only semantically safe reaction bindings are recorded here;
-// the retained running clip is intentionally not mislabelled as Vanished.
+// Verified directly against the supplied Koru state exports. The optimized handoff
+// keeps the five source clips below. These bindings stay metadata-only until the
+// production binary is committed at Koru's stable model path.
 const KORU_STATE_CLIPS: Partial<Record<CompanionReaction, string>> = {
   idle: "Armature|Idle_3|baselayer",
   watching: "Armature|walking_man|baselayer",
@@ -44,8 +44,8 @@ const KORU_STATE_CLIPS: Partial<Record<CompanionReaction, string>> = {
 };
 
 export const ACTIVE_COMPANION_ROSTER: readonly CompanionDefinition[] = [
-  { id: "koru", name: "Koru", slot: 1, isMascot: true, fallbackArtwork: "/assets/companions/koru-signal-companion.webp", modelUrl: "/assets/companions/koru/koru.glb", modelFormat: "glb", animationClips: KORU_STATE_CLIPS },
-  { id: "fenn", name: "Fenn", slot: 2, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/fenn/fenn.glb", modelFormat: "glb", animationClips: VERIFIED_STATE_CLIPS },
+  { id: "koru", name: "Koru", slot: 1, isMascot: true, fallbackArtwork: "/assets/companions/koru-signal-companion.webp", modelUrl: null, modelFormat: null, animationClips: KORU_STATE_CLIPS },
+  { id: "fenn", name: "Fenn", slot: 2, isMascot: false, fallbackArtwork: null, modelUrl: null, modelFormat: null, animationClips: VERIFIED_STATE_CLIPS },
   { id: "aeris", name: "Aeris", slot: 3, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/aeris/aeris.glb", modelFormat: "glb", animationClips: VERIFIED_STATE_CLIPS },
   { id: "nyxen", name: "Nyxen", slot: 4, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/nyxen/nyxen.glb", modelFormat: "glb", animationClips: VERIFIED_STATE_CLIPS },
   { id: "solix", name: "Solix", slot: 5, isMascot: false, fallbackArtwork: null, modelUrl: "/assets/companions/solix/solix.glb", modelFormat: "glb", animationClips: VERIFIED_STATE_CLIPS },
