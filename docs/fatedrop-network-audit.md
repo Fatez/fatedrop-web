@@ -1,6 +1,6 @@
 # FateDrop Network Consistency Audit
 
-_Date: 22 August 2026_
+_Date: 23 August 2026_
 
 Branch: `agent/web-koru-final-revamp-2026-08-21`
 
@@ -156,19 +156,21 @@ The active roster is exactly:
 4. **Nyxen**;
 5. **Solix**.
 
-Each has one stable character slot behind the shared renderer contract. A character may use one approved GLB or a verified reaction-specific GLB pack without creating another companion identity.
+Oru remains a Koru & Friends world/brand creature and merch accent, not a sixth selectable signal companion.
 
-Koru remains FateDrop's mascot and signal voice regardless of which personal companion a collector selects.
+Each active companion has one stable GLB character slot behind the shared renderer contract. A character may later use a verified reaction-specific GLB pack without creating another companion identity.
+
+Koru remains FateDrop's mascot, signal voice and default companion regardless of which personal companion a collector selects.
 
 Current Web model state is explicit:
 
-- Koru — approved 2D fallback active while the correct production GLB is recovered/verified;
-- Fenn — source reaction pack verified and optimized for Web; final binary repository handoff/registration remains;
+- Koru — GLB registered at `/assets/companions/koru/koru.glb`;
+- Fenn — GLB registered at `/assets/companions/fenn/fenn.glb`;
 - Aeris — GLB registered;
 - Nyxen — GLB registered;
 - Solix — GLB registered.
 
-Registered Web assets render their real mesh/texture through the lightweight WebGL boundary. Reduced-motion preference keeps the real model visible but stops continuous presentation motion. Skeletal animation playback is not claimed merely because source GLBs contain clips; it must be implemented and visually verified before public copy describes those animations as active.
+All five registered Web assets render their real mesh/texture through the lightweight WebGL boundary. A shared front-facing base yaw corrects the source orientation for the selector. Reduced-motion preference keeps the real model visible but stops continuous presentation motion. Skeletal animation playback is not claimed merely because source GLBs contain clips; it must be implemented and visually verified before public copy describes those animations as active.
 
 All five use the same underlying reaction contract:
 
@@ -186,7 +188,7 @@ Kael (`K-01`) and Nyra (`N-02`) remain legacy/archive FateDrop character referen
 
 Retired Droid, Scout, radar-drone, signal-orb and mini-beacon companion concepts are not active product architecture.
 
-Model handoff is documented in `docs/companion-model-slots.md`.
+Model registration and verified source metadata are documented in `docs/companion-model-slots.md`.
 
 ## RESOLVED — profile and companion were conflated
 
@@ -279,9 +281,8 @@ These concepts can remain documented and architecturally possible without compet
 
 The intentional remaining work after this website pass is narrow:
 
-- complete the final Fenn binary handoff/registration and recover/verify the correct Koru GLB;
+- visually QA the five registered 3D companions for identity, texture, framing, front-facing orientation, fallback and reduced-motion behavior;
 - visually QA the rebuilt public pages and dashboard on desktop/mobile;
-- visually QA registered 3D companions for identity, texture, framing, fallback and reduced-motion behavior;
 - implement skeletal animation playback only if/when it is deliberately promoted from the current state-presentation boundary;
 - reconcile the mobile app companion implementation to the same five-slot contract before mobile parity is claimed;
 - continue Cloud retailer/event/RRP coverage improvements;
