@@ -375,7 +375,7 @@ export function CompanionWebglModel({ name, modelUrl, reaction, compact = false 
     ])
       .then(([buffer, siblingTexture]) => {
         const model = parseGlb(buffer);
-        if (!model.imageBlob && siblingTexture) model.imageBlob = siblingTexture;
+        if (siblingTexture) model.imageBlob = siblingTexture;
         return model;
       })
       .then((model) => renderModel(canvas, model, reaction, stopped, reducedMotion))
