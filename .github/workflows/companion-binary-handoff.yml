@@ -1,0 +1,39 @@
+name: Companion Binary Handoff
+
+on:
+  push:
+    paths:
+      - ".handoff/companion/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/web-koru-final-revamp-2026-08-21
+          fetch-depth: 1
+      - name: Rebuild verified web companion assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/assets/companions/koru public/assets/companions/fenn
+          cat .handoff/companion/koru.part.* | tr -d '\n' | base64 --decode > public/assets/companions/koru/koru.glb
+          cat .handoff/companion/fenn.part.* | tr -d '\n' | base64 --decode > public/assets/companions/fenn/fenn.glb
+          echo "3c3bc275932752383a0b5810c36084e47edc07fcfc65f4fb83fdd140c6e9e9c5  public/assets/companions/koru/koru.glb" | sha256sum --check
+          echo "575037dc13a2e55b68ded996bd8635afc0207dd43212d17d42bd9a2304bf80c6  public/assets/companions/fenn/fenn.glb" | sha256sum --check
+          test "$(head -c 4 public/assets/companions/koru/koru.glb)" = "glTF"
+          test "$(head -c 4 public/assets/companions/fenn/fenn.glb)" = "glTF"
+      - name: Commit binary assets and clear handoff staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .handoff/companion
+          git config user.name "FateDrop Companion Handoff"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A public/assets/companions/koru public/assets/companions/fenn .handoff/companion
+          git commit -m "Add optimized Koru and Fenn web GLBs"
+          git push origin HEAD:agent/web-koru-final-revamp-2026-08-21
