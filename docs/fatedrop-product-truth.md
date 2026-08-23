@@ -1,6 +1,6 @@
 # FateDrop Product Spec v1
 
-_Last reviewed: 22 August 2026_
+_Last reviewed: 23 August 2026_
 
 This document is the canonical product authority for FateDrop Web and the reference point for the mobile app, FateDrop Cloud and Discord workstreams. When older marketing copy, tests, dashboard labels or implementation aliases disagree with this file, reconcile the surface to this specification without destructive schema changes unless a migration is genuinely required.
 
@@ -321,7 +321,7 @@ Event Vendor Mode remains **HOLD / FOUNDATION** until enough real organiser/vend
 
 ## Koru & Friends — BRAND + COMPANION LAYER
 
-**Status: BETA presentation / BETA Web renderer / asset handoff ongoing.**
+**Status: BETA presentation / BETA Web renderer.**
 
 Koru & Friends is the character, culture and companion layer around FateDrop. It must strengthen the product identity rather than replace the serious intelligence platform underneath it.
 
@@ -347,7 +347,7 @@ Each active companion owns one stable character slot behind the shared renderer 
 
 The selector and account persistence work independently of model availability. A missing or failed model renders an honest fallback/placeholder rather than inventing a shipped 3D asset or blocking account functionality.
 
-On Web, registered assets render their real mesh and texture through the lightweight WebGL boundary. Aeris, Nyxen and Solix are currently registered; Fenn's verified reaction pack still requires its final binary handoff/registration, and Koru keeps the approved 2D mascot fallback until the correct production GLB is recovered and verified.
+On Web, all five active companion slots have registered GLB display assets: Koru, Fenn, Aeris, Nyxen and Solix. Registered assets render their real mesh and texture through the lightweight WebGL boundary. Koru remains FateDrop's fixed mascot, network voice and default companion; Fenn is a separate selectable Koru & Friends companion. Oru remains a FateDrop-world / merch character and is not a sixth selectable signal companion.
 
 The current WebGL viewer may use restrained rotation, bob and state tinting as presentation. It does **not** make skeletal animation playback a shipped claim. A source GLB containing clips is not enough: skeletal clip playback must be implemented and visually verified for the character before public copy describes that animation as active.
 
