@@ -2,49 +2,46 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const requiredDashboardPages = [
-  "app/dashboard/page.tsx",
+const dashboardRoutes = [
   "app/dashboard/search/page.tsx",
   "app/dashboard/alerts/page.tsx",
-  "app/dashboard/true-price/page.tsx",
-  "app/dashboard/fatefind/page.tsx",
   "app/dashboard/watchlist/page.tsx",
   "app/dashboard/wishlist/page.tsx",
-  "app/dashboard/stores/page.tsx",
-  "app/dashboard/local-radar/page.tsx",
-  "app/dashboard/events/page.tsx",
-  "app/dashboard/avatar/page.tsx",
-  "app/dashboard/profile/page.tsx",
   "app/dashboard/notifications/page.tsx",
-  "app/dashboard/discord/page.tsx",
+  "app/dashboard/stores/page.tsx",
+  "app/dashboard/events/page.tsx",
+  "app/dashboard/true-price/page.tsx",
+  "app/dashboard/local-radar/page.tsx",
+  "app/dashboard/profile/page.tsx",
+  "app/dashboard/avatar/page.tsx",
   "app/dashboard/membership/page.tsx",
+  "app/dashboard/discord/page.tsx",
 ];
 
 test("every retained dashboard destination has a real page", () => {
-  for (const file of requiredDashboardPages) assert.equal(fs.existsSync(file), true, `${file} missing`);
+  for (const route of dashboardRoutes) assert.equal(fs.existsSync(route), true, `${route} is missing`);
 });
 
 test("core dashboard navigation keeps every collector destination in the approved workspace", () => {
-  const shell = fs.readFileSync("components/dashboard-shell.tsx", "utf8");
-  for (const route of [
-    "/dashboard",
-    "/dashboard/search",
-    "/dashboard/alerts",
-    "/dashboard/true-price",
-    "/dashboard/fatefind",
-    "/dashboard/watchlist",
-    "/dashboard/wishlist",
-    "/dashboard/stores",
-    "/dashboard/local-radar",
-    "/dashboard/events",
-    "/dashboard/avatar",
-  ]) assert.ok(shell.includes(route), `${route} missing from dashboard shell`);
+  const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
+  const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  assert.ok(shell.includes('href="/dashboard/notifications"'));
+  assert.ok(shell.includes('href="/dashboard/profile"'));
+  assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
+  assert.ok(nav.includes('"FateFind", "/dashboard/watchlist"'));
+  assert.ok(nav.includes('"Watchlist", "/dashboard/wishlist"'));
+  assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
+  assert.ok(nav.includes('"True Price", "/dashboard/true-price"'));
+  assert.ok(nav.includes('"Indies", "/dashboard/stores"'));
 });
 
 test("dashboard home uses the shared shell and retains personal collector identity", () => {
   const root = fs.readFileSync("app/dashboard/page.tsx", "utf8");
-  const shell = fs.readFileSync("components/dashboard-shell.tsx", "utf8");
-  assert.ok(root.includes("DashboardShell"));
+  const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
+  assert.ok(root.includes("DashboardPageShell"));
+  assert.equal(root.includes("fd-dashboard-sidebar"), false);
+  assert.ok(root.includes("snapshot.account.displayName"));
   assert.ok(root.includes('href="/dashboard/avatar"'));
   assert.ok(root.includes('href="/dashboard/alerts"'));
   assert.ok(root.includes("/assets/dashboard/koru-network-guide.png"));
@@ -84,82 +81,174 @@ test("Koru and Friends is the only active companion system", () => {
   assert.ok(api.includes("companionId"));
   assert.ok(api.includes("normalizeCompanionId"));
   assert.ok(storage.includes("fatedrop_user_avatars"));
-  assert.ok(storage.includes('process.env.FATEDROP_ACCOUNT_STORE'));
+  assert.ok(storage.includes("FATEDROP_ACCOUNT_STORE"));
+  assert.ok(storage.includes("FATEDROP_AVATAR_FILE"));
   for (const retiredFile of [
     "components/companion-3d-stage.tsx",
     "components/avatar-builder.tsx",
     "components/avatar-preview.tsx",
     "components/avatar-option-thumbnail.tsx",
+    "components/avatar-anime-character.tsx",
+    "components/avatar-layered-character.tsx",
+    "lib/avatar-assets.ts",
+    "public/assets/avatar-v2/avatar-sprites.svg",
+    "public/assets/companions/fatedrop-male.glb",
+    "public/assets/companions/fatedrop-droid.glb",
   ]) assert.equal(fs.existsSync(retiredFile), false, `${retiredFile} should remain retired`);
 });
 
 test("Alerts is a precise network ledger and keeps personal delivery controls separate", () => {
   const alerts = fs.readFileSync("app/dashboard/alerts/page.tsx", "utf8");
-  assert.ok(alerts.includes("Network signal ledger"));
-  assert.ok(alerts.includes("Notification preferences"));
-  assert.ok(alerts.includes("Whisper"));
-  assert.ok(alerts.includes("Echo"));
-  assert.ok(alerts.includes("Manifested"));
-  assert.ok(alerts.includes("Vanished"));
+  assert.ok(alerts.includes("NETWORK FLIGHT RECORDER"));
+  assert.ok(alerts.includes("PRECISE SIGNAL ACTIVITY"));
+  assert.ok(alerts.includes("SIGNAL LEDGER"));
+  assert.ok(alerts.includes("EXACT CAUSE"));
+  for (const state of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) assert.ok(alerts.includes(`"${state}"`));
+  for (const cause of ["catalogue_new", "queue", "security", "restock", "sold_out", "lifecycle_unspecified"]) assert.ok(alerts.includes(`"${cause}"`));
+  assert.ok(alerts.includes('/dashboard/notifications'));
+  assert.ok(alerts.includes('/dashboard/true-price?q='));
+  assert.ok(alerts.includes('/dashboard/watchlist?q='));
+  assert.ok(alerts.includes("CanonicalAlertSignalPack"));
+  assert.ok(alerts.includes("Cause unclassified"));
+  assert.equal(alerts.includes("<LiveAlertFeed"), false);
 });
 
 test("Search, True Price and FateFind form one working collector journey", () => {
   const search = fs.readFileSync("app/dashboard/search/page.tsx", "utf8");
-  const price = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
-  const fatefind = fs.readFileSync("app/dashboard/fatefind/page.tsx", "utf8");
-  assert.ok(search.includes("searchSignalEngineCatalogue"));
-  assert.ok(price.includes("getSignalEngineTruePrice"));
-  assert.ok(fatefind.includes("FateFind"));
+  const truePrice = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
+  const fateFind = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
+  const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  assert.ok(search.includes("searchSignalCatalogue"));
+  assert.ok(search.includes('/dashboard/true-price?q='));
+  assert.ok(search.includes('/dashboard/watchlist?q='));
+  assert.ok(search.includes("BUY ↗"));
+  assert.ok(truePrice.includes("searchSignalTruePrice"));
+  assert.ok(truePrice.includes('/dashboard/watchlist?q='));
+  assert.ok(truePrice.includes("BUY AT RETAILER ↗"));
+  assert.ok(fateFind.includes("FateMatchBuilder"));
+  assert.ok(fateFind.includes("FateFindActions"));
+  assert.ok(client.includes('"/api/catalogue"'));
+  assert.ok(client.includes('"/api/true-price"'));
 });
 
 test("FateFind supports create pause resume delete and evidence-based local matching", () => {
-  const page = fs.readFileSync("app/dashboard/fatefind/page.tsx", "utf8");
-  const route = fs.readFileSync("app/api/fate-matches/route.ts", "utf8");
-  assert.ok(page.includes("FateFind"));
-  assert.ok(route.includes("POST"));
+  const builder = fs.readFileSync("components/fate-match-builder.tsx", "utf8");
+  const actions = fs.readFileSync("components/fatefind-actions.tsx", "utf8");
+  const api = fs.readFileSync("app/api/fate-matches/route.ts", "utf8");
+  const storage = fs.readFileSync("lib/fate-match-storage.ts", "utf8");
+  assert.ok(builder.includes("navigator.geolocation"));
+  assert.ok(builder.includes("radiusKm"));
+  assert.ok(builder.includes("latitude"));
+  assert.ok(builder.includes("longitude"));
+  assert.ok(builder.includes("Use your location before saving a Local-only FateFind."));
+  assert.ok(api.includes("export async function POST"));
+  assert.ok(api.includes("export async function PATCH"));
+  assert.ok(api.includes("export async function DELETE"));
+  assert.ok(api.includes("Local FateFind monitoring requires a resolved location and radius."));
+  assert.ok(api.includes("assertSameOrigin(request)"));
+  assert.ok(storage.includes("setFateMatchEnabled"));
+  assert.ok(storage.includes("deleteFateMatch"));
+  assert.ok(actions.includes('method: "PATCH"'));
+  assert.ok(actions.includes('method: "DELETE"'));
 });
 
 test("Universal Wishlist is persistent, separate from FateFind and migration-safe", () => {
-  const wishlist = fs.readFileSync("app/dashboard/wishlist/page.tsx", "utf8");
-  assert.ok(wishlist.includes("Wishlist"));
+  const page = fs.readFileSync("app/dashboard/wishlist/page.tsx", "utf8");
+  const api = fs.readFileSync("app/api/wishlist/route.ts", "utf8");
+  const storage = fs.readFileSync("lib/wishlist-storage.ts", "utf8");
+  const migration = fs.readFileSync("database/2026-08-19-user-preferences.sql", "utf8");
+  assert.ok(page.includes("Wishlist means “I want this.”"));
+  assert.ok(page.includes("FateFind means “go hunt this for me.”"));
+  assert.ok(api.includes("assertSameOrigin"));
+  assert.ok(storage.includes("fatedrop_wishlist_items"));
+  assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS fatedrop_wishlist_items"));
 });
 
 test("notification preferences use one persistent cross-channel account model", () => {
-  const notifications = fs.readFileSync("app/dashboard/notifications/page.tsx", "utf8");
-  assert.ok(notifications.includes("Notification"));
+  const page = fs.readFileSync("app/dashboard/notifications/page.tsx", "utf8");
+  const api = fs.readFileSync("app/api/notification-preferences/route.ts", "utf8");
+  const storage = fs.readFileSync("lib/notification-preferences.ts", "utf8");
+  const migration = fs.readFileSync("database/2026-08-19-user-preferences.sql", "utf8");
+  assert.ok(page.includes("ONE PROFILE · EVERY CHANNEL"));
+  assert.ok(api.includes("assertSameOrigin"));
+  assert.ok(storage.includes("fatedrop_notification_preferences"));
+  for (const signal of ["whisper", "echo", "manifested", "vanished", "priceChange", "fateMatch"]) assert.ok(storage.includes(signal));
+  assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS fatedrop_notification_preferences"));
 });
 
 test("free signal API redacts actionable fields before browser delivery", () => {
-  const route = fs.readFileSync("app/api/dashboard/signals/route.ts", "utf8");
-  assert.ok(route.includes("membership"));
+  const api = fs.readFileSync("app/api/dashboard/signals/route.ts", "utf8");
+  assert.ok(api.includes('"Premium signal detail"'));
+  assert.ok(api.includes('"Major network movement detected"'));
+  assert.ok(api.includes("retailer: null"));
+  assert.ok(api.includes("detail: null"));
+  assert.ok(api.includes("confidence: null"));
+  assert.ok(api.includes("deliveredPricePence: null"));
+  assert.ok(api.includes('"Cache-Control": "private, no-store, max-age=0"'));
 });
 
 test("internal alert visualiser preserves the final signal vocabulary and companion language", () => {
-  const visualiser = fs.readFileSync("app/internal/alert-visualiser/page.tsx", "utf8");
-  for (const state of ["Whisper", "Echo", "Manifested", "Vanished"]) assert.ok(visualiser.includes(state));
+  const feed = fs.readFileSync("components/live-alert-feed.tsx", "utf8");
+  assert.ok(feed.includes('whisper: { label: "WHISPER"'));
+  assert.ok(feed.includes('echo: { label: "ECHO"'));
+  assert.ok(feed.includes('queue: { label: "ECHO"'));
+  assert.ok(feed.includes('security: { label: "ECHO"'));
+  assert.ok(feed.includes('drop_pulse: { label: "DROP PULSE"'));
+  assert.ok(feed.includes('state: "echo"'));
+  assert.equal(feed.includes('whisper: { label: "ECHO"'), false);
+  assert.equal(feed.includes('echo: { label: "MANIFESTED"'), false);
+  assert.ok(feed.includes("TEST COMPANION SURGE"));
+  assert.ok(feed.includes("TEST PRODUCT SIGNAL"));
+  assert.ok(feed.includes("Your selected Koru &amp; Friends companion remains on watch"));
+  assert.equal(feed.includes("TEST AVATAR SURGE"), false);
 });
 
 test("True Price is canonical Cloud comparison and FateWindow stays out of the active product surface", () => {
-  const price = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
-  assert.ok(price.includes("getSignalEngineTruePrice"));
-  assert.equal(price.includes("FateWindow"), false);
+  const page = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
+  const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  assert.ok(page.includes("searchSignalTruePrice"));
+  assert.ok(page.includes("ITEM PRICE"));
+  assert.ok(page.includes("KNOWN DELIVERY"));
+  assert.ok(page.includes("TRUE PRICE"));
+  assert.ok(page.includes("Unknown never means free"));
+  assert.ok(page.includes("CREATE A FATEFIND"));
+  assert.equal(page.toUpperCase().includes("FATEWINDOW"), false);
+  assert.ok(client.includes('"/api/true-price"'));
 });
 
 test("retailer discovery separates Cloud runtime health from storefront lab feeds", () => {
   const stores = fs.readFileSync("app/dashboard/stores/page.tsx", "utf8");
-  assert.ok(stores.includes("retailer"));
+  const network = fs.readFileSync("lib/retailer-network.ts", "utf8");
+  const registry = fs.readFileSync("lib/retailer-registry.ts", "utf8");
+  assert.ok(stores.includes("LIVE NETWORK"));
+  assert.ok(stores.includes("STORE PREVIEWS"));
+  assert.ok(stores.includes("FateDrop is the bridge, not the marketplace"));
+  assert.ok(stores.includes("not a paid ranking, endorsement or blanket trust badge"));
+  assert.ok(network.includes("getSignalEngineStatus"));
+  assert.ok(registry.includes("cloudRetailerId"));
+  assert.ok(registry.includes('cloudRetailerId: "smyths-uk"'));
 });
 
 test("Events has a canonical network-feed migration endpoint", () => {
-  assert.equal(fs.existsSync("app/api/events/route.ts"), true);
+  const eventsApi = fs.readFileSync("app/api/events/route.ts", "utf8");
+  const dashboardEvents = fs.readFileSync("app/dashboard/events/page.tsx", "utf8");
+  assert.ok(eventsApi.includes("getLatestNetworkMetricSnapshot"));
+  assert.ok(eventsApi.includes('status: snapshot ? "network" : "awaiting-network-feed"'));
+  assert.ok(eventsApi.includes("upcomingEvents"));
+  assert.ok(dashboardEvents.includes("loadUpcomingEncounters"));
+  assert.ok(dashboardEvents.includes("EventCalendar"));
+  assert.ok(dashboardEvents.includes("FateEncountersLive"));
 });
 
 test("baseline production security headers are configured", () => {
   const config = fs.readFileSync("next.config.ts", "utf8");
-  assert.ok(config.includes("Content-Security-Policy"));
+  for (const header of ["X-Content-Type-Options", "Referrer-Policy", "X-Frame-Options", "Permissions-Policy"]) assert.ok(config.includes(header));
 });
 
 test("Stripe checkout blocks duplicate live subscriptions and repeat trials", () => {
   const checkout = fs.readFileSync("app/api/billing/checkout/route.ts", "utf8");
-  assert.ok(checkout.includes("subscription"));
+  const billing = fs.readFileSync("lib/billing.ts", "utf8");
+  assert.ok(checkout.includes('snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled"'));
+  assert.ok(checkout.includes("trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt"));
+  assert.ok(billing.includes("if (input.trialEligible)"));
 });
