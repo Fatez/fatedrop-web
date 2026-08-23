@@ -90,7 +90,10 @@ test("Koru and Friends has one versioned five-slot renderer boundary for current
   assert.equal(contract.includes("AvatarLoadout"), false);
   assert.ok(renderer.includes("companionRendererMode"));
   assert.ok(renderer.includes("companionModelUrl"));
-  assert.ok(renderer.includes("KoruMascot"));
+  assert.ok(renderer.includes("CompanionWebglModel"));
+  assert.ok(renderer.includes("CompanionPlaceholder"));
+  assert.equal(renderer.includes("KoruMascot"), false, "the selector must not use homepage artwork as a substitute for the missing Koru GLB");
+  assert.ok(renderer.includes("Never substitute campaign/homepage artwork"));
   assert.ok(selector.includes("ACTIVE_COMPANION_ROSTER.map"));
   assert.ok(selector.includes("SIGNAL STATE PREVIEW"));
   assert.ok(truth.includes("BETA Web renderer / asset handoff ongoing"));
