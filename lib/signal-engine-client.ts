@@ -19,7 +19,12 @@ export type SignalCatalogueOffer = {
   productId?: string;
   rrpGbp?: number;
   rrpSource?: string;
+  rrpKind?: "official" | "component_reference" | "pack_reference";
   rrpObservedAt?: string;
+  rrpReferenceBasis?: string;
+  unitCount?: number;
+  unitKind?: string;
+  unitRrpGbp?: number;
   lastSeen?: string;
 };
 
@@ -57,7 +62,12 @@ export type SignalTruePriceGroup = {
   retailerCount: number;
   rrpGbp?: number;
   rrpSource?: string;
+  rrpKind?: "official" | "component_reference" | "pack_reference";
   rrpObservedAt?: string;
+  rrpReferenceBasis?: string;
+  unitCount?: number;
+  unitKind?: string;
+  unitRrpGbp?: number;
   offers: SignalTruePriceOffer[];
 };
 
