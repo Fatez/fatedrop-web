@@ -65,7 +65,15 @@ export async function POST(request: Request) {
     }) : [];
     const snapshot: NetworkMetricSnapshot = {
       id: randomUUID(), sourceEventId, source, measuredAt, recordedAt: now,
-      metrics: { whisper: metric(metrics.whisper), manifested: metric(metrics.manifested), vanished: metric(metrics.vanished), echo: metric(metrics.echo), changes24h: metric(metrics.changes24h), productsTracked: metric(metrics.productsTracked), inStock: metric(metrics.inStock), catalogueRetailers: metric(metrics.catalogueRetailers), healthyMonitors: metric(metrics.healthyMonitors) },
+      metrics: {
+        whisper: metric(metrics.whisper), manifested: metric(metrics.manifested), vanished: metric(metrics.vanished), echo: metric(metrics.echo),
+        changes24h: metric(metrics.changes24h), productsTracked: metric(metrics.productsTracked), inStock: metric(metrics.inStock), catalogueRetailers: metric(metrics.catalogueRetailers), healthyMonitors: metric(metrics.healthyMonitors),
+        whisperDelivered: metric(metrics.whisperDelivered), whisperSkipped: metric(metrics.whisperSkipped), whisperFailed: metric(metrics.whisperFailed), whisperUnaccounted: metric(metrics.whisperUnaccounted),
+        echoDelivered: metric(metrics.echoDelivered), echoSkipped: metric(metrics.echoSkipped), echoFailed: metric(metrics.echoFailed), echoUnaccounted: metric(metrics.echoUnaccounted),
+        manifestedDelivered: metric(metrics.manifestedDelivered), manifestedSkipped: metric(metrics.manifestedSkipped), manifestedFailed: metric(metrics.manifestedFailed), manifestedUnaccounted: metric(metrics.manifestedUnaccounted),
+        vanishedDelivered: metric(metrics.vanishedDelivered), vanishedSkipped: metric(metrics.vanishedSkipped), vanishedFailed: metric(metrics.vanishedFailed), vanishedUnaccounted: metric(metrics.vanishedUnaccounted),
+        discordDetected: metric(metrics.discordDetected), discordAttempted: metric(metrics.discordAttempted), discordDelivered: metric(metrics.discordDelivered), discordSkipped: metric(metrics.discordSkipped), discordFailed: metric(metrics.discordFailed), discordUnaccounted: metric(metrics.discordUnaccounted),
+      },
       recentSignals, upcomingEvents,
     };
     const inserted = await saveNetworkMetricSnapshot(snapshot);
