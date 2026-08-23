@@ -1,6 +1,6 @@
 import type { AccountSnapshot } from "./account-storage";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal } from "./dashboard-storage";
-import { getSignalLifecycleSummary } from "./signal-trends";
+import { getSignalDeliverySummary, getSignalLifecycleSummary } from "./signal-trends";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
 
@@ -44,11 +44,12 @@ export function signalCauseLabel(signal: NetworkSignal) {
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
-  const [activity, network, history, signalSummary] = await Promise.all([
+  const [activity, network, history, signalSummary, signalDeliverySummary] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
     getLatestNetworkMetricSnapshot(),
     listNetworkMetricSnapshots(30),
     getSignalLifecycleSummary(7),
+    getSignalDeliverySummary(7),
   ]);
 
   const stores = new Map<string, { name: string; count: number; latestAt: number }>();
@@ -93,6 +94,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     network,
     networkHistory: history,
     signalSummary,
+    signalDeliverySummary,
     publishedBaseline,
     publicSignalMetrics: {
       whisper: signalSummary?.whisper.total ?? null,
@@ -136,7 +138,13 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         label: "Network lifecycle metrics",
         source: signalSummary ? "FateDrop signal ledger" : network ? network.source : "Awaiting FateDrop Cloud metric feed",
         updatedAt: signalSummary ? now : network?.measuredAt ?? null,
-        note: signalSummary ? "The four dashboard lifecycle cards are aggregated directly from persisted Whisper, Echo, Manifested and Vanished signal rows over the last seven UTC days, including zero-activity days." : network ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle counters remain unavailable rather than falling back to invented values.",
+        note: signalSummary ? "The four dashboard lifecycle totals are aggregated directly from persisted Whisper, Echo, Manifested and Vanished signal rows over the last seven UTC days, including zero-activity days." : network ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle counters remain unavailable rather than falling back to invented values.",
+      },
+      {
+        label: "Alert delivery health",
+        source: signalDeliverySummary ? "FateDrop signal delivery ledger" : "Awaiting signal delivery telemetry",
+        updatedAt: signalDeliverySummary ? now : null,
+        note: signalDeliverySummary ? "Sent alerts, intentional policy suppression and delivery/configuration issues are aggregated separately from detections so the dashboard never confuses engine activity with successful alert delivery." : "Delivery health remains unavailable rather than being inferred from signal detections.",
       },
     ],
   };
