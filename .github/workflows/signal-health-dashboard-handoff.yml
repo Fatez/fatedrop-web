@@ -1,0 +1,153 @@
+name: Signal Health Dashboard Handoff
+
+on:
+  push:
+    paths:
+      - ".handoff/signal-health/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/web-koru-final-revamp-2026-08-21
+          fetch-depth: 1
+      - name: Reconcile signal health dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+
+          dashboard = Path("lib/dashboard.ts")
+          text = dashboard.read_text()
+          old = '''    publicSignalMetrics: {
+      whisper: signalSummary?.whisper.total ?? network?.metrics.whisper ?? null,
+      echo: signalSummary?.echo.total ?? network?.metrics.echo ?? null,
+      manifested: signalSummary?.manifested.total ?? network?.metrics.manifested ?? null,
+      vanished: signalSummary?.vanished.total ?? network?.metrics.vanished ?? null,
+    },'''
+          new = '''    publicSignalMetrics: {
+      whisper: signalSummary?.whisper.total ?? null,
+      echo: signalSummary?.echo.total ?? null,
+      manifested: signalSummary?.manifested.total ?? null,
+      vanished: signalSummary?.vanished.total ?? null,
+    },'''
+          if old not in text:
+              raise SystemExit("dashboard lifecycle fallback block not found")
+          dashboard.write_text(text.replace(old, new, 1))
+
+          page = Path("app/dashboard/page.tsx")
+          text = page.read_text()
+          old = '''function sparkPath(points: TrendPoint[], width = 120, height = 32) {
+  if (!points.length) return `M0 ${height / 2} L${width} ${height / 2}`;
+  const min = Math.min(...points.map((point) => point.value));
+  const max = Math.max(...points.map((point) => point.value));
+  const spread = Math.max(1, max - min);
+  const firstTime = points[0]?.measuredAt ?? 0;
+  const lastTime = points[points.length - 1]?.measuredAt ?? firstTime;
+  const timeSpread = Math.max(1, lastTime - firstTime);
+  return points.map((point, index) => {
+    const x = points.length === 1 ? width : ((point.measuredAt - firstTime) / timeSpread) * width;
+    const y = height - 4 - ((point.value - min) / spread) * (height - 8);
+    return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(" ");
+}'''
+          new = '''function sparkCoordinates(points: TrendPoint[], width = 120, height = 42) {
+  if (!points.length) return [];
+  const max = Math.max(1, ...points.map((point) => point.value));
+  const firstTime = points[0]?.measuredAt ?? 0;
+  const lastTime = points[points.length - 1]?.measuredAt ?? firstTime;
+  const timeSpread = Math.max(1, lastTime - firstTime);
+  return points.map((point) => ({
+    ...point,
+    x: points.length === 1 ? width / 2 : ((point.measuredAt - firstTime) / timeSpread) * width,
+    y: height - 5 - (point.value / max) * (height - 10),
+  }));
+}
+
+function sparkPath(points: TrendPoint[], width = 120, height = 42) {
+  const coordinates = sparkCoordinates(points, width, height);
+  if (!coordinates.length) return `M0 ${height - 5} L${width} ${height - 5}`;
+  return coordinates.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
+}
+
+function dayLabel(timestamp: number) {
+  return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(timestamp * 1000));
+}
+
+function peakPoint(points: TrendPoint[]) {
+  return points.reduce<TrendPoint | null>((peak, point) => !peak || point.value > peak.value ? point : peak, null);
+}'''
+          if old not in text:
+              raise SystemExit("dashboard sparkPath block not found")
+          text = text.replace(old, new, 1)
+
+          text = text.replace(
+              "What’s changing across the network — Whisper, Echo, Manifested and Vanished activity recorded across the last seven days.",
+              "Real Signal Intelligence activity from the persisted ledger — daily Whisper, Echo, Manifested and Vanished events across the last seven UTC days.",
+              1,
+          )
+
+          old = '''            const points = series[key];
+            const today = data.signalSummary?.[key].today ?? null;
+            return <article className={`fd-lifecycle-card ${key}`} key={key}>'''
+          new = '''            const points = series[key];
+            const today = data.signalSummary?.[key].today ?? null;
+            const coordinates = sparkCoordinates(points);
+            const peak = peakPoint(points);
+            return <article className={`fd-lifecycle-card ${key}`} key={key}>'''
+          if old not in text:
+              raise SystemExit("dashboard lifecycle map prelude not found")
+          text = text.replace(old, new, 1)
+
+          old = '''              <em className="fd-lifecycle-window">7D ALERTS</em>
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
+              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-label={`${label} alerts per day over the last seven days`} role="img"><path d={sparkPath(points)} /></svg>
+              {today !== null
+                ? <p className={today > 0 ? "up" : undefined}>{today > 0 ? "↑" : "→"} {metric(today)} today</p>
+                : <p>Waiting for signal history</p>}'''
+          new = '''              <em className="fd-lifecycle-window">7D SIGNALS</em>
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
+              <svg viewBox="0 0 120 42" preserveAspectRatio="none" aria-label={`${label} signal events per UTC day over the last seven days`} role="img">
+                <path d={sparkPath(points)} />
+                {coordinates.map((point) => <circle key={point.measuredAt} cx={point.x} cy={point.y} r="1.45" />)}
+              </svg>
+              <div className="fd-lifecycle-days" aria-label={`${label} daily counts`}>
+                {points.map((point) => <span key={point.measuredAt}><small>{dayLabel(point.measuredAt)}</small><b>{metric(point.value)}</b></span>)}
+              </div>
+              {today !== null
+                ? <p className={today > 0 ? "up" : undefined}>{today > 0 ? "↑" : "→"} {metric(today)} today{peak ? ` · peak ${metric(peak.value)} on ${dayLabel(peak.measuredAt)}` : ""}</p>
+                : <p>Signal ledger unavailable</p>}'''
+          if old not in text:
+              raise SystemExit("dashboard lifecycle chart block not found")
+          text = text.replace(old, new, 1)
+
+          old = '''.fd-lifecycle-card{position:relative;min-height:132px;padding:14px;overflow:hidden;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:linear-gradient(145deg,#101419,#0b0f13)}'''
+          new = '''.fd-lifecycle-card{position:relative;min-height:188px;padding:14px;overflow:hidden;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:linear-gradient(145deg,#101419,#0b0f13)}'''
+          if old not in text:
+              raise SystemExit("dashboard lifecycle card css not found")
+          text = text.replace(old, new, 1)
+
+          old = '''.fd-lifecycle-card svg{position:absolute;right:12px;bottom:28px;width:48%;height:33px;overflow:visible}.fd-lifecycle-card svg path{fill:none;stroke:currentColor;stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.82}.fd-lifecycle-card>p{position:absolute;left:14px;bottom:10px;margin:0;color:#676168;font-size:6px}.fd-lifecycle-card>p.up{color:#839f7b}.fd-lifecycle-card>p.down{color:#a96b6b}'''
+          new = '''.fd-lifecycle-card svg{display:block;width:100%;height:48px;margin-top:9px;overflow:visible}.fd-lifecycle-card svg path{fill:none;stroke:currentColor;stroke-width:1.15;vector-effect:non-scaling-stroke;opacity:.82}.fd-lifecycle-card svg circle{fill:currentColor;stroke:#0c1014;stroke-width:.75;vector-effect:non-scaling-stroke}.fd-lifecycle-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-top:4px}.fd-lifecycle-days span{display:grid;gap:1px;min-width:0;text-align:center}.fd-lifecycle-days small{overflow:hidden;color:#625d63;font-size:5px;font-weight:700;white-space:nowrap}.fd-lifecycle-days b{color:#aaa1a8;font-size:6px;font-weight:700}.fd-lifecycle-card>p{margin:7px 0 0;color:#676168;font-size:6px}.fd-lifecycle-card>p.up{color:#839f7b}.fd-lifecycle-card>p.down{color:#a96b6b}'''
+          if old not in text:
+              raise SystemExit("dashboard lifecycle chart css not found")
+          page.write_text(text.replace(old, new, 1))
+
+          test = Path("tests/signal-health-dashboard.test.mjs")
+          test.write_text('''import test from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\n\nconst read = (file) => fs.readFileSync(file, "utf8");\n\ntest("dashboard lifecycle graphs use one real seven-day signal ledger source", () => {\n  const dashboard = read("lib/dashboard.ts");\n  const trends = read("lib/signal-trends.ts");\n  const page = read("app/dashboard/page.tsx");\n  assert.ok(trends.includes("FROM fatedrop_signals"));\n  assert.ok(trends.includes("COUNT(*)::int AS count"));\n  assert.ok(trends.includes("state IN ('whisper', 'echo', 'manifested', 'vanished')"));\n  assert.ok(dashboard.includes("whisper: signalSummary?.whisper.total ?? null"));\n  assert.equal(dashboard.includes("signalSummary?.whisper.total ?? network?.metrics.whisper"), false);\n  assert.ok(page.includes("7D SIGNALS"));\n  assert.ok(page.includes("persisted ledger"));\n  assert.ok(page.includes("fd-lifecycle-days"));\n  assert.ok(page.includes("peak ${metric(peak.value)}"));\n  assert.ok(page.includes("point.value / max"), "trend must retain a zero baseline rather than min-max exaggeration");\n  assert.ok(page.includes("Signal ledger unavailable"));\n});\n''')
+
+      - name: Commit signal health dashboard and remove one-shot handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .handoff/signal-health
+          rm -f .github/workflows/signal-health-dashboard-handoff.yml
+          git config user.name "FateDrop Signal Health"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/dashboard/page.tsx lib/dashboard.ts tests/signal-health-dashboard.test.mjs .handoff/signal-health .github/workflows/signal-health-dashboard-handoff.yml
+          git commit -m "Make dashboard lifecycle trends real and inspectable"
+          git push origin HEAD:agent/web-koru-final-revamp-2026-08-21
