@@ -20,6 +20,16 @@ export function publicSignalLabel(signal: NetworkSignal) {
   return "Signal";
 }
 
+function deliveryLifecycle(network: Awaited<ReturnType<typeof getLatestNetworkMetricSnapshot>>, state: "whisper" | "echo" | "manifested" | "vanished") {
+  return {
+    detected: network?.metrics[state] ?? null,
+    delivered: network?.metrics[`${state}Delivered`] ?? null,
+    skipped: network?.metrics[`${state}Skipped`] ?? null,
+    failed: network?.metrics[`${state}Failed`] ?? null,
+    unaccounted: network?.metrics[`${state}Unaccounted`] ?? null,
+  };
+}
+
 export async function buildDashboardData(snapshot: AccountSnapshot) {
   const [activity, network, history] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
@@ -70,11 +80,27 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     healthyMonitors: network?.metrics.healthyMonitors ?? null,
   };
 
+  const deliveryHealth = {
+    detected: network?.metrics.discordDetected ?? null,
+    attempted: network?.metrics.discordAttempted ?? null,
+    delivered: network?.metrics.discordDelivered ?? null,
+    skipped: network?.metrics.discordSkipped ?? null,
+    failed: network?.metrics.discordFailed ?? null,
+    unaccounted: network?.metrics.discordUnaccounted ?? null,
+    byState: {
+      whisper: deliveryLifecycle(network, "whisper"),
+      echo: deliveryLifecycle(network, "echo"),
+      manifested: deliveryLifecycle(network, "manifested"),
+      vanished: deliveryLifecycle(network, "vanished"),
+    },
+  };
+
   return {
     generatedAt: now,
     network,
     networkHistory: history,
     publishedBaseline,
+    deliveryHealth,
     publicSignalMetrics: {
       whisper: network?.metrics.whisper ?? null,
       echo: network?.metrics.echo ?? null,
@@ -117,7 +143,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         label: "Network lifecycle metrics",
         source: network ? network.source : "Awaiting FateDrop Cloud metric feed",
         updatedAt: network?.measuredAt ?? null,
-        note: network ? "Derived from the latest persisted network snapshot. Whisper, Echo, Manifested and Vanished retain the same meanings as the production Signal Engine." : "Until a live feed is connected, lifecycle and catalogue counters remain unavailable rather than falling back to stale values.",
+        note: network ? "Derived from the latest persisted network snapshot. Detected lifecycle events remain separate from Discord sent, skipped, failed and unaccounted delivery outcomes." : "Until a live feed is connected, lifecycle, delivery and catalogue counters remain unavailable rather than falling back to stale values.",
       },
     ],
   };

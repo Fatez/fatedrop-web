@@ -38,13 +38,22 @@ test("dashboard activity and network metrics are persisted idempotently", async 
       source: "FateDrop Cloud test",
       measuredAt: now,
       recordedAt: now,
-      metrics: { whisper: 1, manifested: 2, vanished: 3, echo: 4, changes24h: 10, productsTracked: 100, inStock: 50, catalogueRetailers: 4, healthyMonitors: 3 },
+      metrics: {
+        whisper: 1, manifested: 10, vanished: 3, echo: 4, changes24h: 18,
+        productsTracked: 100, inStock: 50, catalogueRetailers: 4, healthyMonitors: 3,
+        manifestedDelivered: 5, manifestedSkipped: 2, manifestedFailed: 1, manifestedUnaccounted: 2,
+        discordDetected: 18, discordAttempted: 16, discordDelivered: 9, discordSkipped: 6, discordFailed: 1, discordUnaccounted: 2,
+      },
       recentSignals: [],
       upcomingEvents: [],
     };
     assert.equal(await storage.saveNetworkMetricSnapshot(snapshot), true);
     assert.equal(await storage.saveNetworkMetricSnapshot({ ...snapshot, id: "snapshot-2" }), false);
-    assert.equal((await storage.getLatestNetworkMetricSnapshot()).metrics.manifested, 2);
+    const latest = await storage.getLatestNetworkMetricSnapshot();
+    assert.equal(latest.metrics.manifested, 10);
+    assert.equal(latest.metrics.manifestedDelivered, 5);
+    assert.equal(latest.metrics.manifestedUnaccounted, 2);
+    assert.equal(latest.metrics.discordDelivered, 9);
 
     const audit = { eventId: "evt_stripe_1", eventType: "customer.subscription.updated", userId: "user-1", customerId: "cus_1", subscriptionId: "sub_1", stripeCreatedAt: now, processedAt: now };
     assert.equal(await storage.hasProcessedBillingEvent(audit.eventId), false);
