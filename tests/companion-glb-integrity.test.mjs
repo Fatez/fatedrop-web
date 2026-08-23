@@ -40,10 +40,11 @@ for (const id of ACTIVE_COMPANIONS) {
   });
 }
 
-test("web companion renderer supports the registered GLB plus sibling-JPEG package", () => {
+test("web companion renderer prefers the registered sibling-JPEG package over aggressively compressed embedded textures", () => {
   const renderer = fs.readFileSync(path.join(root, "components/companion-webgl-model.tsx"), "utf8");
   assert.ok(renderer.includes("companionSiblingTextureUrl"));
   assert.ok(renderer.includes("optionalSiblingTexture"));
-  assert.ok(renderer.includes("if (!model.imageBlob && siblingTexture) model.imageBlob = siblingTexture"));
+  assert.ok(renderer.includes("if (siblingTexture) model.imageBlob = siblingTexture"));
+  assert.equal(renderer.includes("if (!model.imageBlob && siblingTexture) model.imageBlob = siblingTexture"), false);
   assert.ok(renderer.includes("-texture.jpg"));
 });
