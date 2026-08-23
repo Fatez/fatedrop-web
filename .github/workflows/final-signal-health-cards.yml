@@ -1,0 +1,150 @@
+name: Final Signal Health Cards
+
+on:
+  push:
+    paths:
+      - ".handoff/final-signal-health/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/web-koru-final-revamp-2026-08-21
+          fetch-depth: 1
+      - name: Reconcile real signal and alert health cards
+        shell: python
+        run: |
+          from pathlib import Path
+
+          page = Path("app/dashboard/page.tsx")
+          text = page.read_text()
+
+          old = '''function sparkPath(points: TrendPoint[], width = 120, height = 32) {
+            if (!points.length) return `M0 ${height / 2} L${width} ${height / 2}`;
+            const min = Math.min(...points.map((point) => point.value));
+            const max = Math.max(...points.map((point) => point.value));
+            const spread = Math.max(1, max - min);
+            const firstTime = points[0]?.measuredAt ?? 0;
+            const lastTime = points[points.length - 1]?.measuredAt ?? firstTime;
+            const timeSpread = Math.max(1, lastTime - firstTime);
+            return points.map((point, index) => {
+              const x = points.length === 1 ? width : ((point.measuredAt - firstTime) / timeSpread) * width;
+              const y = height - 4 - ((point.value - min) / spread) * (height - 8);
+              return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+            }).join(" ");
+          }'''
+          new = '''function sparkCoordinates(points: TrendPoint[], width = 120, height = 46) {
+            if (!points.length) return [];
+            const max = Math.max(1, ...points.map((point) => point.value));
+            const firstTime = points[0]?.measuredAt ?? 0;
+            const lastTime = points[points.length - 1]?.measuredAt ?? firstTime;
+            const timeSpread = Math.max(1, lastTime - firstTime);
+            return points.map((point) => ({
+              ...point,
+              x: points.length === 1 ? width / 2 : ((point.measuredAt - firstTime) / timeSpread) * width,
+              y: height - 5 - (point.value / max) * (height - 10),
+            }));
+          }
+
+          function sparkPath(points: TrendPoint[], width = 120, height = 46) {
+            const coordinates = sparkCoordinates(points, width, height);
+            if (!coordinates.length) return `M0 ${height - 5} L${width} ${height - 5}`;
+            return coordinates.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
+          }
+
+          function dayLabel(timestamp: number) {
+            return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" }).format(new Date(timestamp * 1000));
+          }
+
+          function peakPoint(points: TrendPoint[]) {
+            return points.reduce<TrendPoint | null>((peak, point) => !peak || point.value > peak.value ? point : peak, null);
+          }'''
+          if old not in text:
+              raise SystemExit("sparkPath source block changed")
+          text = text.replace(old, new, 1)
+
+          old = 'What’s changing across the network — Whisper, Echo, Manifested and Vanished activity recorded across the last seven days.'
+          new = 'Real Signal Intelligence detections and actual alert-delivery health across the last seven UTC days.'
+          if old not in text:
+              raise SystemExit("signal overview copy changed")
+          text = text.replace(old, new, 1)
+
+          old = '''            const points = series[key];
+            const today = data.signalSummary?.[key].today ?? null;
+            return <article className={`fd-lifecycle-card ${key}`} key={key}>'''
+          new = '''            const points = series[key];
+            const today = data.signalSummary?.[key].today ?? null;
+            const delivery = data.signalDeliverySummary?.[key] ?? null;
+            const alertPoints = delivery?.trend.map((point) => ({ measuredAt: point.measuredAt, value: point.sent })) ?? [];
+            const alertCoordinates = sparkCoordinates(alertPoints);
+            const detectedPeak = peakPoint(points);
+            return <article className={`fd-lifecycle-card ${key}`} key={key}>'''
+          if old not in text:
+              raise SystemExit("lifecycle map prelude changed")
+          text = text.replace(old, new, 1)
+
+          old = '''              <em className="fd-lifecycle-window">7D ALERTS</em>
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
+              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-label={`${label} alerts per day over the last seven days`} role="img"><path d={sparkPath(points)} /></svg>
+              {today !== null
+                ? <p className={today > 0 ? "up" : undefined}>{today > 0 ? "↑" : "→"} {metric(today)} today</p>
+                : <p>Waiting for signal history</p>}'''
+          new = '''              <em className="fd-lifecycle-window">7D DETECTED</em>
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
+              <div className="fd-alert-chart-head"><span>ALERTS SENT / UTC DAY</span><b>{delivery ? `${metric(delivery.sent)} sent` : "—"}</b></div>
+              <svg viewBox="0 0 120 46" preserveAspectRatio="none" aria-label={`${label} alerts actually sent per UTC day over the last seven days`} role="img">
+                <path d={sparkPath(alertPoints)} />
+                {alertCoordinates.map((point) => <circle key={point.measuredAt} cx={point.x} cy={point.y} r="1.5" />)}
+              </svg>
+              <div className="fd-lifecycle-days" aria-label={`${label} sent-alert daily counts`}>
+                {alertPoints.map((point) => <span key={point.measuredAt}><small>{dayLabel(point.measuredAt)}</small><b>{metric(point.value)}</b></span>)}
+              </div>
+              <p className="fd-detection-context">{today !== null ? `${metric(today)} detected today${detectedPeak ? ` · peak ${metric(detectedPeak.value)} on ${dayLabel(detectedPeak.measuredAt)}` : ""}` : "Signal ledger unavailable"}</p>
+              {delivery ? <div className="fd-delivery-health">
+                <span><small>SENT</small><b>{metric(delivery.sent)}</b></span>
+                <span><small>POLICY SUPPRESSED</small><b>{metric(delivery.policySkipped)}</b></span>
+                <span className={delivery.issues > 0 ? "issue" : undefined}><small>ISSUES</small><b>{metric(delivery.issues)}</b></span>
+              </div> : <div className="fd-delivery-unavailable">Delivery ledger unavailable</div>}'''
+          if old not in text:
+              raise SystemExit("lifecycle chart source block changed")
+          text = text.replace(old, new, 1)
+
+          old = '.fd-lifecycle-card{position:relative;min-height:132px;padding:14px;overflow:hidden;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:linear-gradient(145deg,#101419,#0b0f13)}'
+          new = '.fd-lifecycle-card{position:relative;min-height:250px;padding:14px;overflow:hidden;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:linear-gradient(145deg,#101419,#0b0f13)}'
+          if old not in text:
+              raise SystemExit("lifecycle card css changed")
+          text = text.replace(old, new, 1)
+
+          old = '''.fd-lifecycle-card svg{position:absolute;right:12px;bottom:28px;width:48%;height:33px;overflow:visible}.fd-lifecycle-card svg path{fill:none;stroke:currentColor;stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.82}.fd-lifecycle-card>p{position:absolute;left:14px;bottom:10px;margin:0;color:#676168;font-size:6px}.fd-lifecycle-card>p.up{color:#839f7b}.fd-lifecycle-card>p.down{color:#a96b6b}'''
+          new = '''.fd-alert-chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;color:#615b61;font-size:5px;font-weight:850;letter-spacing:.08em}.fd-alert-chart-head b{color:#958d93;font-size:6px;letter-spacing:0}.fd-lifecycle-card svg{display:block;width:100%;height:49px;margin-top:5px;overflow:visible}.fd-lifecycle-card svg path{fill:none;stroke:currentColor;stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.82}.fd-lifecycle-card svg circle{fill:currentColor;stroke:#0c1014;stroke-width:.8;vector-effect:non-scaling-stroke}.fd-lifecycle-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-top:2px}.fd-lifecycle-days span{display:grid;gap:1px;min-width:0;text-align:center}.fd-lifecycle-days small{overflow:hidden;color:#5f5960;font-size:5px;font-weight:700;white-space:nowrap}.fd-lifecycle-days b{color:#aaa1a8;font-size:6px;font-weight:700}.fd-detection-context{margin:8px 0 0;color:#706970;font-size:6px;line-height:1.35}.fd-delivery-health{display:grid;grid-template-columns:.75fr 1.35fr .65fr;gap:5px;margin-top:8px}.fd-delivery-health span{display:grid;gap:2px;padding:5px 6px;border:1px solid rgba(221,203,188,.055);border-radius:6px;background:rgba(255,255,255,.012)}.fd-delivery-health small{color:#625c62;font-size:4.5px;font-weight:850;letter-spacing:.06em}.fd-delivery-health b{color:#a9a0a6;font-size:7px}.fd-delivery-health span.issue{border-color:rgba(179,78,86,.18)}.fd-delivery-health span.issue b{color:#b65b62}.fd-delivery-unavailable{margin-top:8px;color:#676168;font-size:6px}'''
+          if old not in text:
+              raise SystemExit("lifecycle graph css changed")
+          text = text.replace(old, new, 1)
+
+          old = '@media(max-width:520px){.fd-overview-card{padding:14px 12px}.fd-ref-card-head{flex-direction:column}.fd-lifecycle-grid{grid-template-columns:1fr}.fd-lifecycle-card{min-height:122px}'
+          new = '@media(max-width:520px){.fd-overview-card{padding:14px 12px}.fd-ref-card-head{flex-direction:column}.fd-lifecycle-grid{grid-template-columns:1fr}.fd-lifecycle-card{min-height:240px}'
+          if old not in text:
+              raise SystemExit("mobile lifecycle css changed")
+          text = text.replace(old, new, 1)
+
+          page.write_text(text)
+
+          test = Path("tests/signal-health-dashboard.test.mjs")
+          test.write_text('''import test from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\n\nconst read = (file) => fs.readFileSync(file, "utf8");\n\ntest("dashboard separates real detections from real alert delivery", () => {\n  const trends = read("lib/signal-trends.ts");\n  const dashboard = read("lib/dashboard.ts");\n  const page = read("app/dashboard/page.tsx");\n\n  assert.ok(trends.includes("FROM fatedrop_signals"));\n  assert.ok(trends.includes("fatedrop_signal_delivery_attempts"));\n  assert.ok(trends.includes("INNER JOIN fatedrop_signals"));\n  assert.ok(trends.includes('result === "sent"'));\n  assert.ok(trends.includes('result === "skipped" && detail === "disabled"'));\n  assert.ok(dashboard.includes("getSignalDeliverySummary(7)"));\n  assert.ok(dashboard.includes("signalDeliverySummary"));\n  assert.ok(dashboard.includes("whisper: signalSummary?.whisper.total ?? null"));\n  assert.equal(dashboard.includes("signalSummary?.whisper.total ?? network?.metrics.whisper"), false);\n\n  assert.ok(page.includes("7D DETECTED"));\n  assert.ok(page.includes("ALERTS SENT / UTC DAY"));\n  assert.ok(page.includes("POLICY SUPPRESSED"));\n  assert.ok(page.includes("ISSUES"));\n  assert.ok(page.includes("point.value / max"));\n  assert.ok(page.includes("alerts actually sent per UTC day"));\n  assert.equal(page.includes("7D ALERTS"), false);\n});\n''')
+
+      - name: Commit final signal health cards and remove handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .handoff/final-signal-health
+          rm -f .github/workflows/final-signal-health-cards.yml
+          git config user.name "FateDrop Signal Health"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/dashboard/page.tsx tests/signal-health-dashboard.test.mjs .handoff/final-signal-health .github/workflows/final-signal-health-cards.yml
+          git commit -m "Show real signal detections and alert delivery health"
+          git push origin HEAD:agent/web-koru-final-revamp-2026-08-21
