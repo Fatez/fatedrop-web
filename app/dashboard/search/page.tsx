@@ -17,14 +17,25 @@ function truePrice(offer: SignalCatalogueOffer) {
   return offer.price + offer.shippingGbp;
 }
 
+function rrpName(offer: SignalCatalogueOffer) {
+  if (offer.rrpKind === "component_reference") return "REFERENCE RRP";
+  if (offer.rrpKind === "pack_reference") return "PACK RRP REF";
+  return "RRP";
+}
+
 function rrpContext(offer: SignalCatalogueOffer) {
-  const delivered = truePrice(offer);
-  if (delivered === null || typeof offer.rrpGbp !== "number" || offer.rrpGbp <= 0) return null;
-  const difference = delivered - offer.rrpGbp;
+  if (typeof offer.price !== "number" || typeof offer.rrpGbp !== "number" || offer.rrpGbp <= 0) return null;
+  const difference = offer.price - offer.rrpGbp;
   const percent = (difference / offer.rrpGbp) * 100;
   const sign = difference > 0 ? "+" : difference < 0 ? "−" : "";
   const percentSign = percent > 0 ? "+" : percent < 0 ? "−" : "";
-  return `${sign}£${Math.abs(difference).toFixed(2)} · ${percentSign}${Math.abs(percent).toFixed(1)}% vs RRP`;
+  return `${sign}£${Math.abs(difference).toFixed(2)} · ${percentSign}${Math.abs(percent).toFixed(1)}% vs ${rrpName(offer)}`;
+}
+
+function unitContext(offer: SignalCatalogueOffer) {
+  if (typeof offer.unitCount !== "number" || offer.unitCount <= 1 || typeof offer.price !== "number") return null;
+  const unit = offer.unitKind === "booster_pack" ? "pack" : "unit";
+  return `${offer.unitCount} ${unit}s · ${gbp(offer.price / offer.unitCount)} item/${unit}`;
 }
 
 function groupOffers(offers: SignalCatalogueOffer[]) {
@@ -79,7 +90,7 @@ export default async function DashboardSearchPage({ searchParams }: { searchPara
       <div className="fd-search-page">
         <section className="fd-dash-card fd-network-card fd-search-hero">
           <div className="fd-dash-card-head"><span>SEARCH THE FATEDROP NETWORK</span><i className={result ? "live" : "pending"}>{result ? "● CLOUD CONNECTED" : "○ SIGNAL ENGINE"}</i></div>
-          <div className="fd-network-message"><h1>Search the product once.<br/>Compare the retailers underneath it.</h1><p>FateDrop resolves observed offers from the canonical Cloud catalogue, keeps unknown delivery unknown and gives you a direct path into True Price or a saved FateFind.</p></div>
+          <div className="fd-network-message"><h1>Search the product once.<br/>Compare the retailers underneath it.</h1><p>FateDrop resolves observed offers from the canonical Cloud catalogue, keeps unknown delivery unknown, compares item price against verified RRP/reference value, and gives you a direct path into True Price or a saved FateFind.</p></div>
           <form action="/dashboard/search" method="get" className="fd-network-search-form">
             <label className="fd-dashboard-search"><span>⌕</span><input name="q" defaultValue={q} autoFocus aria-label="Search products" placeholder="Try: Elite Trainer Box, booster bundle, Charizard…" /></label>
             <label><span>STOCK</span><select name="stock" defaultValue={stockOnly ? "in" : "all"}><option value="in">Available only</option><option value="all">All observed</option></select></label>
@@ -100,10 +111,12 @@ export default async function DashboardSearchPage({ searchParams }: { searchPara
               <div className="fd-search-offers">{group.offers.map((offer) => {
                 const delivered = truePrice(offer);
                 const context = rrpContext(offer);
+                const units = unitContext(offer);
+                const provenance = offer.rrpReferenceBasis ?? (offer.rrpSource ? `Verified source: ${offer.rrpSource}` : null);
                 return <div className="fd-search-offer" key={offer.id}>
                   <div><small>{offer.availability === "IN_STOCK" ? "● AVAILABLE" : offer.availability ?? "OBSERVED"}</small><strong>{offer.retailer}</strong><span>{offer.lastSeen ? `Observed ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(offer.lastSeen))}` : "Network observation"}</span></div>
-                  <div className="fd-search-offer-price"><span><small>ITEM</small><b>{gbp(offer.price)}</b></span><span><small>DELIVERY</small><b>{typeof offer.shippingGbp === "number" ? offer.shippingGbp === 0 ? "FREE" : gbp(offer.shippingGbp) : "UNKNOWN"}</b></span><span><small>TRUE PRICE</small><b>{delivered !== null ? gbp(delivered) : "—"}</b></span><span><small>RRP</small><b>{gbp(offer.rrpGbp)}</b></span></div>
-                  <div className="fd-search-offer-foot"><span>{context ?? (typeof offer.rrpGbp === "number" ? "RRP known · delivered comparison waits for delivery" : "Verified RRP unavailable")}</span><a href={offer.url} target="_blank" rel="noreferrer">BUY ↗</a></div>
+                  <div className="fd-search-offer-price"><span><small>ITEM</small><b>{gbp(offer.price)}</b></span><span><small>DELIVERY</small><b>{typeof offer.shippingGbp === "number" ? offer.shippingGbp === 0 ? "FREE" : gbp(offer.shippingGbp) : "UNKNOWN"}</b></span><span><small>TRUE PRICE</small><b>{delivered !== null ? gbp(delivered) : "—"}</b></span><span><small>{rrpName(offer)}</small><b>{gbp(offer.rrpGbp)}</b></span></div>
+                  <div className="fd-search-offer-foot"><span>{[context, units, provenance].filter(Boolean).join(" · ") || "Verified RRP/reference unavailable"}</span><a href={offer.url} target="_blank" rel="noreferrer">BUY ↗</a></div>
                 </div>;
               })}</div>
               <footer><Link href={`/dashboard/true-price?q=${encodeURIComponent(group.title)}`}>COMPARE TRUE PRICE →</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>CREATE FATEFIND →</Link></footer>
