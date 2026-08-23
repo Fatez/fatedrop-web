@@ -35,11 +35,14 @@ export function signalHealthChartCoordinates(
   const lastTime = points[points.length - 1]?.measuredAt ?? firstTime;
   const timeSpread = Math.max(1, lastTime - firstTime);
 
-  return points.map((point) => ({
-    ...point,
-    x: points.length === 1 ? width / 2 : ((point.measuredAt - firstTime) / timeSpread) * width,
-    y: baselineY - (Math.max(0, point.value) / safeScaleMax) * drawableHeight,
-  }));
+  return points.map((point) => {
+    const scaledY = baselineY - (Math.max(0, point.value) / safeScaleMax) * drawableHeight;
+    return {
+      ...point,
+      x: points.length === 1 ? width / 2 : ((point.measuredAt - firstTime) / timeSpread) * width,
+      y: Math.min(baselineY, Math.max(topPadding, scaledY)),
+    };
+  });
 }
 
 export function signalHealthChartPath(
