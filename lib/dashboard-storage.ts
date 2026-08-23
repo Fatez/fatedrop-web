@@ -60,6 +60,7 @@ export type NetworkMetricSnapshot = {
     inStock: number | null;
     catalogueRetailers: number | null;
     healthyMonitors: number | null;
+    [metricName: string]: number | null;
   };
   recentSignals: NetworkSignal[];
   upcomingEvents: NetworkEventListing[];
