@@ -21,10 +21,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p public/assets/companions/koru public/assets/companions/fenn
-          cat .handoff/companion/koru.final.* | tr -d '\n' | base64 --decode > public/assets/companions/koru/koru.glb
-          cat .handoff/companion/fenn.final.* | tr -d '\n' | base64 --decode > public/assets/companions/fenn/fenn.glb
-          echo "2ebe28000a019205f2b593033dbbdbe24cec38e0ea54c28ad93f52255743f324  public/assets/companions/koru/koru.glb" | sha256sum --check
-          echo "c3dad490ac00721a1cdf67581c29a37e6c0586e710261562b993e56c552af262  public/assets/companions/fenn/fenn.glb" | sha256sum --check
+          cat .handoff/companion/koru.part.* | tr -d '\n' | base64 --decode > public/assets/companions/koru/koru.glb
+          cat .handoff/companion/fenn.part.* | tr -d '\n' | base64 --decode > public/assets/companions/fenn/fenn.glb
+          echo "56e6b9b55350bad9788ae2827fc492997ff099f08072c0f49f53eac1ebdb67f0  public/assets/companions/koru/koru.glb" | sha256sum --check
+          echo "d7f04031b4ab6fe22f9d1707860eec71486cae4ff3dd33900a7381740e718716  public/assets/companions/fenn/fenn.glb" | sha256sum --check
           test "$(head -c 4 public/assets/companions/koru/koru.glb)" = "glTF"
           test "$(head -c 4 public/assets/companions/fenn/fenn.glb)" = "glTF"
       - name: Commit binary assets and clear handoff staging
