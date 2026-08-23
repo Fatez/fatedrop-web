@@ -1,20 +1,9 @@
 import { getSnapshotForRequest } from "@/lib/auth";
-import { listCanonicalAlertDeliveries } from "@/lib/canonical-alert-delivery";
-import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
+import { listDeliveryBackedCanonicalAlerts, type CanonicalAlertWithDelivery } from "@/lib/canonical-alert-delivery";
 import { hasCapability } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type CanonicalAlertWithDelivery = CanonicalAlert & {
-  delivery: {
-    discord: {
-      status: "sent" | "failed" | "skipped";
-      attemptedAt: string;
-      issue: string | null;
-    };
-  };
-};
 
 function freeAlert(alert: CanonicalAlertWithDelivery): CanonicalAlertWithDelivery {
   return {
@@ -53,25 +42,6 @@ function freeAlert(alert: CanonicalAlertWithDelivery): CanonicalAlertWithDeliver
   };
 }
 
-async function hydrateCanonicalAlerts(requestedId: string | null, limit: number) {
-  const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit });
-  const alerts = await Promise.all(deliveries.map(async (delivery) => {
-    const [alert] = await listCanonicalAlerts({ id: delivery.signalId, limit: 1 });
-    if (!alert) return null;
-    return {
-      ...alert,
-      delivery: {
-        discord: {
-          status: delivery.result,
-          attemptedAt: new Date(delivery.attemptedAt * 1000).toISOString(),
-          issue: delivery.result === "sent" ? null : delivery.detail,
-        },
-      },
-    } satisfies CanonicalAlertWithDelivery;
-  }));
-  return alerts.filter((alert): alert is CanonicalAlertWithDelivery => Boolean(alert));
-}
-
 export async function GET(request: Request) {
   const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) {
@@ -87,7 +57,7 @@ export async function GET(request: Request) {
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
-    const canonicalAlerts = await hydrateCanonicalAlerts(requestedId, limit);
+    const canonicalAlerts = await listDeliveryBackedCanonicalAlerts({ id: requestedId, limit });
     const alerts = premium ? canonicalAlerts : canonicalAlerts.map(freeAlert);
 
     return Response.json({

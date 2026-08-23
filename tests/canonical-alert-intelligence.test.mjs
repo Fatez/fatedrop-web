@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const moduleSource = await readFile(new URL('../lib/canonical-alerts.ts', import.meta.url), 'utf8');
+const deliverySource = await readFile(new URL('../lib/canonical-alert-delivery.ts', import.meta.url), 'utf8');
 const pushSource = await readFile(new URL('../lib/canonical-push.ts', import.meta.url), 'utf8');
 const routeSource = await readFile(new URL('../app/api/mobile/alerts/route.ts', import.meta.url), 'utf8');
 const ingestSource = await readFile(new URL('../app/api/dashboard/network-snapshot/route.ts', import.meta.url), 'utf8');
@@ -61,8 +62,9 @@ test('web Alerts exposes lifecycle-aware signal packs for Whisper and Echo separ
   assert.match(webPackSource, /CREATE FATEFIND/);
 });
 
-test('mobile API consumes shared alerts and redacts premium intelligence for free accounts', () => {
-  assert.match(routeSource, /listCanonicalAlerts/);
+test('mobile API consumes delivery-backed shared alerts and redacts premium intelligence for free accounts', () => {
+  assert.match(routeSource, /listDeliveryBackedCanonicalAlerts/);
+  assert.match(deliverySource, /listCanonicalAlerts/);
   assert.doesNotMatch(routeSource, /fatedrop_retail_offers/);
   assert.match(routeSource, /function freeAlert/);
   assert.match(routeSource, /rrpPence: null/);

@@ -1,4 +1,5 @@
 import type { AccountSnapshot } from "./account-storage";
+import { getCanonicalAlertDeliverySummary } from "./canonical-alert-delivery";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal } from "./dashboard-storage";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
@@ -31,10 +32,11 @@ function deliveryLifecycle(network: Awaited<ReturnType<typeof getLatestNetworkMe
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
-  const [activity, network, history] = await Promise.all([
+  const [activity, network, history, canonicalAlerts] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
     getLatestNetworkMetricSnapshot(),
     listNetworkMetricSnapshots(30),
+    getCanonicalAlertDeliverySummary(7).catch(() => null),
   ]);
 
   const stores = new Map<string, { name: string; count: number; latestAt: number }>();
@@ -101,6 +103,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     networkHistory: history,
     publishedBaseline,
     deliveryHealth,
+    canonicalAlerts,
     publicSignalMetrics: {
       whisper: network?.metrics.whisper ?? null,
       echo: network?.metrics.echo ?? null,
@@ -143,7 +146,13 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         label: "Network lifecycle metrics",
         source: network ? network.source : "Awaiting FateDrop Cloud metric feed",
         updatedAt: network?.measuredAt ?? null,
-        note: network ? "Derived from the latest persisted network snapshot. Detected lifecycle events remain separate from Discord sent, skipped, failed and unaccounted delivery outcomes." : "Until a live feed is connected, lifecycle, delivery and catalogue counters remain unavailable rather than falling back to stale values.",
+        note: network ? "Derived from the latest persisted network snapshot. Detected lifecycle events remain separate from canonical alerts and Discord delivery outcomes." : "Until a live feed is connected, lifecycle and catalogue counters remain unavailable rather than falling back to stale values.",
+      },
+      {
+        label: "Canonical alert totals",
+        source: canonicalAlerts ? "FateDrop delivery ledger" : "Delivery ledger unavailable",
+        updatedAt: canonicalAlerts?.daily.at(-1)?.day ? Math.floor(new Date(`${canonicalAlerts.daily.at(-1)!.day}T23:59:59Z`).getTime() / 1000) : null,
+        note: canonicalAlerts ? "Counts only delivery-backed alert decisions: Discord sent, provider failures and real routing/configuration issues. Policy-disabled and duplicate-batch suppressions are excluded." : "Canonical alert totals remain unavailable rather than being inferred from raw detections.",
       },
     ],
   };
