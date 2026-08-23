@@ -13,10 +13,14 @@ test("dashboard keeps all four canonical lifecycle counters distinct", () => {
     '["vanished", "Vanished", "Confirmed availability is gone."]',
   ]) assert.ok(dashboardPage.includes(row));
   assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\[key\]\)/);
-  assert.match(dashboardData, /whisper: signalSummary\?\.whisper\.total \?\? network\?\.metrics\.whisper \?\? null/);
-  assert.match(dashboardData, /echo: signalSummary\?\.echo\.total \?\? network\?\.metrics\.echo \?\? null/);
-  assert.match(dashboardData, /manifested: signalSummary\?\.manifested\.total \?\? network\?\.metrics\.manifested \?\? null/);
-  assert.match(dashboardData, /vanished: signalSummary\?\.vanished\.total \?\? network\?\.metrics\.vanished \?\? null/);
+  assert.match(dashboardData, /whisper: signalSummary\?\.whisper\.total \?\? null/);
+  assert.match(dashboardData, /echo: signalSummary\?\.echo\.total \?\? null/);
+  assert.match(dashboardData, /manifested: signalSummary\?\.manifested\.total \?\? null/);
+  assert.match(dashboardData, /vanished: signalSummary\?\.vanished\.total \?\? null/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.whisper\.total \?\? network\?\.metrics\.whisper/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.echo\.total \?\? network\?\.metrics\.echo/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.manifested\.total \?\? network\?\.metrics\.manifested/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.vanished\.total \?\? network\?\.metrics\.vanished/);
   assert.doesNotMatch(dashboardData, /echo: signalSummary\?\.whisper\.total/);
   assert.doesNotMatch(dashboardData, /manifested: signalSummary\?\.echo\.total/);
   assert.doesNotMatch(dashboardData, /\(network\.metrics\.manifested \?\? 0\) \+ \(network\.metrics\.echo \?\? 0\)/);
