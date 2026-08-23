@@ -1,6 +1,5 @@
 "use client";
 
-import { KoruMascot } from "@/components/koru-mascot";
 import { CompanionWebglModel } from "@/components/companion-webgl-model";
 import { companionDefinition, companionModelUrl, companionRendererMode, type CompanionRenderRequest } from "@/lib/companion-contract";
 
@@ -24,9 +23,7 @@ export function CompanionRenderer({ request }: { request: CompanionRenderRequest
     return <CompanionWebglModel name={definition.name} modelUrl={modelUrl} reaction={request.reaction} compact={request.compact}/>;
   }
 
-  if (definition.id === "koru" && mode === "fallback-2d") {
-    return <KoruMascot reaction={request.reaction} compact={request.compact} label={request.label ?? "Koru"}/>;
-  }
-
+  // Never substitute campaign/homepage artwork for a missing companion model.
+  // The selector should make an unavailable 3D slot explicit until the real GLB is registered.
   return <CompanionPlaceholder name={definition.name} slot={definition.slot} compact={request.compact}/>;
 }
