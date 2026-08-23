@@ -18,7 +18,7 @@ test("Koru remains the default and Oru cannot enter the five-slot selector", () 
   const loadout = read("lib/avatar-loadout.ts");
   const activeLine = contract.split("\n").find((line) => line.includes("ACTIVE_COMPANION_IDS")) || "";
   assert.ok(activeLine.includes('["koru", "fenn", "aeris", "nyxen", "solix"]'));
-  assert.equal(activeLine.includes("oru"), false);
+  assert.equal(activeLine.includes('"oru"'), false);
   assert.ok(loadout.includes('companion: "koru"'));
 });
 
