@@ -10,20 +10,21 @@ The active website companion roster is intentionally fixed to five characters:
 
 `Kael (K-01)` and `Nyra (N-02)` are legacy/archive references only. They are not active selector slots.
 
+Oru is a FateDrop-world / Koru & Friends character and merch/brand accent. Oru is not a sixth selectable signal companion.
+
 ## Stable public asset layout
 
 Each character owns one folder under `/assets/companions/<id>/`.
 
-Current registered single-GLB packs:
+Current registered single-GLB display packs:
 
+- Koru — `/assets/companions/koru/koru.glb`
+- Fenn — `/assets/companions/fenn/fenn.glb`
 - Aeris — `/assets/companions/aeris/aeris.glb`
 - Nyxen — `/assets/companions/nyxen/nyxen.glb`
 - Solix — `/assets/companions/solix/solix.glb`
 
-Reserved final paths:
-
-- Koru — `/assets/companions/koru/koru.glb`
-- Fenn base/rig — `/assets/companions/fenn/fenn.glb`
+All five stable slots are registered through the shared WebGL renderer. Koru remains FateDrop's fixed mascot/network voice and default companion; Fenn is a normal selectable Koru & Friends companion despite the historical `fatedrop-mascot-*` source filenames.
 
 A character may also ship approved reaction-specific GLBs inside the same folder when the source pack is exported that way. The canonical Fenn reaction filenames are:
 
@@ -40,7 +41,7 @@ Do not introduce separate Droid, Scout, TCG-theme or signal-familiar model slots
 
 Model registration lives only in `lib/companion-contract.ts` inside `ACTIVE_COMPANION_ROSTER`.
 
-For a single GLB containing the production character model/clip set:
+For a single GLB containing the production character display model:
 
 1. Add the GLB at the character's stable folder path.
 2. Set `modelUrl` to that path.
@@ -58,7 +59,7 @@ For a reaction-specific state pack:
 5. Treat skeletal playback as a separate renderer capability; source clips alone do not prove playback is live.
 6. Run the same full verification gate.
 
-Until a GLB is registered, the companion selector deliberately renders an honest fallback. Koru may use approved 2D mascot artwork as its fallback.
+If a registered model fails to load, the companion selector deliberately renders an honest placeholder rather than substituting unrelated campaign/homepage artwork.
 
 ## Verified source animation metadata
 
@@ -71,9 +72,18 @@ The supplied **Aeris, Nyxen, Solix and Fenn** state exports were inspected direc
 - Vanished — `Armature|Sneaky_Walk|baselayer`
 - FateMatch — `Armature|Victory_Cheer|baselayer`
 
-Fenn additionally has a seventh rigged/base export. The verified names are recorded in the companion contract. Fenn must not be marked as a registered Web model until its corresponding optimized binaries are present under the stable public folder.
+Fenn additionally has a seventh rigged/base export. Its optimized Web display GLB is now registered at the stable Fenn path above.
+
+Koru's supplied source exports were also inspected directly. The verified source metadata recorded in the companion contract includes:
+
+- Idle — `Armature|Idle_3|baselayer`
+- Notice/watch — `Armature|walking_man|baselayer`
+- Echo/alert — `Armature|Alert|baselayer`
+- confirmed/victory treatment — `Armature|Victory_Cheer|baselayer`
 
 The current lightweight WebGL renderer displays registered meshes/textures and state presentation; it does **not** yet play the skinned animation channels above. These verified names are retained so a future skeletal-animation implementation can bind to real source metadata rather than guessed labels.
+
+The WebGL boundary applies a shared front-facing base yaw so the five display models face the collector consistently. Reduced-motion users retain the real model without continuous presentation motion.
 
 ## Reaction contract
 
