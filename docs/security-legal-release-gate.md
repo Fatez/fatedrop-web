@@ -9,9 +9,10 @@ This checklist is a production-readiness control, not legal advice. A successful
 - ✅ Sampled account/auth mutation routes use the shared same-origin guard.
 - ✅ Stripe webhook verification and idempotent billing-event storage have automated coverage.
 - ✅ Public signal language is Whisper → Echo → Manifested → Vanished, with Drop Pulse kept as supporting evidence/context.
+- ✅ Monitoring design rule: observe public/authorised product and readiness evidence; never defeat authentication, CAPTCHA, queue or other access controls.
 - 🟠 CSP, HSTS, private no-cache/noindex and Sec-Fetch-Site hardening are in this release-gate branch and require deployed verification after merge.
 - 🟠 Cloudflare authentication rate limiting / bot challenge still requires edge configuration and production proof.
-- 🟠 Final UK legal wording and operational data-rights processes require owner/legal review before scaled paid launch.
+- 🟠 Final UK legal wording, retailer-data acquisition review and operational data-rights processes require owner/legal review before scaled paid launch.
 
 ## P0 — required before scaled paid launch
 
@@ -25,6 +26,23 @@ This checklist is a production-readiness control, not legal advice. A successful
 - [ ] Verify CSP, HSTS and the remaining security headers against the deployed Cloudflare site and required integrations.
 - [ ] Verify Stripe webhook signatures, duplicate-event handling and billing environment configuration in production.
 - [ ] Document and test backup/restore and incident-response procedures.
+
+### Retailer monitoring / data acquisition
+- [ ] Maintain a source register for every monitored retailer describing the exact public or authorised pages, feeds, APIs or catalogue endpoints FateDrop uses.
+- [ ] Do not build or operate functionality intended to bypass authentication, account restrictions, CAPTCHA, waiting rooms/queues, bot challenges, paywalls or other technical access controls.
+- [ ] Treat queue/security/access changes as observable Echo evidence only; FateDrop may detect that a control appeared or changed but must not circumvent it.
+- [ ] Prefer official APIs, feeds, sitemaps, structured public catalogue endpoints and normal public product pages over brittle or adversarial collection methods.
+- [ ] Apply bounded request rates, timeouts, backoff and per-retailer kill switches so FateDrop can stop a collector quickly if a retailer objects, blocks access or collection becomes operationally unsafe.
+- [ ] Review each retailer's applicable terms, robots/access signals, API/feed licence terms and any written permissions before moving that source from candidate/dry-run into scaled monitoring.
+- [ ] Record source URL, retailer, observation time and evidence provenance for stock, price and RRP facts so claims can be audited and corrected.
+- [ ] Keep official RRP provenance separate from retailer selling prices. Do not promote a retailer's claimed RRP, list price or was-price to canonical RRP without an eligible authoritative source.
+- [ ] Minimise collection of personal data. Product titles, stock, prices, delivery terms and retailer product identifiers should be preferred over customer/user information.
+- [ ] If a collector would process personal data from a public source, complete the applicable UK data-protection assessment, transparency/lawful-basis work and retention controls before enabling it.
+- [ ] Review copyright/database-right exposure before systematic or high-volume extraction/re-use of a retailer or third-party catalogue, particularly where the source represents a substantially invested database.
+- [ ] Provide an operational retailer contact/removal path and document how a disputed source, price, RRP or stock observation is paused, corrected or removed.
+- [ ] Obtain UK legal review of the monitoring/data-acquisition model before scaled paid launch and revisit that review when adding materially different source types or jurisdictions.
+
+Current legal reference points for this gate include the Computer Misuse Act 1990 (unauthorised computer access), UK data-protection/ICO guidance on publicly accessible personal data, and UK copyright/database-right rules. Public accessibility by itself is not treated as permission to bypass controls, process personal data without obligations, or reuse a protected database without considering the relevant rights and terms.
 
 ### Privacy / UK data protection
 - [ ] Publish the final data-controller identity and contact details.
