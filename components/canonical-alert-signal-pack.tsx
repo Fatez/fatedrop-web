@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import type { CanonicalAlert, CanonicalOfferLink, CanonicalSignalThreadEntry } from "@/lib/canonical-alerts";
+import type { CanonicalAlert, CanonicalOfferLink, CanonicalSignalStage, CanonicalSignalThreadEntry } from "@/lib/canonical-alerts";
 import { moneyFromPence, relativeTime } from "@/lib/dashboard";
 
 const panel: CSSProperties = {
@@ -23,6 +23,14 @@ const action: CSSProperties = {
   letterSpacing: ".05em",
 };
 
+function companionForStage(stage: CanonicalSignalStage) {
+  if (stage === "WHISPER") return "ORU";
+  if (stage === "ECHO") return "FENN";
+  if (stage === "MANIFESTED") return "KORU";
+  if (stage === "VANISHED") return "NIXON";
+  return "FATEDROP";
+}
+
 function offerPrice(offer: CanonicalOfferLink) {
   if (offer.deliveredPricePence != null) return `${moneyFromPence(offer.deliveredPricePence)} delivered`;
   if (offer.itemPricePence != null) return `${moneyFromPence(offer.itemPricePence)} item · delivery unknown`;
@@ -39,17 +47,18 @@ function threadColor(entry: CanonicalSignalThreadEntry) {
 
 function packSummary(alert: CanonicalAlert) {
   const alternatives = alert.preparedLinks.alternatives.length;
-  if (alert.fateStage === "WHISPER") return `SIGNAL PACK · PRODUCT MOVEMENT · ${alert.signalThread.length} UPDATE${alert.signalThread.length === 1 ? "" : "S"}`;
-  if (alert.fateStage === "ECHO") return `SIGNAL PACK · GET READY · ${alert.signalThread.length} UPDATE${alert.signalThread.length === 1 ? "" : "S"}`;
-  if (alert.fateStage === "VANISHED") return `SIGNAL PACK · ${alternatives} LIVE ALTERNATIVE${alternatives === 1 ? "" : "S"}`;
-  return `SIGNAL PACK · CONFIRMED · ${alternatives + 1} READY LINK${alternatives ? "S" : ""}`;
+  const companion = companionForStage(alert.fateStage);
+  if (alert.fateStage === "WHISPER") return `${companion} · WHISPER · PRODUCT MOVEMENT · ${alert.signalThread.length} UPDATE${alert.signalThread.length === 1 ? "" : "S"}`;
+  if (alert.fateStage === "ECHO") return `${companion} · ECHO · GET READY · ${alert.signalThread.length} UPDATE${alert.signalThread.length === 1 ? "" : "S"}`;
+  if (alert.fateStage === "VANISHED") return `${companion} · VANISHED · ${alternatives} LIVE ALTERNATIVE${alternatives === 1 ? "" : "S"}`;
+  return `${companion} · MANIFESTED · CONFIRMED · ${alternatives + 1} READY LINK${alternatives ? "S" : ""}`;
 }
 
 function explainer(alert: CanonicalAlert) {
-  if (alert.fateStage === "WHISPER") return "Catalogue or product movement has been detected. FateDrop has prepared the product and comparison routes, but stock is not confirmed.";
-  if (alert.fateStage === "ECHO") return "Queue, traffic, security or access readiness has changed. Get ready; stock is still not confirmed.";
-  if (alert.fateStage === "VANISHED") return "This observed availability is no longer verified. Use the live alternatives below when FateDrop still sees the same canonical product elsewhere.";
-  return "Confirmed purchasable availability. Open the retailer, compare the network, or inspect another live offer.";
+  if (alert.fateStage === "WHISPER") return "Oru spotted catalogue or product movement. FateDrop has prepared the product and comparison routes, but stock is not confirmed.";
+  if (alert.fateStage === "ECHO") return "Fenn picked up queue, traffic, security or access readiness. Get ready; stock is still not confirmed.";
+  if (alert.fateStage === "VANISHED") return "Nixon saw this previously verified availability disappear. Use the live alternatives below when FateDrop still sees the same canonical product elsewhere.";
+  return "Koru found confirmed purchasable availability. Open the retailer, compare the network, or inspect another live offer.";
 }
 
 export function CanonicalAlertSignalPack({ alert, now }: { alert: CanonicalAlert; now: number }) {
@@ -74,7 +83,7 @@ export function CanonicalAlertSignalPack({ alert, now }: { alert: CanonicalAlert
 
       {lowest ? <a href={lowest.url} target="_blank" rel="noreferrer" style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center", padding: 11, border: "1px solid rgba(98,233,177,.23)", borderRadius: 11, background: "rgba(98,233,177,.035)", textDecoration: "none" }}><span><b style={{ display: "block", color: "#62e9b1", fontSize: 7, letterSpacing: ".09em" }}>LOWEST KNOWN LINK READY</b><strong style={{ display: "block", color: "#f4f1f7", fontSize: 10, marginTop: 3 }}>{lowest.retailer}</strong><small style={{ color: "#77717e", fontSize: 8 }}>{offerPrice(lowest)}</small></span><span style={{ color: "#62e9b1", fontSize: 11 }}>↗</span></a> : null}
 
-      {alert.signalThread.length ? <section style={{ display: "grid", gap: 6 }}><b style={{ color: "#6f6875", fontSize: 7, letterSpacing: ".1em" }}>SIGNAL TRAIL</b>{alert.signalThread.map((entry) => <div key={entry.id} style={{ display: "grid", gridTemplateColumns: "9px 85px minmax(0,1fr)", gap: 8, padding: "7px 8px", borderRadius: 9, background: entry.id === alert.id ? "rgba(115,233,251,.035)" : "transparent" }}><i style={{ width: 6, height: 6, marginTop: 3, borderRadius: "50%", background: threadColor(entry), boxShadow: `0 0 10px ${threadColor(entry)}` }}/><span style={{ color: threadColor(entry), fontSize: 7, fontWeight: 900, letterSpacing: ".06em" }}>{entry.fateStage}<small style={{ display: "block", color: "#68616e", fontSize: 6, fontWeight: 500, marginTop: 2 }}>{relativeTime(Math.floor(new Date(entry.occurredAt).getTime() / 1000), now)}</small></span><span><strong style={{ display: "block", color: "#d8d3dd", fontSize: 8 }}>{entry.reason || "Network state changed"}</strong><small style={{ color: "#716a77", fontSize: 7 }}>{entry.retailer}{entry.pricePence == null ? "" : ` · ${moneyFromPence(entry.pricePence)}`}{entry.id === alert.id ? " · CURRENT ALERT" : ""}</small></span></div>)}</section> : null}
+      {alert.signalThread.length ? <section style={{ display: "grid", gap: 6 }}><b style={{ color: "#6f6875", fontSize: 7, letterSpacing: ".1em" }}>SIGNAL TRAIL</b>{alert.signalThread.map((entry) => <div key={entry.id} style={{ display: "grid", gridTemplateColumns: "9px 110px minmax(0,1fr)", gap: 8, padding: "7px 8px", borderRadius: 9, background: entry.id === alert.id ? "rgba(115,233,251,.035)" : "transparent" }}><i style={{ width: 6, height: 6, marginTop: 3, borderRadius: "50%", background: threadColor(entry), boxShadow: `0 0 10px ${threadColor(entry)}` }}/><span style={{ color: threadColor(entry), fontSize: 7, fontWeight: 900, letterSpacing: ".06em" }}>{companionForStage(entry.fateStage)} · {entry.fateStage}<small style={{ display: "block", color: "#68616e", fontSize: 6, fontWeight: 500, marginTop: 2 }}>{relativeTime(Math.floor(new Date(entry.occurredAt).getTime() / 1000), now)}</small></span><span><strong style={{ display: "block", color: "#d8d3dd", fontSize: 8 }}>{entry.reason || "Network state changed"}</strong><small style={{ color: "#716a77", fontSize: 7 }}>{entry.retailer}{entry.pricePence == null ? "" : ` · ${moneyFromPence(entry.pricePence)}`}{entry.id === alert.id ? " · CURRENT ALERT" : ""}</small></span></div>)}</section> : null}
 
       {pack.alternatives.length ? <section style={{ display: "grid", gap: 6 }}><b style={{ color: "#6f6875", fontSize: 7, letterSpacing: ".1em" }}>{alert.fateStage === "VANISHED" ? "STILL LIVE ELSEWHERE" : "OTHER LIVE OFFERS"}</b><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 6 }}>{pack.alternatives.slice(0, 8).map((alternative) => <a key={alternative.offerId} href={alternative.url} target="_blank" rel="noreferrer" style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8, padding: 10, border: "1px solid rgba(255,255,255,.065)", borderRadius: 10, background: "rgba(255,255,255,.015)", textDecoration: "none" }}><span><strong style={{ display: "block", color: "#eeeaf2", fontSize: 9 }}>{alternative.retailer}</strong><small style={{ color: "#756e7b", fontSize: 7 }}>{offerPrice(alternative)} · {alternative.stockStatus || "observed"}</small></span><span style={{ color: "#b397ff" }}>↗</span></a>)}</div></section> : null}
     </div>
