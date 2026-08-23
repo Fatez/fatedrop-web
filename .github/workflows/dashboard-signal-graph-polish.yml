@@ -1,0 +1,114 @@
+name: Dashboard Signal Graph Polish
+
+on:
+  push:
+    paths:
+      - ".handoff/dashboard-signal-graph/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/web-koru-final-revamp-2026-08-21
+          fetch-depth: 1
+      - name: Make lifecycle graphs inspectable
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path("app/dashboard/page.tsx")
+          text = p.read_text()
+
+          old = '''function sparkPath(points: TrendPoint[], width = 120, height = 32) {
+            if (!points.length) return `M0 ${height / 2} L${width} ${height / 2}`;
+            const min = Math.min(...points.map((point) => point.value));
+            const max = Math.max(...points.map((point) => point.value));
+            const spread = Math.max(1, max - min);
+            const firstTime = points[0]?.measuredAt ?? 0;
+            const lastTime = points[points.length - 1]?.measuredAt ?? firstTime;
+            const timeSpread = Math.max(1, lastTime - firstTime);
+            return points.map((point, index) => {
+              const x = points.length === 1 ? width : ((point.measuredAt - firstTime) / timeSpread) * width;
+              const y = height - 4 - ((point.value - min) / spread) * (height - 8);
+              return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+            }).join(" ");
+          }'''.replace("          ", "")
+          new = '''function sparkPath(points: TrendPoint[], width = 120, height = 38) {
+            if (!points.length) return `M0 ${height - 4} L${width} ${height - 4}`;
+            const max = Math.max(1, ...points.map((point) => point.value));
+            const firstTime = points[0]?.measuredAt ?? 0;
+            const lastTime = points[points.length - 1]?.measuredAt ?? firstTime;
+            const timeSpread = Math.max(1, lastTime - firstTime);
+            return points.map((point, index) => {
+              const x = points.length === 1 ? width / 2 : ((point.measuredAt - firstTime) / timeSpread) * width;
+              const y = height - 4 - (point.value / max) * (height - 8);
+              return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+            }).join(" ");
+          }
+
+          function dayLabel(timestamp: number) {
+            return new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" }).format(new Date(timestamp * 1000));
+          }'''.replace("          ", "")
+          if old not in text:
+              raise SystemExit("sparkPath source block changed")
+          text = text.replace(old, new, 1)
+
+          text = text.replace(
+            "What’s changing across the network — Whisper, Echo, Manifested and Vanished activity recorded across the last seven days.",
+            "Real Signal Intelligence activity from the persisted ledger — daily Whisper, Echo, Manifested and Vanished events across the last seven UTC days.",
+            1,
+          )
+
+          old = '''              <em className="fd-lifecycle-window">7D ALERTS</em>
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
+              <svg viewBox="0 0 120 32" preserveAspectRatio="none" aria-label={`${label} alerts per day over the last seven days`} role="img"><path d={sparkPath(points)} /></svg>
+              {today !== null
+                ? <p className={today > 0 ? "up" : undefined}>{today > 0 ? "↑" : "→"} {metric(today)} today</p>
+                : <p>Waiting for signal history</p>}'''
+          new = '''              <em className="fd-lifecycle-window">7D SIGNALS</em>
+              <div className="fd-lifecycle-value"><strong>{metric(data.publicSignalMetrics[key])}</strong><i aria-hidden="true" /></div>
+              <svg viewBox="0 0 120 38" preserveAspectRatio="none" aria-label={`${label} signal events per UTC day over the last seven days`} role="img"><path d={sparkPath(points)} /></svg>
+              <div className="fd-lifecycle-days" aria-label={`${label} daily signal counts`}>
+                {points.map((point) => <span key={point.measuredAt}><small>{dayLabel(point.measuredAt)}</small><b>{metric(point.value)}</b></span>)}
+              </div>
+              {today !== null
+                ? <p className={today > 0 ? "up" : undefined}>{today > 0 ? "↑" : "→"} {metric(today)} today</p>
+                : <p>Signal ledger unavailable</p>}'''
+          if old not in text:
+              raise SystemExit("lifecycle graph JSX changed")
+          text = text.replace(old, new, 1)
+
+          old = '.fd-lifecycle-card{position:relative;min-height:132px;padding:14px;overflow:hidden;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:linear-gradient(145deg,#101419,#0b0f13)}'
+          new = '.fd-lifecycle-card{position:relative;min-height:178px;padding:14px;overflow:hidden;border:1px solid rgba(221,203,188,.07);border-radius:9px;background:linear-gradient(145deg,#101419,#0b0f13)}'
+          if old not in text:
+              raise SystemExit("lifecycle card CSS changed")
+          text = text.replace(old, new, 1)
+
+          old = '.fd-lifecycle-card svg{position:absolute;right:12px;bottom:28px;width:48%;height:33px;overflow:visible}.fd-lifecycle-card svg path{fill:none;stroke:currentColor;stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.82}.fd-lifecycle-card>p{position:absolute;left:14px;bottom:10px;margin:0;color:#676168;font-size:6px}.fd-lifecycle-card>p.up{color:#839f7b}.fd-lifecycle-card>p.down{color:#a96b6b}'
+          new = '.fd-lifecycle-card svg{display:block;width:100%;height:40px;margin-top:8px;overflow:visible}.fd-lifecycle-card svg path{fill:none;stroke:currentColor;stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.82}.fd-lifecycle-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-top:3px}.fd-lifecycle-days span{display:grid;gap:1px;min-width:0;text-align:center}.fd-lifecycle-days small{color:#625d63;font-size:5px;font-weight:700}.fd-lifecycle-days b{color:#aaa1a8;font-size:6px;font-weight:700}.fd-lifecycle-card>p{margin:6px 0 0;color:#676168;font-size:6px}.fd-lifecycle-card>p.up{color:#839f7b}.fd-lifecycle-card>p.down{color:#a96b6b}'
+          if old not in text:
+              raise SystemExit("lifecycle graph CSS changed")
+          text = text.replace(old, new, 1)
+          text = text.replace('@media(max-width:520px){.fd-overview-card{padding:14px 12px}.fd-ref-card-head{flex-direction:column}.fd-lifecycle-grid{grid-template-columns:1fr}.fd-lifecycle-card{min-height:122px}', '@media(max-width:520px){.fd-overview-card{padding:14px 12px}.fd-ref-card-head{flex-direction:column}.fd-lifecycle-grid{grid-template-columns:1fr}.fd-lifecycle-card{min-height:170px}', 1)
+          p.write_text(text)
+
+          test = Path("tests/signal-health-ledger.test.mjs")
+          t = test.read_text()
+          t = t.replace('  assert.ok(page.includes("alerts per day over the last seven days"));', '  assert.ok(page.includes("7D SIGNALS"));\n  assert.ok(page.includes("signal events per UTC day over the last seven days"));\n  assert.ok(page.includes("fd-lifecycle-days"));\n  assert.ok(page.includes("point.value / max"), "graph must retain a zero baseline instead of min-max exaggeration");')
+          test.write_text(t)
+
+      - name: Commit graph view and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .handoff/dashboard-signal-graph
+          rm -f .github/workflows/dashboard-signal-graph-polish.yml
+          git config user.name "FateDrop Signal Health"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/dashboard/page.tsx tests/signal-health-ledger.test.mjs .handoff/dashboard-signal-graph .github/workflows/dashboard-signal-graph-polish.yml
+          git commit -m "Make daily signal health graphs inspectable"
+          git push origin HEAD:agent/web-koru-final-revamp-2026-08-21
