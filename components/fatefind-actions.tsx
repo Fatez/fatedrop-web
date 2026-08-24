@@ -30,8 +30,8 @@ function matchPrice(hit: LatestHit) {
 }
 
 function rrpContext(hit: LatestHit) {
-  if (hit.truePricePence === null || hit.officialRrpPence === null || hit.officialRrpPence <= 0) return null;
-  const percent = ((hit.truePricePence - hit.officialRrpPence) / hit.officialRrpPence) * 100;
+  if (hit.itemPricePence === null || hit.officialRrpPence === null || hit.officialRrpPence <= 0) return null;
+  const percent = ((hit.itemPricePence - hit.officialRrpPence) / hit.officialRrpPence) * 100;
   const sign = percent > 0 ? "+" : percent < 0 ? "−" : "";
   return `${sign}${Math.abs(percent).toFixed(1)}% vs RRP`;
 }
@@ -59,14 +59,14 @@ export function FateFindActions({ id, enabled }: { id: string; enabled: boolean 
         body: JSON.stringify({ id, enabled: !enabled }),
       });
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
-      if (!response.ok) { setMessage(payload.error || "FateFind could not be updated."); return; }
-      setMessage(payload.message || (!enabled ? "FateFind resumed." : "FateFind paused."));
+      if (!response.ok) { setMessage(payload.error || "FateMatch watch could not be updated."); return; }
+      setMessage(payload.message || (!enabled ? "FateMatch watch resumed." : "FateMatch watch paused."));
       window.location.reload();
     } finally { setBusy(null); }
   }
 
   async function remove() {
-    if (!window.confirm("Delete this FateFind? Its saved hunt rules will be removed, but historical FateMatch activity remains evidence.")) return;
+    if (!window.confirm("Delete this FateMatch watch? Its saved conditions will be removed, but historical FateMatch activity remains evidence.")) return;
     setBusy("delete"); setMessage("");
     try {
       const response = await fetch("/api/fate-matches", {
@@ -75,8 +75,8 @@ export function FateFindActions({ id, enabled }: { id: string; enabled: boolean 
         body: JSON.stringify({ id }),
       });
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
-      if (!response.ok) { setMessage(payload.error || "FateFind could not be deleted."); return; }
-      setMessage(payload.message || "FateFind deleted.");
+      if (!response.ok) { setMessage(payload.error || "FateMatch watch could not be deleted."); return; }
+      setMessage(payload.message || "FateMatch watch deleted.");
       window.location.reload();
     } finally { setBusy(null); }
   }
