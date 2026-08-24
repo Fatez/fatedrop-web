@@ -101,6 +101,33 @@ export type SignalEngineStatus = {
   };
 };
 
+export type SignalRetailerDirectoryRecord = {
+  id: string;
+  name: string;
+  websiteUrl: string | null;
+  retailerClass: string;
+  verification: string;
+  tcgs: string[];
+  online: boolean;
+  physicalStores: boolean | null;
+  physicalLocations: number | null;
+  monitoring: {
+    configured: boolean;
+    healthy: boolean;
+    stale: boolean;
+    baselineCompleted: boolean;
+    productsSeen: number | null;
+    lastScanAt: number | null;
+    lastSuccessAt: number | null;
+  };
+};
+
+export type SignalRetailerDirectoryResponse = {
+  success: boolean;
+  retailers: SignalRetailerDirectoryRecord[];
+  disclaimer?: string;
+};
+
 function signalEngineBaseUrl() {
   return (process.env.FATEDROP_SIGNAL_ENGINE_URL || DEFAULT_SIGNAL_ENGINE_URL).replace(/\/+$/, "");
 }
@@ -152,4 +179,8 @@ export async function searchSignalTruePrice(query: string) {
 
 export function getSignalEngineStatus() {
   return signalFetch<SignalEngineStatus>("/api/status");
+}
+
+export function getSignalRetailerDirectory() {
+  return signalFetch<SignalRetailerDirectoryResponse>("/api/retailers");
 }
