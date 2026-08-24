@@ -1,43 +1,58 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
+import { RetailerMarketDirectory } from "@/components/retailer-market-directory";
 import { getCobAndPipCatalogue, getWishlistCollectablesCatalogue } from "@/lib/retailer-catalogue";
 import { getRetailerNetwork } from "@/lib/retailer-network";
 
-export const metadata: Metadata = { title: "Indies & Retailers | FateDrop Dashboard", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Retailers | FateDrop Dashboard", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-const WISHLIST_BRAND_IMAGE = "https://www.wishlistcollectables.co.uk/cdn/shop/files/IMG_20231207_152535.jpg?v=1702206733&width=1500";
-const COB_AND_PIP_LOGO = "https://cobandpip.co.uk/cdn/shop/files/Cob_and_Pip_LOGO.jpg?v=1747145906";
-
-function relative(epoch: number | null) {
-  if (!epoch) return "No successful scan recorded";
-  const minutes = Math.max(0, Math.floor((Date.now() / 1000 - epoch) / 60));
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  return hours < 48 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
-}
-
 export default async function DashboardStoresPage() {
-  const [cobAndPip, wishlist, retailerNetwork] = await Promise.all([getCobAndPipCatalogue(), getWishlistCollectablesCatalogue(), getRetailerNetwork()]);
-  const monitored = retailerNetwork.filter((retailer) => retailer.source === "cloud");
+  const [cobAndPip, wishlist, retailerNetwork] = await Promise.all([
+    getCobAndPipCatalogue(),
+    getWishlistCollectablesCatalogue(),
+    getRetailerNetwork(),
+  ]);
+
   const storefronts = [
-    { id: "wishlist-collectables", name: "Wishlist Collectables", location: "London · Online + physical", tags: ["Pokémon", "Lorcana", "One Piece", "Yu-Gi-Oh"], products: wishlist, href: "/dashboard/stores/wishlist-collectables", note: "Experimental direct storefront", image: WISHLIST_BRAND_IMAGE, imageMode: "cover" },
-    { id: "cob-and-pip", name: "Cob & Pip", location: "UK · Online", tags: ["Pokémon", "TCG"], products: cobAndPip, href: "/dashboard/stores/cob-and-pip", note: "Experimental direct storefront", image: COB_AND_PIP_LOGO, imageMode: "contain" },
+    {
+      id: "wishlist-collectables",
+      name: "Wishlist Collectables",
+      location: "London · Online + physical",
+      online: true,
+      physicalStores: true,
+      href: "/dashboard/stores/wishlist-collectables",
+      indexed: wishlist.length,
+      available: wishlist.filter((product) => product.available).length,
+    },
+    {
+      id: "cob-and-pip",
+      name: "Cob & Pip",
+      location: "UK · Online",
+      online: true,
+      physicalStores: false,
+      href: "/dashboard/stores/cob-and-pip",
+      indexed: cobAndPip.length,
+      available: cobAndPip.filter((product) => product.available).length,
+    },
   ];
-  const indexed = storefronts.reduce((total, store) => total + store.products.length, 0);
 
-  return <DashboardPageShell title="Indies & Retailers" eyebrow="DISCOVER RETAILERS · KEEP SOURCES HONEST">
-    <div className="fd-indie-hub">
-      <section className="fd-dash-card fd-indie-hub-hero"><div className="fd-dash-card-head"><span>FATEDROP RETAILER NETWORK</span><i className={monitored.some((item)=>item.runtime.healthy) ? "live" : "pending"}>{monitored.length ? `● ${monitored.length} CLOUD RETAILER${monitored.length===1?"":"S"}` : "○ AWAITING CLOUD"}</i></div><div className="fd-network-message"><h1>One network.<br/>Different levels of connection.</h1><p>FateDrop now separates retailers observed by the canonical Signal Engine from experimental storefront feeds and future registry candidates. A Cloud monitor is evidence of data collection, not a paid partnership or blanket trust badge.</p></div><div className="fd-network-metrics"><div><strong>{monitored.length}</strong><span>CLOUD RETAILERS</span><small>Runtime state from Signal Engine</small></div><div><strong>{storefronts.length}</strong><span>LAB STOREFRONTS</span><small>Direct experimental feeds</small></div><div><strong>{indexed}</strong><span>LAB ITEMS</span><small>Not the canonical network total</small></div></div></section>
+  const cloud = retailerNetwork.filter((retailer) => retailer.source === "cloud");
+  const major = retailerNetwork.filter((retailer) => retailer.retailerClass === "national" || retailer.category === "major-retail");
+  const indies = retailerNetwork.filter((retailer) => ["independent", "specialist", "regional"].includes(retailer.retailerClass) || ["indie", "tcg-specialist"].includes(retailer.category));
 
-      <section className="fd-dash-card fd-runtime-retailers"><div className="fd-dash-card-head"><span>CANONICAL CLOUD RETAILERS</span><Link href="/dashboard/search">Search their observed offers →</Link></div>{monitored.length ? <div className="fd-runtime-grid">{monitored.map((retailer)=><article key={retailer.id}><div><span className={retailer.runtime.healthy ? "healthy" : "warning"}>{retailer.runtime.healthy ? "● HEALTHY" : "○ DEGRADED"}</span><h2>{retailer.name}</h2><p>{retailer.category.replaceAll("-"," ")} · {retailer.runtime.baselineCompleted ? "baseline complete" : "baseline pending"}</p></div><dl><div><dt>PRODUCTS SEEN</dt><dd>{retailer.runtime.productsSeen ?? "—"}</dd></div><div><dt>LAST SUCCESS</dt><dd>{relative(retailer.runtime.lastSuccessAt)}</dd></div></dl><div className="fd-runtime-actions">{retailer.website ? <a href={retailer.website} target="_blank" rel="noreferrer">RETAILER SITE ↗</a> : null}<Link href={`/dashboard/search?q=${encodeURIComponent(retailer.name)}`}>SEARCH NETWORK →</Link></div></article>)}</div> : <div className="fd-dashboard-empty"><strong>Cloud retailer health is unavailable.</strong><span>The page does not infer monitor health from static configuration.</span></div>}</section>
+  return <DashboardPageShell title="Retailers" eyebrow="RRP / MAJOR · INDEPENDENTS · ONLINE · PHYSICAL">
+    <div className="fd-retailer-hub">
+      <section className="fd-dash-card fd-retailer-hero">
+        <div className="fd-dash-card-head"><span>CANONICAL CLOUD RETAILERS · MARKET DIRECTORY</span><i className={cloud.some((item) => item.runtime.healthy) ? "live" : "pending"}>{cloud.length ? `● ${cloud.length} CLOUD RETAILER${cloud.length === 1 ? "" : "S"}` : "○ AWAITING CLOUD"}</i></div>
+        <div className="fd-retailer-message"><h1>Two markets.<br/>One source of truth.</h1><p>Major/RRP comparison retailers stay separate from the independent network. Independents can then be explored by online or physical presence without confusing a website with a real shop. Cloud monitor health describes FateDrop evidence collection — it is not a paid-partner badge. <strong>EXPERIMENTAL STOREFRONT LAB</strong> feeds remain explicitly separate from canonical Cloud monitoring.</p></div>
+        <div className="fd-retailer-metrics"><div><strong>{major.length}</strong><span>RRP / MAJOR</span><small>National comparison lane</small></div><div><strong>{indies.length + storefronts.length}</strong><span>INDEPENDENTS</span><small>Specialist + indie discovery</small></div><div><strong>{indies.filter((item) => item.physicalStores === true).length + storefronts.filter((item) => item.physicalStores).length}</strong><span>PHYSICAL</span><small>Explicit evidence only</small></div></div>
+      </section>
 
-      <section className="fd-dash-card fd-indie-discovery"><div className="fd-dash-card-head"><span>EXPERIMENTAL STOREFRONT LAB</span><Link href="/dashboard/true-price">Compare canonical offers ↗</Link></div><p className="fd-lab-explain">These direct catalogue feeds demonstrate the future Indie storefront experience. They remain explicitly separate from canonical Cloud monitoring and do not imply formal FateDrop partner or Verified status.</p><div className="fd-indie-store-grid">{storefronts.map((store) => { const inStock = store.products.filter((product) => product.available).length; return <article className="fd-indie-store-card" key={store.id}><div className="fd-indie-store-brand" style={{ backgroundImage: `url("${store.image}")`, backgroundSize: store.imageMode }} aria-label={`${store.name} branding`} /><div className="fd-indie-store-card-top"><span className="fd-indie-store-status">{store.note}</span></div><h2>{store.name}</h2><p>{store.location}</p><div className="fd-indie-store-tags">{store.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="fd-indie-store-stats"><div><strong>{store.products.length}</strong><small>LAB INDEXED</small></div><div><strong>{inStock}</strong><small>OBSERVED AVAILABLE</small></div></div><Link className="fd-indie-store-open" href={store.href}>Explore lab storefront →</Link></article>; })}</div></section>
+      <RetailerMarketDirectory retailers={retailerNetwork} labStorefronts={storefronts} />
 
-      <section className="fd-dash-card fd-indie-model"><div><span>THE TARGET ARCHITECTURE</span><h2>Cloud owns network truth. Storefronts own retailer presentation.</h2></div><p>Search, stock, RRP and True Price should converge on canonical Cloud offers. Retailer storefronts can then become clean views over participating retailer metadata and catalogue data instead of accumulating one-off ingestion logic inside the website.</p></section>
+      <section className="fd-dash-card fd-retailer-model"><div><span>THE RETAILER MODEL</span><h2>RRP/reference gives comparison context. Indies give collectors choice.</h2></div><p>Search, stock, RRP and True Price continue to come from canonical FateDrop evidence. The retailer directory then adds a clean discovery layer for national retailers and independents — including genuine physical-store discovery as that evidence grows.</p></section>
     </div>
-    <style>{`.fd-indie-hub{display:grid;gap:22px}.fd-indie-hub-hero,.fd-runtime-retailers,.fd-indie-discovery{padding:28px}.fd-indie-hub-hero .fd-network-message h1{font-size:clamp(2rem,3vw,3.2rem);line-height:1.02;max-width:850px}.fd-indie-hub-hero .fd-network-message p{font-size:15px;line-height:1.7;max-width:920px}.fd-runtime-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}.fd-runtime-grid article{padding:18px;border:1px solid rgba(255,255,255,.075);border-radius:16px;background:radial-gradient(circle at 100% 0%,rgba(88,232,255,.045),transparent 30%),rgba(255,255,255,.018)}.fd-runtime-grid span{font-size:7px;font-weight:900;letter-spacing:.11em}.fd-runtime-grid .healthy{color:#71e8ae}.fd-runtime-grid .warning{color:#f4b76f}.fd-runtime-grid h2{margin:8px 0 4px;font-size:18px}.fd-runtime-grid p{margin:0;color:#77717f;font-size:9px;text-transform:capitalize}.fd-runtime-grid dl{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:16px 0}.fd-runtime-grid dl div{padding:9px;border:1px solid rgba(255,255,255,.055);border-radius:9px;background:rgba(0,0,0,.14)}.fd-runtime-grid dt{color:#605a67;font-size:6px;font-weight:900;letter-spacing:.08em}.fd-runtime-grid dd{margin:3px 0 0;font-size:9px}.fd-runtime-actions{display:flex;gap:10px;flex-wrap:wrap}.fd-runtime-actions a{color:#9eefff;font-size:7px;font-weight:900;text-decoration:none}.fd-lab-explain{max-width:900px;color:#85808c;font-size:11px;line-height:1.6}.fd-indie-store-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}.fd-indie-store-card{min-height:390px;padding:0 22px 22px;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:radial-gradient(circle at 90% 0%,rgba(157,109,255,.1),transparent 34%),rgba(255,255,255,.022)}.fd-indie-store-brand{height:122px;margin:0 -22px 16px;border-bottom:1px solid rgba(255,255,255,.09);background-position:center;background-repeat:no-repeat;background-color:#f4f4f4}.fd-indie-store-card-top{display:flex;align-items:center;justify-content:flex-end}.fd-indie-store-status{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#8d8795}.fd-indie-store-card h2{margin:12px 0 5px;font-size:24px}.fd-indie-store-card>p{margin:0;color:#89838f;font-size:12px}.fd-indie-store-tags{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}.fd-indie-store-tags span{padding:6px 8px;border:1px solid rgba(255,255,255,.08);border-radius:999px;font-size:8px;color:#aaa4b0}.fd-indie-store-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}.fd-indie-store-stats div{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)}.fd-indie-store-stats strong{display:block;font-size:19px}.fd-indie-store-stats small{font-size:7px;letter-spacing:.12em;color:#77717d}.fd-indie-store-open{margin-top:14px;min-height:42px;display:grid;place-items:center;border:1px solid rgba(88,232,255,.25);border-radius:12px;background:linear-gradient(135deg,rgba(88,232,255,.08),rgba(157,109,255,.1));color:#fff;font-size:10px;font-weight:850;text-decoration:none}.fd-indie-model{padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:center}.fd-indie-model span{font-size:8px;letter-spacing:.15em;color:#68e8fb;font-weight:850}.fd-indie-model h2{margin:7px 0 0;font-size:22px}.fd-indie-model p{margin:0;color:#96909c;font-size:12px;line-height:1.65}@media(max-width:1050px){.fd-runtime-grid{grid-template-columns:1fr 1fr}}@media(max-width:850px){.fd-indie-store-grid,.fd-indie-model,.fd-runtime-grid{grid-template-columns:1fr}.fd-indie-hub-hero,.fd-indie-discovery,.fd-runtime-retailers{padding:20px}}`}</style>
+    <style>{`.fd-retailer-hub{display:grid;gap:22px}.fd-retailer-hero{padding:28px}.fd-retailer-message h1{font-size:clamp(2rem,3vw,3.2rem);line-height:1.02;max-width:850px}.fd-retailer-message p{font-size:15px;line-height:1.7;max-width:920px;color:#9a949f}.fd-retailer-message strong{color:#b7f5ff;font-size:.82em;letter-spacing:.04em}.fd-retailer-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:24px}.fd-retailer-metrics div{padding:14px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.02)}.fd-retailer-metrics strong{display:block;font-size:24px}.fd-retailer-metrics span{display:block;margin-top:3px;color:#68e8fb;font-size:7px;font-weight:900;letter-spacing:.12em}.fd-retailer-metrics small{display:block;margin-top:4px;color:#77717f;font-size:8px}.fd-retailer-model{padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:center}.fd-retailer-model span{font-size:8px;letter-spacing:.15em;color:#68e8fb;font-weight:850}.fd-retailer-model h2{margin:7px 0 0;font-size:22px}.fd-retailer-model p{margin:0;color:#96909c;font-size:12px;line-height:1.65}@media(max-width:850px){.fd-retailer-hero{padding:20px}.fd-retailer-metrics,.fd-retailer-model{grid-template-columns:1fr}}`}</style>
   </DashboardPageShell>;
 }
