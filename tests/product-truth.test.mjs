@@ -31,7 +31,8 @@ test("canonical dashboard language separates Search, FateFind, FateMatch and Kor
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
   assert.ok(fateFind.includes('title="FateFind"'));
   assert.ok(fateFind.includes("strongest-value option available now"));
-  assert.ok(fateFind.includes("searchSignalFateFind"));
+  assert.ok(fateFind.includes("searchSignalTruePrice"));
+  assert.ok(fateFind.includes("ValueCompare"));
   assert.ok(fateMatch.includes('title="FateMatch"'));
   assert.ok(fateMatch.includes("let me know when this is in stock"));
   assert.ok(companion.includes('title: "Koru & Friends | FateDrop Dashboard"'));
