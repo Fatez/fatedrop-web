@@ -9,8 +9,8 @@ function stringArray(value: unknown) {
   return [];
 }
 function objectValue(value: unknown) {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, boolean>;
-  if (typeof value === "string") { try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed as Record<string, boolean> : {}; } catch { return {}; } }
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, boolean | string>;
+  if (typeof value === "string") { try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed as Record<string, boolean | string> : {}; } catch { return {}; } }
   return {};
 }
 function nullableNumber(value: unknown) { return value === null || value === undefined ? null : Number(value); }
