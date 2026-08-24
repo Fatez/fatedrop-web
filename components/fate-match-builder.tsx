@@ -21,7 +21,7 @@ export function FateMatchBuilder({ premium, initialQuery = "", initialProductIde
   function resolveLocation() {
     if (!navigator.geolocation) { setLocationStatus("This browser cannot provide a location. Use Online only for this FateFind."); return; }
     setLocating(true);
-    setLocationStatus("Resolving your location for this FateFind…");
+    setLocationStatus("Resolving your location for this FateMatch…");
     navigator.geolocation.getCurrentPosition((position) => {
       setLatitude(position.coords.latitude);
       setLongitude(position.coords.longitude);
@@ -36,7 +36,7 @@ export function FateMatchBuilder({ premium, initialQuery = "", initialProductIde
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!premium) { setMessage("Premium unlocks active FateMatch monitoring."); return; }
-    if (scope === "local" && (latitude === null || longitude === null)) { setMessage("Use your location before saving a Local-only FateFind."); return; }
+    if (scope === "local" && (latitude === null || longitude === null)) { setMessage("Use your location before saving a Local-only FateMatch."); return; }
     setSaving(true); setMessage("");
     const includeLocal = scope === "local" || (scope === "either" && latitude !== null && longitude !== null);
     const response = await fetch("/api/fate-matches", {
@@ -77,7 +77,7 @@ export function FateMatchBuilder({ premium, initialQuery = "", initialProductIde
     </div> : null}
 
     <p className="fd-fm-note"><b>FateMatch</b> is the watch. With no price rules it simply means “let me know when this is in stock.” When a qualifying observed offer goes live, your companion alerts you and gives you the retailer route.</p>
-    {scope === "local" ? <p className="fd-fm-note">Local-only hunts are saved only after a real browser location is resolved. FateDrop does not guess your postcode or radius.</p> : null}
+    {scope === "local" ? <p className="fd-fm-note">Local-only FateMatch watches are saved only after a real browser location is resolved. FateDrop does not guess your postcode or radius.</p> : null}
     {message ? <p className="fd-fm-message">{message}</p> : null}
     <style jsx>{`
       .fd-fatematch-builder{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end}.fd-fm-field{display:grid;gap:6px}.fd-fm-field label,.fd-fm-location label{font-size:7px;font-weight:900;letter-spacing:.14em;color:#77717e}.fd-fm-field input,.fd-fm-field select,.fd-fm-location select{box-sizing:border-box;width:100%;height:44px;padding:0 12px;border:1px solid rgba(221,203,188,.1);border-radius:11px;background:#0c0f13;color:#e7ddd6;outline:0}.fd-fm-field input:focus,.fd-fm-field select:focus,.fd-fm-location select:focus{border-color:rgba(171,126,195,.35)}.fd-money-input{display:flex;align-items:center;height:44px;padding:0 10px;border:1px solid rgba(221,203,188,.1);border-radius:11px;background:#0c0f13}.fd-money-input input{height:auto;padding:0 5px;border:0;background:transparent}.fd-money-input span{color:#827b89;font-size:12px}.fd-fatematch-builder>button{height:44px;padding:0 16px;border:1px solid rgba(171,126,195,.22);border-radius:11px;background:linear-gradient(135deg,rgba(112,72,140,.12),rgba(136,105,84,.07));color:#e4d8cf;font-size:9px;font-weight:900;letter-spacing:.08em}.fd-fatematch-builder>button:disabled,.fd-fm-location button:disabled{opacity:.55}.fd-fm-location{grid-column:1/-1;padding:11px;display:grid;grid-template-columns:150px auto minmax(0,1fr);gap:10px;align-items:end;border:1px solid rgba(221,203,188,.065);border-radius:10px;background:rgba(255,255,255,.012)}.fd-fm-location>div{display:grid;gap:5px}.fd-fm-location button{height:44px;padding:0 13px;border:1px solid rgba(171,126,195,.18);border-radius:9px;background:rgba(112,72,140,.06);color:#c9a9d5;font-size:7px;font-weight:900}.fd-fm-location p{margin:0;align-self:center;color:#776f70;font-size:8px;line-height:1.45}.fd-fm-note,.fd-fm-message{grid-column:1/-1;margin:2px 0 0;color:#8d8794;font-size:10px;line-height:1.45}.fd-fm-note b{color:#c9b1c9}.fd-fm-message{color:#b996c7}@media(max-width:1000px){.fd-fatematch-builder{grid-template-columns:1fr 1fr}.fd-fm-field.wide{grid-column:1/-1}.fd-fatematch-builder>button{grid-column:1/-1}.fd-fm-location{grid-template-columns:140px auto 1fr}}@media(max-width:680px){.fd-fm-location{grid-template-columns:1fr}.fd-fatematch-builder{grid-template-columns:1fr}.fd-fm-field.wide,.fd-fatematch-builder>button{grid-column:auto}}`}</style>
