@@ -44,6 +44,7 @@ test("FateMatch RRP percentage remains item price vs RRP, not delivered True Pri
 test("repository product truth locks one shared meaning across App and Web", () => {
   const truth = read("docs/fatedrop-product-truth.md");
   assert.ok(truth.includes("FateFind = best value available now; FateMatch = watch it and alert me when it qualifies."));
-  assert.ok(truth.includes("one canonical result contract consumed by both App and Web"));
+  assert.ok(truth.includes("The approved FateFind user experience is the proven comparison/search surface"));
+  assert.ok(truth.includes("preserves the same comparison behaviour across App and Web"));
   assert.ok(truth.includes("FATEMATCH — LIVE NOW"));
 });
