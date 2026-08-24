@@ -171,7 +171,7 @@ function retailerFilterForQuery(query: string) {
 export async function searchSignalCatalogue(query: string, options: {
   inStock?: boolean;
   limit?: number;
-  sort?: "price" | "title";
+  sort?: "relevance" | "recent" | "price" | "title";
   retailer?: string;
   category?: string;
   minPrice?: number;
