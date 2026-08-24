@@ -217,6 +217,8 @@ Prefer explainable evidence such as `High activity · 4 meaningful changes in 12
 
 **FateFind answers: “What is the strongest-value option I can buy right now?”**
 
+The approved FateFind user experience is the proven comparison/search surface that previously carried the public name **True Price**. Do not replace that experience with a separate simplified finder. Rename and preserve the working comparison flow: product search → comparable live configurations/offers → RRP/reference position → value verdict → delivery/True Price context → retailer handoff.
+
 FateFind:
 
 - gathers the relevant live/in-stock configurations for the collector's product intent;
@@ -224,8 +226,8 @@ FateFind:
 - resolves the correct authoritative RRP/reference where legitimate;
 - uses item price vs RRP/reference as the headline £/% value signal;
 - keeps delivery separate and uses known mandatory delivery for True Price;
-- ranks the current buying opportunities by the shared Cloud intelligence rather than by the smallest absolute £ number;
-- returns one canonical result contract consumed by both App and Web.
+- uses the shared canonical Cloud comparison response and the proven value-comparison logic rather than the smallest absolute £ number;
+- preserves the same comparison behaviour across App and Web.
 
 A single pack can therefore have the lowest checkout price without being the strongest-value FateFind result. FateFind must never invent an RRP or claim an RRP-value winner when the reference is not legitimate.
 
