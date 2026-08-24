@@ -220,11 +220,12 @@ test("retailer discovery separates Cloud runtime health from storefront lab feed
   const stores = fs.readFileSync("app/dashboard/stores/page.tsx", "utf8");
   const network = fs.readFileSync("lib/retailer-network.ts", "utf8");
   const registry = fs.readFileSync("lib/retailer-registry.ts", "utf8");
-  assert.ok(stores.includes("LIVE NETWORK"));
-  assert.ok(stores.includes("STORE PREVIEWS"));
-  assert.ok(stores.includes("FateDrop is the bridge, not the marketplace"));
-  assert.ok(stores.includes("not a paid ranking, endorsement or blanket trust badge"));
+  assert.ok(stores.includes("CANONICAL CLOUD RETAILERS · MARKET DIRECTORY"));
+  assert.ok(stores.includes("EXPERIMENTAL STOREFRONT LAB"));
+  assert.ok(stores.includes("Cloud monitor health describes FateDrop evidence collection"));
+  assert.ok(stores.includes("<RetailerMarketDirectory"));
   assert.ok(network.includes("getSignalEngineStatus"));
+  assert.ok(network.includes("getSignalRetailerDirectory"));
   assert.ok(registry.includes("cloudRetailerId"));
   assert.ok(registry.includes('cloudRetailerId: "smyths-uk"'));
 });
