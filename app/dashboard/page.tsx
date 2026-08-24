@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardNetworkPulse } from "@/components/dashboard-network-pulse";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
+import { DashboardToolGuide } from "@/components/dashboard-tool-guide";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { buildDashboardData, moneyFromPence, relativeTime, signalLabel } from "@/lib/dashboard";
 import type { NetworkSignal } from "@/lib/dashboard-storage";
@@ -118,6 +119,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      <DashboardToolGuide/>
       <section className="fd-reference-grid">
         <article className="fd-ref-card fd-recent-signals">
           <div className="fd-ref-card-head compact"><div><h2>Recent Signals</h2><p>Latest network movement.</p></div></div>
@@ -132,13 +134,13 @@ export default async function DashboardPage() {
         </article>
 
         <article className="fd-ref-card fd-true-price-card">
-          <div className="fd-ref-card-head compact"><div><h2>True Price Comparison</h2><p>What you really pay.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>FateFind Pricing Context</h2><p>RRP value first; True Price is included when delivery is known.</p></div></div>
           {priceGroup ? <div className="fd-price-table">
             <div className="fd-price-head"><span>Store</span><span>Known true price</span><span>Observed</span></div>
             {priceGroup.slice(0, 4).map((item) => <div className="fd-price-row" key={item.id}><strong>{item.retailer || "Retailer pending"}</strong><b>{moneyFromPence(item.deliveredPricePence) || "—"}</b><small>{relativeTime(item.occurredAt, data.generatedAt)}</small></div>)}
-            <p><b>{priceGroup[0]?.title}</b> · Item price + known mandatory delivery = True Price. Compare who is actually cheapest before checkout.</p>
-          </div> : <div className="fd-ref-empty tall"><strong>No comparable True Prices yet.</strong><span>FateDrop only compares delivered totals when the required price and delivery evidence is known.</span></div>}
-          <Link className="fd-card-link" href="/dashboard/true-price">View full comparison <span>→</span></Link>
+            <p><b>{priceGroup[0]?.title}</b> · FateFind uses the correct RRP percentage to judge value. True Price adds known mandatory delivery so you can see what you would actually pay.</p>
+          </div> : <div className="fd-ref-empty tall"><strong>No FateFind pricing context yet.</strong><span>FateDrop will not invent delivery or RRP data. FateFind shows True Price only when the required delivery evidence is known.</span></div>}
+          <Link className="fd-card-link" href="/dashboard/fatefind">Open FateFind <span>→</span></Link>
         </article>
 
         <article className="fd-ref-card fd-fatefind-card">
