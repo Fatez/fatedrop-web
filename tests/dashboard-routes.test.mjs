@@ -129,13 +129,13 @@ test("Search, FateFind and FateMatch form one working collector journey while Tr
   assert.ok(legacyTruePrice.includes("/dashboard/fatefind"));
   assert.ok(fateFind.includes("TRUE PRICE"));
   assert.ok(fateFind.includes("RRP / REFERENCE"));
-  assert.ok(fateFind.includes("searchSignalFateFind"));
+  assert.ok(fateFind.includes("searchSignalTruePrice"));
+  assert.ok(fateFind.includes("ValueCompare"));
   assert.ok(fateFind.includes("Best value now"));
   assert.ok(fateMatch.includes("FateMatchBuilder"));
   assert.ok(fateMatch.includes("FateFindActions"));
   assert.ok(client.includes('"/api/catalogue"'));
   assert.ok(client.includes('"/api/true-price"'));
-  assert.ok(client.includes('"/api/fatefind"'));
 });
 
 test("FateMatch supports create pause resume delete companion assignment and evidence-based local matching", () => {
