@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AlertStageTrend } from "@/components/alert-stage-trend";
 import { CanonicalAlertSignalPack } from "@/components/canonical-alert-signal-pack";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { StartMembershipButton } from "@/components/membership-actions";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { listCanonicalAlerts, type CanonicalAlert, type CanonicalSignalStage } from "@/lib/canonical-alerts";
+import { getCanonicalSignalTrend } from "@/lib/canonical-alert-trends";
 import { activityLabel, buildDashboardData, moneyFromPence, relativeTime } from "@/lib/dashboard";
 import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
@@ -85,6 +87,38 @@ function companionVoice(stage: CanonicalSignalStage) {
   return "FateDrop observed network activity";
 }
 
+
+const alertStageMeta = [
+  {
+    state: "whisper",
+    stage: "WHISPER",
+    companion: "ORU",
+    description: "Catalogue and product movement before verified purchasable stock.",
+    artPath: "/assets/companions/oru-alert.png",
+  },
+  {
+    state: "echo",
+    stage: "ECHO",
+    companion: "FENN",
+    description: "Queue, traffic, security and access-readiness activity.",
+    artPath: "/assets/companions/fenn-alert.png",
+  },
+  {
+    state: "manifested",
+    stage: "MANIFESTED",
+    companion: "KORU",
+    description: "Verified purchasable availability observed by the FateDrop network.",
+    artPath: "/assets/companions/koru-portrait.webp",
+  },
+  {
+    state: "vanished",
+    stage: "VANISHED",
+    companion: "NIXON",
+    description: "Previously verified availability that is no longer purchasable.",
+    artPath: "/assets/companions/nixon-alert.png",
+  },
+] as const;
+
 export default async function AlertsPage() {
   const snapshot = await getCurrentSnapshot();
   const premium = snapshot ? hasPremiumAccess(snapshot.membership) : false;
@@ -92,9 +126,11 @@ export default async function AlertsPage() {
   const data = snapshot ? await buildDashboardData(snapshot) : null;
   let fateFinds: Awaited<ReturnType<typeof listUserFateMatches>> = [];
   let canonicalAlerts: CanonicalAlert[] = [];
+  let alertTrend: Awaited<ReturnType<typeof getCanonicalSignalTrend>> | null = null;
   if (snapshot) {
     try { fateFinds = await listUserFateMatches(snapshot.account.id); } catch { fateFinds = []; }
     try { canonicalAlerts = await listCanonicalAlerts({ limit: 20 }); } catch { canonicalAlerts = []; }
+    try { alertTrend = await getCanonicalSignalTrend(7); } catch { alertTrend = null; }
   }
   const activeFateFinds = fateFinds.filter((item)=>item.enabled);
   const personalHistory = data?.personal.recent ?? [];
@@ -110,6 +146,27 @@ export default async function AlertsPage() {
       </section>
 
       {!premium ? <section className="fd-alerts-gate"><div><span>PREMIUM MONITORING</span><h2>Free sees the movement. Premium gets the price intelligence.</h2><p>Canonical signals remain visible, while RRP deltas, cheapest-known comparable offers, prepared retailer links, priority delivery and FateFind automation form the deeper monitoring layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot?.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
+
+      {alertTrend ? <section className="fd-alert-trends-shell">
+        <div className="fd-alert-trends-heading">
+          <div><span>7 DAY SIGNAL ACTIVITY</span><h2>Each companion has its own network pulse.</h2></div>
+          <p>These lines are built from persisted canonical Whisper, Echo, Manifested and Vanished signals. They measure network activity — not Discord delivery attempts.</p>
+        </div>
+        <div className="fd-alert-trends-grid">
+          {alertStageMeta.map((meta) => {
+            const trend = alertTrend.byState[meta.state];
+            return <AlertStageTrend
+              key={meta.state}
+              stage={meta.stage}
+              companion={meta.companion}
+              description={meta.description}
+              total={trend.total}
+              points={trend.points}
+              artPath={meta.artPath}
+            />;
+          })}
+        </div>
+      </section> : null}
 
       <section className="fd-dash-card fd-canonical-alerts"><div className="fd-dash-card-head"><span>CANONICAL SIGNAL INBOX</span><small>{canonicalAlerts.length ? `${canonicalAlerts.length} recent` : "Awaiting signals"}</small></div>{canonicalAlerts.length ? <div className="fd-canonical-list">{canonicalAlerts.map((alert)=>{
         const verdict = verdictLine(alert);
@@ -132,7 +189,7 @@ export default async function AlertsPage() {
       <section className="fd-dash-card fd-alert-model"><div><span>UNIVERSAL SIGNAL LANGUAGE</span><h2>Oru whispers. Fenn echoes. Koru finds it. Nixon sees it vanish.</h2></div><p>Oru/Whisper means product or catalogue movement before confirmed stock. Fenn/Echo is queue, traffic, security or access readiness. Koru/Manifested means verified purchasable availability. Nixon/Vanished means previously verified availability is gone. The meaning does not change between Discord, web or app.</p></section>
     </div>
     <style>{`
-      .fd-personal-alerts{display:grid;gap:20px}.fd-alert-personal-hero{position:relative;overflow:hidden;min-height:330px;padding:34px;border:1px solid rgba(157,109,255,.18);border-radius:24px;background:linear-gradient(90deg,rgba(6,7,13,.95),rgba(6,7,13,.66)),url('/assets/cardwave-bg.webp') center right/cover no-repeat}.fd-alert-personal-hero>div:first-child{max-width:720px}.fd-alert-personal-hero span{color:#73e9fb;font-size:9px;font-weight:900;letter-spacing:.18em}.fd-alert-personal-hero h1{margin:13px 0;font-size:clamp(2.5rem,4.5vw,4.7rem);line-height:.91;letter-spacing:-.055em}.fd-alert-personal-hero h1 em{font-style:normal;background:linear-gradient(90deg,#fff,#a5efff,#bd94ff);-webkit-background-clip:text;color:transparent}.fd-alert-personal-hero p{max-width:680px;color:#9c95a4;font-size:14px;line-height:1.65}.fd-alert-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.fd-alert-hero-actions a{padding:10px 13px;border:1px solid rgba(88,232,255,.18);border-radius:10px;color:#c9f7ff;font-size:8px;font-weight:900;text-decoration:none}.fd-alert-personal-metrics{position:absolute;left:34px;bottom:26px;display:flex;gap:28px}.fd-alert-personal-metrics span{color:#6d6774;font-size:7px}.fd-alert-personal-metrics b{display:block;color:#fff;font-size:17px;letter-spacing:0}.fd-alerts-gate{border:1px solid rgba(155,92,255,.3);background:linear-gradient(100deg,rgba(79,30,141,.17),rgba(10,9,15,.95));border-radius:18px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:24px}.fd-alerts-gate span{font-size:9px;letter-spacing:.16em;color:#ad77ff;font-weight:800}.fd-alerts-gate h2{font-size:19px;margin:6px 0}.fd-alerts-gate p{color:#918a99;margin:0;font-size:12px;max-width:780px}.fd-canonical-alerts{padding:24px}.fd-canonical-list{display:grid;gap:9px;margin-top:16px}.fd-canonical-signal{display:grid;grid-template-columns:150px 1fr auto;gap:18px;align-items:center;padding:15px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.018)}.fd-canonical-stage{display:grid;gap:4px}.fd-canonical-stage i{width:7px;height:7px;border-radius:50%;background:#8d6cff;box-shadow:0 0 14px #8d6cff}.fd-canonical-signal.whisper .fd-canonical-stage i{background:#70def0;box-shadow:0 0 14px #70def0}.fd-canonical-signal.manifested .fd-canonical-stage i{background:#54e5ab;box-shadow:0 0 14px #54e5ab}.fd-canonical-signal.vanished .fd-canonical-stage i{background:#ff6b79;box-shadow:0 0 14px #ff6b79}.fd-canonical-stage b{font-size:8px;letter-spacing:.1em;color:#c2afff}.fd-canonical-signal.whisper .fd-canonical-stage b{color:#86eefa}.fd-canonical-signal.manifested .fd-canonical-stage b{color:#68e8b7}.fd-canonical-stage small{color:#665f6c;font-size:7px}.fd-canonical-copy{display:grid;gap:4px;min-width:0}.fd-canonical-copy strong{color:#f5f3f8;font-size:12px}.fd-canonical-copy span{color:#827b89;font-size:9px}.fd-canonical-copy em{font-style:normal;color:#70def0;font-size:8px;font-weight:800}.fd-canonical-copy .verdict{font-weight:900;letter-spacing:.03em}.fd-canonical-copy .verdict.better{color:#ffbd62}.fd-canonical-copy .verdict.lowest{color:#62e9b1}.fd-canonical-copy .verdict.unknown{color:#706a77}.fd-canonical-action a{display:block;padding:9px 11px;border:1px solid rgba(116,225,244,.15);border-radius:9px;color:#9beeff;font-size:7px;font-weight:900;text-decoration:none;white-space:nowrap}.fd-alert-personal-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}.fd-alert-finds,.fd-alert-delivery,.fd-alert-history{padding:24px}.fd-delivery-list{display:grid;gap:8px;margin-top:16px}.fd-delivery-list>div{display:grid;grid-template-columns:75px 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.065);border-radius:11px;background:rgba(255,255,255,.02)}.fd-delivery-list b{font-size:9px}.fd-delivery-list span{color:#85808c;font-size:9px}.fd-delivery-list i{font-size:6px;font-style:normal;font-weight:900;letter-spacing:.08em}.fd-alert-delivery>p{color:#77717e;font-size:9px;line-height:1.55}.fd-alert-model{padding:24px 28px;display:grid;grid-template-columns:.8fr 1.2fr;gap:28px;align-items:center}.fd-alert-model span{color:#73e9fb;font-size:8px;font-weight:900;letter-spacing:.14em}.fd-alert-model h2{margin:7px 0 0;font-size:22px}.fd-alert-model p{margin:0;color:#908a97;font-size:11px;line-height:1.65}@media(max-width:900px){.fd-alert-personal-grid,.fd-alert-model{grid-template-columns:1fr}.fd-canonical-signal{grid-template-columns:110px 1fr}.fd-canonical-action{grid-column:2}.fd-alert-personal-metrics{gap:14px;flex-wrap:wrap}.fd-delivery-list>div{grid-template-columns:1fr}}@media(max-width:650px){.fd-alert-personal-hero{padding:25px;min-height:430px}.fd-alert-personal-metrics{left:25px}.fd-alerts-gate{display:block}.fd-canonical-alerts,.fd-alert-finds,.fd-alert-delivery,.fd-alert-history{padding:20px}.fd-canonical-signal{grid-template-columns:1fr}.fd-canonical-action{grid-column:1}}
+      .fd-personal-alerts{display:grid;gap:20px}.fd-alert-personal-hero{position:relative;overflow:hidden;min-height:330px;padding:34px;border:1px solid rgba(157,109,255,.18);border-radius:24px;background:linear-gradient(90deg,rgba(6,7,13,.95),rgba(6,7,13,.66)),url('/assets/cardwave-bg.webp') center right/cover no-repeat}.fd-alert-personal-hero>div:first-child{max-width:720px}.fd-alert-personal-hero span{color:#73e9fb;font-size:9px;font-weight:900;letter-spacing:.18em}.fd-alert-personal-hero h1{margin:13px 0;font-size:clamp(2.5rem,4.5vw,4.7rem);line-height:.91;letter-spacing:-.055em}.fd-alert-personal-hero h1 em{font-style:normal;background:linear-gradient(90deg,#fff,#a5efff,#bd94ff);-webkit-background-clip:text;color:transparent}.fd-alert-personal-hero p{max-width:680px;color:#9c95a4;font-size:14px;line-height:1.65}.fd-alert-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.fd-alert-hero-actions a{padding:10px 13px;border:1px solid rgba(88,232,255,.18);border-radius:10px;color:#c9f7ff;font-size:8px;font-weight:900;text-decoration:none}.fd-alert-personal-metrics{position:absolute;left:34px;bottom:26px;display:flex;gap:28px}.fd-alert-personal-metrics span{color:#6d6774;font-size:7px}.fd-alert-personal-metrics b{display:block;color:#fff;font-size:17px;letter-spacing:0}.fd-alerts-gate{border:1px solid rgba(155,92,255,.3);background:linear-gradient(100deg,rgba(79,30,141,.17),rgba(10,9,15,.95));border-radius:18px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:24px}.fd-alerts-gate span{font-size:9px;letter-spacing:.16em;color:#ad77ff;font-weight:800}.fd-alerts-gate h2{font-size:19px;margin:6px 0}.fd-alerts-gate p{color:#918a99;margin:0;font-size:12px;max-width:780px}.fd-alert-trends-shell{padding:24px;border:1px solid rgba(255,255,255,.07);border-radius:20px;background:linear-gradient(180deg,rgba(14,15,23,.92),rgba(8,9,14,.94))}.fd-alert-trends-heading{display:flex;justify-content:space-between;gap:28px;align-items:end;margin-bottom:17px}.fd-alert-trends-heading span{color:#73e9fb;font-size:8px;font-weight:900;letter-spacing:.15em}.fd-alert-trends-heading h2{margin:6px 0 0;font-size:21px}.fd-alert-trends-heading p{max-width:540px;margin:0;color:#827b89;font-size:10px;line-height:1.55}.fd-alert-trends-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.fd-stage-trend{min-width:0;padding:14px;border:1px solid rgba(255,255,255,.07);border-radius:15px;background:rgba(255,255,255,.018);color:#9d7cff}.fd-stage-trend.whisper{color:#70def0}.fd-stage-trend.echo{color:#b493ff}.fd-stage-trend.manifested{color:#54e5ab}.fd-stage-trend.vanished{color:#ff6b79}.fd-stage-trend-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.fd-stage-companion{display:flex;align-items:center;gap:9px;min-width:0}.fd-stage-companion-art{width:46px;height:46px;flex:0 0 46px;border-radius:13px;overflow:hidden;border:1px solid color-mix(in srgb,currentColor 28%,transparent);background:color-mix(in srgb,currentColor 8%,#090a0f);display:grid;place-items:center}.fd-stage-companion-art img{width:100%;height:100%;object-fit:cover}.fd-stage-companion-art span{font-size:17px;font-weight:900;color:currentColor}.fd-stage-companion small,.fd-stage-trend-total small{display:block;color:#716a78;font-size:6px;font-weight:900;letter-spacing:.12em}.fd-stage-companion strong{display:block;margin-top:2px;color:currentColor;font-size:9px;letter-spacing:.08em}.fd-stage-trend-total{text-align:right}.fd-stage-trend-total b{display:block;color:#f7f5f9;font-size:18px}.fd-stage-trend>p{min-height:34px;margin:11px 0 7px;color:#837d89;font-size:8px;line-height:1.45}.fd-stage-chart svg{display:block;width:100%;height:auto;overflow:visible}.fd-stage-chart .grid{stroke:rgba(255,255,255,.05);stroke-width:1}.fd-stage-chart .line{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px currentColor)}.fd-stage-chart .point{fill:#07080c;stroke:currentColor;stroke-width:2}.fd-stage-chart-axis{display:grid;grid-template-columns:1fr auto 1fr;gap:4px;color:#5f5965;font-size:5.5px;font-weight:800;letter-spacing:.07em}.fd-stage-chart-axis span:nth-child(2){text-align:center}.fd-stage-chart-axis span:last-child{text-align:right}.fd-canonical-alerts{padding:24px}.fd-canonical-list{display:grid;gap:9px;margin-top:16px}.fd-canonical-signal{display:grid;grid-template-columns:150px 1fr auto;gap:18px;align-items:center;padding:15px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.018)}.fd-canonical-stage{display:grid;gap:4px}.fd-canonical-stage i{width:7px;height:7px;border-radius:50%;background:#8d6cff;box-shadow:0 0 14px #8d6cff}.fd-canonical-signal.whisper .fd-canonical-stage i{background:#70def0;box-shadow:0 0 14px #70def0}.fd-canonical-signal.manifested .fd-canonical-stage i{background:#54e5ab;box-shadow:0 0 14px #54e5ab}.fd-canonical-signal.vanished .fd-canonical-stage i{background:#ff6b79;box-shadow:0 0 14px #ff6b79}.fd-canonical-stage b{font-size:8px;letter-spacing:.1em;color:#c2afff}.fd-canonical-signal.whisper .fd-canonical-stage b{color:#86eefa}.fd-canonical-signal.manifested .fd-canonical-stage b{color:#68e8b7}.fd-canonical-stage small{color:#665f6c;font-size:7px}.fd-canonical-copy{display:grid;gap:4px;min-width:0}.fd-canonical-copy strong{color:#f5f3f8;font-size:12px}.fd-canonical-copy span{color:#827b89;font-size:9px}.fd-canonical-copy em{font-style:normal;color:#70def0;font-size:8px;font-weight:800}.fd-canonical-copy .verdict{font-weight:900;letter-spacing:.03em}.fd-canonical-copy .verdict.better{color:#ffbd62}.fd-canonical-copy .verdict.lowest{color:#62e9b1}.fd-canonical-copy .verdict.unknown{color:#706a77}.fd-canonical-action a{display:block;padding:9px 11px;border:1px solid rgba(116,225,244,.15);border-radius:9px;color:#9beeff;font-size:7px;font-weight:900;text-decoration:none;white-space:nowrap}.fd-alert-personal-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}.fd-alert-finds,.fd-alert-delivery,.fd-alert-history{padding:24px}.fd-delivery-list{display:grid;gap:8px;margin-top:16px}.fd-delivery-list>div{display:grid;grid-template-columns:75px 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.065);border-radius:11px;background:rgba(255,255,255,.02)}.fd-delivery-list b{font-size:9px}.fd-delivery-list span{color:#85808c;font-size:9px}.fd-delivery-list i{font-size:6px;font-style:normal;font-weight:900;letter-spacing:.08em}.fd-alert-delivery>p{color:#77717e;font-size:9px;line-height:1.55}.fd-alert-model{padding:24px 28px;display:grid;grid-template-columns:.8fr 1.2fr;gap:28px;align-items:center}.fd-alert-model span{color:#73e9fb;font-size:8px;font-weight:900;letter-spacing:.14em}.fd-alert-model h2{margin:7px 0 0;font-size:22px}.fd-alert-model p{margin:0;color:#908a97;font-size:11px;line-height:1.65}@media(max-width:1100px){.fd-alert-trends-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:900px){.fd-alert-personal-grid,.fd-alert-model{grid-template-columns:1fr}.fd-alert-trends-heading{display:block}.fd-alert-trends-heading p{margin-top:8px}.fd-canonical-signal{grid-template-columns:110px 1fr}.fd-canonical-action{grid-column:2}.fd-alert-personal-metrics{gap:14px;flex-wrap:wrap}.fd-delivery-list>div{grid-template-columns:1fr}}@media(max-width:650px){.fd-alert-trends-grid{grid-template-columns:1fr}.fd-alert-trends-shell{padding:18px}.fd-alert-personal-hero{padding:25px;min-height:430px}.fd-alert-personal-metrics{left:25px}.fd-alerts-gate{display:block}.fd-canonical-alerts,.fd-alert-finds,.fd-alert-delivery,.fd-alert-history{padding:20px}.fd-canonical-signal{grid-template-columns:1fr}.fd-canonical-action{grid-column:1}}
     `}</style>
   </DashboardPageShell>;
 }
