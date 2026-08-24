@@ -78,6 +78,46 @@ export type SignalTruePriceResponse = {
   disclaimer: string;
 };
 
+export type SignalFateFindOpportunity = {
+  rank: number;
+  rankingBasis: "rrp_value" | "true_price_rrp_unavailable";
+  productId: string | null;
+  productTitle: string;
+  productType: string | null;
+  tcg: string;
+  offerId: string | null;
+  retailerId: string | null;
+  retailerName: string | null;
+  url: string | null;
+  stockStatus: string;
+  lastSeenAt: number | null;
+  itemPricePence: number | null;
+  deliveryKnown: boolean;
+  deliveryPence: number | null;
+  truePricePence: number | null;
+  rrpResolved: boolean;
+  rrpPence: number | null;
+  rrpKind: string | null;
+  rrpSource: string | null;
+  rrpReferenceBasis: string | null;
+  rrpReason: string | null;
+  rrpApplicabilityReason: string | null;
+  itemVsRrpDeltaPence: number | null;
+  percentAboveRrp: number | null;
+  valueLabel: string | null;
+  qualifyingReasons: string[];
+};
+
+export type SignalFateFindResponse = {
+  success: boolean;
+  contractVersion: 1;
+  query: string;
+  generatedAt: number;
+  comparisonStatus: "no_matches" | "ranked_by_rrp_value" | "ranked_without_rrp";
+  bestOpportunity: SignalFateFindOpportunity | null;
+  rankedOffers: SignalFateFindOpportunity[];
+};
+
 export type SignalRetailerState = {
   id: string;
   name: string;
@@ -161,6 +201,10 @@ function safeTruePriceOffer(offer: SignalTruePriceOffer): SignalTruePriceOffer |
   return productUrl ? { ...offer, productUrl } : null;
 }
 
+function safeFateFindOpportunity(offer: SignalFateFindOpportunity): SignalFateFindOpportunity {
+  return { ...offer, url: offer.url ? safeExternalHttpsUrl(offer.url) : null };
+}
+
 function retailerFilterForQuery(query: string) {
   const normalized = query.trim().toLocaleLowerCase("en-GB");
   if (!normalized) return null;
@@ -209,6 +253,16 @@ export async function searchSignalCatalogue(query: string, options: {
     count: products.length,
     total: Math.max(products.length, result.total - blocked),
   };
+}
+
+export async function searchSignalFateFind(query: string) {
+  const clean = query.trim();
+  if (clean.length < 2) return null;
+  const result = await signalFetch<SignalFateFindResponse>("/api/fatefind", new URLSearchParams({ q: clean }));
+  if (!result) return null;
+  const rankedOffers = result.rankedOffers.map(safeFateFindOpportunity);
+  const bestOpportunity = rankedOffers.find((offer) => offer.rank === 1) ?? null;
+  return { ...result, rankedOffers, bestOpportunity };
 }
 
 export async function searchSignalTruePrice(query: string) {
