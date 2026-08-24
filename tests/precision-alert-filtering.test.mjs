@@ -9,6 +9,7 @@ const mobileAlerts = await readFile(new URL('../app/api/mobile/alerts/route.ts',
 const push = await readFile(new URL('../lib/canonical-push.ts', import.meta.url), 'utf8');
 const canonical = await readFile(new URL('../lib/canonical-alerts.ts', import.meta.url), 'utf8');
 const webAlerts = await readFile(new URL('../app/dashboard/alerts/page.tsx', import.meta.url), 'utf8');
+const trends = await readFile(new URL('../lib/canonical-alert-trends.ts', import.meta.url), 'utf8');
 
 test('product alert intelligence distinguishes collector products from noise', () => {
   assert.match(classifier, /"SEALED_TCG"/);
@@ -48,7 +49,7 @@ test('mobile inbox and push both apply the shared precision gate', () => {
   assert.match(push, /!productEnabled\(alert, recipient\)/);
 });
 
-test('web inbox applies preferences while raw seven-day network trends remain independent', () => {
+test('web inbox applies preferences while seven-day network trends remain independent of personal filters', () => {
   assert.match(webAlerts, /notificationPreferencesAllowAlert/);
   assert.match(webAlerts, /rawAlerts\.filter/);
   assert.match(webAlerts, /getCanonicalSignalTrend\(7\)/);
@@ -62,4 +63,13 @@ test('observed live time is a Vanished-only closed-window fact', () => {
   assert.match(canonical, /row\.state === "vanished" \? row\.observed_duration_seconds : null/);
   assert.match(webAlerts, /alert\.fateStage === "VANISHED"/);
   assert.match(webAlerts, /OBSERVED LIVE/);
+});
+
+test('canonical inbox and trend graphs reject orphan Vanished events', () => {
+  assert.match(canonical, /s\.state <> 'vanished' OR live_window\.manifested_at IS NOT NULL/);
+  assert.match(trends, /s\.state <> 'vanished'/);
+  assert.match(trends, /m\.state='manifested'/);
+  assert.match(trends, /v\.state='vanished'/);
+  assert.match(trends, /v\.detected_at > m\.detected_at/);
+  assert.match(trends, /v\.detected_at < s\.detected_at/);
 });
