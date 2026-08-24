@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { fateDropPostgres } from "@/lib/postgres";
+import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const MAX_ATTEMPTS = 3;
@@ -13,6 +14,11 @@ type RecipientRow = {
   echo_enabled: boolean;
   manifested_enabled: boolean;
   vanished_enabled: boolean;
+  sealed_tcg_enabled: boolean;
+  single_cards_enabled: boolean;
+  accessories_enabled: boolean;
+  merchandise_enabled: boolean;
+  unknown_products_enabled: boolean;
   push_enabled: boolean;
   quiet_hours_enabled: boolean;
   quiet_hours_start: string | null;
@@ -54,6 +60,16 @@ function stageEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
   if (alert.fateStage === "MANIFESTED") return recipient.manifested_enabled;
   if (alert.fateStage === "VANISHED") return recipient.vanished_enabled;
   return false;
+}
+
+function productEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
+  return productAlertEnabled(alert.productIntelligence, {
+    sealedTcg: recipient.sealed_tcg_enabled,
+    singleCards: recipient.single_cards_enabled,
+    accessories: recipient.accessories_enabled,
+    merchandise: recipient.merchandise_enabled,
+    unknownProducts: recipient.unknown_products_enabled,
+  });
 }
 
 function minutesInTimezone(now: Date, timezone: string) {
@@ -107,6 +123,11 @@ async function eligibleRecipients() {
       COALESCE(np.echo_enabled,true) AS echo_enabled,
       COALESCE(np.manifested_enabled,true) AS manifested_enabled,
       COALESCE(np.vanished_enabled,false) AS vanished_enabled,
+      COALESCE(np.sealed_tcg_enabled,true) AS sealed_tcg_enabled,
+      COALESCE(np.single_cards_enabled,true) AS single_cards_enabled,
+      COALESCE(np.accessories_enabled,false) AS accessories_enabled,
+      COALESCE(np.merchandise_enabled,false) AS merchandise_enabled,
+      COALESCE(np.unknown_products_enabled,true) AS unknown_products_enabled,
       COALESCE(np.push_enabled,true) AS push_enabled,
       COALESCE(np.quiet_hours_enabled,false) AS quiet_hours_enabled,
       np.quiet_hours_start,
@@ -140,7 +161,7 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
 
   for (const alert of recent) {
     for (const recipient of recipients) {
-      if (!stageEnabled(alert, recipient) || inQuietHours(recipient, nowDate)) continue;
+      if (!stageEnabled(alert, recipient) || !productEnabled(alert, recipient) || inQuietHours(recipient, nowDate)) continue;
       queueRows.push({
         id: randomUUID(),
         dedupe_key: `push:${alert.id}:${recipient.endpoint_id}`,
