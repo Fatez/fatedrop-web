@@ -1,4 +1,4 @@
-import type { FateMatch } from "@/lib/fate-match";
+import type { FateFindCompanionId, FateFindNotificationPreferences, FateMatch } from "@/lib/fate-match";
 import { fateDropPostgres } from "@/lib/postgres";
 import { safeExternalHttpsUrl } from "@/lib/external-url";
 import { calculateTruePrice } from "@/lib/true-price";
@@ -8,10 +8,19 @@ function stringArray(value: unknown) {
   if (typeof value === "string") { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed.map(String) : []; } catch { return []; } }
   return [];
 }
-function objectValue(value: unknown) {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, boolean>;
-  if (typeof value === "string") { try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed as Record<string, boolean> : {}; } catch { return {}; } }
-  return {};
+function isCompanionId(value: unknown): value is FateFindCompanionId {
+  return value === "koru" || value === "fenn" || value === "oru" || value === "nyxen";
+}
+function objectValue(value: unknown): FateFindNotificationPreferences {
+  let parsed: Record<string, unknown> = {};
+  if (value && typeof value === "object" && !Array.isArray(value)) parsed = value as Record<string, unknown>;
+  else if (typeof value === "string") { try { const candidate = JSON.parse(value); if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) parsed = candidate as Record<string, unknown>; } catch { parsed = {}; } }
+  return {
+    website: parsed.website !== false,
+    discord: parsed.discord === true,
+    app: parsed.app === true,
+    companionId: isCompanionId(parsed.companionId) ? parsed.companionId : "koru",
+  };
 }
 function nullableNumber(value: unknown) { return value === null || value === undefined ? null : Number(value); }
 function nullableString(value: unknown) { return value === null || value === undefined ? null : String(value); }
