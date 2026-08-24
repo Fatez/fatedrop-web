@@ -30,7 +30,8 @@ test("FateMatch controls surface a real qualifying result only when hit evidence
   assert.ok(actions.includes("latestHit ? <div className=\"fd-fatefind-hit\">"));
   assert.ok(actions.includes("FATEMATCH · {latestHit.retailerName}"));
   assert.ok(actions.includes("VIEW MATCH ↗"));
-  assert.ok(actions.includes("TRUE PRICE →"));
+  assert.ok(actions.includes("FATEFIND →"));
+  assert.ok(actions.includes("/dashboard/fatefind?q="));
   assert.ok(actions.includes("data-fd-retailer={latestHit.retailerName}"));
   assert.ok(actions.includes("data-fd-product-title={latestHit.productTitle}"));
   assert.ok(observer.includes('pathname === "/dashboard/watchlist"'));
