@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (file) => fs.readFileSync(file, "utf8");
 
-test("saved FateFinds can read their latest real qualifying offer without crossing user ownership", () => {
+test("saved FateMatch watches can read their latest real qualifying offer without crossing user ownership", () => {
   const storage = read("lib/fate-match-storage.ts");
   const route = read("app/api/fate-matches/[id]/route.ts");
 
@@ -22,7 +22,7 @@ test("saved FateFinds can read their latest real qualifying offer without crossi
   assert.ok(route.includes('"Cache-Control": "private, no-store"'));
 });
 
-test("FateFind controls surface a real FateMatch only when hit evidence exists", () => {
+test("FateMatch controls surface a real qualifying result only when hit evidence exists", () => {
   const actions = read("components/fatefind-actions.tsx");
   const observer = read("components/retailer-handoff-observer.tsx");
 
