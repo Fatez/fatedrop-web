@@ -30,7 +30,7 @@ test("core dashboard navigation keeps every collector destination in the approve
   assert.equal(nav.includes('"/dashboard/true-price"'), false);
   assert.ok(shell.includes('href="/dashboard/notifications"'));
   assert.ok(shell.includes('href="/dashboard/profile"'));
-  assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
+  assert.ok(nav.includes('["⌕", "Search", "/dashboard/search",'));
   assert.ok(nav.includes('"FateFind", "/dashboard/fatefind"'));
   assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Watchlist", "/dashboard/wishlist"'));
