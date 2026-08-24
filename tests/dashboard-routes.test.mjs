@@ -113,22 +113,27 @@ test("Alerts is a precise network ledger and keeps personal delivery controls se
   assert.equal(alerts.includes("<LiveAlertFeed"), false);
 });
 
-test("Search, True Price and FateFind form one working collector journey", () => {
+test("Search, FateFind value intelligence and FateMatch form one working collector journey", () => {
   const search = fs.readFileSync("app/dashboard/search/page.tsx", "utf8");
   const truePrice = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
-  const fateFind = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
-  const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
+  const catalogueClient = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  const verdictClient = fs.readFileSync("lib/fatefind-verdict-client.ts", "utf8");
   assert.ok(search.includes("searchSignalCatalogue"));
   assert.ok(search.includes('/dashboard/true-price?q='));
   assert.ok(search.includes('/dashboard/watchlist?q='));
   assert.ok(search.includes("BUY ↗"));
-  assert.ok(truePrice.includes("searchSignalTruePrice"));
+  assert.ok(truePrice.includes("requestFateVerdict"));
+  assert.ok(truePrice.includes("<ValueCompare"));
   assert.ok(truePrice.includes('/dashboard/watchlist?q='));
   assert.ok(truePrice.includes("BUY AT RETAILER ↗"));
-  assert.ok(fateFind.includes("FateMatchBuilder"));
-  assert.ok(fateFind.includes("FateFindActions"));
-  assert.ok(client.includes('"/api/catalogue"'));
-  assert.ok(client.includes('"/api/true-price"'));
+  assert.ok(fateMatch.includes("FateMatchBuilder"));
+  assert.ok(fateMatch.includes("FateFindActions"));
+  assert.ok(catalogueClient.includes('"/api/catalogue"'));
+  assert.ok(catalogueClient.includes('"/api/true-price"'));
+  assert.ok(verdictClient.includes('/api/fatefind/matches'));
+  assert.ok(verdictClient.includes('mode: "verdict"'));
+  assert.ok(verdictClient.includes('FATEDROP_CLOUD'));
 });
 
 test("FateFind supports create pause resume delete and evidence-based local matching", () => {
@@ -203,17 +208,20 @@ test("internal alert visualiser preserves the final signal vocabulary and compan
   assert.equal(feed.includes("TEST AVATAR SURGE"), false);
 });
 
-test("True Price is canonical Cloud comparison and FateWindow stays out of the active product surface", () => {
+test("True Price presentation and FateFind verdict both come from canonical Cloud evidence", () => {
   const page = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
-  const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
-  assert.ok(page.includes("searchSignalTruePrice"));
+  const catalogueClient = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  const verdictClient = fs.readFileSync("lib/fatefind-verdict-client.ts", "utf8");
+  assert.ok(page.includes("requestFateVerdict"));
   assert.ok(page.includes("ITEM PRICE"));
   assert.ok(page.includes("KNOWN DELIVERY"));
   assert.ok(page.includes("TRUE PRICE"));
   assert.ok(page.includes("Unknown never means free"));
-  assert.ok(page.includes("CREATE A FATEFIND"));
+  assert.ok(page.includes("CREATE A FATEMATCH"));
   assert.equal(page.toUpperCase().includes("FATEWINDOW"), false);
-  assert.ok(client.includes('"/api/true-price"'));
+  assert.ok(catalogueClient.includes('"/api/true-price"'));
+  assert.ok(verdictClient.includes('/api/fatefind/matches'));
+  assert.ok(verdictClient.includes('FATEDROP_CLOUD'));
 });
 
 test("retailer discovery separates Cloud runtime health from storefront lab feeds", () => {
