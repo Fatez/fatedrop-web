@@ -107,7 +107,7 @@ export function IndieBridgeSection() {
         <div className="button-row"><Link className="button button-primary" href="/businesses">For independent retailers <span>↗</span></Link><Link className="button button-secondary" href="/collectors">For collectors</Link></div>
       </div>
       <div className="fd-bridge-visual" aria-label="Collector to FateDrop to independent retailer journey">
-        <article><small>01 · COLLECTOR</small><strong>I know what I want.</strong><p>Search, wishlist or create a FateFind.</p></article>
+        <article><small>01 · COLLECTOR</small><strong>I know what I want.</strong><p>Search it, run FateFind for the best live value, or create a FateMatch watch.</p></article>
         <i>→</i>
         <article className="network"><small>02 · FATEDROP</small><strong>We find the useful evidence.</strong><p>Signals, FateMatches and True Price context.</p></article>
         <i>→</i>
@@ -132,13 +132,13 @@ export function MembershipConversionSection() {
       <div className="fd-membership-copy">
         <p className="fd-kicker">FATEDROP PLUS</p>
         <h2 id="fd-membership-title">Browse the network for free. Unlock the intelligence when you need it.</h2>
-        <p>A free FateDrop ID keeps discovery open. FateDrop Plus is where the deeper signal layer lives: lifecycle alert detail, FateFind → FateMatch, True Price context and premium network alerts as each channel is enabled.</p>
+        <p>A free FateDrop ID keeps discovery open. FateDrop Plus is where the deeper signal layer lives: lifecycle alert detail, FateFind best-value intelligence, FateMatch monitoring, True Price context and premium network alerts as each channel is enabled.</p>
         <div className="button-row"><Link className="button button-primary" href="/subscriptions#collectors">See collector membership <span>↗</span></Link><Link className="button button-secondary" href="/demo">Try the demo first</Link></div>
       </div>
       <div className="fd-membership-card">
         <small>THE STARTING PREMIUM TIER</small>
         <div><strong>£4.99</strong><span>/ month</span></div>
-        <ul><li>Premium signal detail</li><li>Whisper · Echo · Manifested · Vanished</li><li>FateFind hunts + FateMatch results</li><li>True Price context</li><li>Premium Discord entitlement when enabled</li></ul>
+        <ul><li>Premium signal detail</li><li>Whisper · Echo · Manifested · Vanished</li><li>FateFind best-value intelligence + FateMatch watches</li><li>True Price context</li><li>Premium Discord entitlement when enabled</li></ul>
         <Link href="/subscriptions#collectors">See exactly what&apos;s included <span>→</span></Link>
       </div>
     </section>
