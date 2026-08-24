@@ -103,10 +103,10 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   const q = (params.q ?? "").trim().slice(0, 120);
 
   let alerts: CanonicalAlert[] = [];
-  let fateFinds: Awaited<ReturnType<typeof listUserFateMatches>> = [];
+  let fateMatchWatches: Awaited<ReturnType<typeof listUserFateMatches>> = [];
   let alertTrend: Awaited<ReturnType<typeof getCanonicalSignalTrend>> | null = null;
   try { alerts = await listCanonicalAlerts({ limit: 100 }); } catch { alerts = []; }
-  try { fateFinds = await listUserFateMatches(snapshot.account.id); } catch { fateFinds = []; }
+  try { fateMatchWatches = await listUserFateMatches(snapshot.account.id); } catch { fateMatchWatches = []; }
   try { alertTrend = await getCanonicalSignalTrend(7); } catch { alertTrend = null; }
 
   const exactSignals = new Map((data.network?.recentSignals ?? []).map((signal) => [signal.id, signal]));
@@ -122,7 +122,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
     return lifecycle.includes(alert.fateStage as FilterStage);
   });
 
-  const activeFateFinds = fateFinds.filter((item) => item.enabled);
+  const activeFateMatchWatches = fateMatchWatches.filter((item) => item.enabled);
   const personalHistory = data.personal.recent;
   const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
   const hasOpenSubscription = Boolean(snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
@@ -147,7 +147,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         </div>
       </section> : null}
 
-      {!premium ? <section className="fd-ledger-gate"><div><span>PREMIUM DETAIL</span><h2>Free can see movement. Premium gets the buying intelligence.</h2><p>Retailer identity, exact price/RRP context, prepared links, signal threads and active FateFind automation remain the deeper monitoring layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
+      {!premium ? <section className="fd-ledger-gate"><div><span>PREMIUM DETAIL</span><h2>Free can see movement. Premium gets the buying intelligence.</h2><p>Retailer identity, exact price/RRP context, prepared links, signal threads and active FateMatch monitoring remain the deeper buying-intelligence layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
 
       <section className="fd-ledger-filter fd-dash-card">
         <form action="/dashboard/alerts" method="get">
@@ -169,14 +169,14 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
           return <article className={`fd-ledger-row ${stageClass}`} key={alert.id}>
             <div className="fd-ledger-state"><i/><b>{alert.fateStage}</b><em>{exactCause.label}</em><small>{relativeTime(alertTime(alert), data.generatedAt)}</small></div>
             <div className="fd-ledger-product"><small>{premium ? alert.retailer : "Connected retailer"}</small><strong>{premium ? alert.title : "Premium signal detail"}</strong><p>{premium ? alert.message : alert.fateStage === "WHISPER" ? "Product or catalogue movement detected." : alert.fateStage === "ECHO" ? "Access, queue or security readiness changed." : alert.fateStage === "MANIFESTED" ? "Confirmed purchasable availability is live." : "Previously confirmed availability is gone."}</p>{premium && context ? <em>{context}</em> : null}<em className="verdict">{verdict(alert)}</em></div>
-            <div className="fd-ledger-actions">{premium ? <a className="primary" href={alert.productUrl} target="_blank" rel="noreferrer">{primaryActionLabel(alert.fateStage)}</a> : <Link className="primary" href="/dashboard/membership">UNLOCK →</Link>}<Link href={`/dashboard/true-price?q=${encodeURIComponent(alert.preparedLinks.compareQuery)}`}>TRUE PRICE</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(alert.preparedLinks.fateFindQuery)}`}>FATEFIND</Link></div>
+            <div className="fd-ledger-actions">{premium ? <a className="primary" href={alert.productUrl} target="_blank" rel="noreferrer">{primaryActionLabel(alert.fateStage)}</a> : <Link className="primary" href="/dashboard/membership">UNLOCK →</Link>}<Link href={`/dashboard/fatefind?q=${encodeURIComponent(alert.preparedLinks.compareQuery)}`}>FATEFIND</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(alert.preparedLinks.fateFindQuery)}`}>FATEMATCH</Link></div>
             {premium ? <CanonicalAlertSignalPack alert={alert} now={data.generatedAt}/> : null}
           </article>;
         })}</div> : <div className="fd-dashboard-empty"><strong>No signals match this view.</strong><span>Clear a filter or wait for new evidence. FateDrop does not create filler activity.</span></div>}
       </section>
 
       <div className="fd-ledger-support-grid">
-        <section className="fd-dash-card fd-ledger-hunts"><header><div><span>YOUR FATEFINDS</span><h2>{activeFateFinds.length} active hunt{activeFateFinds.length === 1 ? "" : "s"}</h2></div><Link href="/dashboard/watchlist">Manage →</Link></header><p>A FateFind is what you asked FateDrop to hunt. A FateMatch is a real observed offer that satisfies those rules.</p>{activeFateFinds.length ? <div>{activeFateFinds.slice(0,4).map((hunt) => <span key={hunt.id}><b>{hunt.query || "Resolved product"}</b><small>{hunt.maxTruePricePence !== null ? `Max £${(hunt.maxTruePricePence / 100).toFixed(2)} True Price` : "No True Price cap"}</small></span>)}</div> : <Link className="fd-ledger-wide-link" href="/dashboard/watchlist">Create your first FateFind →</Link>}</section>
+        <section className="fd-dash-card fd-ledger-hunts"><header><div><span>YOUR FATEMATCH WATCHES</span><h2>{activeFateMatchWatches.length} active watch{activeFateMatchWatches.length === 1 ? "" : "es"}</h2></div><Link href="/dashboard/watchlist">Manage →</Link></header><p>FateMatch watches a specific product until your stock, price, RRP or budget conditions are met. Your chosen companion then alerts you to buy.</p>{activeFateMatchWatches.length ? <div>{activeFateMatchWatches.slice(0,4).map((hunt) => <span key={hunt.id}><b>{hunt.query || "Resolved product"}</b><small>{hunt.maxTruePricePence !== null ? `Max £${(hunt.maxTruePricePence / 100).toFixed(2)} True Price` : "Stock / rule watch"}</small></span>)}</div> : <Link className="fd-ledger-wide-link" href="/dashboard/watchlist">Create your first FateMatch →</Link>}</section>
         <section className="fd-dash-card fd-ledger-delivery"><header><div><span>WHERE ALERTS REACH YOU</span><h2>One preference record.</h2></div><Link href="/dashboard/notifications">Edit →</Link></header><p>Website, app and Discord consume the same lifecycle preferences only when that channel is actually configured and entitled. An unavailable channel is never reported as delivered.</p><div><span><b>WEB</b><small>Available</small></span><span><b>APP PUSH</b><small>Controlled validation</small></span><span><b>DISCORD</b><small>Configuration dependent</small></span></div></section>
       </div>
 
