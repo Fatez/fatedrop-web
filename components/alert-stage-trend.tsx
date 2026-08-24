@@ -5,7 +5,7 @@ import type { CanonicalTrendPoint } from "@/lib/canonical-alert-trends";
 
 type AlertStageTrendProps = {
   stage: "WHISPER" | "ECHO" | "MANIFESTED" | "VANISHED";
-  companion: "ORU" | "FENN" | "KORU" | "NIXON";
+  companion: "ORU" | "FENN" | "KORU" | "NYXEN";
   description: string;
   total: number;
   points: CanonicalTrendPoint[];
