@@ -26,7 +26,8 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation keeps every collector destination in the approved workspace", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
-  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  assert.equal(nav.includes('"/dashboard/true-price"'), false);
   assert.ok(shell.includes('href="/dashboard/notifications"'));
   assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
@@ -34,7 +35,6 @@ test("core dashboard navigation keeps every collector destination in the approve
   assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Watchlist", "/dashboard/wishlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
-  assert.ok(nav.includes('"True Price", "/dashboard/true-price"'));
   assert.ok(nav.includes('"Indies", "/dashboard/stores"'));
 });
 
@@ -108,28 +108,27 @@ test("Alerts is a precise network ledger and keeps personal delivery controls se
   for (const state of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) assert.ok(alerts.includes(`"${state}"`));
   for (const cause of ["catalogue_new", "queue", "security", "restock", "sold_out", "lifecycle_unspecified"]) assert.ok(alerts.includes(`"${cause}"`));
   assert.ok(alerts.includes('/dashboard/notifications'));
-  assert.ok(alerts.includes('/dashboard/true-price?q='));
+  assert.ok(alerts.includes('/dashboard/fatefind?q='));
   assert.ok(alerts.includes('/dashboard/watchlist?q='));
   assert.ok(alerts.includes("CanonicalAlertSignalPack"));
   assert.ok(alerts.includes("Cause unclassified"));
   assert.equal(alerts.includes("<LiveAlertFeed"), false);
 });
 
-test("Search, True Price, FateFind and FateMatch form one working collector journey", () => {
+test("Search, FateFind and FateMatch form one working collector journey while True Price remains an internal calculation", () => {
   const search = fs.readFileSync("app/dashboard/search/page.tsx", "utf8");
-  const truePrice = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
+  const legacyTruePrice = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
   const fateFind = fs.readFileSync("app/dashboard/fatefind/page.tsx", "utf8");
   const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
   const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
   assert.ok(search.includes("searchSignalCatalogue"));
-  assert.ok(search.includes('/dashboard/true-price?q='));
+  assert.equal(search.includes('/dashboard/true-price?q='), false);
   assert.ok(search.includes('/dashboard/fatefind?q='));
   assert.ok(search.includes('/dashboard/watchlist?q='));
   assert.ok(search.includes("BUY ↗"));
-  assert.ok(truePrice.includes("searchSignalTruePrice"));
-  assert.ok(truePrice.includes('/dashboard/fatefind?q='));
-  assert.ok(truePrice.includes('/dashboard/watchlist?q='));
-  assert.ok(truePrice.includes("BUY AT RETAILER ↗"));
+  assert.ok(legacyTruePrice.includes("/dashboard/fatefind"));
+  assert.ok(fateFind.includes("TRUE PRICE"));
+  assert.ok(fateFind.includes("RRP / REFERENCE"));
   assert.ok(fateFind.includes("searchSignalFateFind"));
   assert.ok(fateFind.includes("Best value now"));
   assert.ok(fateMatch.includes("FateMatchBuilder"));
@@ -215,17 +214,13 @@ test("internal alert visualiser preserves the final signal vocabulary and compan
   assert.equal(feed.includes("TEST AVATAR SURGE"), false);
 });
 
-test("True Price is canonical Cloud comparison and FateWindow stays out of the active product surface", () => {
+test("True Price remains a FateFind calculation rather than a standalone dashboard product", () => {
   const page = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
+  const fateFind = fs.readFileSync("app/dashboard/fatefind/page.tsx", "utf8");
   const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
-  assert.ok(page.includes("searchSignalTruePrice"));
-  assert.ok(page.includes("ITEM PRICE"));
-  assert.ok(page.includes("KNOWN DELIVERY"));
-  assert.ok(page.includes("TRUE PRICE"));
-  assert.ok(page.includes("Unknown never means free"));
-  assert.ok(page.includes("FATEFIND BEST VALUE"));
-  assert.ok(page.includes("LET ME KNOW WHEN IN STOCK"));
-  assert.equal(page.toUpperCase().includes("FATEWINDOW"), false);
+  assert.ok(page.includes("/dashboard/fatefind"));
+  assert.ok(fateFind.includes("TRUE PRICE"));
+  assert.ok(fateFind.includes("RRP / REFERENCE"));
   assert.ok(client.includes('"/api/true-price"'));
 });
 
