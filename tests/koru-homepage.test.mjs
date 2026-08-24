@@ -161,7 +161,7 @@ test("dashboard home matches the approved evidence-backed collector workspace", 
   assert.ok(dashboard.includes("Signals Overview"));
   assert.ok(dashboard.includes("Recent Signals"));
   assert.ok(dashboard.includes("True Price Comparison"));
-  assert.ok(dashboard.includes("FateFind"));
+  assert.ok(dashboard.includes("FateMatch"));
   assert.ok(dashboard.includes("Network Pulse"));
   assert.ok(dashboard.includes("Recent Manifested Drops"));
   assert.ok(dashboard.includes("Independent Stores"));
