@@ -575,6 +575,7 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
           ) a
         ) alternatives ON true
         WHERE s.id=${id}
+          AND (s.state <> 'vanished' OR live_window.manifested_at IS NOT NULL)
         LIMIT 1`
     : await sql`
         SELECT
@@ -658,6 +659,7 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
             LIMIT 8
           ) a
         ) alternatives ON true
+        WHERE s.state <> 'vanished' OR live_window.manifested_at IS NOT NULL
         ORDER BY s.detected_at DESC
         LIMIT ${safeLimit}`;
 
