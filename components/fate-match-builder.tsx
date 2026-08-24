@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 
-export function FateMatchBuilder({ premium, initialQuery = "" }: { premium: boolean; initialQuery?: string }) {
+const companions = ["koru", "fenn", "aeris", "nyxen", "solix"] as const;
+
+export function FateMatchBuilder({ premium, initialQuery = "", initialProductIdentityId = null }: { premium: boolean; initialQuery?: string; initialProductIdentityId?: string | null }) {
   const [query, setQuery] = useState(initialQuery);
+  const [companionId, setCompanionId] = useState<(typeof companions)[number]>("koru");
   const [maxTruePrice, setMaxTruePrice] = useState("");
   const [maxPercent, setMaxPercent] = useState("");
   const [scope, setScope] = useState<"online" | "local" | "either">("either");
@@ -32,7 +35,7 @@ export function FateMatchBuilder({ premium, initialQuery = "" }: { premium: bool
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!premium) { setMessage("Premium unlocks active FateFind monitoring."); return; }
+    if (!premium) { setMessage("Premium unlocks active FateMatch monitoring."); return; }
     if (scope === "local" && (latitude === null || longitude === null)) { setMessage("Use your location before saving a Local-only FateFind."); return; }
     setSaving(true); setMessage("");
     const includeLocal = scope === "local" || (scope === "either" && latitude !== null && longitude !== null);
@@ -40,6 +43,7 @@ export function FateMatchBuilder({ premium, initialQuery = "" }: { premium: bool
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         query,
+        productIdentityId: initialProductIdentityId,
         maxTruePricePence: maxTruePrice ? Math.round(Number(maxTruePrice) * 100) : null,
         maxPercentAboveRrp: maxPercent ? Number(maxPercent) : null,
         scope,
@@ -47,13 +51,13 @@ export function FateMatchBuilder({ premium, initialQuery = "" }: { premium: bool
         latitude: includeLocal ? latitude : null,
         longitude: includeLocal ? longitude : null,
         stockRequirement: "in_stock",
-        notificationPreferences: { website: true, discord: true, app: true },
+        notificationPreferences: { website: true, discord: true, app: true, companionId },
       }),
     });
     const payload = await response.json().catch(() => ({})) as { error?: string };
     setSaving(false);
-    if (!response.ok) { setMessage(payload.error || "FateFind could not be saved."); return; }
-    setMessage("FateFind saved. When an observed offer satisfies it, FateDrop can raise a FateMatch.");
+    if (!response.ok) { setMessage(payload.error || "FateMatch could not be saved."); return; }
+    setMessage(`${companionId.charAt(0).toUpperCase() + companionId.slice(1)} is watching it. FateDrop will alert you with FATEMATCH — LIVE NOW when a qualifying offer goes live.`);
     setMaxTruePrice(""); setMaxPercent("");
     window.location.reload();
   }
@@ -62,8 +66,9 @@ export function FateMatchBuilder({ premium, initialQuery = "" }: { premium: bool
     <div className="fd-fm-field wide"><label>WHAT SHOULD FATEDROP FIND?</label><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="e.g. Destined Rivals ETB" required /></div>
     <div className="fd-fm-field"><label>MAX TRUE PRICE</label><div className="fd-money-input"><span>£</span><input inputMode="decimal" value={maxTruePrice} onChange={(e)=>setMaxTruePrice(e.target.value)} placeholder="65.00" /></div></div>
     <div className="fd-fm-field"><label>MAX ABOVE RRP</label><div className="fd-money-input"><input inputMode="decimal" value={maxPercent} onChange={(e)=>setMaxPercent(e.target.value)} placeholder="10" /><span>%</span></div></div>
+    <div className="fd-fm-field"><label>WHO WATCHES?</label><select value={companionId} onChange={(e)=>setCompanionId(e.target.value as typeof companionId)}>{companions.map((id)=><option key={id} value={id}>{id.charAt(0).toUpperCase()+id.slice(1)}</option>)}</select></div>
     <div className="fd-fm-field"><label>WHERE?</label><select value={scope} onChange={(e)=>setScope(e.target.value as typeof scope)}><option value="either">Online or local</option><option value="online">Online only</option><option value="local">Local only</option></select></div>
-    <button type="submit" disabled={saving}>{premium ? saving ? "SAVING…" : "CREATE FATEFIND →" : "PREMIUM REQUIRED"}</button>
+    <button type="submit" disabled={saving}>{premium ? saving ? "SAVING…" : "START FATEMATCH WATCH →" : "PREMIUM REQUIRED"}</button>
 
     {scope !== "online" ? <div className="fd-fm-location">
       <div><label>LOCAL RADIUS</label><select value={radiusKm} onChange={(e)=>{ const next = Number(e.target.value); setRadiusKm(next); if (latitude !== null) setLocationStatus(`Location ready · local offers can be evaluated within ${next} km.`); }}><option value={10}>10 km</option><option value={25}>25 km</option><option value={50}>50 km</option><option value={100}>100 km</option></select></div>
@@ -71,7 +76,7 @@ export function FateMatchBuilder({ premium, initialQuery = "" }: { premium: bool
       <p>{locationStatus}</p>
     </div> : null}
 
-    <p className="fd-fm-note"><b>FateFind</b> is the hunt you define. A <b>FateMatch</b> is the result when a qualifying observed offer satisfies that hunt.</p>
+    <p className="fd-fm-note"><b>FateMatch</b> is the watch. With no price rules it simply means “let me know when this is in stock.” When a qualifying observed offer goes live, your companion alerts you and gives you the retailer route.</p>
     {scope === "local" ? <p className="fd-fm-note">Local-only hunts are saved only after a real browser location is resolved. FateDrop does not guess your postcode or radius.</p> : null}
     {message ? <p className="fd-fm-message">{message}</p> : null}
     <style jsx>{`
