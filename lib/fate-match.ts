@@ -3,7 +3,16 @@ import { distanceKm } from "./location";
 
 export type FateMatchScope = "online" | "local" | "either";
 export type FateMatchStockRequirement = "in_stock" | "purchasable" | "any";
+export type FateFindCompanionId = "koru" | "fenn" | "oru" | "nyxen";
+export type FateFindNotificationPreferences = {
+  website: boolean;
+  discord: boolean;
+  app: boolean;
+  companionId: FateFindCompanionId;
+};
 
+// Legacy type name retained for storage/API compatibility. This record is a saved FateFind;
+// a FateMatch is the successful observed result produced when the saved rules qualify.
 export type FateMatch = {
   id: string;
   userId: string;
@@ -20,7 +29,7 @@ export type FateMatch = {
   preferredRetailerIds: string[];
   excludedRetailerIds: string[];
   stockRequirement: FateMatchStockRequirement;
-  notificationPreferences: Record<string, boolean>;
+  notificationPreferences: FateFindNotificationPreferences;
   enabled: boolean;
   createdAt: number;
   updatedAt: number;
@@ -53,7 +62,7 @@ function scopeMatches(match: FateMatch, offer: NetworkOffer, location: NetworkLo
 export function evaluateFateMatch(match: FateMatch, offer: NetworkOffer, truePrice: TruePriceResult, location: NetworkLocation | null = null): FateMatchEvaluation {
   const reasons: string[] = [];
   const rejectedBy: string[] = [];
-  if (!match.enabled) rejectedBy.push("FateMatch is paused");
+  if (!match.enabled) rejectedBy.push("FateFind is paused");
   if (match.productIdentityId && match.productIdentityId !== offer.productIdentityId) rejectedBy.push("Product identity does not match");
   if (match.excludedRetailerIds.includes(offer.retailerId)) rejectedBy.push("Retailer is excluded");
   if (match.preferredRetailerIds.length && !match.preferredRetailerIds.includes(offer.retailerId)) rejectedBy.push("Retailer is outside preferred list");
