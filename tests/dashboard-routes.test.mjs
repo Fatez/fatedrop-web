@@ -33,7 +33,7 @@ test("core dashboard navigation keeps every collector destination in the approve
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search",'));
   assert.ok(nav.includes('"FateFind", "/dashboard/fatefind"'));
   assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
-  assert.ok(nav.includes('"Watchlist", "/dashboard/wishlist"'));
+  assert.ok(nav.includes('"Wishlist", "/dashboard/wishlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
   assert.ok(nav.includes('"Indies", "/dashboard/stores"'));
 });
