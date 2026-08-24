@@ -30,6 +30,7 @@ test("Cloud catalogue and True Price handoffs are sanitized before dashboard ren
   const search = read("app/dashboard/search/page.tsx");
   const truePrice = read("app/dashboard/true-price/page.tsx");
   const stores = read("app/dashboard/stores/page.tsx");
+  const directory = read("components/retailer-market-directory.tsx");
 
   assert.ok(client.includes("safeExternalHttpsUrl(offer.url)"));
   assert.ok(client.includes("safeExternalHttpsUrl(offer.productUrl)"));
@@ -39,10 +40,11 @@ test("Cloud catalogue and True Price handoffs are sanitized before dashboard ren
 
   assert.ok(search.includes('href={offer.url}'));
   assert.ok(truePrice.includes('href={offer.productUrl}'));
-  assert.ok(stores.includes('href={retailer.website}'));
+  assert.ok(stores.includes("<RetailerMarketDirectory"));
+  assert.ok(directory.includes('href={retailer.website}'));
   assert.ok(search.includes('target="_blank" rel="noreferrer"'));
   assert.ok(truePrice.includes('target="_blank" rel="noreferrer"'));
-  assert.ok(stores.includes('target="_blank" rel="noreferrer"'));
+  assert.ok(directory.includes('target="_blank" rel="noreferrer"'));
 });
 
 test("lead website and ticket submissions share the HTTPS-only URL guard", () => {
