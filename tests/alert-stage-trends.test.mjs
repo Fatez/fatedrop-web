@@ -19,7 +19,7 @@ test("dashboard renders one real activity trend for each companion lifecycle", (
   assert.match(alertsSource, /ORU/);
   assert.match(alertsSource, /FENN/);
   assert.match(alertsSource, /KORU/);
-  assert.match(alertsSource, /NIXON/);
+  assert.match(alertsSource, /NYXEN/);
   assert.match(alertsSource, /AlertStageTrend/);
   assert.match(componentSource, /CANONICAL SIGNAL ACTIVITY/);
   assert.match(componentSource, /7 DAY SIGNALS/);
@@ -30,5 +30,5 @@ test("web lifecycle graphs remain artwork-free", () => {
   assert.doesNotMatch(componentSource, /artPath/);
   assert.doesNotMatch(alertsSource, /oru-alert/);
   assert.doesNotMatch(alertsSource, /fenn-alert/);
-  assert.doesNotMatch(alertsSource, /nixon-alert/);
+  assert.doesNotMatch(alertsSource, /nyxen-alert/);
 });
