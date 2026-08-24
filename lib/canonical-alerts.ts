@@ -116,6 +116,14 @@ type JsonThreadRow = {
   url?: unknown;
 };
 
+type ProductClassificationEvidenceRow = {
+  kind?: unknown;
+  category?: unknown;
+  subcategory?: unknown;
+  confidence?: unknown;
+  evidence?: unknown;
+};
+
 type JsonOfferRow = {
   offerId?: unknown;
   retailerId?: unknown;
@@ -146,6 +154,7 @@ type SignalRow = {
   detected_at: number;
   observed_duration_seconds: number | null;
   reason: string;
+  evidence: unknown;
   lowest_offer_id: string | null;
   lowest_retailer_id: string | null;
   lowest_retailer_name: string | null;
@@ -223,6 +232,22 @@ function jsonArray<T>(value: unknown): T[] {
   } catch {
     return [];
   }
+}
+
+function productClassification(row: SignalRow): ProductAlertClassification {
+  const knownCategories = new Set(["SEALED_TCG", "SINGLE_CARD", "ACCESSORY", "MERCHANDISE", "UNKNOWN"]);
+  const persisted = jsonArray<ProductClassificationEvidenceRow>(row.evidence)
+    .find((entry) => entry?.kind === "product_alert_classification");
+  if (persisted && typeof persisted.category === "string" && knownCategories.has(persisted.category)) {
+    const confidence = nullableNumber(persisted.confidence);
+    return {
+      category: persisted.category as ProductAlertClassification["category"],
+      subcategory: typeof persisted.subcategory === "string" && persisted.subcategory ? persisted.subcategory : "UNCLASSIFIED",
+      confidence: confidence == null ? 0.5 : Math.max(0, Math.min(1, confidence)),
+      evidence: Array.isArray(persisted.evidence) ? persisted.evidence.filter((item): item is string => typeof item === "string") : ["persisted-signal-classification"],
+    };
+  }
+  return classifyProductAlert({ title: row.title, productType: row.product_type });
 }
 
 function offerLink(input: {
@@ -425,7 +450,7 @@ function toCanonicalAlert(row: SignalRow): CanonicalAlert {
   const confirmed = fateStage === "MANIFESTED";
   const priceIntelligence = intelligence(row);
   const links = preparedLinks(row, fateStage, priceIntelligence);
-  const productIntelligence = classifyProductAlert({ title: row.title, productType: row.product_type });
+  const productIntelligence = productClassification(row);
   return {
     id: row.id,
     type: row.state.toUpperCase(),
@@ -473,7 +498,7 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
           s.rrp_pence AS signal_rrp_pence,p.official_rrp_pence AS canonical_rrp_pence,
           s.delivered_price_pence,s.stock_status,s.confidence,s.detected_at,
           (CASE WHEN s.state='vanished' AND live_window.manifested_at IS NOT NULL THEN GREATEST(0,s.detected_at-live_window.manifested_at) ELSE NULL END)::integer AS observed_duration_seconds,
-          s.reason,
+          s.reason,s.evidence,
           best.offer_id AS lowest_offer_id,best.retailer_id AS lowest_retailer_id,best.retailer_name AS lowest_retailer_name,best.url AS lowest_url,
           best.price_pence AS lowest_item_price_pence,best.stock_status AS lowest_stock_status,
           CASE WHEN best.postage_pence IS NOT NULL AND best.price_pence IS NOT NULL THEN best.price_pence + best.postage_pence ELSE NULL END AS lowest_delivered_price_pence,
@@ -557,7 +582,7 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
           s.rrp_pence AS signal_rrp_pence,p.official_rrp_pence AS canonical_rrp_pence,
           s.delivered_price_pence,s.stock_status,s.confidence,s.detected_at,
           (CASE WHEN s.state='vanished' AND live_window.manifested_at IS NOT NULL THEN GREATEST(0,s.detected_at-live_window.manifested_at) ELSE NULL END)::integer AS observed_duration_seconds,
-          s.reason,
+          s.reason,s.evidence,
           best.offer_id AS lowest_offer_id,best.retailer_id AS lowest_retailer_id,best.retailer_name AS lowest_retailer_name,best.url AS lowest_url,
           best.price_pence AS lowest_item_price_pence,best.stock_status AS lowest_stock_status,
           CASE WHEN best.postage_pence IS NOT NULL AND best.price_pence IS NOT NULL THEN best.price_pence + best.postage_pence ELSE NULL END AS lowest_delivered_price_pence,
