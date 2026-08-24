@@ -18,18 +18,22 @@ test("public network proof never falls back to the retired hard-coded snapshot",
   assert.ok(dashboard.includes("Awaiting FateDrop Cloud metric feed"));
 });
 
-test("canonical dashboard language is Search, FateFind and Koru & Friends", async () => {
-  const [nav, fateFind, companion] = await Promise.all([
+test("canonical dashboard language separates Search, FateFind, FateMatch and Koru & Friends", async () => {
+  const [nav, fateFind, fateMatch, companion] = await Promise.all([
     source("components/dashboard-nav.tsx"),
+    source("app/dashboard/fatefind/page.tsx"),
     source("app/dashboard/watchlist/page.tsx"),
     source("app/dashboard/avatar/page.tsx"),
   ]);
   assert.ok(nav.includes('"Search", "/dashboard/search"'));
-  assert.ok(nav.includes('"FateFind", "/dashboard/watchlist"'));
+  assert.ok(nav.includes('"FateFind", "/dashboard/fatefind"'));
+  assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
   assert.ok(fateFind.includes('title="FateFind"'));
-  assert.ok(fateFind.includes("A FateFind is just a saved hunt"));
-  assert.ok(fateFind.includes("that result is your FateMatch"));
+  assert.ok(fateFind.includes("strongest-value option available now"));
+  assert.ok(fateFind.includes("searchSignalFateFind"));
+  assert.ok(fateMatch.includes('title="FateMatch"'));
+  assert.ok(fateMatch.includes("let me know when this is in stock"));
   assert.ok(companion.includes('title: "Koru & Friends | FateDrop Dashboard"'));
   assert.ok(companion.includes("Koru, Fenn, Aeris, Nyxen or Solix"));
   assert.ok(companion.includes("Koru remains the mascot and signal voice of FateDrop"));
@@ -42,7 +46,8 @@ test("dashboard Search and True Price use the canonical Signal Engine", async ()
     source("lib/signal-engine-client.ts"),
   ]);
   assert.ok(search.includes("searchSignalCatalogue"));
-  assert.ok(search.includes("CREATE FATEFIND"));
+  assert.ok(search.includes("FATEFIND BEST VALUE"));
+  assert.ok(search.includes("LET ME KNOW WHEN IN STOCK"));
   assert.ok(truePrice.includes("searchSignalTruePrice"));
   assert.ok(truePrice.includes("ITEM PRICE"));
   assert.ok(truePrice.includes("KNOWN DELIVERY"));
@@ -106,10 +111,10 @@ test("Koru and Friends has one versioned five-slot renderer boundary for current
   assert.ok(truth.includes("Reduced-motion preference must retain the real model"));
 });
 
-test("FateFind API uses same-origin writes while keeping legacy client response compatibility", async () => {
+test("FateMatch monitoring API uses same-origin writes while keeping legacy client response compatibility", async () => {
   const route = await source("app/api/fate-matches/route.ts");
   assert.ok(route.includes("assertSameOrigin(request)"));
-  assert.ok(route.includes("fateFinds, matches: fateFinds"));
+  assert.ok(route.includes("fateMatchHunts, fateFinds: fateMatchHunts, matches: fateMatchHunts"));
   assert.ok(route.includes("fateFind: saved, match: saved"));
   assert.ok(route.includes("max: 10_000_000"));
   assert.ok(route.includes("max: 1000"));
@@ -151,8 +156,9 @@ test("Product Spec v1 remains the repository authority", async () => {
   ]);
   for (const status of ["LIVE", "BETA", "DEMO", "FOUNDATION", "HOLD", "PLANNED"]) assert.ok(truth.includes(`**${status}**`) || truth.includes(`**${status}`));
   assert.ok(truth.includes("FateDrop Product Spec v1"));
-  assert.ok(truth.includes("FateFind is the hunt"));
-  assert.ok(truth.includes("FateMatch is the successful result"));
+  assert.ok(truth.includes("FateFind answers: “What is the strongest-value option I can buy right now?”"));
+  assert.ok(truth.includes("FateMatch answers: “Let me know when this is in stock under the conditions I want.”"));
+  assert.ok(truth.includes("FATEMATCH — LIVE NOW"));
   assert.ok(truth.includes("Whisper — product / catalogue movement"));
   assert.ok(truth.includes("Echo — access readiness"));
   assert.ok(truth.includes("Whisper is a real public lifecycle state. Do not collapse it into Echo."));
@@ -160,7 +166,7 @@ test("Product Spec v1 remains the repository authority", async () => {
   assert.ok(truth.includes("It lives on the dedicated `/demo` page"));
   assert.equal(truth.includes("Whisper — internal"), false);
   assert.ok(audit.includes("RESOLVED — FateFind / FateMatch naming collision"));
-  assert.ok(audit.includes("FateFind = the hunt the collector creates"));
-  assert.ok(audit.includes("FateMatch = the successful observed result"));
+  assert.ok(audit.includes("FateFind = the live intelligent best-value finder"));
+  assert.ok(audit.includes("FateMatch = the monitoring/watch system"));
   assert.ok(audit.includes("The interactive phone is deliberately kept off Home"));
 });
