@@ -22,7 +22,7 @@ It helps collectors:
 - understand meaningful product, access and stock movement;
 - compare observed offers against authoritative RRP where known;
 - understand True Price when mandatory delivery is known;
-- create structured FateFind hunts and receive qualifying FateMatch results;
+- use FateFind to identify the strongest-value live buying option and FateMatch to monitor until a chosen product qualifies;
 - discover participating independent retailers, local businesses and real-world events;
 - continue to the retailer to complete the purchase.
 
@@ -37,7 +37,7 @@ Pokémon TCG in the UK is the launch focus. The architecture may support additio
 1. **Signal Intelligence** — Whisper → Echo → Manifested → Vanished.
 2. **Search / Catalogue** — product-first discovery across canonical observed offers.
 3. **True Price + RRP context** — transparent price context rather than a bare sticker price.
-4. **FateFind → FateMatch** — structured collector intent and successful qualifying results.
+4. **FateFind + FateMatch** — live best-value discovery plus companion-backed monitoring and qualifying live alerts.
 5. **Independent Discovery** — connect collector demand with participating independent retailers while preserving retailer checkout.
 
 ### Supporting network tools
@@ -58,7 +58,7 @@ The mobile product should preserve five durable destinations:
 1. **Home** — network activity and relevant personal highlights.
 2. **Search** — catalogue search, offer comparison and retailer hand-off.
 3. **Indies** — retailer discovery and storefronts.
-4. **Alerts** — personal signal delivery, FateFind/FateMatch history and preferences.
+4. **Alerts** — personal signal delivery, FateMatch history and notification preferences.
 5. **More** — Wishlist, Events, Local Radar, Koru & Friends/account/membership and genuinely secondary tools.
 
 The website dashboard may expose more destinations, but it should preserve the same mental model rather than creating a new top-level product for every idea.
@@ -72,7 +72,7 @@ The public website should explain the product quickly rather than reproduce the 
 Home should remain short:
 
 1. approved Koru hero;
-2. Signals, True Price, FateFind → FateMatch and independent discovery;
+2. Signals, True Price, FateFind best-value discovery, FateMatch monitoring and independent discovery;
 3. Koru & Friends / merch bridge after the product explanation;
 4. collector ↔ FateDrop ↔ independent retailer bridge;
 5. Events/Fate Encounters entry point;
@@ -213,29 +213,44 @@ Prefer explainable evidence such as `High activity · 4 meaningful changes in 12
 
 ## FateFind and FateMatch
 
-### FateFind — CORE / premium candidate
+### FateFind — CORE live best-value finder
 
-**FateFind is the hunt the collector creates.**
+**FateFind answers: “What is the strongest-value option I can buy right now?”**
 
-Example criteria may include:
+FateFind:
 
-- Destined Rivals ETB;
-- max £65 delivered;
-- max +10% above authoritative RRP;
-- sealed;
-- UK;
-- eligible retailers;
-- in stock.
+- gathers the relevant live/in-stock configurations for the collector's product intent;
+- keeps genuinely different quantities/configurations visible rather than comparing only raw checkout totals;
+- resolves the correct authoritative RRP/reference where legitimate;
+- uses item price vs RRP/reference as the headline £/% value signal;
+- keeps delivery separate and uses known mandatory delivery for True Price;
+- ranks the current buying opportunities by the shared Cloud intelligence rather than by the smallest absolute £ number;
+- returns one canonical result contract consumed by both App and Web.
 
-FateDrop evaluates qualifying observed opportunities against the saved rule.
+A single pack can therefore have the lowest checkout price without being the strongest-value FateFind result. FateFind must never invent an RRP or claim an RRP-value winner when the reference is not legitimate.
 
-### FateMatch — CORE result
+### FateMatch — CORE monitoring / live alert
 
-**FateMatch is the successful result.**
+**FateMatch answers: “Let me know when this is in stock under the conditions I want.”**
 
-When a real observed offer satisfies a FateFind, FateDrop can raise a FateMatch and explain why it matched.
+The simplest FateMatch is an in-stock watch. Optional conditions may include:
 
-Existing internal compatibility keys may remain where changing them would break existing clients, but public meaning must stay FateFind = hunt and FateMatch = successful result.
+- RRP only / at or below RRP;
+- max percentage above RRP;
+- max item price;
+- max True Price;
+- eligible/excluded retailers;
+- stock requirement.
+
+The collector can associate a FateDrop companion with the watch. The companion is the presentation/personality layer; the actual monitoring remains one shared Cloud evaluator.
+
+When a genuine observed offer satisfies the conditions, the shared system raises:
+
+**FATEMATCH — LIVE NOW**
+
+The result carries the product, retailer, stock state, item price, valid RRP/reference and percentage, known delivery, True Price, qualification reason and retailer purchase route.
+
+Existing internal compatibility keys/tables may remain where changing them would break clients. Public meaning is locked: **FateFind = best value available now; FateMatch = watch it and alert me when it qualifies.**
 
 ## Universal Wishlist — KEEP
 
@@ -245,7 +260,7 @@ Wishlist means:
 
 > “I want / like this product.”
 
-It survives sold-out states and retailer changes. It is not an active price/availability rule and remains distinct from FateFind.
+It survives sold-out states and retailer changes. It is not an active price/availability rule and remains distinct from FateMatch monitoring.
 
 Wishlist persistence must not silently create monitoring/notification promises.
 
@@ -256,7 +271,7 @@ Wishlist persistence must not silently create monitoring/notification promises.
 Alerts is personal and may contain:
 
 - Whisper / Echo / Manifested / Vanished delivery relevant to the user;
-- active FateFinds;
+- active FateMatch watches;
 - FateMatch / stock / price notifications;
 - notification history;
 - RRP/True Price context where entitlement and evidence allow;
@@ -378,7 +393,7 @@ Saving profile presentation must preserve the selected companion. Selecting a co
 
 **Status: FOUNDATION / BETA depending deployment configuration.**
 
-Membership should remain simple: Free has meaningful value; paid membership unlocks stronger monitoring/alerts/FateFind/intelligence according to the final commercial split.
+Membership should remain simple: Free has meaningful value; paid membership can unlock stronger monitoring/alerts/FateMatch and deeper intelligence according to the final commercial split.
 
 The entitlement layer remains the authority. Do not create client-only paid-access truth.
 
