@@ -29,9 +29,9 @@ test("Web FateMatch owns stock watches, conditions and companion assignment", ()
 test("Search exposes best-value-now and watch-for-me as separate actions", () => {
   const search = read("app/dashboard/search/page.tsx");
   assert.ok(search.includes("/dashboard/fatefind?q="));
-  assert.ok(search.includes("FATEFIND BEST VALUE"));
+  assert.ok(search.includes("FATEFIND · BEST VALUE NOW"));
   assert.ok(search.includes("/dashboard/watchlist?q="));
-  assert.ok(search.includes("LET ME KNOW WHEN IN STOCK"));
+  assert.ok(search.includes("FATEMATCH · WATCH MY CONDITIONS"));
 });
 
 test("FateMatch RRP percentage remains item price vs RRP, not delivered True Price vs RRP", () => {
