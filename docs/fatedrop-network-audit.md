@@ -58,8 +58,8 @@ Drop Pulse may summarise activity, but it is contextual evidence and not a fifth
 
 The final product meaning is:
 
-- **FateFind = the hunt the collector creates.**
-- **FateMatch = the successful observed result that satisfies a FateFind.**
+- **FateFind = the live intelligent best-value finder.** It compares the relevant currently purchasable configurations using the shared RRP/reference and True Price intelligence.
+- **FateMatch = the monitoring/watch system.** The collector can choose “let me know when this is in stock”, optionally add price/RRP rules and assign a companion. A qualifying live event is presented as **FATEMATCH — LIVE NOW**.
 - **Universal Wishlist = a separate simple product save.**
 
 Existing internal compatibility keys may remain where removing them would break clients, but public copy must preserve this distinction.
@@ -104,7 +104,7 @@ FateDrop helps the collector find and understand the offer. It does not pretend 
 The homepage is intentionally short and product-led:
 
 1. approved Koru dusk hero;
-2. core FateDrop value: Signals, True Price, FateFind → FateMatch and independent discovery;
+2. core FateDrop value: Signals, True Price, FateFind best-value discovery, FateMatch monitoring and independent discovery;
 3. Koru & Friends / merch bridge after the product explanation;
 4. collector ↔ FateDrop ↔ indie retailer bridge;
 5. Events/Fate Encounters entry point;
@@ -114,7 +114,7 @@ The interactive phone is deliberately kept off Home and lives on the dedicated `
 
 ### Collectors
 
-Explains the collector job: detect, compare, create FateFind hunts, receive FateMatch results, discover independents and use supporting Wishlist/Local Radar/Events tools.
+Explains the collector job: detect, compare, use FateFind for the strongest live value, create FateMatch stock watches, discover independents and use supporting Wishlist/Local Radar/Events tools.
 
 ### Retailers
 
@@ -219,7 +219,7 @@ Main dashboard True Price comparison consumes the canonical network comparison p
 
 Global network activity belongs primarily on Home.
 
-Alerts focuses on the collector's own FateFinds, FateMatches, notification history and delivery preferences. The four lifecycle states remain distinct in notification settings.
+Alerts focuses on the collector's FateMatch watches/results, notification history and delivery preferences. The four lifecycle states remain distinct in notification settings.
 
 ## RESOLVED — mutable network proof is not hard-coded
 
