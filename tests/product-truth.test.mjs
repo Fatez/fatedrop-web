@@ -39,20 +39,20 @@ test("canonical dashboard language separates Search, FateFind, FateMatch and Kor
   assert.ok(companion.includes("Koru remains the mascot and signal voice of FateDrop"));
 });
 
-test("dashboard Search and True Price use the canonical Signal Engine", async () => {
-  const [search, truePrice, client] = await Promise.all([
+test("dashboard Search hands value decisions to FateFind while True Price remains calculation infrastructure", async () => {
+  const [search, fateFind, legacyTruePrice, client] = await Promise.all([
     source("app/dashboard/search/page.tsx"),
+    source("app/dashboard/fatefind/page.tsx"),
     source("app/dashboard/true-price/page.tsx"),
     source("lib/signal-engine-client.ts"),
   ]);
   assert.ok(search.includes("searchSignalCatalogue"));
-  assert.ok(search.includes("FATEFIND BEST VALUE"));
-  assert.ok(search.includes("LET ME KNOW WHEN IN STOCK"));
-  assert.ok(truePrice.includes("searchSignalTruePrice"));
-  assert.ok(truePrice.includes("ITEM PRICE"));
-  assert.ok(truePrice.includes("KNOWN DELIVERY"));
-  assert.ok(truePrice.includes("TRUE PRICE"));
-  assert.ok(truePrice.includes("Unknown never means free"));
+  assert.ok(search.includes("FATEFIND · BEST VALUE NOW"));
+  assert.ok(search.includes("FATEMATCH · WATCH MY CONDITIONS"));
+  assert.equal(search.includes("/dashboard/true-price?q="), false);
+  assert.ok(fateFind.includes("TRUE PRICE"));
+  assert.ok(fateFind.includes("RRP / REFERENCE"));
+  assert.ok(legacyTruePrice.includes("/dashboard/fatefind"));
   assert.ok(client.includes('"/api/catalogue"'));
   assert.ok(client.includes('"/api/true-price"'));
   assert.ok(client.includes("FATEDROP_SIGNAL_ENGINE_URL"));
