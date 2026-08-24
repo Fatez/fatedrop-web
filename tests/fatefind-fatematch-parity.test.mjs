@@ -4,13 +4,13 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
-test("Web FateFind consumes the shared Cloud ranking and does not save monitoring rules", () => {
+test("Web FateFind preserves the proven True Price comparison search and does not save monitoring rules", () => {
   const page = read("app/dashboard/fatefind/page.tsx");
   const client = read("lib/signal-engine-client.ts");
-  assert.ok(page.includes("searchSignalFateFind"));
-  assert.ok(page.includes("Best value now"));
-  assert.ok(page.includes("BEST VALUE NOW"));
-  assert.ok(client.includes('"/api/fatefind"'));
+  assert.ok(page.includes("searchSignalTruePrice"));
+  assert.ok(page.includes("ValueCompare"));
+  assert.ok(page.includes("FATEFIND · VALUE INTELLIGENCE"));
+  assert.ok(client.includes('"/api/true-price"'));
   assert.equal(page.includes('fetch("/api/fate-matches"'), false);
 });
 
