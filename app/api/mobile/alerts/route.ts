@@ -1,11 +1,22 @@
 import { getSnapshotForRequest } from "@/lib/auth";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
+import { listCanonicalAlertDeliveries, type CanonicalAlertDelivery } from "@/lib/canonical-alert-delivery";
 import { hasCapability } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function freeAlert(alert: CanonicalAlert): CanonicalAlert {
+type CanonicalAlertForMobile = CanonicalAlert & {
+  delivery: {
+    discord: {
+      status: CanonicalAlertDelivery["result"];
+      attemptedAt: string;
+      issue: string | null;
+    } | null;
+  };
+};
+
+function freeAlert(alert: CanonicalAlertForMobile): CanonicalAlertForMobile {
   return {
     ...alert,
     product: {
@@ -32,7 +43,7 @@ function freeAlert(alert: CanonicalAlert): CanonicalAlert {
     },
     notification: {
       title: alert.notification.title,
-      body: `${alert.retailer} · ${alert.fateStage === "ECHO" ? "early signal" : alert.fateStage === "MANIFESTED" ? "confirmed availability" : alert.fateStage === "VANISHED" ? "availability lost" : "network activity"}`,
+      body: `${alert.retailer} · ${alert.fateStage === "ECHO" ? "early signal" : alert.fateStage === "MANIFESTED" ? "confirmed availability" : alert.fateStage === "VANISHED" ? "availability lost" : alert.fateStage === "WHISPER" ? "network movement" : "network activity"}`,
       data: {
         ...alert.notification.data,
         verdict: "NO_FAIR_COMPARISON",
@@ -40,6 +51,26 @@ function freeAlert(alert: CanonicalAlert): CanonicalAlert {
       },
     },
   };
+}
+
+function attachDiscordDelivery(
+  alerts: CanonicalAlert[],
+  deliveries: CanonicalAlertDelivery[],
+): CanonicalAlertForMobile[] {
+  const bySignalId = new Map(deliveries.map((delivery) => [delivery.signalId, delivery]));
+  return alerts.map((alert) => {
+    const delivery = bySignalId.get(alert.id) ?? null;
+    return {
+      ...alert,
+      delivery: {
+        discord: delivery ? {
+          status: delivery.result,
+          attemptedAt: new Date(delivery.attemptedAt * 1000).toISOString(),
+          issue: delivery.result === "sent" ? null : delivery.detail,
+        } : null,
+      },
+    };
+  });
 }
 
 export async function GET(request: Request) {
@@ -57,8 +88,11 @@ export async function GET(request: Request) {
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
+
     const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit });
-    const alerts = premium ? canonicalAlerts : canonicalAlerts.map(freeAlert);
+    const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(limit, canonicalAlerts.length) });
+    const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries);
+    const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);
 
     return Response.json({
       success: true,
