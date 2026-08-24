@@ -21,6 +21,8 @@ test('product alert intelligence distinguishes collector products from noise', (
   assert.match(classifier, /strongSealedEvidence/);
   assert.match(classifier, /tcgCollectionEvidence/);
   assert.match(classifier, /singleCardEvidence/);
+  assert.match(canonical, /product_alert_classification/);
+  assert.match(canonical, /productClassification\(row\)/);
 });
 
 test('precision defaults reduce noise without silently dropping unknown products', () => {
