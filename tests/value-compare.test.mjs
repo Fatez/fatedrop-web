@@ -9,11 +9,11 @@ const page = fs.readFileSync(path.join(root, "app/dashboard/fatefind/page.tsx"),
 const compare = fs.readFileSync(path.join(root, "components/value-compare.tsx"), "utf8");
 const client = fs.readFileSync(path.join(root, "lib/signal-engine-client.ts"), "utf8");
 
-test("FateFind consumes the shared ranking and presents RRP value separately from True Price", () => {
-  assert.match(page, /searchSignalFateFind/);
+test("FateFind uses the proven RRP comparison and presents True Price separately", () => {
+  assert.match(page, /searchSignalTruePrice/);
+  assert.match(page, /rrpDelta\(offer\.priceGbp, group\.rrpGbp\)/);
   assert.match(page, /RRP \/ REFERENCE/);
   assert.match(page, /TRUE PRICE/);
-  assert.doesNotMatch(page, /rrpDelta\(/);
 });
 
 test("two-item compare chooses value by item-price RRP position before unit cost", () => {
