@@ -126,11 +126,11 @@ Dashboard Search uses the canonical FateDrop Signal Engine catalogue path rather
 
 No demo/sample results may substitute for real network results on a live surface.
 
-## True Price — CORE / major USP
+## True Price — CORE FateFind pricing metric
 
 **Status: BETA.**
 
-True Price is a pricing layer across FateDrop, not merely a standalone screen.
+True Price is a pricing calculation used inside FateFind and other qualifying buying-intelligence surfaces. It is **not a separate top-level product or dashboard destination**.
 
 Where evidence permits, show:
 
@@ -145,9 +145,9 @@ Unknown delivery is **unknown**, never free. Unknown RRP is **unknown**, never i
 
 RRP-first comparison remains useful even when delivery is not yet known. Delivered True Price is an enhancement, not a prerequisite for a valid item-price-to-RRP comparison.
 
-## Compare Offers — CORE
+## Compare Offers — CORE FateFind behaviour
 
-Group the same product across retailers and let the collector compare price, delivery, stock and True Price transparently.
+FateFind groups relevant live configurations/offers and lets the collector compare price, RRP percentage, delivery, stock and True Price transparently before ranking the strongest-value opportunity.
 
 Do not call objective comparison a retailer ranking. Sorting by known delivered cost, item price, availability or distance is acceptable. Paid placement must never masquerade as objective ordering.
 
