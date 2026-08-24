@@ -122,9 +122,9 @@ export default async function DashboardSearchPage({ searchParams }: { searchPara
                   <div className="fd-search-offer-foot"><span>{[context, units, provenance].filter(Boolean).join(" · ") || "Verified RRP/reference unavailable"}</span><a href={offer.url} target="_blank" rel="noreferrer">BUY ↗</a></div>
                 </div>;
               })}</div>
-              <footer><Link href={`/dashboard/true-price?q=${encodeURIComponent(group.title)}`}>COMPARE TRUE PRICE →</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>CREATE FATEFIND →</Link></footer>
+              <footer><Link href={`/dashboard/true-price?q=${encodeURIComponent(group.title)}`}>COMPARE TRUE PRICE →</Link><Link href={`/dashboard/fatefind?q=${encodeURIComponent(group.title)}`}>FATEFIND BEST VALUE →</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>LET ME KNOW WHEN IN STOCK →</Link></footer>
             </article>;
-          })}</div> : <div className="fd-dashboard-empty"><strong>No matching observed offers.</strong><span>Try a broader product name or include sold-out observations. FateDrop does not pad empty results with sample products.</span><Link className="fd-dashboard-wide-button" href={`/dashboard/watchlist?q=${encodeURIComponent(q)}`}>Create a FateFind instead →</Link></div>}
+          })}</div> : <div className="fd-dashboard-empty"><strong>No matching observed offers.</strong><span>Try a broader product name or include sold-out observations. FateDrop does not pad empty results with sample products.</span><Link className="fd-dashboard-wide-button" href={`/dashboard/watchlist?q=${encodeURIComponent(q)}`}>Create a FateMatch stock watch →</Link></div>}
           {result && (previousCursor || result.nextCursor) ? <nav className="fd-search-pagination" aria-label="Search result pages">{previousCursor !== null ? <Link href={searchHref({ q, stockOnly, sort: params.sort, category, maxPrice: maxPriceRaw, cursor: previousCursor })}>← PREVIOUS</Link> : <span/>}{result.nextCursor ? <Link href={searchHref({ q, stockOnly, sort: params.sort, category, maxPrice: maxPriceRaw, cursor: result.nextCursor })}>NEXT →</Link> : null}</nav> : null}
         </section>
       </div>
