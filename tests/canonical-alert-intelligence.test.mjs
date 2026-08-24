@@ -62,16 +62,19 @@ test('web Alerts exposes lifecycle-aware signal packs for Whisper and Echo separ
   assert.match(webPackSource, /CREATE FATEFIND/);
 });
 
-test('mobile API consumes delivery-backed shared alerts and redacts premium intelligence for free accounts', () => {
-  assert.match(routeSource, /listDeliveryBackedCanonicalAlerts/);
-  assert.match(deliverySource, /listCanonicalAlerts/);
+test('mobile API consumes signal-backed shared alerts, attaches optional Discord truth and redacts premium intelligence for free accounts', () => {
+  assert.match(routeSource, /listCanonicalAlerts/);
+  assert.match(routeSource, /listCanonicalAlertDeliveries/);
+  assert.match(deliverySource, /fatedrop_signal_delivery_attempts/);
+  assert.match(routeSource, /attachDiscordDelivery/);
+  assert.doesNotMatch(routeSource, /listDeliveryBackedCanonicalAlerts/);
   assert.doesNotMatch(routeSource, /fatedrop_retail_offers/);
   assert.match(routeSource, /function freeAlert/);
   assert.match(routeSource, /rrpPence: null/);
   assert.match(routeSource, /lowestKnown: null/);
   assert.match(routeSource, /officialReference: null/);
   assert.match(routeSource, /alternatives: \[\]/);
-  assert.match(routeSource, /canonicalAlerts\.map\(freeAlert\)/);
+  assert.match(routeSource, /alertsWithDelivery\.map\(freeAlert\)/);
 });
 
 test('push delivery is feature-gated, deduplicated and honors all four lifecycle preferences', () => {
