@@ -24,11 +24,11 @@ test("every static retailer registry handoff is HTTPS", () => {
   }
 });
 
-test("Cloud catalogue and True Price handoffs are sanitized before dashboard rendering", () => {
+test("Cloud catalogue and FateFind handoffs are sanitized before dashboard rendering", () => {
   const client = read("lib/signal-engine-client.ts");
   const network = read("lib/retailer-network.ts");
   const search = read("app/dashboard/search/page.tsx");
-  const truePrice = read("app/dashboard/true-price/page.tsx");
+  const fateFind = read("app/dashboard/fatefind/page.tsx");
   const stores = read("app/dashboard/stores/page.tsx");
   const directory = read("components/retailer-market-directory.tsx");
 
@@ -39,11 +39,11 @@ test("Cloud catalogue and True Price handoffs are sanitized before dashboard ren
   assert.ok(network.includes("safeExternalHttpsUrl(registry.website)"));
 
   assert.ok(search.includes('href={offer.url}'));
-  assert.ok(truePrice.includes('href={offer.productUrl}'));
+  assert.ok(fateFind.includes('href={offer.url}'));
   assert.ok(stores.includes("<RetailerMarketDirectory"));
   assert.ok(directory.includes('href={retailer.website}'));
   assert.ok(search.includes('target="_blank" rel="noreferrer"'));
-  assert.ok(truePrice.includes('target="_blank" rel="noreferrer"'));
+  assert.ok(fateFind.includes('target="_blank" rel="noreferrer"'));
   assert.ok(directory.includes('target="_blank" rel="noreferrer"'));
 });
 
