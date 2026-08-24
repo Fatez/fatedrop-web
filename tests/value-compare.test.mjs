@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const page = fs.readFileSync(path.join(root, "app/dashboard/true-price/page.tsx"), "utf8");
 const compare = fs.readFileSync(path.join(root, "components/value-compare.tsx"), "utf8");
-const client = fs.readFileSync(path.join(root, "lib/signal-engine-client.ts"), "utf8");
+const catalogueClient = fs.readFileSync(path.join(root, "lib/signal-engine-client.ts"), "utf8");
+const verdictClient = fs.readFileSync(path.join(root, "lib/fatefind-verdict-client.ts"), "utf8");
 
 test("RRP percentage uses item price and stays separate from True Price delivery", () => {
   assert.match(page, /rrpDelta\(offer\.priceGbp, group\.rrpGbp\)/);
@@ -16,18 +17,26 @@ test("RRP percentage uses item price and stays separate from True Price delivery
   assert.match(page, /VS RRP \/ REF/);
 });
 
-test("two-item compare chooses value by item-price RRP position before unit cost", () => {
-  assert.match(compare, /const itemPrice = offer\.priceGbp/);
-  assert.match(compare, /left\.rrpPercent !== null && right\.rrpPercent !== null/);
-  assert.match(compare, /left\.unitCost !== null && right\.unitCost !== null/);
-  assert.match(compare, /BEST VALUE FOUND/);
-  assert.match(compare, /final delivered-cost comparison remains provisional/);
+test("two-item compare renders the canonical Cloud pair verdict and never recalculates a winner", () => {
+  assert.match(compare, /\/api\/fatefind\/verdict/);
+  assert.match(compare, /pairVerdict/);
+  assert.match(compare, /position\.rrpPercent/);
+  assert.match(compare, /position\.unitCost/);
+  assert.match(compare, /FATEDROP HEAD-TO-HEAD VERDICT/);
+  assert.doesNotMatch(compare, /const itemPrice = offer\.priceGbp/);
+  assert.doesNotMatch(compare, /left\.rrpPercent !== null && right\.rrpPercent !== null/);
+  assert.doesNotMatch(compare, /left\.unitCost !== null && right\.unitCost !== null/);
+  assert.doesNotMatch(compare, /function bestOffer/);
+  assert.doesNotMatch(compare, /function comparison/);
 });
 
-test("web client accepts official and component RRP provenance from Cloud", () => {
-  assert.match(client, /component_reference/);
-  assert.match(client, /pack_reference/);
-  assert.match(client, /rrpReferenceBasis/);
-  assert.match(client, /unitCount/);
-  assert.match(client, /unitRrpGbp/);
+test("web clients preserve Cloud RRP provenance and canonical Fate Verdict authority", () => {
+  assert.match(catalogueClient, /component_reference/);
+  assert.match(catalogueClient, /pack_reference/);
+  assert.match(catalogueClient, /rrpReferenceBasis/);
+  assert.match(catalogueClient, /unitCount/);
+  assert.match(catalogueClient, /unitRrpGbp/);
+  assert.match(verdictClient, /\/api\/fatefind\/matches/);
+  assert.match(verdictClient, /mode: "verdict"/);
+  assert.match(verdictClient, /FATEDROP_CLOUD/);
 });
