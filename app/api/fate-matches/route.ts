@@ -69,10 +69,10 @@ export async function POST(request: Request) {
       enabled: true, createdAt: now, updatedAt: now,
     };
     if (scope === "local" && (match.radiusKm === null || match.latitude === null || match.longitude === null)) {
-      return Response.json({ error: "Local FateFind monitoring requires a resolved location and radius." }, { status: 400 });
+      return Response.json({ error: "Local FateMatch monitoring requires a resolved location and radius." }, { status: 400 });
     }
     if (scope === "either" && match.radiusKm !== null && (match.latitude === null || match.longitude === null)) {
-      return Response.json({ error: "A local radius can only be saved after location is resolved." }, { status: 400 });
+      return Response.json({ error: "A local FateMatch radius can only be saved after location is resolved." }, { status: 400 });
     }
     try {
       const saved = await createFateMatch(match);
