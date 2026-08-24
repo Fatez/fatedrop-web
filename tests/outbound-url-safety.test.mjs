@@ -39,7 +39,7 @@ test("Cloud catalogue and FateFind handoffs are sanitized before dashboard rende
   assert.ok(network.includes("safeExternalHttpsUrl(registry.website)"));
 
   assert.ok(search.includes('href={offer.url}'));
-  assert.ok(fateFind.includes('href={offer.url}'));
+  assert.ok(fateFind.includes('href={offer.productUrl}'));
   assert.ok(stores.includes("<RetailerMarketDirectory"));
   assert.ok(directory.includes('href={retailer.website}'));
   assert.ok(search.includes('target="_blank" rel="noreferrer"'));
