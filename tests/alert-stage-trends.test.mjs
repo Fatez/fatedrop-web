@@ -25,11 +25,10 @@ test("dashboard renders one real activity trend for each companion lifecycle", (
   assert.match(componentSource, /7 DAY SIGNALS/);
 });
 
-test("companion art fails safely until the full portrait set exists", () => {
-  assert.match(componentSource, /onError=\{\(\) => setArtFailed\(true\)\}/);
-  assert.match(componentSource, /companion\.slice\(0, 1\)/);
-  assert.match(alertsSource, /\/assets\/companions\/oru-alert\.png/);
-  assert.match(alertsSource, /\/assets\/companions\/fenn-alert\.png/);
-  assert.match(alertsSource, /\/assets\/companions\/koru-portrait\.webp/);
-  assert.match(alertsSource, /\/assets\/companions\/nixon-alert\.png/);
+test("web lifecycle graphs remain artwork-free", () => {
+  assert.doesNotMatch(componentSource, /<img/);
+  assert.doesNotMatch(componentSource, /artPath/);
+  assert.doesNotMatch(alertsSource, /oru-alert/);
+  assert.doesNotMatch(alertsSource, /fenn-alert/);
+  assert.doesNotMatch(alertsSource, /nixon-alert/);
 });
