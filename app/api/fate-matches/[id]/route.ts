@@ -9,7 +9,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
   const { id: rawId } = await context.params;
   const id = rawId.trim().slice(0, 180);
-  if (!id) return Response.json({ error: "FateFind id is required." }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
+  if (!id) return Response.json({ error: "FateMatch watch id is required." }, { status: 400, headers: { "Cache-Control": "private, no-store" } });
   try {
     const latestHit = await getLatestUserFateMatchHit(snapshot.account.id, id);
     return Response.json({ latestHit }, { headers: { "Cache-Control": "private, no-store" } });
