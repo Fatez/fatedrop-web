@@ -1,4 +1,5 @@
 import { fateDropPostgres } from "@/lib/postgres";
+import { classifyProductAlert, type ProductAlertClassification } from "@/lib/product-alert-intelligence";
 
 export type FatePriceVerdict = "LOWEST_KNOWN" | "BETTER_OFFER_FOUND" | "NO_FAIR_COMPARISON";
 export type CanonicalSignalStage = "WHISPER" | "ECHO" | "MANIFESTED" | "VANISHED" | "NETWORK";
@@ -49,11 +50,14 @@ export type CanonicalAlert = {
   message: string;
   retailer: string;
   detectedAt: string;
+  observedDurationSeconds: number | null;
+  productIntelligence: ProductAlertClassification;
   confirmed: boolean;
   confirmedRestock: boolean;
   productUrl: string;
   product: {
     title: string;
+    productType: string | null;
     url: string;
     imageUrl: string | null;
     pricePence: number | null;
@@ -92,6 +96,8 @@ export type CanonicalAlert = {
       verdict: FatePriceVerdict;
       lowestKnownUrl: string | null;
       compareQuery: string;
+      productCategory: ProductAlertClassification["category"];
+      observedDurationSeconds: number | null;
       linksPrepared: true;
     };
   };
@@ -128,6 +134,7 @@ type SignalRow = {
   retailer_id: string;
   retailer_name: string;
   title: string;
+  product_type: string | null;
   url: string;
   image_url: string | null;
   price_pence: number | null;
@@ -137,6 +144,7 @@ type SignalRow = {
   stock_status: string | null;
   confidence: number;
   detected_at: number;
+  observed_duration_seconds: number | null;
   reason: string;
   lowest_offer_id: string | null;
   lowest_retailer_id: string | null;
@@ -175,6 +183,21 @@ function roundOne(value: number | null) {
 
 function pounds(pence: number | null) {
   return pence == null ? null : `£${(pence / 100).toFixed(2)}`;
+}
+
+function observedDuration(seconds: number | null) {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return null;
+  const whole = Math.floor(seconds);
+  if (whole < 60) return `${whole}s`;
+  const minutes = Math.floor(whole / 60);
+  const remainderSeconds = whole % 60;
+  if (minutes < 60) return remainderSeconds ? `${minutes}m ${remainderSeconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainderMinutes = minutes % 60;
+  if (hours < 24) return remainderMinutes ? `${hours}h ${remainderMinutes}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remainderHours = hours % 24;
+  return remainderHours ? `${days}d ${remainderHours}h` : `${days}d`;
 }
 
 function text(value: unknown) {
@@ -342,6 +365,7 @@ function notificationCopy(
   row: SignalRow,
   priceIntelligence: CanonicalAlert["priceIntelligence"],
   links: CanonicalPreparedLinks,
+  productIntelligence: ProductAlertClassification,
 ): CanonicalAlert["notification"] {
   const stage = publicStage(row.state);
   const stageLabel = stage === "WHISPER" ? "Whisper" : stage === "ECHO" ? "Echo" : stage === "MANIFESTED" ? "Manifested" : stage === "VANISHED" ? "Vanished" : "Signal";
@@ -354,7 +378,11 @@ function notificationCopy(
 
   if (stage === "WHISPER") lines.push("Catalogue or product movement detected · stock is not confirmed");
   if (stage === "ECHO") lines.push("Queue, traffic or security readiness changed · get ready · stock is not confirmed");
-  if (stage === "VANISHED") lines.push("Observed availability is no longer verified");
+  if (stage === "VANISHED") {
+    lines.push("Observed availability is no longer verified");
+    const duration = observedDuration(row.observed_duration_seconds);
+    if (duration) lines.push(`Observed live for ${duration}`);
+  }
 
   if (rrp && delta != null) {
     const direction = delta === 0 ? "at RRP" : delta > 0 ? `${delta.toFixed(1)}% over RRP` : `${Math.abs(delta).toFixed(1)}% below RRP`;
@@ -385,6 +413,8 @@ function notificationCopy(
       verdict: priceIntelligence.verdict,
       lowestKnownUrl: links.lowestKnown?.url ?? null,
       compareQuery: links.compareQuery,
+      productCategory: productIntelligence.category,
+      observedDurationSeconds: row.observed_duration_seconds,
       linksPrepared: true,
     },
   };
@@ -395,6 +425,7 @@ function toCanonicalAlert(row: SignalRow): CanonicalAlert {
   const confirmed = fateStage === "MANIFESTED";
   const priceIntelligence = intelligence(row);
   const links = preparedLinks(row, fateStage, priceIntelligence);
+  const productIntelligence = classifyProductAlert({ title: row.title, productType: row.product_type });
   return {
     id: row.id,
     type: row.state.toUpperCase(),
@@ -406,11 +437,14 @@ function toCanonicalAlert(row: SignalRow): CanonicalAlert {
     message: row.reason,
     retailer: row.retailer_name,
     detectedAt: new Date(Number(row.detected_at) * 1000).toISOString(),
+    observedDurationSeconds: row.state === "vanished" ? row.observed_duration_seconds : null,
+    productIntelligence,
     confirmed,
     confirmedRestock: confirmed,
     productUrl: row.url,
     product: {
       title: row.title,
+      productType: row.product_type,
       url: row.url,
       imageUrl: row.image_url,
       pricePence: row.price_pence,
@@ -420,7 +454,7 @@ function toCanonicalAlert(row: SignalRow): CanonicalAlert {
     priceIntelligence,
     signalThread: signalThread(row),
     preparedLinks: links,
-    notification: notificationCopy(row, priceIntelligence, links),
+    notification: notificationCopy(row, priceIntelligence, links, productIntelligence),
     confidence: Number(row.confidence),
   };
 }
@@ -435,9 +469,11 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
   const rows = id
     ? await sql`
         SELECT
-          s.id,s.state,s.product_id,s.offer_id,s.retailer_id,s.retailer_name,s.title,s.url,s.image_url,s.price_pence,
+          s.id,s.state,s.product_id,s.offer_id,s.retailer_id,s.retailer_name,s.title,s.product_type,s.url,s.image_url,s.price_pence,
           s.rrp_pence AS signal_rrp_pence,p.official_rrp_pence AS canonical_rrp_pence,
-          s.delivered_price_pence,s.stock_status,s.confidence,s.detected_at,s.reason,
+          s.delivered_price_pence,s.stock_status,s.confidence,s.detected_at,
+          CASE WHEN s.state='vanished' AND live_window.manifested_at IS NOT NULL THEN GREATEST(0,s.detected_at-live_window.manifested_at) ELSE NULL END AS observed_duration_seconds,
+          s.reason,
           best.offer_id AS lowest_offer_id,best.retailer_id AS lowest_retailer_id,best.retailer_name AS lowest_retailer_name,best.url AS lowest_url,
           best.price_pence AS lowest_item_price_pence,best.stock_status AS lowest_stock_status,
           CASE WHEN best.postage_pence IS NOT NULL AND best.price_pence IS NOT NULL THEN best.price_pence + best.postage_pence ELSE NULL END AS lowest_delivered_price_pence,
@@ -464,6 +500,24 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
           ORDER BY ro.last_seen_at DESC
           LIMIT 1
         ) official ON true
+        LEFT JOIN LATERAL (
+          SELECT hs.detected_at AS manifested_at
+          FROM fatedrop_signals hs
+          WHERE s.state='vanished'
+            AND hs.offer_id=s.offer_id
+            AND hs.state='manifested'
+            AND hs.detected_at < s.detected_at
+            AND NOT EXISTS (
+              SELECT 1
+              FROM fatedrop_signals hv
+              WHERE hv.offer_id=s.offer_id
+                AND hv.state='vanished'
+                AND hv.detected_at > hs.detected_at
+                AND hv.detected_at < s.detected_at
+            )
+          ORDER BY hs.detected_at DESC
+          LIMIT 1
+        ) live_window ON true
         LEFT JOIN LATERAL (
           SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id',h.id,'state',h.state,'retailer',h.retailer_name,'detectedAt',h.detected_at,'reason',h.reason,
@@ -499,9 +553,11 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
         LIMIT 1`
     : await sql`
         SELECT
-          s.id,s.state,s.product_id,s.offer_id,s.retailer_id,s.retailer_name,s.title,s.url,s.image_url,s.price_pence,
+          s.id,s.state,s.product_id,s.offer_id,s.retailer_id,s.retailer_name,s.title,s.product_type,s.url,s.image_url,s.price_pence,
           s.rrp_pence AS signal_rrp_pence,p.official_rrp_pence AS canonical_rrp_pence,
-          s.delivered_price_pence,s.stock_status,s.confidence,s.detected_at,s.reason,
+          s.delivered_price_pence,s.stock_status,s.confidence,s.detected_at,
+          CASE WHEN s.state='vanished' AND live_window.manifested_at IS NOT NULL THEN GREATEST(0,s.detected_at-live_window.manifested_at) ELSE NULL END AS observed_duration_seconds,
+          s.reason,
           best.offer_id AS lowest_offer_id,best.retailer_id AS lowest_retailer_id,best.retailer_name AS lowest_retailer_name,best.url AS lowest_url,
           best.price_pence AS lowest_item_price_pence,best.stock_status AS lowest_stock_status,
           CASE WHEN best.postage_pence IS NOT NULL AND best.price_pence IS NOT NULL THEN best.price_pence + best.postage_pence ELSE NULL END AS lowest_delivered_price_pence,
@@ -528,6 +584,24 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
           ORDER BY ro.last_seen_at DESC
           LIMIT 1
         ) official ON true
+        LEFT JOIN LATERAL (
+          SELECT hs.detected_at AS manifested_at
+          FROM fatedrop_signals hs
+          WHERE s.state='vanished'
+            AND hs.offer_id=s.offer_id
+            AND hs.state='manifested'
+            AND hs.detected_at < s.detected_at
+            AND NOT EXISTS (
+              SELECT 1
+              FROM fatedrop_signals hv
+              WHERE hv.offer_id=s.offer_id
+                AND hv.state='vanished'
+                AND hv.detected_at > hs.detected_at
+                AND hv.detected_at < s.detected_at
+            )
+          ORDER BY hs.detected_at DESC
+          LIMIT 1
+        ) live_window ON true
         LEFT JOIN LATERAL (
           SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id',h.id,'state',h.state,'retailer',h.retailer_name,'detectedAt',h.detected_at,'reason',h.reason,
