@@ -12,7 +12,7 @@ const client = fs.readFileSync(path.join(root, "lib/signal-engine-client.ts"), "
 test("FateFind uses the proven RRP comparison and presents True Price separately", () => {
   assert.match(page, /searchSignalTruePrice/);
   assert.match(page, /rrpDelta\(offer\.priceGbp, group\.rrpGbp\)/);
-  assert.match(page, /RRP \/ REFERENCE/);
+  assert.match(page, /VS RRP \/ REF/);
   assert.match(page, /TRUE PRICE/);
 });
 
