@@ -220,7 +220,7 @@ test("True Price remains a FateFind calculation rather than a standalone dashboa
   const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
   assert.ok(page.includes("/dashboard/fatefind"));
   assert.ok(fateFind.includes("TRUE PRICE"));
-  assert.ok(fateFind.includes("RRP / REFERENCE"));
+  assert.ok(fateFind.includes("VS RRP / REF"));
   assert.ok(client.includes('"/api/true-price"'));
 });
 
