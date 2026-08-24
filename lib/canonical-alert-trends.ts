@@ -61,10 +61,28 @@ export async function getCanonicalSignalTrend(days = 7): Promise<CanonicalSignal
       state,
       to_char(to_timestamp(detected_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day,
       COUNT(*)::int AS count
-    FROM fatedrop_signals
-    WHERE detected_at >= ${cutoff}
-      AND state IN ('whisper','echo','manifested','vanished')
-    GROUP BY state,day
+    FROM fatedrop_signals s
+    WHERE s.detected_at >= ${cutoff}
+      AND s.state IN ('whisper','echo','manifested','vanished')
+      AND (
+        s.state <> 'vanished'
+        OR EXISTS (
+          SELECT 1
+          FROM fatedrop_signals m
+          WHERE m.offer_id=s.offer_id
+            AND m.state='manifested'
+            AND m.detected_at < s.detected_at
+            AND NOT EXISTS (
+              SELECT 1
+              FROM fatedrop_signals v
+              WHERE v.offer_id=s.offer_id
+                AND v.state='vanished'
+                AND v.detected_at > m.detected_at
+                AND v.detected_at < s.detected_at
+            )
+        )
+      )
+    GROUP BY s.state,day
     ORDER BY day ASC`;
 
   const byState: CanonicalSignalTrend["byState"] = {
