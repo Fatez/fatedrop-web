@@ -92,7 +92,7 @@ export default async function DashboardSearchPage({ searchParams }: { searchPara
       <div className="fd-search-page">
         <section className="fd-dash-card fd-network-card fd-search-hero">
           <div className="fd-dash-card-head"><span>SEARCH THE FATEDROP NETWORK</span><i className={result ? "live" : "pending"}>{result ? "● CLOUD CONNECTED" : "○ SIGNAL ENGINE"}</i></div>
-          <div className="fd-network-message"><h1>Search the product once.<br/>Compare the retailers underneath it.</h1><p>FateDrop resolves observed offers from the canonical Cloud catalogue, keeps unknown delivery unknown, compares item price against verified RRP/reference value, and gives you a direct path into True Price or a saved FateFind.</p></div>
+          <div className="fd-network-message"><h1>Search the product once.<br/>Compare the retailers underneath it.</h1><p>Search shows what the FateDrop network currently knows: product, retailer, stock, item price, verified RRP/reference and delivery when known. Use FateFind when you want FateDrop to rank the strongest-value deal, or FateMatch when you want a companion to watch your buying conditions.</p></div>
           <form action="/dashboard/search" method="get" className="fd-network-search-form">
             <label className="fd-dashboard-search"><span>⌕</span><input name="q" defaultValue={q} autoFocus aria-label="Search products" placeholder="Try: Elite Trainer Box, booster bundle, Charizard…" /></label>
             <label><span>STOCK</span><select name="stock" defaultValue={stockOnly ? "in" : "all"}><option value="in">Available only</option><option value="all">All observed</option></select></label>
@@ -122,7 +122,7 @@ export default async function DashboardSearchPage({ searchParams }: { searchPara
                   <div className="fd-search-offer-foot"><span>{[context, units, provenance].filter(Boolean).join(" · ") || "Verified RRP/reference unavailable"}</span><a href={offer.url} target="_blank" rel="noreferrer">BUY ↗</a></div>
                 </div>;
               })}</div>
-              <footer><Link href={`/dashboard/true-price?q=${encodeURIComponent(group.title)}`}>COMPARE TRUE PRICE →</Link><Link href={`/dashboard/fatefind?q=${encodeURIComponent(group.title)}`}>FATEFIND BEST VALUE →</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>LET ME KNOW WHEN IN STOCK →</Link></footer>
+              <footer><Link href={`/dashboard/fatefind?q=${encodeURIComponent(group.title)}`}>FATEFIND · BEST VALUE NOW →</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>FATEMATCH · WATCH MY CONDITIONS →</Link></footer>
             </article>;
           })}</div> : <div className="fd-dashboard-empty"><strong>No matching observed offers.</strong><span>Try a broader product name or include sold-out observations. FateDrop does not pad empty results with sample products.</span><Link className="fd-dashboard-wide-button" href={`/dashboard/watchlist?q=${encodeURIComponent(q)}`}>Create a FateMatch stock watch →</Link></div>}
           {result && (previousCursor || result.nextCursor) ? <nav className="fd-search-pagination" aria-label="Search result pages">{previousCursor !== null ? <Link href={searchHref({ q, stockOnly, sort: params.sort, category, maxPrice: maxPriceRaw, cursor: previousCursor })}>← PREVIOUS</Link> : <span/>}{result.nextCursor ? <Link href={searchHref({ q, stockOnly, sort: params.sort, category, maxPrice: maxPriceRaw, cursor: result.nextCursor })}>NEXT →</Link> : null}</nav> : null}
