@@ -30,7 +30,7 @@ test("canonical dashboard language separates Search, FateFind, FateMatch and Kor
   assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
   assert.ok(fateFind.includes('title="FateFind"'));
-  assert.ok(fateFind.includes("strongest-value option available now"));
+  assert.ok(fateFind.includes("Find the strongest-value deal before you buy."));
   assert.ok(fateFind.includes("searchSignalTruePrice"));
   assert.ok(fateFind.includes("ValueCompare"));
   assert.ok(fateMatch.includes('title="FateMatch"'));
@@ -52,7 +52,7 @@ test("dashboard Search hands value decisions to FateFind while True Price remain
   assert.ok(search.includes("FATEMATCH · WATCH MY CONDITIONS"));
   assert.equal(search.includes("/dashboard/true-price?q="), false);
   assert.ok(fateFind.includes("TRUE PRICE"));
-  assert.ok(fateFind.includes("RRP / REFERENCE"));
+  assert.ok(fateFind.includes("VS RRP / REF"));
   assert.ok(legacyTruePrice.includes("/dashboard/fatefind"));
   assert.ok(client.includes('"/api/catalogue"'));
   assert.ok(client.includes('"/api/true-price"'));
