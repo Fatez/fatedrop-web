@@ -61,7 +61,7 @@ export default async function DashboardPage() {
   const recentSignals = [...(network?.recentSignals ?? [])].sort((a, b) => b.occurredAt - a.occurredAt).slice(0, 5);
   const priceGroup = truePriceGroup(network?.recentSignals ?? []);
   const recentDrops = data.recentManifested.slice(0, 4);
-  const fateFinds = data.personal.watchlist.slice(0, 3);
+  const fateMatchWatches = data.personal.watchlist.slice(0, 3);
   const stores = data.personal.favoriteStores.slice(0, 5);
   const series = Object.fromEntries(
     lifecycle.map(([key]) => [key, data.signalSummary?.[key].trend ?? []]),
@@ -142,11 +142,11 @@ export default async function DashboardPage() {
         </article>
 
         <article className="fd-ref-card fd-fatefind-card">
-          <div className="fd-ref-card-head compact"><div><h2>FateFind</h2><p>Your saved hunts — FateMatch is a live offer that matches your rules.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>FateMatch</h2><p>Your companion-backed stock watches and recent qualifying activity.</p></div></div>
           <div className="fd-fatefind-list">
-            {fateFinds.length ? fateFinds.map((item) => <div key={item.id}><span><strong>{item.title || "Saved FateFind"}</strong><small>{item.subtitle || item.retailer || "Network-wide hunt"}</small></span><b>{item.amountPence ? moneyFromPence(item.amountPence) : "•"}</b></div>) : <div className="fd-ref-empty"><strong>No FateFind activity yet.</strong><span>Tell FateDrop what you want and what you’re willing to pay. We keep watching the network for you.</span></div>}
+            {fateMatchWatches.length ? fateMatchWatches.map((item) => <div key={item.id}><span><strong>{item.title || "Saved FateMatch watch"}</strong><small>{item.subtitle || item.retailer || "Cloud stock watch"}</small></span><b>{item.amountPence ? moneyFromPence(item.amountPence) : "•"}</b></div>) : <div className="fd-ref-empty"><strong>No FateMatch watches yet.</strong><span>Choose “let me know when this is in stock” and your companion can keep watching the shared network for you.</span></div>}
           </div>
-          <Link className="fd-card-link" href="/dashboard/watchlist">Manage FateFinds <span>→</span></Link>
+          <Link className="fd-card-link" href="/dashboard/watchlist">Manage FateMatch <span>→</span></Link>
         </article>
 
         <article className="fd-ref-card fd-network-pulse-card">
