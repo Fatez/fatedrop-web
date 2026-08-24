@@ -144,7 +144,7 @@ export default async function AlertsPage() {
     try { fateFinds = await listUserFateMatches(snapshot.account.id); } catch { fateFinds = []; }
     try {
       const [rawAlerts, preferences] = await Promise.all([
-        listCanonicalAlerts({ limit: 50 }),
+        listCanonicalAlerts({ limit: 100 }),
         getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES),
       ]);
       canonicalAlerts = rawAlerts.filter((alert) => notificationPreferencesAllowAlert(alert, preferences)).slice(0, 20);
