@@ -35,22 +35,27 @@ test("canonical dashboard language is Search, FateFind and Koru & Friends", asyn
   assert.ok(companion.includes("Koru remains the mascot and signal voice of FateDrop"));
 });
 
-test("dashboard Search and True Price use the canonical Signal Engine", async () => {
-  const [search, truePrice, client] = await Promise.all([
+test("dashboard Search and FateFind use canonical Cloud services", async () => {
+  const [search, truePrice, catalogueClient, verdictClient] = await Promise.all([
     source("app/dashboard/search/page.tsx"),
     source("app/dashboard/true-price/page.tsx"),
     source("lib/signal-engine-client.ts"),
+    source("lib/fatefind-verdict-client.ts"),
   ]);
   assert.ok(search.includes("searchSignalCatalogue"));
   assert.ok(search.includes("CREATE FATEFIND"));
-  assert.ok(truePrice.includes("searchSignalTruePrice"));
+  assert.ok(truePrice.includes("requestFateVerdict"));
+  assert.ok(truePrice.includes("<ValueCompare"));
   assert.ok(truePrice.includes("ITEM PRICE"));
   assert.ok(truePrice.includes("KNOWN DELIVERY"));
   assert.ok(truePrice.includes("TRUE PRICE"));
   assert.ok(truePrice.includes("Unknown never means free"));
-  assert.ok(client.includes('"/api/catalogue"'));
-  assert.ok(client.includes('"/api/true-price"'));
-  assert.ok(client.includes("FATEDROP_SIGNAL_ENGINE_URL"));
+  assert.ok(catalogueClient.includes('"/api/catalogue"'));
+  assert.ok(catalogueClient.includes('"/api/true-price"'));
+  assert.ok(catalogueClient.includes("FATEDROP_SIGNAL_ENGINE_URL"));
+  assert.ok(verdictClient.includes('/api/fatefind/matches'));
+  assert.ok(verdictClient.includes('mode: "verdict"'));
+  assert.ok(verdictClient.includes('FATEDROP_CLOUD'));
 });
 
 test("unknown delivery can never masquerade as a delivered total", async () => {
