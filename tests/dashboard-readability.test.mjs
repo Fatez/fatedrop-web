@@ -16,9 +16,11 @@ test("dashboard operational typography keeps a human-readable hierarchy", () => 
 });
 
 test("dashboard shell and Network Pulse remain readable at desktop scale", () => {
-  assert.match(shell, /fd-ref-search input[^}]*font-size:13px/);
+  assert.match(shell, /fd-ref-search input[^}]*font-size:14px/);
   assert.match(shell, /fd-ref-settings[^}]*font-size:12px/);
-  assert.match(shell, /fd-ref-profile strong\{font-size:11px\}/);
+  assert.match(shell, /fd-ref-profile strong\{font-size:13px\}/);
   assert.match(pulse, /fd-pulse-metrics small[^}]*font-size:11px/);
   assert.match(pulse, /fd-pulse-explain span[^}]*font-size:10px/);
+  assert.match(shell, /fd-dashboard-content-frame p\{font-size:max\(13px,1em\)!important/);
+  assert.match(shell, /fd-dashboard-content-frame small\{font-size:max\(10\.5px,1em\)!important/);
 });
