@@ -1,7 +1,9 @@
 import { getSnapshotForRequest } from "@/lib/auth";
+import { notificationPreferencesAllowAlert } from "@/lib/alert-preference-filter";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { listCanonicalAlertDeliveries, type CanonicalAlertDelivery } from "@/lib/canonical-alert-delivery";
 import { hasCapability } from "@/lib/entitlements";
+import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -88,10 +90,14 @@ export async function GET(request: Request) {
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
+    const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
 
-    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit });
-    const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(limit, canonicalAlerts.length) });
-    const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries);
+    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit: retrievalLimit });
+    const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(retrievalLimit, canonicalAlerts.length) });
+    const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
+    const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries)
+      .filter((alert) => notificationPreferencesAllowAlert(alert, preferences))
+      .slice(0, limit);
     const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);
 
     return Response.json({
