@@ -81,9 +81,9 @@ export default async function DashboardTruePricePage({ searchParams }: { searchP
                 <a href={offer.productUrl} target="_blank" rel="noreferrer">BUY AT RETAILER ↗</a>
               </div>;
             })}</div>
-            <footer><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>CREATE A FATEFIND →</Link><Link href={`/dashboard/search?q=${encodeURIComponent(group.title)}`}>OPEN NETWORK SEARCH →</Link></footer>
+            <footer><Link href={`/dashboard/fatefind?q=${encodeURIComponent(group.title)}`}>FATEFIND BEST VALUE →</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>LET ME KNOW WHEN IN STOCK →</Link><Link href={`/dashboard/search?q=${encodeURIComponent(group.title)}`}>OPEN NETWORK SEARCH →</Link></footer>
           </article>)}</div>
-        </> : <div className="fd-dashboard-empty"><strong>No comparable live offers found.</strong><span>FateDrop will not invent a comparison when the network has no qualifying observed offers.</span><Link className="fd-dashboard-wide-button" href={`/dashboard/watchlist?q=${encodeURIComponent(q)}`}>Create a FateFind for this product →</Link></div>}
+        </> : <div className="fd-dashboard-empty"><strong>No comparable live offers found.</strong><span>FateDrop will not invent a comparison when the network has no qualifying observed offers.</span><Link className="fd-dashboard-wide-button" href={`/dashboard/watchlist?q=${encodeURIComponent(q)}`}>Create a FateMatch stock watch →</Link></div>}
         {result?.disclaimer ? <p className="fd-tp-disclaimer">{result.disclaimer}</p> : null}
       </section>
 
