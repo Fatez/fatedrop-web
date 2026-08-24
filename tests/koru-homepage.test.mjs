@@ -160,7 +160,8 @@ test("dashboard home matches the approved evidence-backed collector workspace", 
   const pulse = read("components/dashboard-network-pulse.tsx");
   assert.ok(dashboard.includes("Signals Overview"));
   assert.ok(dashboard.includes("Recent Signals"));
-  assert.ok(dashboard.includes("True Price Comparison"));
+  assert.ok(dashboard.includes("FateFind Pricing Context"));
+  assert.ok(dashboard.includes("DashboardToolGuide"));
   assert.ok(dashboard.includes("FateMatch"));
   assert.ok(dashboard.includes("Network Pulse"));
   assert.ok(dashboard.includes("Recent Manifested Drops"));
