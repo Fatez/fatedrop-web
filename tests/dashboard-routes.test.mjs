@@ -5,6 +5,7 @@ import fs from "node:fs";
 const dashboardRoutes = [
   "app/dashboard/search/page.tsx",
   "app/dashboard/alerts/page.tsx",
+  "app/dashboard/fatefind/page.tsx",
   "app/dashboard/watchlist/page.tsx",
   "app/dashboard/wishlist/page.tsx",
   "app/dashboard/notifications/page.tsx",
@@ -25,11 +26,12 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation keeps every collector destination in the approved workspace", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
-  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/true-price", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
   assert.ok(shell.includes('href="/dashboard/notifications"'));
   assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search"]'));
-  assert.ok(nav.includes('"FateFind", "/dashboard/watchlist"'));
+  assert.ok(nav.includes('"FateFind", "/dashboard/fatefind"'));
+  assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Watchlist", "/dashboard/wishlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
   assert.ok(nav.includes('"True Price", "/dashboard/true-price"'));
@@ -113,25 +115,31 @@ test("Alerts is a precise network ledger and keeps personal delivery controls se
   assert.equal(alerts.includes("<LiveAlertFeed"), false);
 });
 
-test("Search, True Price and FateFind form one working collector journey", () => {
+test("Search, True Price, FateFind and FateMatch form one working collector journey", () => {
   const search = fs.readFileSync("app/dashboard/search/page.tsx", "utf8");
   const truePrice = fs.readFileSync("app/dashboard/true-price/page.tsx", "utf8");
-  const fateFind = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
+  const fateFind = fs.readFileSync("app/dashboard/fatefind/page.tsx", "utf8");
+  const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
   const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
   assert.ok(search.includes("searchSignalCatalogue"));
   assert.ok(search.includes('/dashboard/true-price?q='));
+  assert.ok(search.includes('/dashboard/fatefind?q='));
   assert.ok(search.includes('/dashboard/watchlist?q='));
   assert.ok(search.includes("BUY ↗"));
   assert.ok(truePrice.includes("searchSignalTruePrice"));
+  assert.ok(truePrice.includes('/dashboard/fatefind?q='));
   assert.ok(truePrice.includes('/dashboard/watchlist?q='));
   assert.ok(truePrice.includes("BUY AT RETAILER ↗"));
-  assert.ok(fateFind.includes("FateMatchBuilder"));
-  assert.ok(fateFind.includes("FateFindActions"));
+  assert.ok(fateFind.includes("searchSignalFateFind"));
+  assert.ok(fateFind.includes("Best value now"));
+  assert.ok(fateMatch.includes("FateMatchBuilder"));
+  assert.ok(fateMatch.includes("FateFindActions"));
   assert.ok(client.includes('"/api/catalogue"'));
   assert.ok(client.includes('"/api/true-price"'));
+  assert.ok(client.includes('"/api/fatefind"'));
 });
 
-test("FateFind supports create pause resume delete and evidence-based local matching", () => {
+test("FateMatch supports create pause resume delete companion assignment and evidence-based local matching", () => {
   const builder = fs.readFileSync("components/fate-match-builder.tsx", "utf8");
   const actions = fs.readFileSync("components/fatefind-actions.tsx", "utf8");
   const api = fs.readFileSync("app/api/fate-matches/route.ts", "utf8");
@@ -140,11 +148,13 @@ test("FateFind supports create pause resume delete and evidence-based local matc
   assert.ok(builder.includes("radiusKm"));
   assert.ok(builder.includes("latitude"));
   assert.ok(builder.includes("longitude"));
-  assert.ok(builder.includes("Use your location before saving a Local-only FateFind."));
+  assert.ok(builder.includes("Use your location before saving a Local-only FateMatch."));
+  assert.ok(builder.includes("companionId"));
+  assert.ok(builder.includes("START FATEMATCH WATCH"));
   assert.ok(api.includes("export async function POST"));
   assert.ok(api.includes("export async function PATCH"));
   assert.ok(api.includes("export async function DELETE"));
-  assert.ok(api.includes("Local FateFind monitoring requires a resolved location and radius."));
+  assert.ok(api.includes("Local FateMatch monitoring requires a resolved location and radius."));
   assert.ok(api.includes("assertSameOrigin(request)"));
   assert.ok(storage.includes("setFateMatchEnabled"));
   assert.ok(storage.includes("deleteFateMatch"));
@@ -152,13 +162,15 @@ test("FateFind supports create pause resume delete and evidence-based local matc
   assert.ok(actions.includes('method: "DELETE"'));
 });
 
-test("Universal Wishlist is persistent, separate from FateFind and migration-safe", () => {
+test("Universal Wishlist is persistent, separate from FateFind and FateMatch, and migration-safe", () => {
   const page = fs.readFileSync("app/dashboard/wishlist/page.tsx", "utf8");
   const api = fs.readFileSync("app/api/wishlist/route.ts", "utf8");
   const storage = fs.readFileSync("lib/wishlist-storage.ts", "utf8");
   const migration = fs.readFileSync("database/2026-08-19-user-preferences.sql", "utf8");
   assert.ok(page.includes("Wishlist means “I want this.”"));
-  assert.ok(page.includes("FateFind means “go hunt this for me.”"));
+  assert.ok(page.includes("FateMatch means “let me know when this is in stock.”"));
+  assert.ok(page.includes("/dashboard/fatefind"));
+  assert.ok(page.includes("/dashboard/watchlist"));
   assert.ok(api.includes("assertSameOrigin"));
   assert.ok(storage.includes("fatedrop_wishlist_items"));
   assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS fatedrop_wishlist_items"));
@@ -211,7 +223,8 @@ test("True Price is canonical Cloud comparison and FateWindow stays out of the a
   assert.ok(page.includes("KNOWN DELIVERY"));
   assert.ok(page.includes("TRUE PRICE"));
   assert.ok(page.includes("Unknown never means free"));
-  assert.ok(page.includes("CREATE A FATEFIND"));
+  assert.ok(page.includes("FATEFIND BEST VALUE"));
+  assert.ok(page.includes("LET ME KNOW WHEN IN STOCK"));
   assert.equal(page.toUpperCase().includes("FATEWINDOW"), false);
   assert.ok(client.includes('"/api/true-price"'));
 });
