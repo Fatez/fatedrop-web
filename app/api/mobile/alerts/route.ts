@@ -90,12 +90,14 @@ export async function GET(request: Request) {
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
+    const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
 
-    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit });
-    const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(limit, canonicalAlerts.length) });
+    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit: retrievalLimit });
+    const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(retrievalLimit, canonicalAlerts.length) });
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
     const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries)
-      .filter((alert) => notificationPreferencesAllowAlert(alert, preferences));
+      .filter((alert) => notificationPreferencesAllowAlert(alert, preferences))
+      .slice(0, limit);
     const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);
 
     return Response.json({
