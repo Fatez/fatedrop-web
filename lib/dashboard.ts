@@ -1,4 +1,5 @@
 import type { AccountSnapshot } from "./account-storage";
+import { getCanonicalAlertDeliverySummary } from "./canonical-alert-delivery";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal } from "./dashboard-storage";
 import { getSignalDeliverySummary, getSignalLifecycleSummary } from "./signal-trends";
 
@@ -44,12 +45,13 @@ export function signalCauseLabel(signal: NetworkSignal) {
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
-  const [activity, network, history, signalSummary, signalDeliverySummary] = await Promise.all([
+  const [activity, network, history, signalSummary, signalDeliverySummary, canonicalAlerts] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
     getLatestNetworkMetricSnapshot(),
     listNetworkMetricSnapshots(30),
     getSignalLifecycleSummary(7),
     getSignalDeliverySummary(7),
+    getCanonicalAlertDeliverySummary(7).catch(() => null),
   ]);
 
   const stores = new Map<string, { name: string; count: number; latestAt: number }>();
@@ -95,6 +97,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     networkHistory: history,
     signalSummary,
     signalDeliverySummary,
+    canonicalAlerts,
     publishedBaseline,
     publicSignalMetrics: {
       whisper: signalSummary?.whisper.total ?? null,
@@ -145,6 +148,12 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         source: signalDeliverySummary ? "FateDrop signal delivery ledger" : "Awaiting signal delivery telemetry",
         updatedAt: signalDeliverySummary ? now : null,
         note: signalDeliverySummary ? "Sent alerts, intentional policy suppression and delivery/configuration issues are aggregated separately from detections so the dashboard never confuses engine activity with successful alert delivery." : "Delivery health remains unavailable rather than being inferred from signal detections.",
+      },
+      {
+        label: "Canonical alert totals",
+        source: canonicalAlerts ? "FateDrop delivery ledger" : "Delivery ledger unavailable",
+        updatedAt: canonicalAlerts?.daily.at(-1)?.day ? Math.floor(new Date(`${canonicalAlerts.daily.at(-1)!.day}T23:59:59Z`).getTime() / 1000) : null,
+        note: canonicalAlerts ? "Counts only delivery-backed alert decisions: Discord sent, provider failures and real routing/configuration issues. Policy-disabled and duplicate-batch suppressions are excluded." : "Canonical alert totals remain unavailable rather than being inferred from raw detections.",
       },
     ],
   };
