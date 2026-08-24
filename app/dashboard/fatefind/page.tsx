@@ -1,60 +1,96 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
-import { searchSignalFateFind, type SignalFateFindOpportunity } from "@/lib/signal-engine-client";
+import { ValueCompare } from "@/components/value-compare";
+import { searchSignalTruePrice, type SignalTruePriceGroup } from "@/lib/signal-engine-client";
 
 export const metadata: Metadata = { title: "FateFind | FateDrop Dashboard", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-function gbp(pence: number | null) {
-  return pence === null ? "—" : new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(pence / 100);
+function gbp(value: number | undefined) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value)
+    : "—";
 }
 
-function Opportunity({ offer, best = false }: { offer: SignalFateFindOpportunity; best?: boolean }) {
-  return <article className={best ? "fd-find-offer best" : "fd-find-offer"}>
-    <header>
-      <div><small>{best ? "BEST VALUE NOW" : `#${offer.rank} FATEFIND`}</small><h2>{offer.productTitle}</h2><span>{offer.retailerName || "Connected retailer"} · {offer.stockStatus.replaceAll("_", " ")}</span></div>
-      {offer.valueLabel ? <b>{offer.valueLabel}</b> : <b className="unknown">RRP VALUE UNAVAILABLE</b>}
-    </header>
-    <div className="fd-find-price-grid">
-      <div><small>ITEM</small><strong>{gbp(offer.itemPricePence)}</strong></div>
-      <div><small>RRP / REFERENCE</small><strong>{gbp(offer.rrpPence)}</strong></div>
-      <div><small>DELIVERY</small><strong>{offer.deliveryKnown ? gbp(offer.deliveryPence) : "UNKNOWN"}</strong></div>
-      <div><small>TRUE PRICE</small><strong>{gbp(offer.truePricePence)}</strong></div>
-    </div>
-    <p>{offer.rrpReferenceBasis || (offer.rrpResolved ? "Verified RRP/reference" : "Verified RRP/reference unavailable — FateDrop will not invent one.")}</p>
-    <footer>
-      {offer.url ? <a href={offer.url} target="_blank" rel="noreferrer">BUY NOW ↗</a> : <span>Retailer route unavailable</span>}
-      <Link href={`/dashboard/watchlist?q=${encodeURIComponent(offer.productTitle)}&productId=${encodeURIComponent(offer.productId || "")}`}>LET ME KNOW WHEN IN STOCK →</Link>
-    </footer>
-  </article>;
+function rrpDelta(price: number | undefined, rrp: number | undefined) {
+  if (typeof price !== "number" || typeof rrp !== "number" || !Number.isFinite(price) || !Number.isFinite(rrp) || rrp <= 0) return null;
+  const difference = price - rrp;
+  const percent = (difference / rrp) * 100;
+  const prefix = difference > 0 ? "+" : difference < 0 ? "−" : "";
+  const percentPrefix = percent > 0 ? "+" : percent < 0 ? "−" : "";
+  return `${prefix}£${Math.abs(difference).toFixed(2)} · ${percentPrefix}${Math.abs(percent).toFixed(1)}%`;
 }
 
-export default async function FateFindPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+function sourceLabel(group: SignalTruePriceGroup) {
+  if (group.rrpKind === "component_reference") return `Component RRP reference · ${group.rrpReferenceBasis ?? "verified unit basis"}`;
+  if (group.rrpKind === "pack_reference") return `Pack RRP reference · ${group.rrpReferenceBasis ?? "verified set pack"}`;
+  if (!group.rrpSource) return "RRP source unavailable";
+  if (group.rrpSource === "pokemon-center-uk") return "Pokémon Center UK observed RRP";
+  return `Observed RRP source: ${group.rrpSource}`;
+}
+
+function rrpHeading(group: SignalTruePriceGroup) {
+  if (group.rrpKind === "component_reference") return "REFERENCE RRP";
+  if (group.rrpKind === "pack_reference") return "PACK RRP REFERENCE";
+  return "RRP";
+}
+
+export default async function DashboardFateFindPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
-  const result = q.length >= 2 ? await searchSignalFateFind(q) : null;
-  const best = result?.bestOpportunity ?? null;
-  const rest = result?.rankedOffers.filter((offer) => offer.rank !== 1) ?? [];
+  const result = q.length >= 2 ? await searchSignalTruePrice(q) : null;
+  const groups = result?.groups ?? [];
 
-  return <DashboardPageShell title="FateFind" eyebrow="BEST VALUE · LIVE NOW">
-    <div className="fd-find-page">
-      <section className="fd-dash-card fd-find-hero">
-        <span>FATEFIND</span>
-        <h1>Find the strongest-value option available now.</h1>
-        <p>FateDrop checks the live network, understands the product configuration, uses the correct RRP/reference and ranks real buying opportunities. The smallest raw £ number does not automatically win.</p>
-        <form action="/dashboard/fatefind" method="get"><input name="q" defaultValue={q} autoFocus placeholder="Try: Destined Rivals booster packs" aria-label="FateFind product"/><button type="submit">FATEFIND →</button></form>
+  return <DashboardPageShell title="FateFind" eyebrow="BEST VALUE · RRP INTELLIGENCE">
+    <div className="fd-true-price-page">
+      <section className="fd-dash-card fd-true-price-hero">
+        <div className="fd-tp-intro">
+          <span>FATEFIND · VALUE INTELLIGENCE</span>
+          <h1>Find the strongest-value deal before you buy.</h1>
+          <p>FateFind compares live retailer offers against the correct RRP/reference so you can see which option is actually best value. True Price remains part of that result: item price is compared with the verified value baseline, and delivery is only added when its cost is genuinely known.</p>
+        </div>
+        <div className="fd-tp-simple">
+          <div><b>1</b><strong>ITEM PRICE / RRP</strong><span>Compare the item price with a verified RRP or clearly-labelled reference.</span></div>
+          <i>+</i>
+          <div><b>2</b><strong>KNOWN DELIVERY</strong><span>Only a real mandatory delivery cost. Unknown never means free.</span></div>
+          <i>=</i>
+          <div className="answer"><b>3</b><strong>TRUE PRICE</strong><span>The known total you would actually pay at checkout.</span></div>
+        </div>
+        <form action="/dashboard/fatefind" method="get" className="fd-tp-search">
+          <label className="fd-dashboard-search"><span>⌕</span><input name="q" defaultValue={q} autoFocus aria-label="Find the best-value deal" placeholder="Try: Destined Rivals" /></label>
+          <button type="submit">FATEFIND →</button>
+        </form>
+        <p className="fd-tp-kid-copy">A bigger bundle can cost more at checkout and still be better value. FateFind therefore ranks value from the verified RRP/reference position first, while True Price separately shows the known delivered cost.</p>
       </section>
 
-      {!q ? <section className="fd-dash-card fd-find-empty"><strong>What do you want to buy?</strong><span>Enter a product or set. FateFind will compare the currently purchasable options using the shared Cloud intelligence.</span></section> : q.length < 2 ? <section className="fd-dash-card fd-find-empty"><strong>Keep typing.</strong><span>Use at least two characters.</span></section> : !result ? <section className="fd-dash-card fd-find-empty"><strong>FateFind is temporarily unavailable.</strong><span>No local fallback ranking is invented. The website waits for the same shared Cloud result used by the app.</span></section> : !best ? <section className="fd-dash-card fd-find-empty"><strong>No live buying opportunity right now.</strong><span>Create a FateMatch and let your companion watch for the product instead.</span><Link href={`/dashboard/watchlist?q=${encodeURIComponent(q)}`}>LET ME KNOW WHEN THIS IS IN STOCK →</Link></section> : <>
-        <section className="fd-find-result-head"><div><span>FATEFIND RESULT</span><h2>Best value now</h2></div><small>{result.rankedOffers.length} live option{result.rankedOffers.length === 1 ? "" : "s"} compared · one shared Cloud ranking</small></section>
-        <Opportunity offer={best} best/>
-        {result.comparisonStatus === "ranked_without_rrp" ? <p className="fd-find-warning">A verified RRP/reference is unavailable for the leading result, so FateDrop is not presenting it as an RRP-value winner.</p> : null}
-        {rest.length ? <><section className="fd-find-result-head"><div><span>OTHER LIVE OPTIONS</span><h2>Ranked alternatives</h2></div></section>{rest.map((offer) => <Opportunity key={offer.offerId || `${offer.productId}:${offer.rank}`} offer={offer}/>)}</> : null}
-      </>}
+      <section className="fd-dash-card fd-tp-results">
+        <div className="fd-tp-results-head"><div><span>{q ? `FATEFIND · ${q.toUpperCase()}` : "COMPARE OFFERS"}</span><h2>{q ? "Which live option is the strongest value?" : "Search once. Let FateFind compare the network."}</h2></div><small>{result ? `${result.count} product group${result.count === 1 ? "" : "s"}` : q.length >= 2 ? "Cloud response unavailable" : "Enter a product above"}</small></div>
+        {!q ? <div className="fd-dashboard-empty"><strong>Type a product above.</strong><span>FateDrop compares qualifying observed retailer offers, RRP/reference position and known checkout cost without inventing missing evidence.</span></div> : q.length < 2 ? <div className="fd-dashboard-empty"><strong>Keep typing.</strong><span>Use at least two characters so FateDrop can resolve a meaningful product search.</span></div> : !result ? <div className="fd-dashboard-empty"><strong>The Signal Engine could not be reached.</strong><span>No sample prices or pretend retailers are substituted.</span></div> : groups.length ? <>
+          <ValueCompare groups={groups} />
+          <div className="fd-tp-groups">{groups.map((group) => <article className="fd-tp-group" key={group.id}>
+            <header><div><small>{group.category} · {group.retailerCount} RETAILER{group.retailerCount === 1 ? "" : "S"}</small><h2>{group.title}</h2><p>{typeof group.rrpGbp === "number" ? `${rrpHeading(group)} ${gbp(group.rrpGbp)} · ${sourceLabel(group)}${group.rrpObservedAt ? ` · observed ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(group.rrpObservedAt))}` : ""}` : "Verified RRP/reference unavailable for this product identity"}</p></div><span>{Math.round(group.matchingConfidence * 100)}% identity confidence</span></header>
+            <div className="fd-tp-offers">{[...group.offers].sort((a, b) => {
+              if (a.deliveryKnown !== b.deliveryKnown) return a.deliveryKnown ? -1 : 1;
+              return (a.totalDeliveredGbp ?? a.priceGbp ?? Infinity) - (b.totalDeliveredGbp ?? b.priceGbp ?? Infinity);
+            }).map((offer) => {
+              const delta = rrpDelta(offer.priceGbp, group.rrpGbp);
+              return <div className={offer.isLowestKnownDelivered ? "fd-tp-offer best" : "fd-tp-offer"} key={offer.id}>
+                <div className="fd-tp-store"><small>{offer.isLowestKnownDelivered ? "LOWEST KNOWN TRUE PRICE" : offer.stockStatus.replaceAll("_", " ")}</small><strong>{offer.retailerName}</strong><span>{offer.lastCheckedAt ? `Checked ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(offer.lastCheckedAt))}` : "Observed network offer"}</span></div>
+                <div className="fd-tp-cost"><span><small>ITEM</small><b>{gbp(offer.priceGbp)}</b></span><span><small>DELIVERY</small><b>{offer.deliveryKnown ? offer.shippingGbp === 0 ? "FREE" : gbp(offer.shippingGbp) : "UNKNOWN"}</b></span><span className="true"><small>TRUE PRICE</small><b>{offer.deliveryKnown ? gbp(offer.totalDeliveredGbp) : "—"}</b></span><span><small>VS RRP / REF</small><b>{delta ?? "RRP UNKNOWN"}</b><em>{delta ? "ITEM PRICE VS VALUE BASELINE" : ""}</em></span></div>
+                <a href={offer.productUrl} target="_blank" rel="noreferrer">BUY AT RETAILER ↗</a>
+              </div>;
+            })}</div>
+            <footer><Link href={`/dashboard/watchlist?q=${encodeURIComponent(group.title)}`}>FATEMATCH · WATCH MY CONDITIONS →</Link><Link href={`/dashboard/search?q=${encodeURIComponent(group.title)}`}>OPEN NETWORK SEARCH →</Link></footer>
+          </article>)}</div>
+        </> : <div className="fd-dashboard-empty"><strong>No comparable live offers found.</strong><span>FateDrop will not invent a comparison when the network has no qualifying observed offers.</span><Link className="fd-dashboard-wide-button" href={`/dashboard/watchlist?q=${encodeURIComponent(q)}`}>Create a FateMatch stock watch →</Link></div>}
+        {result?.disclaimer ? <p className="fd-tp-disclaimer">{result.disclaimer}</p> : null}
+      </section>
+
+      <section className="fd-dash-card fd-tp-trust"><div><span>HOW FATEFIND DECIDES</span><h2>RRP value first. Checkout cost stays transparent.</h2></div><p>FateFind compares item price with the verified RRP/reference to judge value, while True Price separately tells you the real checkout cost when mandatory delivery is known. FateDrop does not call unknown delivery “free”, guess an RRP, or force a value verdict when product identity is uncertain.</p></section>
     </div>
     <style>{`
-      .fd-find-page{display:grid;gap:14px;max-width:1500px;margin:0 auto}.fd-find-hero{padding:30px;background:radial-gradient(circle at 85% 0%,rgba(128,89,151,.1),transparent 35%),linear-gradient(145deg,#101318,#090c10 72%)}.fd-find-hero>span,.fd-find-result-head span{color:#b19378;font-size:8px;font-weight:900;letter-spacing:.16em}.fd-find-hero h1{max-width:900px;margin:9px 0 12px;color:#eee4da;font-family:Georgia,serif;font-size:clamp(2rem,4vw,4rem);font-weight:500;line-height:1}.fd-find-hero p{max-width:900px;color:#9a918d;font-size:12px;line-height:1.65}.fd-find-hero form{display:flex;gap:9px;margin-top:20px;max-width:820px}.fd-find-hero input{flex:1;height:50px;padding:0 15px;border:1px solid rgba(221,203,188,.11);border-radius:12px;background:#0b0f13;color:#eee4da}.fd-find-hero button{padding:0 20px;border:1px solid rgba(172,129,193,.26);border-radius:12px;background:rgba(112,72,140,.15);color:#eee4da;font-size:9px;font-weight:900}.fd-find-empty{padding:26px;display:grid;gap:7px}.fd-find-empty strong{color:#ded4cb;font-size:18px}.fd-find-empty span{color:#81797a;font-size:11px}.fd-find-empty a{width:max-content;margin-top:7px;color:#c4a2d0;font-size:9px;font-weight:900;text-decoration:none}.fd-find-result-head{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-top:9px;padding:0 4px}.fd-find-result-head h2{margin:4px 0 0;color:#ded4cb;font-family:Georgia,serif;font-size:24px;font-weight:500}.fd-find-result-head small{color:#766f70;font-size:8px}.fd-find-offer{padding:20px;border:1px solid rgba(221,203,188,.075);border-radius:14px;background:#0b0f13}.fd-find-offer.best{border-color:rgba(126,161,111,.25);background:linear-gradient(145deg,rgba(91,129,79,.065),#0b0f13 42%)}.fd-find-offer header{display:flex;justify-content:space-between;gap:20px}.fd-find-offer header small{color:#91b181;font-size:7px;font-weight:900;letter-spacing:.13em}.fd-find-offer h2{margin:5px 0 3px;color:#e4dad2;font-size:18px}.fd-find-offer header span{color:#80787a;font-size:9px;text-transform:capitalize}.fd-find-offer header>b{align-self:flex-start;padding:7px 10px;border:1px solid rgba(126,161,111,.22);border-radius:999px;color:#9bb989;background:rgba(92,130,77,.06);font-size:8px}.fd-find-offer header>b.unknown{border-color:rgba(170,135,96,.18);color:#ad9276}.fd-find-price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}.fd-find-price-grid>div{padding:11px;border:1px solid rgba(221,203,188,.06);border-radius:10px;background:rgba(255,255,255,.012)}.fd-find-price-grid small{display:block;color:#716a6c;font-size:7px;font-weight:900;letter-spacing:.09em}.fd-find-price-grid strong{display:block;margin-top:4px;color:#ddd3cc;font-size:14px}.fd-find-offer>p{margin:11px 0 0;color:#81797b;font-size:9px}.fd-find-offer footer{display:flex;gap:9px;margin-top:14px}.fd-find-offer footer a{min-height:39px;padding:0 14px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(172,129,193,.18);border-radius:9px;color:#d6c5d8;font-size:8px;font-weight:900;text-decoration:none}.fd-find-offer footer a:first-child{background:rgba(112,72,140,.12)}.fd-find-offer footer span{color:#71696b;font-size:8px}.fd-find-warning{margin:0 4px;color:#a38d77;font-size:9px}@media(max-width:700px){.fd-find-hero form,.fd-find-offer footer{flex-direction:column}.fd-find-hero button{height:46px}.fd-find-price-grid{grid-template-columns:1fr 1fr}.fd-find-offer header{flex-direction:column}.fd-find-result-head{align-items:flex-start;flex-direction:column}}@media(max-width:440px){.fd-find-price-grid{grid-template-columns:1fr}}
+      .fd-true-price-page{display:grid;gap:12px;max-width:1600px;margin:0 auto}.fd-true-price-page .fd-dash-card{border-color:rgba(221,203,188,.085);background:linear-gradient(145deg,#0e1216,#090d11 74%);border-radius:12px}.fd-true-price-hero{padding:28px;background:radial-gradient(circle at 90% 8%,rgba(126,80,146,.15),transparent 28%),linear-gradient(145deg,#101318,#090c10 70%)!important}.fd-tp-intro>span,.fd-tp-results-head span,.fd-tp-trust span{color:#aa886d;font-size:7px;font-weight:900;letter-spacing:.16em}.fd-tp-intro h1{max-width:900px;margin:9px 0 13px;color:#eee4da;font-family:Georgia,'Times New Roman',serif;font-size:clamp(2.4rem,4vw,4.8rem);font-weight:500;line-height:.94;letter-spacing:-.05em}.fd-tp-intro p{max-width:850px;margin:0;color:#918885;font-size:12px;line-height:1.72}.fd-tp-intro p b{color:#d8c9bd}.fd-tp-simple{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:center;margin-top:22px}.fd-tp-simple>div{min-height:92px;padding:14px;border:1px solid rgba(221,203,188,.07);border-radius:10px;background:rgba(255,255,255,.018);display:grid;grid-template-columns:25px 1fr;gap:4px 8px;align-content:center}.fd-tp-simple>div.answer{border-color:rgba(132,164,117,.18);background:rgba(111,145,95,.045)}.fd-tp-simple b{grid-row:1/3;width:25px;height:25px;display:grid;place-items:center;border:1px solid rgba(172,129,193,.2);border-radius:7px;color:#b88dcc;font-size:8px}.fd-tp-simple strong{font-size:8px;letter-spacing:.08em;color:#cfc4bc}.fd-tp-simple span{font-size:7px;color:#71696a;line-height:1.4}.fd-tp-simple>i{font-style:normal;color:#675a63}.fd-tp-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-top:18px}.fd-tp-search .fd-dashboard-search{height:48px;margin:0}.fd-tp-search button{height:48px;padding:0 18px;border:1px solid rgba(172,129,193,.22);border-radius:10px;background:linear-gradient(135deg,rgba(112,72,140,.14),rgba(136,105,84,.08));color:#e4d8cf;font-size:8px;font-weight:900;letter-spacing:.08em}.fd-tp-kid-copy{max-width:1000px;margin:12px 0 0;color:#766f6e;font-size:8px;line-height:1.55}.fd-tp-results{padding:22px}.fd-tp-results-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.fd-tp-results-head h2{margin:5px 0 0;color:#ded4cb;font-family:Georgia,serif;font-size:24px;font-weight:500}.fd-tp-results-head small{color:#746d6c;font-size:8px}.fd-tp-groups{display:grid;gap:12px;margin-top:18px}.fd-tp-group{overflow:hidden;border:1px solid rgba(221,203,188,.08);border-radius:11px;background:#0b0f13}.fd-tp-group>header{display:flex;justify-content:space-between;gap:20px;padding:17px 18px;border-bottom:1px solid rgba(221,203,188,.06)}.fd-tp-group>header small{color:#a6846c;font-size:7px;font-weight:900;letter-spacing:.1em}.fd-tp-group h2{margin:5px 0 0;font-size:17px;color:#ddd3cb}.fd-tp-group>header p{margin:6px 0 0;color:#7a7272;font-size:8px}.fd-tp-group>header>span{color:#746d70;font-size:8px}.fd-tp-offers{display:grid;gap:1px;background:#17171a}.fd-tp-offer{display:grid;grid-template-columns:minmax(180px,1fr) minmax(390px,1.15fr) auto;gap:16px;align-items:center;padding:15px 18px;background:#0b0f13}.fd-tp-offer.best{background:linear-gradient(90deg,rgba(119,151,102,.06),#0b0f13 44%)}.fd-tp-store small{display:block;color:#8b817d;font-size:6px;font-weight:900;letter-spacing:.1em}.fd-tp-offer.best .fd-tp-store small{color:#86a678}.fd-tp-store strong{display:block;margin:4px 0;font-size:12px}.fd-tp-store span{color:#6d6666;font-size:7px}.fd-tp-cost{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.fd-tp-cost span{padding:8px;border:1px solid rgba(221,203,188,.055);border-radius:8px;background:rgba(0,0,0,.14)}.fd-tp-cost span.true{border-color:rgba(132,164,117,.16)}.fd-tp-cost small{display:block;color:#655e5f;font-size:6px;font-weight:900;letter-spacing:.08em}.fd-tp-cost b{font-size:9px}.fd-tp-cost em{display:block;margin-top:3px;color:#6d6666;font-size:5px;font-style:normal;font-weight:800;letter-spacing:.05em}.fd-tp-cost .true b{color:#9cb68f}.fd-tp-offer>a{padding:9px 11px;border:1px solid rgba(172,129,193,.18);border-radius:8px;color:#c9a8d7;font-size:7px;font-weight:900;text-decoration:none}.fd-tp-group>footer{display:flex;gap:12px;padding:11px 18px;border-top:1px solid rgba(221,203,188,.06)}.fd-tp-group>footer a{color:#b78ac7;font-size:8px;font-weight:900;text-decoration:none}.fd-tp-disclaimer{margin:14px 0 0;color:#716a6a;font-size:8px}.fd-tp-trust{padding:22px 24px;display:grid;grid-template-columns:.8fr 1.2fr;gap:30px;align-items:center}.fd-tp-trust h2{margin:6px 0 0;color:#ddd2c8;font-family:Georgia,serif;font-size:22px;font-weight:500}.fd-tp-trust p{margin:0;color:#857d7b;font-size:10px;line-height:1.65}@media(max-width:1050px){.fd-tp-offer{grid-template-columns:1fr}.fd-tp-cost{grid-template-columns:repeat(2,1fr)}}@media(max-width:850px){.fd-tp-simple,.fd-tp-trust{grid-template-columns:1fr}.fd-tp-simple>i{display:none}.fd-tp-group>header{flex-direction:column}}@media(max-width:650px){.fd-tp-search,.fd-tp-cost{grid-template-columns:1fr}.fd-true-price-hero,.fd-tp-results{padding:18px}}
     `}</style>
   </DashboardPageShell>;
 }
