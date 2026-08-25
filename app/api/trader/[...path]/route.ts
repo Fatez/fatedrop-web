@@ -47,7 +47,7 @@ async function proxy(request: Request, context: RouteContext) {
   let body: string | undefined;
   if (request.method !== "GET") {
     body = await request.text();
-    if (Buffer.byteLength(body, "utf8") > MAX_BODY_BYTES) {
+    if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
       return json(413, { ok: false, error: { code: "REQUEST_TOO_LARGE", message: "Request body is too large." } });
     }
     if (body) headers.set("Content-Type", request.headers.get("content-type") || "application/json");
