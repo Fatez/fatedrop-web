@@ -51,6 +51,7 @@ export type FateMatchHitView = {
   officialRrpPence: number | null;
   stockState: string | null;
   reasons: string[];
+  companionId: FateFindCompanionId;
   occurredAt: number;
   offerObservedAt: number | null;
 };
@@ -85,6 +86,7 @@ function mapFateMatchHit(row: Record<string, unknown>): FateMatchHitView {
     officialRrpPence,
     stockState: nullableString(row.stock_state),
     reasons: stringArray(row.reasons_json),
+    companionId: objectValue(row.notification_preferences_json).companionId,
     occurredAt: Number(row.occurred_at),
     offerObservedAt: nullableNumber(row.observed_at),
   };
@@ -139,6 +141,7 @@ export async function getLatestUserFateMatchHit(userId: string, matchId: string)
       h.reasons_json,
       h.occurred_at,
       m.query_text,
+      m.notification_preferences_json,
       o.title AS offer_title,
       o.url AS offer_url,
       o.retailer_id,
