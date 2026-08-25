@@ -108,10 +108,10 @@ export async function GET(request: Request) {
       listCanonicalAlertPresentations({ id: requestedId, limit: retrievalLimit }),
     ]);
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
-    const alertsWithContext = attachDiscordDelivery(canonicalAlerts, deliveries, presentations)
+    const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries, presentations)
       .filter((alert) => notificationPreferencesAllowAlert(alert, preferences))
       .slice(0, limit);
-    const alerts = premium ? alertsWithContext : alertsWithContext.map(freeAlert);
+    const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);
 
     return Response.json({
       success: true,
