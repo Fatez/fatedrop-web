@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyBetaAlertTitle, isBetaAlertRelevant } from "../lib/beta-alert-relevance.ts";
+import * as relevanceModule from "../lib/beta-alert-relevance.ts";
+
+const relevance = relevanceModule.default ?? relevanceModule;
+const { classifyBetaAlertTitle, isBetaAlertRelevant } = relevance;
 
 test("filters known accessory, merchandise and single-card noise", () => {
   assert.equal(classifyBetaAlertTitle("Pokemon TCG: Mini Portfolio - Q1 2026"), "ACCESSORY");
