@@ -8,6 +8,7 @@ import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { StartMembershipButton } from "@/components/membership-actions";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { listCanonicalAlerts, type CanonicalAlert, type CanonicalSignalStage } from "@/lib/canonical-alerts";
+import { listCanonicalAlertPresentations, referenceLabel, type CanonicalAlertPresentation } from "@/lib/canonical-alert-presentation";
 import { getCanonicalSignalTrend } from "@/lib/canonical-alert-trends";
 import { activityLabel, buildDashboardData, moneyFromPence, relativeTime, signalCauseLabel } from "@/lib/dashboard";
 import type { NetworkSignal, SignalKind } from "@/lib/dashboard-storage";
@@ -26,7 +27,7 @@ type FilterStage = typeof lifecycle[number];
 
 const alertStageMeta = [
   { state: "whisper", stage: "WHISPER", companion: "ORU", description: "Catalogue and product movement before verified purchasable stock." },
-  { state: "echo", stage: "ECHO", companion: "FENN", description: "Queue, traffic, security and access-readiness activity." },
+  { state: "echo", stage: "ECHO", companion: "FENN", description: "Retailer preparation, queue, traffic, security and access-readiness activity." },
   { state: "manifested", stage: "MANIFESTED", companion: "KORU", description: "Verified purchasable availability observed by the FateDrop network." },
   { state: "vanished", stage: "VANISHED", companion: "NYXEN", description: "Previously verified availability that is no longer purchasable." },
 ] as const;
@@ -66,14 +67,17 @@ function observedDurationLabel(seconds: number | null) {
   return hourRemainder ? `${days}d ${hourRemainder}h` : `${days}d`;
 }
 
-function priceContext(alert: CanonicalAlert) {
+function priceContext(alert: CanonicalAlert, presentation?: CanonicalAlertPresentation | null) {
   const item = moneyFromPence(alert.product.pricePence);
   const delivered = moneyFromPence(alert.product.deliveredPricePence);
-  const rrp = moneyFromPence(alert.priceIntelligence.rrpPence);
+  const reference = moneyFromPence(alert.priceIntelligence.rrpPence);
   const delta = alert.priceIntelligence.rrpDeltaPercent;
   const pieces = [item ? `${item} item` : null];
   if (delivered && alert.product.deliveredPricePence !== alert.product.pricePence) pieces.push(`${delivered} True Price`);
-  if (rrp) pieces.push(delta == null ? `RRP ${rrp}` : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}% vs RRP · ${rrp}`);
+  if (reference) {
+    const label = referenceLabel(presentation);
+    pieces.push(delta == null ? `${label} ${reference}` : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}% vs ${label} · ${reference}`);
+  }
   return pieces.filter(Boolean).join(" · ");
 }
 
@@ -120,14 +124,17 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   const q = (params.q ?? "").trim().slice(0, 120);
 
   let alerts: CanonicalAlert[] = [];
+  let alertPresentations = new Map<string, CanonicalAlertPresentation>();
   let fateMatchWatches: Awaited<ReturnType<typeof listUserFateMatches>> = [];
   let alertTrend: Awaited<ReturnType<typeof getCanonicalSignalTrend>> | null = null;
   try {
-    const [rawAlerts, preferences] = await Promise.all([
+    const [rawAlerts, preferences, presentations] = await Promise.all([
       listCanonicalAlerts({ limit: 100 }),
       getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES),
+      listCanonicalAlertPresentations({ limit: 100 }).catch(() => new Map<string, CanonicalAlertPresentation>()),
     ]);
     alerts = rawAlerts.filter((alert) => notificationPreferencesAllowAlert(alert, preferences));
+    alertPresentations = presentations;
   } catch { alerts = []; }
   try { fateMatchWatches = await listUserFateMatches(snapshot.account.id); } catch { fateMatchWatches = []; }
   try { alertTrend = await getCanonicalSignalTrend(7); } catch { alertTrend = null; }
@@ -153,7 +160,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   return <DashboardPageShell title="Alerts" eyebrow="NETWORK FLIGHT RECORDER">
     <div className="fd-ledger-page">
       <section className="fd-ledger-hero fd-dash-card">
-        <div className="fd-ledger-intro"><span>PRECISE SIGNAL ACTIVITY</span><h1>Every alarm should tell you exactly what happened.</h1><p><b>Lifecycle</b> tells you where the opportunity is: Whisper, Echo, Manifested or Vanished. <b>Cause</b> tells you why that record exists: catalogue change, queue, security, restock, sold out and so on. They are recorded separately so the dashboard never turns every bit of activity into the same alarm.</p></div>
+        <div className="fd-ledger-intro"><span>PRECISE SIGNAL ACTIVITY</span><h1>Every alarm should tell you exactly what happened.</h1><p><b>Lifecycle</b> tells you where the opportunity is: Whisper, Echo, Manifested or Vanished. <b>Cause</b> tells you why that record exists: catalogue change, queue, security, preparation, restock, sold out and so on. They are recorded separately so the dashboard never turns every bit of activity into the same alarm.</p></div>
         <div className="fd-ledger-stages">{lifecycle.map((key) => <Link className={stage === key ? `active ${key.toLowerCase()}` : key.toLowerCase()} key={key} href={filterHref({ stage: stage === key ? undefined : key, cause: cause ?? undefined, q: q || undefined })}><span>{key}</span><strong>{stageCounts[key]}</strong><small>{key === "WHISPER" ? "something changed" : key === "ECHO" ? "get ready" : key === "MANIFESTED" ? "confirmed live" : "confirmed gone"}</small></Link>)}</div>
       </section>
 
@@ -170,7 +177,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         </div>
       </section> : null}
 
-      {!premium ? <section className="fd-ledger-gate"><div><span>PREMIUM DETAIL</span><h2>Free can see movement. Premium gets the buying intelligence.</h2><p>Retailer identity, exact price/RRP context, prepared links, signal threads and active FateMatch monitoring remain the deeper buying-intelligence layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
+      {!premium ? <section className="fd-ledger-gate"><div><span>PREMIUM DETAIL</span><h2>Free can see movement. Premium gets the buying intelligence.</h2><p>Retailer identity, exact price/reference context, prepared links, signal threads and active FateMatch monitoring remain the deeper buying-intelligence layer.</p></div>{hasOpenSubscription ? <Link className="button button-primary" href="/dashboard/membership">Manage membership →</Link> : <StartMembershipButton tier="plus" label={trialEligible ? "Start free trial" : snapshot.membership.stripeCustomerId ? "Restart Plus" : "Choose Plus"}/>}</section> : null}
 
       <section className="fd-ledger-filter fd-dash-card">
         <form action="/dashboard/alerts" method="get">
@@ -188,12 +195,13 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         {filtered.length ? <div className="fd-ledger-list">{filtered.map((alert) => {
           const exactCause = causeFor(alert, exactSignals);
           const stageClass = alert.fateStage.toLowerCase();
-          const context = priceContext(alert);
+          const presentation = alertPresentations.get(alert.id) ?? null;
+          const context = priceContext(alert, presentation);
           return <article className={`fd-ledger-row ${stageClass}`} key={alert.id}>
             <div className="fd-ledger-state"><i/><b>{alert.fateStage}</b><em>{exactCause.label}</em><small>{relativeTime(alertTime(alert), data.generatedAt)}</small></div>
-            <div className="fd-ledger-product"><small>{premium ? alert.retailer : "Connected retailer"}</small><strong>{premium ? alert.title : "Premium signal detail"}</strong><p>{premium ? alert.message : alert.fateStage === "WHISPER" ? "Product or catalogue movement detected." : alert.fateStage === "ECHO" ? "Access, queue or security readiness changed." : alert.fateStage === "MANIFESTED" ? "Confirmed purchasable availability is live." : "Previously confirmed availability is gone."}</p>{alert.fateStage === "VANISHED" && observedDurationLabel(alert.observedDurationSeconds) ? <em className="observed">OBSERVED LIVE · {observedDurationLabel(alert.observedDurationSeconds)}</em> : null}{premium && context ? <em>{context}</em> : null}<em className="verdict">{verdict(alert)}</em></div>
+            <div className="fd-ledger-product"><small>{premium ? alert.retailer : "Connected retailer"}</small><strong>{premium ? alert.title : "Premium signal detail"}</strong><p>{premium ? alert.message : alert.fateStage === "WHISPER" ? "Product or catalogue movement detected." : alert.fateStage === "ECHO" ? "Retailer preparation or readiness changed." : alert.fateStage === "MANIFESTED" ? "Confirmed purchasable availability is live." : "Previously confirmed availability is gone."}</p>{alert.fateStage === "VANISHED" && observedDurationLabel(alert.observedDurationSeconds) ? <em className="observed">OBSERVED LIVE · {observedDurationLabel(alert.observedDurationSeconds)}</em> : null}{premium && context ? <em>{context}</em> : null}<em className="verdict">{verdict(alert)}</em></div>
             <div className="fd-ledger-actions">{premium ? <a className="primary" href={alert.productUrl} target="_blank" rel="noreferrer">{primaryActionLabel(alert.fateStage)}</a> : <Link className="primary" href="/dashboard/membership">UNLOCK →</Link>}<Link href={`/dashboard/fatefind?q=${encodeURIComponent(alert.preparedLinks.compareQuery)}`}>FATEFIND</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(alert.preparedLinks.fateFindQuery)}`}>FATEMATCH</Link></div>
-            {premium ? <CanonicalAlertSignalPack alert={alert} now={data.generatedAt}/> : null}
+            {premium ? <CanonicalAlertSignalPack alert={alert} now={data.generatedAt} presentation={presentation}/> : null}
           </article>;
         })}</div> : <div className="fd-dashboard-empty"><strong>No signals match this view.</strong><span>Clear a filter or wait for new evidence. FateDrop does not create filler activity.</span></div>}
       </section>
