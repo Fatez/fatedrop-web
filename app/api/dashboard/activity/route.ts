@@ -4,7 +4,17 @@ import { recordDashboardActivity, type DashboardActivityEvent, type DashboardAct
 
 export const runtime = "nodejs";
 
-const activityTypes = new Set<DashboardActivityType>(["signal_seen", "wishlist_hit", "store_tracked", "market_saving"]);
+const activityTypes = new Set<DashboardActivityType>([
+  "signal_seen",
+  "wishlist_hit",
+  "store_tracked",
+  "market_saving",
+  "search_appearance",
+  "fatefind_appearance",
+  "fatefind_best_value",
+  "storefront_view",
+  "fatematch_handoff",
+]);
 const signalStates = new Set<SignalLifecycle>(["whisper", "manifested", "vanished", "echo"]);
 
 function text(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) || null : null; }
