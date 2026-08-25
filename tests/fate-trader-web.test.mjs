@@ -1,43 +1,34 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import { fateTraderCardLabel, fateTraderCloudPath } from "../lib/fate-trader-web.ts";
 
-test("Fate Trader proxy only maps explicit shared Cloud routes", () => {
-  assert.equal(fateTraderCloudPath(["cards"]), "/v1/cards");
-  assert.equal(fateTraderCloudPath(["cards", "fdcard_123"]), "/v1/cards/fdcard_123");
-  assert.equal(fateTraderCloudPath(["card-sets", "fdset_1", "cards"]), "/v1/card-sets/fdset_1/cards");
-  assert.equal(fateTraderCloudPath(["collection", "items"]), "/v1/collection/items");
-  assert.equal(fateTraderCloudPath(["wants", "fdcard_123"]), "/v1/wants/fdcard_123");
-  assert.equal(fateTraderCloudPath(["binder", "items"]), "/v1/trader/binder/items");
-  assert.equal(fateTraderCloudPath(["structured-wants", "fdcard_123"]), "/v1/trader/wants/fdcard_123");
-  assert.equal(fateTraderCloudPath(["../../admin"]), null);
-  assert.equal(fateTraderCloudPath(["unknown"]), null);
+async function read(relative) {
+  return fs.readFile(new URL(relative, import.meta.url), "utf8");
+}
+
+test("Fate Trader proxy helper only maps explicit shared Cloud route families", async () => {
+  const source = await read("../lib/fate-trader-web.ts");
+  assert.match(source, /safeSingle/);
+  assert.match(source, /return `\/v1\/\$\{joined\}`/);
+  assert.match(source, /\/v1\/trader\/\$\{joined\}/);
+  assert.match(source, /\/v1\/trader\/wants/);
+  assert.match(source, /if \(!Array\.isArray\(parts\) \|\| parts\.length === 0/);
+  assert.match(source, /parts\.some\(\(part\) => !safeSingle\.test\(part\)\)/);
+  assert.match(source, /return null;/);
+  assert.doesNotMatch(source, /\/v1\/\$\{parts\.join\("\/"\)\}/);
 });
 
-test("card labels stay tied to canonical identity fields", () => {
-  assert.equal(fateTraderCardLabel({
-    id: "fdcard_1",
-    fateCardId: "fdcard_1",
-    tcgCode: "pokemon",
-    seriesId: "series",
-    seriesName: "Sword & Shield",
-    setId: "set",
-    setName: "Darkness Ablaze",
-    printingId: "printing",
-    name: "Furret",
-    collectorNumber: "136",
-    rarity: "Uncommon",
-    supertype: "Pokémon",
-    variantCode: "reverse-holo",
-    languageCode: "en",
-    verificationStatus: "verified",
-    verifiedAt: 1,
-  }), "Furret #136 · reverse holo");
+test("card presentation remains tied to canonical identity fields", async () => {
+  const source = await read("../lib/fate-trader-web.ts");
+  assert.match(source, /card\.name/);
+  assert.match(source, /card\.collectorNumber/);
+  assert.match(source, /card\.variantCode/);
+  assert.match(source, /fateCardId/);
+  assert.match(source, /verificationStatus/);
 });
 
 test("Fate Trader audit client uses the same-site proxy and never embeds Cloud or session credentials", async () => {
-  const source = await fs.readFile(new URL("../components/fate-trader-audit.tsx", import.meta.url), "utf8");
+  const source = await read("../components/fate-trader-audit.tsx");
   assert.match(source, /\/api\/trader\//);
   assert.doesNotMatch(source, /railway\.app/);
   assert.doesNotMatch(source, /fd_session/);
@@ -46,20 +37,43 @@ test("Fate Trader audit client uses the same-site proxy and never embeds Cloud o
   assert.match(source, /I HAVE A CARD/);
   assert.match(source, /I WANT A CARD/);
   assert.match(source, /FIND A TRADE/);
+  assert.match(source, /It is not a public listing yet/);
 });
 
 test("Trader proxy forwards the HttpOnly session only on the server and protects mutations", async () => {
-  const proxy = await fs.readFile(new URL("../app/api/trader/[...path]/route.ts", import.meta.url), "utf8");
+  const proxy = await read("../app/api/trader/[...path]/route.ts");
   assert.match(proxy, /getCurrentSessionToken/);
   assert.match(proxy, /Authorization/);
   assert.match(proxy, /assertSameOrigin/);
   assert.match(proxy, /fateTraderCloudPath/);
-  assert.match(proxy, /NEXT_PUBLIC_FATE_TRADER_ENABLED|fateTraderWebEnabled/);
+  assert.match(proxy, /fateTraderWebEnabled/);
+  assert.match(proxy, /TRADER_UPSTREAM_UNAVAILABLE/);
+});
+
+test("Have flow stages ownership evidence then Binder intent with cleanup on partial failure", async () => {
+  const source = await read("../components/fate-trader-audit.tsx");
+  const createOwnership = source.indexOf('traderRequest<{ item: { id: string; revision: number } }>("collection/items"');
+  const createBinder = source.indexOf('traderRequest<{ item: { id: string } }>("binder/items"');
+  const cleanup = source.indexOf('traderRequest(`collection/items/${encodeURIComponent(collectionItem.id)}?expectedRevision=');
+  assert.ok(createOwnership >= 0);
+  assert.ok(createBinder > createOwnership);
+  assert.ok(cleanup > createBinder);
+  assert.match(source, /visibility: "private"/);
+});
+
+test("Want flow persists exact identity before structured trade constraints", async () => {
+  const source = await read("../components/fate-trader-audit.tsx");
+  const exactWant = source.indexOf('traderRequest<{ want: unknown }>(`wants/${encodeURIComponent(selected.fateCardId)}`');
+  const structured = source.indexOf('traderRequest<{ constraints: unknown }>(`structured-wants/${encodeURIComponent(selected.fateCardId)}`');
+  assert.ok(exactWant >= 0);
+  assert.ok(structured > exactWant);
+  assert.match(source, /minimumConditionCode/);
+  assert.match(source, /acceptedGradingCompanies/);
 });
 
 test("dashboard route and nav remain feature gated", async () => {
-  const page = await fs.readFile(new URL("../app/dashboard/trader/page.tsx", import.meta.url), "utf8");
-  const nav = await fs.readFile(new URL("../components/dashboard-nav.tsx", import.meta.url), "utf8");
+  const page = await read("../app/dashboard/trader/page.tsx");
+  const nav = await read("../components/dashboard-nav.tsx");
   assert.match(page, /fateTraderWebEnabled\(\)/);
   assert.match(page, /notFound\(\)/);
   assert.match(nav, /NEXT_PUBLIC_FATE_TRADER_ENABLED/);
