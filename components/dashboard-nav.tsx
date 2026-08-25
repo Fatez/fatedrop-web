@@ -15,6 +15,7 @@ const primary = [
 ] as const;
 
 const secondary = [
+  ["▥", "Indie Dashboard", "/dashboard/indie", "Verified retailers can see privacy-safe FateDrop traffic, FateFind visibility and collector demand."],
   ["⌖", "Local Radar", "/dashboard/local-radar", "Discover useful physical TCG locations around you."],
   ["#", "Discord", "/dashboard/discord", "Connect your FateDrop account to Discord delivery and community features."],
   ["◇", "Koru & Friends", "/dashboard/avatar", "Choose the companion that represents your FateDrop experience and FateMatch watches."],
