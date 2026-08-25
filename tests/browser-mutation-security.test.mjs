@@ -23,6 +23,10 @@ const serverToServer = new Set([
   "app/api/dashboard/network-snapshot/route.ts",
 ]);
 
+const readOnlyPost = new Set([
+  "app/api/fatefind/verdict/route.ts",
+]);
+
 test("every browser-facing API mutation is same-origin guarded", () => {
   const failures = [];
   const audited = [];
@@ -39,6 +43,14 @@ test("every browser-facing API mutation is same-origin guarded", () => {
 
     if (serverToServer.has(rel)) {
       audited.push(`${rel} [server-to-server]`);
+      continue;
+    }
+
+    // Fate Verdict is a read-only market-intelligence query expressed as POST
+    // because the comparison payload is structured. It never mutates user/session
+    // state and is intentionally callable by the native App.
+    if (readOnlyPost.has(rel)) {
+      audited.push(`${rel} [read-only-post]`);
       continue;
     }
 
@@ -60,4 +72,14 @@ test("explicit server-to-server mutation exemptions retain their stronger authen
   assert.ok(metrics.includes("timingSafeEqual"));
   assert.ok(metrics.includes("FATEDROP_METRICS_INGEST_SECRET"));
   assert.ok(metrics.includes('authorization.startsWith("Bearer ")'));
+});
+
+test("Fate Verdict read-only exception stays non-mutating and native-readable", () => {
+  const verdict = fs.readFileSync(path.join(root, "app/api/fatefind/verdict/route.ts"), "utf8");
+  assert.ok(verdict.includes("requestFateVerdict"));
+  assert.ok(verdict.includes('"Access-Control-Allow-Origin": "*"'));
+  assert.ok(verdict.includes("export async function OPTIONS"));
+  assert.ok(!verdict.includes("updateAccount"));
+  assert.ok(!verdict.includes("startSession"));
+  assert.ok(!verdict.includes("deleteSession"));
 });
