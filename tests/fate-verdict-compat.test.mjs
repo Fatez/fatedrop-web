@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { compareCompatGroups, rankCompatGroups } from '../lib/fate-verdict-compat.ts';
+const imported = await import('../lib/fate-verdict-compat.ts');
+const compat = imported.default && typeof imported.default === 'object' ? imported.default : imported;
+const { compareCompatGroups, rankCompatGroups } = compat;
 
 function group({ id, title, price, rrp = 100, shipping = 5, deliveryKnown = true, family = 'same-family' }) {
   return {
@@ -36,6 +38,7 @@ function group({ id, title, price, rrp = 100, shipping = 5, deliveryKnown = true
 }
 
 test('Fate Verdict v2 ranks by item-price percentage versus verified RRP before True Price', () => {
+  assert.equal(typeof compareCompatGroups, 'function');
   const left = group({ id: 'left', title: 'Left', price: 90, rrp: 100, shipping: 50 });
   const right = group({ id: 'right', title: 'Right', price: 95, rrp: 100, shipping: 0 });
   const result = compareCompatGroups(left, right);
@@ -60,6 +63,7 @@ test('mixed value families fail closed rather than declaring a cross-product win
 });
 
 test('search ranking uses the same RRP-first rule', () => {
+  assert.equal(typeof rankCompatGroups, 'function');
   const groups = [
     group({ id: 'a', title: 'A', price: 92, rrp: 100, shipping: 0, family: 'family' }),
     group({ id: 'b', title: 'B', price: 88, rrp: 100, shipping: 20, family: 'family' }),
