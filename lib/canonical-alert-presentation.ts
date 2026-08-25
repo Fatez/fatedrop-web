@@ -1,5 +1,3 @@
-import { fateDropPostgres } from "@/lib/postgres";
-
 export type CanonicalAlertPresentation = {
   referenceKind: string | null;
   referenceBasis: string | null;
@@ -73,6 +71,9 @@ export function confidenceLabel(value?: number | null) {
 }
 
 export async function listCanonicalAlertPresentations(input: { id?: string | null; limit?: number } = {}) {
+  // Keep the pure formatter importable in Node/tsx tests without pulling in the
+  // runtime database boundary. Postgres is loaded only when the storage lookup runs.
+  const { fateDropPostgres } = await import("@/lib/postgres");
   const sql = await fateDropPostgres();
   const id = input.id?.trim() || null;
   const limit = Math.max(1, Math.min(250, Math.trunc(input.limit ?? 120)));
