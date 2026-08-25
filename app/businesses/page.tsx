@@ -6,7 +6,7 @@ import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
 const retailerBenefits = [
   ["01", "Relevant discovery", "Appear when collectors are already searching for products your connected catalogue can genuinely offer."],
   ["02", "Your checkout stays yours", "FateDrop sends the collector to your website. You keep your brand, payments, fulfilment, returns and customer relationship."],
-  ["03", "Better price context", "True Price and RRP context helps collectors understand an offer instead of reducing every decision to the lowest headline number."],
+  ["03", "FateFind value context", "Verified RRP/reference and True Price context helps collectors understand your offer instead of reducing every decision to the smallest headline number."],
   ["04", "Local + event visibility", "Physical shops, event attendance and organiser-backed vendor information can join the same discovery journey where evidence exists."],
 ] as const;
 
@@ -15,8 +15,8 @@ const retailerFaq = [
   ["Where does the customer check out?", "On your website. FateDrop links the collector to your product page so final stock, price and fulfilment can be confirmed with you."],
   ["How can a catalogue connect?", "Shopify, WooCommerce, feeds, APIs, CSV, sitemaps or a guided manual route can be assessed during founding-beta onboarding."],
   ["Can I review my storefront before it is public?", "Yes. Retailer identity and catalogue presentation should be reviewed before approved products become discoverable."],
-  ["Can paying improve trust status?", "No. Commercial placement cannot purchase stronger verification or evidence. Promotion and trust remain separate."],
-  ["What insight is planned?", "FateDrop is building toward privacy-conscious catalogue health, search-interest and unmet-demand insight without exposing individual collector behaviour."],
+  ["Can paying improve trust or ranking?", "No. A retailer subscription pays for catalogue connection and business tools. It cannot buy stronger verification, a better RRP verdict, alert priority or organic FateFind ranking."],
+  ["What insight is planned?", "FateDrop is building toward privacy-conscious catalogue health, aggregated search-interest and unmet-demand insight without exposing individual collector behaviour."],
 ] as const;
 
 export const metadata: Metadata = {
@@ -30,7 +30,7 @@ export default function BusinessesPage() {
       <MarketStoryHero
         eyebrow="For independent TCG retailers"
         title="The bridge between indie stores and collector demand."
-        description="Bring your catalogue into FateDrop so collectors can discover your products while they are already searching the market. We provide the discovery, signals and price context; the customer still buys directly from you."
+        description="Bring your catalogue into FateDrop so collectors can discover your products while they are already searching the market. We provide discovery, signals and value context; the customer still buys directly from you."
         image="/assets/market/retailers.png"
         alt="FateDrop retailer artwork showing an independent trading-card store"
         proof={["Surface live products", "Reach active collectors", "Keep your checkout", "Join the indie network"]}
@@ -42,19 +42,19 @@ export default function BusinessesPage() {
         <div className="copy-stack">
           <p className="eyebrow"><span />The FateDrop bridge</p>
           <h2>Not a marketplace. A discovery route into your store.</h2>
-          <p>FateDrop is designed around a simple principle: collectors need a better way to discover relevant stock, while independents need a better way to be seen. Connecting those two does not require taking over the transaction.</p>
+          <p>Collectors need a better way to discover relevant stock, while independent stores need a better way to be seen. Connecting those two does not require FateDrop to take over the transaction.</p>
           <strong className="retailer-promise">Your products. Your prices. Your website. Your checkout.</strong>
-          <p>We surface evidence-backed availability and price context, then the collector continues to your existing product page to buy.</p>
+          <p>We surface evidence-backed availability and value context, then the collector continues to your existing product page to buy.</p>
         </div>
         <div className="insight-panel retailer-network-panel">
           <small>COLLECTOR DEMAND → FATEDROP → YOUR STORE</small>
           <div className="retailer-network-flow" aria-label="Retailer catalogue to collector journey"><span>Catalogue</span><i /><span>FateDrop</span><i /><span>Collector</span><i /><span>Your checkout</span></div>
           <div className="search-journey">
-            <div className="search-query">Collector searches or creates a FateFind</div>
+            <div className="search-query">Collector searches or uses FateFind</div>
             <div className="journey-arrow" />
-            <div className="journey-result"><span className="journey-thumb" /><div><b>A qualifying FateMatch can surface your product</b><small>Retailer identity stays visible</small></div><span>Found</span></div>
+            <div className="journey-result"><span className="journey-thumb" /><div><b>Your genuine offer can appear in the comparison</b><small>Retailer identity, price and value context stay visible</small></div><span>Found</span></div>
             <div className="journey-arrow" />
-            <div className="journey-store"><small>DIRECT RETAILER JOURNEY</small><strong>Your product page. Your checkout.</strong><p>FateDrop does not pretend to be the stockist.</p></div>
+            <div className="journey-store"><small>DIRECT RETAILER JOURNEY</small><strong>Your product page. Your checkout.</strong><p>If the collector wants monitoring instead, FateMatch can watch their personal buying conditions.</p></div>
           </div>
         </div>
       </section>
