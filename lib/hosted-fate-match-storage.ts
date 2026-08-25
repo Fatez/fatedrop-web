@@ -1,3 +1,4 @@
+import type { FateFindCompanionId } from "@/lib/fate-match";
 import { fateDropPostgres } from "@/lib/postgres";
 
 export type HostedFateMatch = {
@@ -17,17 +18,39 @@ export type HostedFateMatch = {
   percentAboveRrp: number | null;
   stockStatus: string;
   reasons: string[];
+  companionId: FateFindCompanionId;
   matchedAt: number;
   lastObservedAt: number;
 };
+
+function companionIdFrom(value: unknown): FateFindCompanionId {
+  let parsed: Record<string, unknown> = {};
+  if (value && typeof value === "object" && !Array.isArray(value)) parsed = value as Record<string, unknown>;
+  else if (typeof value === "string") {
+    try {
+      const candidate = JSON.parse(value);
+      if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) parsed = candidate as Record<string, unknown>;
+    } catch {
+      parsed = {};
+    }
+  }
+  const companionId = parsed.companionId;
+  return companionId === "fenn" || companionId === "oru" || companionId === "nyxen" || companionId === "koru" ? companionId : "koru";
+}
 
 export async function listHostedFateMatches(userId: string, limit = 100): Promise<HostedFateMatch[]> {
   const sql = await fateDropPostgres();
   const safeLimit = Math.min(250, Math.max(1, limit));
   const rows = await sql`
-    SELECT * FROM fatedrop_hosted_fate_matches
-    WHERE user_id=${userId}
-    ORDER BY matched_at DESC
+    SELECT
+      hosted.*,
+      find.notification_preferences_json AS fate_find_notification_preferences_json
+    FROM fatedrop_hosted_fate_matches hosted
+    LEFT JOIN fatedrop_fate_matches find
+      ON find.id = hosted.fate_find_id
+      AND find.user_id = hosted.user_id
+    WHERE hosted.user_id=${userId}
+    ORDER BY hosted.matched_at DESC
     LIMIT ${safeLimit}
   ` as unknown as Record<string, unknown>[];
   return rows.map((row) => ({
@@ -36,6 +59,7 @@ export async function listHostedFateMatches(userId: string, limit = 100): Promis
     itemPricePence: row.item_price_pence == null ? null : Number(row.item_price_pence), postagePence: row.postage_pence == null ? null : Number(row.postage_pence),
     deliveredPricePence: row.delivered_price_pence == null ? null : Number(row.delivered_price_pence), rrpPence: row.rrp_pence == null ? null : Number(row.rrp_pence),
     percentAboveRrp: row.percent_above_rrp == null ? null : Number(row.percent_above_rrp), stockStatus: String(row.stock_status), reasons: Array.isArray(row.reasons_json) ? row.reasons_json.map(String) : [],
+    companionId: companionIdFrom(row.fate_find_notification_preferences_json),
     matchedAt: Number(row.matched_at), lastObservedAt: Number(row.last_observed_at),
   }));
 }
