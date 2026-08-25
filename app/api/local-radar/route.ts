@@ -165,7 +165,7 @@ export async function GET(request: Request) {
   if (latitude !== null && (latitude < -90 || latitude > 90 || longitude! < -180 || longitude! > 180)) return Response.json({ error: "Device coordinates are invalid." }, { status: 400 });
   if (latitude === null && !postcode && !address) return Response.json({ error: "Use device location, a UK postcode or an address." }, { status: 400 });
 
-  let origin: Origin | null = latitude !== null && longitude !== null
+  const origin: Origin | null = latitude !== null && longitude !== null
     ? { latitude, longitude, postcode, label: postcode || "Device location" }
     : postcode ? await resolvePostcode(postcode) : await resolveAddress(address!);
   if (!origin) return Response.json({ error: postcode ? "That UK postcode could not be resolved." : "That address could not be resolved." }, { status: 400 });
@@ -179,7 +179,7 @@ export async function GET(request: Request) {
   ]);
 
   const discovered: RadarShop[] = discoveredLocations.flatMap((location): RadarShop[] => {
-    const km = distanceKm(origin!.latitude, origin!.longitude, location.latitude, location.longitude);
+    const km = distanceKm(origin.latitude, origin.longitude, location.latitude, location.longitude);
     if (km > radiusKm) return [];
     const known = knownRetailer(location.website, location.name);
     return [{
