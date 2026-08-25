@@ -17,17 +17,15 @@ export function billingReadiness() {
   const secret = process.env.STRIPE_SECRET_KEY || "";
   const webhook = process.env.STRIPE_WEBHOOK_SECRET || "";
   const plus = process.env.STRIPE_PRICE_PLUS || "";
-  const pro = process.env.STRIPE_PRICE_PRO || "";
   const missing = [
     ["STRIPE_SECRET_KEY", secret],
     ["STRIPE_WEBHOOK_SECRET", webhook],
     ["STRIPE_PRICE_PLUS", plus],
-    ["STRIPE_PRICE_PRO", pro],
   ].filter(([, value]) => !value).map(([name]) => name);
   const mode = secret.startsWith("sk_live_") ? "live" : secret.startsWith("sk_test_") ? "test" : secret ? "unknown" : "unconfigured";
   return {
     configured: missing.length === 0,
-    checkoutConfigured: Boolean(secret && plus && pro),
+    checkoutConfigured: Boolean(secret && plus),
     webhookConfigured: Boolean(webhook),
     mode,
     missing,
@@ -37,14 +35,15 @@ export function billingReadiness() {
 }
 
 export function priceIdForTier(tier: MembershipTier) {
-  if (tier === "plus") return process.env.STRIPE_PRICE_PLUS ?? null;
-  if (tier === "pro") return process.env.STRIPE_PRICE_PRO ?? null;
+  if (tier === "plus" || tier === "pro") return process.env.STRIPE_PRICE_PLUS ?? null;
   return null;
 }
 
 export function tierForPriceId(priceId: string | null | undefined): MembershipTier {
-  if (priceId && priceId === process.env.STRIPE_PRICE_PRO) return "pro";
   if (priceId && priceId === process.env.STRIPE_PRICE_PLUS) return "plus";
+  // Legacy Pro subscriptions remain recognised if an old Stripe price is still configured,
+  // but new checkout only sells FateDrop Plus.
+  if (priceId && process.env.STRIPE_PRICE_PRO && priceId === process.env.STRIPE_PRICE_PRO) return "pro";
   return "free";
 }
 
@@ -58,7 +57,7 @@ export async function createCheckoutSession(input: {
   origin: string;
 }) {
   const priceId = priceIdForTier(input.tier);
-  if (!priceId) throw new BillingUnavailableError(`Stripe price for ${input.tier} is not configured.`);
+  if (!priceId) throw new BillingUnavailableError("Stripe price for FateDrop Plus is not configured.");
 
   const body = new URLSearchParams();
   body.set("mode", "subscription");
@@ -77,7 +76,7 @@ export async function createCheckoutSession(input: {
   body.set("subscription_data[metadata][fatedrop_user_id]", input.userId);
   body.set("subscription_data[metadata][fatedrop_fate_id]", input.fateId);
   body.set("metadata[fatedrop_user_id]", input.userId);
-  body.set("metadata[fatedrop_tier]", input.tier);
+  body.set("metadata[fatedrop_tier]", "plus");
   body.set("allow_promotion_codes", "true");
   if (input.existingCustomerId) body.set("customer", input.existingCustomerId);
   else body.set("customer_email", input.email);
