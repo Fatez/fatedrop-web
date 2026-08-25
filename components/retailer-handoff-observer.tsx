@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 type HandoffContext = "alerts" | "fatefind" | "fatematch" | "search" | "independent_stores";
 
@@ -13,7 +14,7 @@ function contextForPath(pathname: string): HandoffContext | null {
   return null;
 }
 
-function textFrom(root: Element | null, selector: string) {
+function textFrom(root: Element | Document | null, selector: string) {
   return root?.querySelector(selector)?.textContent?.trim() || null;
 }
 
@@ -91,9 +92,6 @@ function recordFateFindAppearances() {
     });
   }
 
-  // The visible Value Compare verdict is the source of truth for this metric.
-  // We record the retailer attached to the default winning comparison rather
-  // than re-implementing FateFind value maths in analytics code.
   const verdict = textFrom(document, ".fd-value-verdict.winner strong");
   if (!verdict) return;
   const winningGroup = groups.find((group) => {
@@ -110,8 +108,8 @@ function recordFateFindAppearances() {
   send({ type: "fatefind_best_value", retailer, storeId: storeId(destination), title: productTitle, subtitle: "Visible FateFind Value Compare winner" });
 }
 
-function recordStorefrontView() {
-  if (!window.location.pathname.startsWith("/dashboard/stores/")) return;
+function recordStorefrontView(pathname: string) {
+  if (!pathname.startsWith("/dashboard/stores/")) return;
   const main = document.querySelector("main") ?? document.body;
   const anchor = [...main.querySelectorAll("a[target='_blank']")].find((item) => externalDestination(item as HTMLAnchorElement)) as HTMLAnchorElement | undefined;
   const destination = externalDestination(anchor ?? null);
@@ -121,12 +119,16 @@ function recordStorefrontView() {
 }
 
 export function RetailerHandoffObserver() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryKey = searchParams.toString();
+
   useEffect(() => {
-    const context = contextForPath(window.location.pathname);
+    const context = contextForPath(pathname);
     const timer = window.setTimeout(() => {
       if (context === "search") recordSearchAppearances();
       if (context === "fatefind") recordFateFindAppearances();
-      if (context === "independent_stores") recordStorefrontView();
+      if (context === "independent_stores") recordStorefrontView(pathname);
     }, 0);
 
     const onClick = (event: MouseEvent) => {
@@ -151,7 +153,7 @@ export function RetailerHandoffObserver() {
       window.clearTimeout(timer);
       document.removeEventListener("click", onClick, { capture: true });
     };
-  }, []);
+  }, [pathname, queryKey]);
 
   return null;
 }
