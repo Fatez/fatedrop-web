@@ -88,7 +88,7 @@ export const siteConfig = {
       number: "02",
       title: "FateFind",
       description:
-        "Compare genuinely equivalent live offers using the correct RRP/reference so the best value is not confused with the smallest raw checkout number. Known delivery is kept separate and True Price is shown as supporting checkout context.",
+        "Compare genuinely equivalent live offers using the correct RRP/reference and identify the strongest-value option rather than confusing value with the smallest raw checkout number. Known delivery is kept separate and True Price is shown as supporting checkout context.",
       meta: "Best value now / verified RRP context",
     },
     {
