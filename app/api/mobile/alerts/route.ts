@@ -1,5 +1,6 @@
 import { getSnapshotForRequest } from "@/lib/auth";
 import { notificationPreferencesAllowAlert } from "@/lib/alert-preference-filter";
+import { isBetaAlertRelevant } from "@/lib/beta-alert-relevance";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { listCanonicalAlertDeliveries, type CanonicalAlertDelivery } from "@/lib/canonical-alert-delivery";
 import { hasCapability } from "@/lib/entitlements";
@@ -90,9 +91,13 @@ export async function GET(request: Request) {
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
-    const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
 
-    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit: retrievalLimit });
+    // Fetch extra history before filtering so legacy accessory/single-card rows do not
+    // reduce useful sealed-TCG inbox depth. Then apply the user's notification preferences
+    // on top of the beta relevance policy so both protections survive together.
+    const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
+    const canonicalAlerts = (await listCanonicalAlerts({ id: requestedId, limit: retrievalLimit }))
+      .filter(isBetaAlertRelevant);
     const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(retrievalLimit, canonicalAlerts.length) });
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
     const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries)
