@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const primary = [
+type NavItem = readonly [string, string, string, string];
+
+const primary: readonly NavItem[] = [
   ["⌂", "Dashboard", "/dashboard", "Your FateDrop overview and the quickest route into each collector tool."],
   ["⌕", "Search", "/dashboard/search", "Find a product and see the live offers FateDrop currently knows about."],
   ["◎", "FateFind", "/dashboard/fatefind", "Find the strongest-value deal available now using RRP percentage and True Price intelligence."],
@@ -12,21 +14,28 @@ const primary = [
   ["♡", "Wishlist", "/dashboard/wishlist", "Save products you want without creating a monitoring rule."],
   ["□", "Events", "/dashboard/events", "Discover relevant TCG events and Fate Encounters."],
   ["⌘", "Indies", "/dashboard/stores", "Discover independent retailers across the FateDrop network."],
-] as const;
+];
 
-const secondary = [
+const trader: NavItem = [
+  "⇄",
+  "Fate Trader",
+  "/dashboard/trader",
+  "List a card you have, tell FateDrop what you want, and find collector-to-collector trade opportunities.",
+];
+
+const secondary: readonly NavItem[] = [
   ["▥", "Indie Dashboard", "/dashboard/indie", "Verified retailers can see privacy-safe FateDrop traffic, FateFind visibility and collector demand."],
   ["⌖", "Local Radar", "/dashboard/local-radar", "Discover useful physical TCG locations around you."],
   ["#", "Discord", "/dashboard/discord", "Connect your FateDrop account to Discord delivery and community features."],
   ["◇", "Koru & Friends", "/dashboard/avatar", "Choose the companion that represents your FateDrop experience and FateMatch watches."],
   ["♛", "Membership", "/dashboard/membership", "View your FateDrop membership and unlocked capabilities."],
-] as const;
+];
 
 function active(pathname: string, href: string) {
   return href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavLink({ pathname, item }: { pathname: string; item: readonly [string, string, string, string] }) {
+function NavLink({ pathname, item }: { pathname: string; item: NavItem }) {
   const [icon, label, href, description] = item;
   return <Link className={active(pathname, href) ? "active" : ""} href={href} title={description}>
     <span className="fd-nav-icon">{icon}</span><b>{label}</b><i aria-hidden="true"/>
@@ -35,8 +44,13 @@ function NavLink({ pathname, item }: { pathname: string; item: readonly [string,
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const traderEnabled = process.env.NEXT_PUBLIC_FATE_TRADER_ENABLED === "true";
+  const primaryItems: readonly NavItem[] = traderEnabled
+    ? [...primary.slice(0, 4), trader, ...primary.slice(4)]
+    : primary;
+
   return <nav aria-label="Dashboard navigation" className="fd-ref-nav">
-    <div className="fd-ref-nav-main">{primary.map((item) => <NavLink key={item[1]} pathname={pathname} item={item}/>)}</div>
+    <div className="fd-ref-nav-main">{primaryItems.map((item) => <NavLink key={item[1]} pathname={pathname} item={item}/>)}</div>
     <div className="fd-ref-nav-more"><small>MORE</small>{secondary.map((item) => <NavLink key={item[1]} pathname={pathname} item={item}/>)}</div>
     <style jsx>{`
       .fd-ref-nav{display:grid;gap:22px;width:100%;min-width:0}.fd-ref-nav-main,.fd-ref-nav-more{display:grid;gap:5px}.fd-ref-nav-more{padding-top:6px;border-top:1px solid rgba(221,203,188,.065)}.fd-ref-nav-more>small{padding:10px 13px 6px;color:#756e74;font-size:10px;font-weight:900;letter-spacing:.16em}

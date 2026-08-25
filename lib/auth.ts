@@ -58,9 +58,16 @@ export async function endApiSession(token: string) {
   if (token) await deleteSession(hashSessionToken(token));
 }
 
-export async function getCurrentUser() {
+// Server-side integrations can forward the same opaque browser session to the
+// shared FateDrop Cloud API as a Bearer token. This helper must never be called
+// from a client component or serialize the token into rendered page data.
+export async function getCurrentSessionToken() {
   const jar = await cookies();
-  const token = jar.get(COOKIE_NAME)?.value;
+  return jar.get(COOKIE_NAME)?.value || null;
+}
+
+export async function getCurrentUser() {
+  const token = await getCurrentSessionToken();
   if (!token) return null;
   return findSessionUser(hashSessionToken(token));
 }
