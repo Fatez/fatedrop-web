@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FateDropDemoSection } from "@/components/koru-final-sections";
+import { FateDropDemoSectionV2 } from "@/components/fatedrop-demo-section-v2";
 import { SiteShell } from "@/components/page-shell";
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default function DemoPage() {
         </div>
       </section>
 
-      <FateDropDemoSection />
+      <FateDropDemoSectionV2 />
 
       <section className="content-section section-shell">
         <div className="quote-band">
