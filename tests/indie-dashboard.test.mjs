@@ -6,6 +6,7 @@ const read = (path) => fs.readFileSync(path, "utf8");
 
 test("Indie dashboard proves retailer value without claiming sales", () => {
   const page = read("app/dashboard/indie/page.tsx");
+  const insights = read("lib/retailer-insights.ts");
   assert.ok(page.includes("PRODUCT APPEARANCES"));
   assert.ok(page.includes("FATEFIND APPEARANCES"));
   assert.ok(page.includes("BEST VALUE WINS"));
@@ -13,7 +14,8 @@ test("Indie dashboard proves retailer value without claiming sales", () => {
   assert.ok(page.includes("FATEMATCH HANDOFFS"));
   assert.ok(page.includes("COLLECTOR DEMAND"));
   assert.ok(page.includes("Traffic and intent, not invented sales."));
-  assert.ok(page.includes("does not mean a purchase was completed"));
+  assert.ok(page.includes("insights?.definition"));
+  assert.ok(insights.includes("does not mean a purchase was completed"));
 });
 
 test("production retailer workspace access requires a verified FateDrop ID mapping", () => {
@@ -41,7 +43,8 @@ test("Search FateFind storefront and FateMatch events feed one retailer value le
     assert.ok(observer.includes(event));
     assert.ok(storage.includes(event));
   }
-  assert.ok(observer.includes('window.location.pathname === "/dashboard/fatefind"'));
+  assert.ok(observer.includes("usePathname"));
+  assert.ok(observer.includes('pathname === "/dashboard/fatefind"'));
   assert.ok(observer.includes("Visible FateFind Value Compare winner"));
 });
 
