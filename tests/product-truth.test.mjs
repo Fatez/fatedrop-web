@@ -122,7 +122,7 @@ test("FateMatch monitoring API uses same-origin writes while keeping legacy clie
   assert.ok(route.includes("max: 250"));
 });
 
-test("trust, roadmap and membership copy do not claim unimplemented finality", async () => {
+test("trust, roadmap and launch membership copy do not sell unimplemented tiers or trust advantages", async () => {
   const [trust, about, siteData, subscriptions] = await Promise.all([
     source("app/trust/page.tsx"),
     source("app/about/page.tsx"),
@@ -134,7 +134,12 @@ test("trust, roadmap and membership copy do not claim unimplemented finality", a
   assert.ok(about.includes("<FutureExpansion"));
   assert.ok(about.includes("siteConfig.roadmap"));
   assert.ok(siteData.includes('{ name: "FateFair", status: "Planned" }'));
-  assert.ok(subscriptions.includes("final higher-tier feature split is still being reviewed"));
+  assert.ok(siteData.includes('name: "FateDrop Plus"'));
+  assert.equal(siteData.includes('name: "FateDrop Pro"'), false);
+  assert.ok(siteData.includes('name: "FateDrop Indie"'));
+  assert.equal(siteData.includes('name: "Indie Pro"'), false);
+  assert.ok(subscriptions.includes("one simple upgrade: FateDrop Plus"));
+  assert.ok(subscriptions.includes("cannot buy a false RRP verdict, alert priority or better organic ranking"));
 });
 
 test("privacy notice covers Koru & Friends and on-demand Local Radar handling", async () => {
