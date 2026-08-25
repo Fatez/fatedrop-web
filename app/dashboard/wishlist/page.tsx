@@ -22,7 +22,7 @@ export default async function WishlistPage() {
       <section className="fd-dash-card fd-wishlist-hero">
         <div className="fd-dash-card-head"><span>UNIVERSAL WISHLIST</span><i className={persistent ? "live" : "pending"}>{persistent ? "● PERSISTENT" : "○ MIGRATION READY"}</i></div>
         <h1>Keep the products you care about.<br/><em>Choose what FateDrop should do with them later.</em></h1>
-        <p>Wishlist is intentionally simple: it means <b>I want this</b>. It does not create a monitoring rule or guarantee an alert. When you are ready, Search can show current offers, FateFind can compare the strongest live value, and FateMatch can actively watch your buying conditions.</p>
+        <p><b>Wishlist means “I want this.”</b> <b>FateMatch means “let me know when this is in stock.”</b> Wishlist does not create a monitoring rule or guarantee an alert. When you are ready, Search can show current offers, FateFind can compare the strongest live value, and FateMatch can actively watch your buying conditions.</p>
         {persistent ? <WishlistCreateForm/> : null}
         <div className="fd-wishlist-path"><span><b>1</b><strong>SAVE</strong><small>Remember the product.</small></span><i>→</i><span><b>2</b><strong>COMPARE</strong><small>Use FateFind when buying now.</small></span><i>→</i><span><b>3</b><strong>WATCH</strong><small>Use FateMatch when waiting.</small></span></div>
         <div className="fd-wishlist-links"><Link href="/dashboard/fatefind">Open FateFind →</Link><Link href="/dashboard/watchlist">Open FateMatch →</Link></div>
