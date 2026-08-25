@@ -3,6 +3,7 @@ import { notificationPreferencesAllowAlert } from "@/lib/alert-preference-filter
 import { isBetaAlertRelevant } from "@/lib/beta-alert-relevance";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { listCanonicalAlertDeliveries, type CanonicalAlertDelivery } from "@/lib/canonical-alert-delivery";
+import { listCanonicalAlertPresentations, type CanonicalAlertPresentation } from "@/lib/canonical-alert-presentation";
 import { hasCapability } from "@/lib/entitlements";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
 
@@ -17,11 +18,13 @@ type CanonicalAlertForMobile = CanonicalAlert & {
       issue: string | null;
     } | null;
   };
+  presentation: CanonicalAlertPresentation | null;
 };
 
 function freeAlert(alert: CanonicalAlertForMobile): CanonicalAlertForMobile {
   return {
     ...alert,
+    presentation: null,
     product: {
       ...alert.product,
       rrpPence: null,
@@ -59,12 +62,14 @@ function freeAlert(alert: CanonicalAlertForMobile): CanonicalAlertForMobile {
 function attachDiscordDelivery(
   alerts: CanonicalAlert[],
   deliveries: CanonicalAlertDelivery[],
+  presentations: Map<string, CanonicalAlertPresentation>,
 ): CanonicalAlertForMobile[] {
   const bySignalId = new Map(deliveries.map((delivery) => [delivery.signalId, delivery]));
   return alerts.map((alert) => {
     const delivery = bySignalId.get(alert.id) ?? null;
     return {
       ...alert,
+      presentation: presentations.get(alert.id) ?? null,
       delivery: {
         discord: delivery ? {
           status: delivery.result,
@@ -98,9 +103,12 @@ export async function GET(request: Request) {
     const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
     const canonicalAlerts = (await listCanonicalAlerts({ id: requestedId, limit: retrievalLimit }))
       .filter(isBetaAlertRelevant);
-    const deliveries = await listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(retrievalLimit, canonicalAlerts.length) });
+    const [deliveries, presentations] = await Promise.all([
+      listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(retrievalLimit, canonicalAlerts.length) }),
+      listCanonicalAlertPresentations({ id: requestedId, limit: retrievalLimit }),
+    ]);
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
-    const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries)
+    const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries, presentations)
       .filter((alert) => notificationPreferencesAllowAlert(alert, preferences))
       .slice(0, limit);
     const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);
