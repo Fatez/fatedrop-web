@@ -57,7 +57,7 @@ function packSummary(alert: CanonicalAlert) {
 
 function explainer(alert: CanonicalAlert) {
   if (alert.fateStage === "WHISPER") return "Oru spotted it: Catalogue or product movement has been detected. FateDrop has prepared the product and comparison routes, but stock is not confirmed.";
-  if (alert.fateStage === "ECHO") return "Fenn picked it up: Retailer preparation, queue, traffic, security or access readiness has changed. Get ready; genuine purchase availability is still not confirmed.";
+  if (alert.fateStage === "ECHO") return "Fenn picked it up: Queue, traffic, security or access readiness has changed. Retailer preparation may also be developing. Get ready; genuine purchase availability is still not confirmed.";
   if (alert.fateStage === "VANISHED") return "Nyxen saw this previously verified availability disappear. Use the live alternatives below when FateDrop still sees the same canonical product elsewhere.";
   return "Koru found confirmed purchasable availability. Open the retailer, compare the network, or inspect another live offer.";
 }
