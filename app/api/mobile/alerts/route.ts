@@ -59,7 +59,7 @@ function freeAlert(alert: CanonicalAlertForMobile): CanonicalAlertForMobile {
   };
 }
 
-function attachCanonicalContext(
+function attachDiscordDelivery(
   alerts: CanonicalAlert[],
   deliveries: CanonicalAlertDelivery[],
   presentations: Map<string, CanonicalAlertPresentation>,
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
       listCanonicalAlertPresentations({ id: requestedId, limit: retrievalLimit }),
     ]);
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
-    const alertsWithContext = attachCanonicalContext(canonicalAlerts, deliveries, presentations)
+    const alertsWithContext = attachDiscordDelivery(canonicalAlerts, deliveries, presentations)
       .filter((alert) => notificationPreferencesAllowAlert(alert, preferences))
       .slice(0, limit);
     const alerts = premium ? alertsWithContext : alertsWithContext.map(freeAlert);
