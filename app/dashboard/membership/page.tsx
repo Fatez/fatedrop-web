@@ -23,21 +23,21 @@ export default async function DashboardMembershipPage({ searchParams }: { search
   const startLabel = trialEligible ? "Start" : snapshot?.membership.stripeCustomerId ? "Restart" : "Choose";
 
   return (
-    <DashboardPageShell title="Membership" eyebrow="BILLING + ACCESS">
+    <DashboardPageShell title="Membership" eyebrow="ONE FATEDROP ID · ONE PLUS ENTITLEMENT">
       <div className="fd-dashboard-grid">
-        {params.billing === "success" ? <section className="fd-dash-card"><div className="fd-dash-card-head"><span>STRIPE CHECKOUT</span><i className="live">RETURNED</i></div><div className="fd-network-message"><h1>Checkout completed.</h1><p>Stripe confirms the subscription through the signed webhook. FateDrop updates the authoritative membership record from that event; app and Discord should consume the same entitlement only when their integrations are connected.</p></div></section> : null}
+        {params.billing === "success" ? <section className="fd-dash-card"><div className="fd-dash-card-head"><span>STRIPE CHECKOUT</span><i className="live">RETURNED</i></div><div className="fd-network-message"><h1>Checkout completed.</h1><p>Stripe confirms the subscription through the signed webhook. FateDrop then updates the one authoritative membership record used by the website, app and connected Discord.</p></div></section> : null}
         {params.billing === "cancelled" ? <section className="fd-dash-card"><div className="fd-dash-card-head"><span>STRIPE CHECKOUT</span><i className="pending">CANCELLED</i></div><div className="fd-network-message"><h1>No changes were made.</h1><p>You returned from Stripe without completing checkout.</p></div></section> : null}
 
         <section className="fd-dash-card fd-billing-card">
           <div className="fd-dash-card-head"><span>YOUR MEMBERSHIP</span><i className={premium ? "live" : "pending"}>{snapshot?.membership.status?.toUpperCase() || "FREE"}</i></div>
-          <div className="fd-billing-state"><strong>{plan}</strong><span>{premium ? "PREMIUM ACCESS" : "STANDARD ACCESS"}</span></div>
+          <div className="fd-billing-state"><strong>{plan}</strong><span>{premium ? "FATEDROP PLUS" : "FREE ACCESS"}</span></div>
           <div className="fd-billing-facts"><span><small>STRIPE CUSTOMER</small><b>{snapshot?.membership.stripeCustomerId ? "Connected" : "Not created"}</b></span><span><small>SUBSCRIPTION</small><b>{snapshot?.membership.stripeSubscriptionId ? "Connected" : "Not created"}</b></span><span><small>TRIAL ENDS</small><b>{dateLabel(snapshot?.membership.trialEndsAt)}</b></span><span><small>PERIOD ENDS</small><b>{dateLabel(snapshot?.membership.currentPeriodEnd)}</b></span></div>
           <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {hasOpenSubscription ? <BillingPortalButton /> : <><StartMembershipButton tier="plus" label={`${startLabel} Plus${trialEligible ? " trial" : ""}`} /><StartMembershipButton tier="pro" label={`${startLabel} Pro${trialEligible ? " trial" : ""}`} />{snapshot?.membership.stripeCustomerId ? <BillingPortalButton /> : null}</>}
+            {hasOpenSubscription ? <BillingPortalButton /> : <><StartMembershipButton tier="plus" label={`${startLabel} FateDrop Plus${trialEligible ? " trial" : ""}`} />{snapshot?.membership.stripeCustomerId ? <BillingPortalButton /> : null}</>}
           </div>
         </section>
 
-        <section className="fd-dash-card"><div className="fd-dash-card-head"><span>FOUNDING-BETA PLAN MODEL</span><i className="pending">FEATURE SPLIT UNDER REVIEW</i></div><div className="fd-network-message"><h2>Plus and Pro currently share one Premium capability foundation.</h2><p>The billing model can distinguish the two tiers, but the final capability split is not fully enforced in entitlement code yet. FateDrop will not invent higher-tier exclusives simply to make the pricing table look finished.</p></div></section>
+        <section className="fd-dash-card"><div className="fd-dash-card-head"><span>ACCESS MODEL</span><i className="live">SIMPLE BY DESIGN</i></div><div className="fd-network-message"><h2>Free or FateDrop Plus.</h2><p>There is no separate app subscription and no consumer Pro tier. The same FateDrop ID carries the same active Plus entitlement to Web, the mobile app and linked Discord so users do not pay twice for the same network.</p></div></section>
 
         <section className="fd-dash-card">
           <div className="fd-dash-card-head"><span>STRIPE READINESS</span><i className={readiness.configured ? "live" : "pending"}>{readiness.configured ? "READY" : "SETUP REQUIRED"}</i></div>
