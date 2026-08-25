@@ -55,19 +55,21 @@ test("interactive phone has moved to a dedicated demo page", () => {
   assert.ok(sitemap.includes('"/demo"'));
 });
 
-test("public product language preserves FateFind to FateMatch and the final lifecycle", () => {
+test("public product language preserves FateFind, FateMatch and the final lifecycle", () => {
   const siteData = read("lib/site-data.ts");
   const trust = read("app/trust/page.tsx");
   const collectors = read("app/collectors/page.tsx");
   const layout = read("app/layout.tsx");
-  assert.ok(siteData.includes("FateFind → FateMatch"));
-  assert.ok(siteData.includes("successful result is a FateMatch"));
-  assert.ok(layout.includes("FateFind hunts"));
-  assert.ok(layout.includes("FateMatch results"));
+  assert.ok(siteData.includes('title: "FateFind"'));
+  assert.ok(siteData.includes('title: "FateMatch"'));
+  assert.ok(siteData.includes("strongest-value option"));
+  assert.ok(siteData.includes("watch your buying conditions"));
+  assert.ok(layout.includes("FateFind live value comparison"));
+  assert.ok(layout.includes("FateMatch personal monitoring"));
   assert.ok(trust.includes("Whisper. Echo. Manifested. Vanished."));
   assert.ok(collectors.includes("Whisper → Echo → Manifested → Vanished"));
-  assert.ok(collectors.includes("A FateFind is the hunt you create."));
-  assert.ok(collectors.includes("the result is a FateMatch"));
+  assert.ok(collectors.includes("FateFind is the live comparison tool"));
+  assert.ok(collectors.includes("FateMatch takes over the waiting"));
 });
 
 test("free drops are removed from public discovery", () => {
@@ -134,7 +136,7 @@ test("collector and retailer pages stay visibly grounded in the TCG market", () 
   const retailers = read("app/businesses/page.tsx");
   assert.ok(fs.existsSync("public/assets/market/collectors.png"));
   assert.ok(fs.existsSync("public/assets/market/retailers.png"));
-  assert.ok(collectors.includes("Find the cards. Know the price. Catch the signal."));
+  assert.ok(collectors.includes("Find the cards. Know the value. Catch the signal."));
   assert.ok(collectors.includes("Search the network"));
   assert.ok(collectors.includes("Buy direct from stores"));
   assert.ok(retailers.includes("The bridge between indie stores and collector demand."));
