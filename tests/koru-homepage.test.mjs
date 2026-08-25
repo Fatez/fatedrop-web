@@ -68,8 +68,8 @@ test("public product language preserves FateFind, FateMatch and the final lifecy
   assert.ok(layout.includes("FateMatch personal monitoring"));
   assert.ok(trust.includes("Whisper. Echo. Manifested. Vanished."));
   assert.ok(collectors.includes("Whisper → Echo → Manifested → Vanished"));
-  assert.ok(collectors.includes("FateFind is the live comparison tool"));
-  assert.ok(collectors.includes("FateMatch takes over the waiting"));
+  assert.ok(collectors.includes("FateFind is the live decision tool"));
+  assert.ok(collectors.includes("FateMatch handles the waiting"));
 });
 
 test("free drops are removed from public discovery", () => {
@@ -136,11 +136,11 @@ test("collector and retailer pages stay visibly grounded in the TCG market", () 
   const retailers = read("app/businesses/page.tsx");
   assert.ok(fs.existsSync("public/assets/market/collectors.png"));
   assert.ok(fs.existsSync("public/assets/market/retailers.png"));
-  assert.ok(collectors.includes("Find the cards. Know the value. Catch the signal."));
-  assert.ok(collectors.includes("Search the network"));
-  assert.ok(collectors.includes("Buy direct from stores"));
-  assert.ok(retailers.includes("The bridge between indie stores and collector demand."));
-  assert.ok(retailers.includes("Surface live products"));
+  assert.ok(collectors.includes("One network. More places to find what you collect."));
+  assert.ok(collectors.includes("Search connected stock"));
+  assert.ok(collectors.includes("Buy direct from retailers"));
+  assert.ok(retailers.includes("Put your stock where collectors are already looking."));
+  assert.ok(retailers.includes("Connect genuine stock"));
   assert.ok(retailers.includes("Keep your checkout"));
 });
 
