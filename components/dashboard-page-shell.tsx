@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AccountSignOut } from "@/components/account-signout";
 import { BrandMark } from "@/components/brand-mark";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { DashboardPageGuide } from "@/components/dashboard-page-guide";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { membershipLabel } from "@/lib/membership";
 
@@ -36,7 +37,7 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
         </form>
         <nav className="fd-ref-top-actions" aria-label="Dashboard quick actions">
           <Link href="/dashboard/alerts" aria-label="Open alerts"><span>♧</span></Link>
-          <Link href="/dashboard/wishlist" aria-label="Open watchlist"><span>☆</span></Link>
+          <Link href="/dashboard/wishlist" aria-label="Open wishlist"><span>☆</span></Link>
           <Link href="/dashboard/profile" className="fd-ref-profile">
             {snapshot.account.avatarUrl ? <span className="fd-ref-top-avatar" style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }}/> : <img src="/assets/fatedrop-logo-mark.png" alt=""/>}
             <div><strong>{snapshot.account.displayName}</strong><small>{plan}</small></div><i>⌄</i>
@@ -44,7 +45,7 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
         </nav>
       </header>
       <div className="fd-ref-mobile-title"><small>{eyebrow || "FATEDROP"}</small><span>{title}</span></div>
-      <div className="fd-dashboard-content-frame">{children}</div>
+      <div className="fd-dashboard-content-frame"><DashboardPageGuide title={title}/>{children}</div>
     </section>
 
     <style>{`
