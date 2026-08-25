@@ -1,4 +1,4 @@
-import type { SignalTruePriceGroup, SignalTruePriceOffer } from './signal-engine-client';
+import type { SignalTruePriceGroup } from './signal-engine-client';
 
 // Compatibility implementation of the locked Fate Verdict v2 rules.
 // This intentionally mirrors server/fate-verdict.js in FateDrop-App so the
@@ -6,6 +6,7 @@ import type { SignalTruePriceGroup, SignalTruePriceOffer } from './signal-engine
 // newer /api/fatefind/matches contract. It is never executed on the client.
 
 type Basis = 'rrp_percent' | 'unit_true_price' | null;
+type CompatGroup = SignalTruePriceGroup & { identityKey?: string; valueFamilyKey?: string };
 
 export type CompatVerdictPosition = {
   groupId: string;
@@ -77,7 +78,7 @@ function cleanKey(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
 }
 
-function bestOffer(group: SignalTruePriceGroup) {
+function bestOffer(group: CompatGroup) {
   const offers = (Array.isArray(group?.offers) ? group.offers : []).filter((offer) => finite(offer?.priceGbp));
   offers.sort((a, b) => {
     const aPrice = finite(a.priceGbp) ? a.priceGbp : Infinity;
@@ -96,7 +97,7 @@ function bestOffer(group: SignalTruePriceGroup) {
   return offers[0] || null;
 }
 
-function rrpEvidence(group: SignalTruePriceGroup) {
+function rrpEvidence(group: CompatGroup) {
   const source = typeof group?.rrpSource === 'string' && group.rrpSource.trim() ? group.rrpSource : null;
   const kind = typeof group?.rrpKind === 'string' && group.rrpKind.trim() ? group.rrpKind : null;
   if (!source) return null;
@@ -124,7 +125,7 @@ function rrpEvidence(group: SignalTruePriceGroup) {
   };
 }
 
-function sameComparableFamily(leftGroup: SignalTruePriceGroup, rightGroup: SignalTruePriceGroup) {
+function sameComparableFamily(leftGroup: CompatGroup, rightGroup: CompatGroup) {
   const leftIdentity = cleanKey(leftGroup?.identityKey);
   const rightIdentity = cleanKey(rightGroup?.identityKey);
   if (leftIdentity && rightIdentity && leftIdentity === rightIdentity) return true;
@@ -133,7 +134,7 @@ function sameComparableFamily(leftGroup: SignalTruePriceGroup, rightGroup: Signa
   return Boolean(leftFamily && rightFamily && leftFamily === rightFamily);
 }
 
-function valuePosition(group: SignalTruePriceGroup): CompatVerdictPosition | null {
+function valuePosition(group: CompatGroup): CompatVerdictPosition | null {
   const offer = bestOffer(group);
   if (!offer) return null;
 
@@ -180,7 +181,7 @@ function noWinner(left: CompatVerdictPosition | null, right: CompatVerdictPositi
   return { left, right, winnerId: null, basis: null, gap: null, reason };
 }
 
-export function compareCompatGroups(leftGroup: SignalTruePriceGroup, rightGroup: SignalTruePriceGroup): CompatPairVerdict {
+export function compareCompatGroups(leftGroup: CompatGroup, rightGroup: CompatGroup): CompatPairVerdict {
   const left = valuePosition(leftGroup);
   const right = valuePosition(rightGroup);
   if (!left || !right || left.groupId === right.groupId) return noWinner(left, right, 'Choose two different comparable items.');
@@ -214,9 +215,9 @@ export function compareCompatGroups(leftGroup: SignalTruePriceGroup, rightGroup:
   return noWinner(left, right, 'FateDrop needs comparable verified RRP/reference or unit evidence before declaring a winner.');
 }
 
-export function rankCompatGroups(groups: SignalTruePriceGroup[]): CompatRankVerdict {
+export function rankCompatGroups(groups: CompatGroup[]): CompatRankVerdict {
   const sourceGroups = Array.isArray(groups) ? groups : [];
-  const positioned = sourceGroups.map((group) => ({ group, position: valuePosition(group) })).filter((entry): entry is { group: SignalTruePriceGroup; position: CompatVerdictPosition } => Boolean(entry.position));
+  const positioned = sourceGroups.map((group) => ({ group, position: valuePosition(group) })).filter((entry): entry is { group: CompatGroup; position: CompatVerdictPosition } => Boolean(entry.position));
   const positions = positioned.map((entry) => entry.position);
   const provisional = positions.some((item) => item.provisional);
 
