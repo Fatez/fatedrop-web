@@ -2,7 +2,7 @@ export const siteConfig = {
   name: "FateDrop",
   title: "FateDrop — UK TCG Signal Intelligence & Indie Discovery",
   description:
-    "Follow evidence-backed stock signals, understand True Price, create FateFind hunts, receive FateMatch results and discover independent TCG retailers and events across the UK.",
+    "Follow evidence-backed stock signals, use FateFind to compare live value against verified RRP/reference, create FateMatch watches and discover independent TCG retailers and events across the UK.",
   tagline: "Follow the signal. Find the retailer. Collect smarter.",
   nav: [
     { label: "Collectors", href: "/collectors" },
@@ -30,32 +30,21 @@ export const siteConfig = {
       name: "FateDrop Plus",
       price: "£4.99 / month",
       featured: true,
-      features: ["Premium signal detail", "Whisper, Echo, Manifested and Vanished lifecycle alerts", "FateFind saved hunts with FateMatch results", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
-    },
-    {
-      name: "FateDrop Pro",
-      price: "£14.99 / month",
-      features: ["Shared Premium capability foundation", "Higher-tier feature split under product review", "Future advanced intelligence only as released", "No guaranteed-first or fabricated priority claims"],
+      features: ["Full FateFind value intelligence", "FateMatch personal monitoring and buying conditions", "Whisper, Echo, Manifested and Vanished lifecycle alerts", "Instant eligible app + Discord notifications", "Advanced alert filters", "True Price context inside FateFind when delivery is known", "Local Radar tools where configured"],
     },
   ],
   retailerPlans: [
     {
       name: "Free Retailer",
       price: "£0",
-      features: ["Basic verified profile", "Limited catalogue", "Direct retailer links", "Organic discovery"],
+      features: ["Basic verified profile", "Organic evidence-based discovery", "Direct retailer links", "No paid ranking or trust advantage"],
     },
     {
-      name: "Indie",
+      name: "FateDrop Indie",
       price: "£9.99 / month",
       secondaryPrice: "or £99 / year",
       featured: true,
-      features: ["Complete catalogue", "Verified FateDrop storefront", "Search visibility", "Events and preorders", "Catalogue monitoring", "Basic referral analytics when available"],
-    },
-    {
-      name: "Indie Pro",
-      price: "£24.99 / month",
-      secondaryPrice: "or £249 / year",
-      features: ["Advanced analytics when released", "Aggregated demand insight when released", "Event Vendor Mode when released", "Priority catalogue support", "Clearly labelled promotional tools"],
+      features: ["Complete connected catalogue", "Verified FateDrop storefront", "Search and FateFind eligibility from genuine offer evidence", "Events and preorders", "Catalogue monitoring", "Basic referral analytics when available", "Retailer keeps customer, checkout and fulfilment"],
     },
   ],
   audiences: [
@@ -63,7 +52,7 @@ export const siteConfig = {
       eyebrow: "01 / Collectors",
       title: "Find the right drop with better context.",
       description:
-        "Follow signals, compare True Price, create FateFind hunts, receive FateMatch results and discover independent retailers and events through one network.",
+        "Follow signals, use FateFind to compare real value, let FateMatch watch your buying conditions and discover independent retailers and events through one network.",
       cta: "Explore collector tools",
       href: "/collectors",
       accent: "cyan",
@@ -97,17 +86,17 @@ export const siteConfig = {
     },
     {
       number: "02",
-      title: "True Price",
+      title: "FateFind",
       description:
-        "Compare an observed offer with official RRP and known mandatory delivery, including the £ and percentage difference above or below RRP where the evidence supports it.",
-      meta: "Price + RRP + known delivery",
+        "Compare genuinely equivalent live offers using the correct RRP/reference so the best value is not confused with the smallest raw checkout number. Known delivery is kept separate and True Price is shown as supporting checkout context.",
+      meta: "Best value now / verified RRP context",
     },
     {
       number: "03",
-      title: "FateFind → FateMatch",
+      title: "FateMatch",
       description:
-        "Create a FateFind hunt with the product and limits that matter. When an observed active offer qualifies, that successful result is a FateMatch.",
-      meta: "Wanted intent / qualifying result",
+        "Choose a specific product and the conditions you would actually buy at — stock, item-price, True Price, RRP percentage or retailer rules — and let FateDrop alert you when a qualifying live offer appears.",
+      meta: "Watch my conditions / alert when qualified",
     },
     {
       number: "04",
@@ -120,7 +109,7 @@ export const siteConfig = {
       number: "05",
       title: "Universal Wishlist",
       description:
-        "Keep products you care about in one account-level list without turning every saved item into a live hunt.",
+        "Keep products you care about in one account-level list without turning every saved item into a live watch.",
       meta: "Saved products / account-wide",
     },
     {
