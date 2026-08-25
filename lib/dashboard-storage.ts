@@ -1,6 +1,15 @@
 import type { NeonQueryFunction } from "@neondatabase/serverless";
 
-export type DashboardActivityType = "signal_seen" | "wishlist_hit" | "store_tracked" | "market_saving";
+export type DashboardActivityType =
+  | "signal_seen"
+  | "wishlist_hit"
+  | "store_tracked"
+  | "market_saving"
+  | "search_appearance"
+  | "fatefind_appearance"
+  | "fatefind_best_value"
+  | "storefront_view"
+  | "fatematch_handoff";
 export type SignalLifecycle = "whisper" | "manifested" | "vanished" | "echo";
 export type SignalKind = SignalLifecycle
   | "catalogue_new"
