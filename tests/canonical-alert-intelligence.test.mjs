@@ -27,6 +27,13 @@ test('RRP and delivered-price comparisons remain separate', () => {
   assert.match(moduleSource, /ro\.postage_pence IS NOT NULL/);
 });
 
+test('canonical alerts only prepare live comparisons from fresh healthy retailers', () => {
+  const healthJoins = moduleSource.match(/JOIN fatedrop_retailer_health rh ON rh\.retailer_id=ro\.retailer_id/g) ?? [];
+  assert.equal(healthJoins.length, 6, 'best, official and alternatives must be guarded in both alert queries');
+  assert.match(moduleSource, /rh\.healthy=true/);
+  assert.match(moduleSource, /COALESCE\(rh\.last_success_at,rh\.last_scan_at\) >= EXTRACT\(EPOCH FROM NOW\(\)\)::bigint - 1800/);
+});
+
 test('canonical alerts preserve the final four-stage lifecycle', () => {
   assert.match(moduleSource, /"WHISPER" \| "ECHO" \| "MANIFESTED" \| "VANISHED"/);
   assert.match(moduleSource, /state === "whisper"\) return "WHISPER"/);

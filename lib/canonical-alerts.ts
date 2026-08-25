@@ -511,6 +511,9 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
         LEFT JOIN LATERAL (
           SELECT ro.offer_id,ro.retailer_id,ro.retailer_name,ro.url,ro.price_pence,ro.postage_pence,ro.stock_status
           FROM fatedrop_retail_offers ro
+          JOIN fatedrop_retailer_health rh ON rh.retailer_id=ro.retailer_id
+            AND rh.healthy=true
+            AND COALESCE(rh.last_success_at,rh.last_scan_at) >= EXTRACT(EPOCH FROM NOW())::bigint - 1800
           WHERE ro.product_id=s.product_id
             AND ro.stock_status IN ('in_stock','low_stock','preorder')
             AND ro.price_pence IS NOT NULL
@@ -521,6 +524,9 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
         LEFT JOIN LATERAL (
           SELECT ro.offer_id,ro.retailer_id,ro.retailer_name,ro.url,ro.price_pence,ro.postage_pence,ro.stock_status
           FROM fatedrop_retail_offers ro
+          JOIN fatedrop_retailer_health rh ON rh.retailer_id=ro.retailer_id
+            AND rh.healthy=true
+            AND COALESCE(rh.last_success_at,rh.last_scan_at) >= EXTRACT(EPOCH FROM NOW())::bigint - 1800
           WHERE ro.product_id=s.product_id AND ro.retailer_id='pokemon-center-uk'
           ORDER BY ro.last_seen_at DESC
           LIMIT 1
@@ -566,6 +572,9 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
               CASE WHEN ro.postage_pence IS NOT NULL AND ro.price_pence IS NOT NULL THEN ro.price_pence + ro.postage_pence ELSE NULL END AS delivered_price_pence,
               COALESCE(CASE WHEN ro.postage_pence IS NOT NULL AND ro.price_pence IS NOT NULL THEN ro.price_pence + ro.postage_pence END,ro.price_pence) AS sort_price
             FROM fatedrop_retail_offers ro
+            JOIN fatedrop_retailer_health rh ON rh.retailer_id=ro.retailer_id
+              AND rh.healthy=true
+              AND COALESCE(rh.last_success_at,rh.last_scan_at) >= EXTRACT(EPOCH FROM NOW())::bigint - 1800
             WHERE ro.product_id=s.product_id AND ro.offer_id<>s.offer_id
               AND ro.stock_status IN ('in_stock','low_stock','preorder') AND ro.price_pence IS NOT NULL
             ORDER BY CASE WHEN ro.postage_pence IS NULL THEN 1 ELSE 0 END ASC,
@@ -596,6 +605,9 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
         LEFT JOIN LATERAL (
           SELECT ro.offer_id,ro.retailer_id,ro.retailer_name,ro.url,ro.price_pence,ro.postage_pence,ro.stock_status
           FROM fatedrop_retail_offers ro
+          JOIN fatedrop_retailer_health rh ON rh.retailer_id=ro.retailer_id
+            AND rh.healthy=true
+            AND COALESCE(rh.last_success_at,rh.last_scan_at) >= EXTRACT(EPOCH FROM NOW())::bigint - 1800
           WHERE ro.product_id=s.product_id
             AND ro.stock_status IN ('in_stock','low_stock','preorder')
             AND ro.price_pence IS NOT NULL
@@ -606,6 +618,9 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
         LEFT JOIN LATERAL (
           SELECT ro.offer_id,ro.retailer_id,ro.retailer_name,ro.url,ro.price_pence,ro.postage_pence,ro.stock_status
           FROM fatedrop_retail_offers ro
+          JOIN fatedrop_retailer_health rh ON rh.retailer_id=ro.retailer_id
+            AND rh.healthy=true
+            AND COALESCE(rh.last_success_at,rh.last_scan_at) >= EXTRACT(EPOCH FROM NOW())::bigint - 1800
           WHERE ro.product_id=s.product_id AND ro.retailer_id='pokemon-center-uk'
           ORDER BY ro.last_seen_at DESC
           LIMIT 1
@@ -651,6 +666,9 @@ export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | nu
               CASE WHEN ro.postage_pence IS NOT NULL AND ro.price_pence IS NOT NULL THEN ro.price_pence + ro.postage_pence ELSE NULL END AS delivered_price_pence,
               COALESCE(CASE WHEN ro.postage_pence IS NOT NULL AND ro.price_pence IS NOT NULL THEN ro.price_pence + ro.postage_pence END,ro.price_pence) AS sort_price
             FROM fatedrop_retail_offers ro
+            JOIN fatedrop_retailer_health rh ON rh.retailer_id=ro.retailer_id
+              AND rh.healthy=true
+              AND COALESCE(rh.last_success_at,rh.last_scan_at) >= EXTRACT(EPOCH FROM NOW())::bigint - 1800
             WHERE ro.product_id=s.product_id AND ro.offer_id<>s.offer_id
               AND ro.stock_status IN ('in_stock','low_stock','preorder') AND ro.price_pence IS NOT NULL
             ORDER BY CASE WHEN ro.postage_pence IS NULL THEN 1 ELSE 0 END ASC,
