@@ -1,3 +1,4 @@
+import { safeExternalHttpsUrl } from "./external-url";
 import { getSignalEngineStatus, getSignalRetailerDirectory, type SignalRetailerDirectoryRecord } from "./signal-engine-client";
 import { retailerByCloudId, retailerRegistry, type RetailerRecord } from "./retailer-registry";
 
@@ -37,7 +38,7 @@ function cloudRow(directory: SignalRetailerDirectoryRecord): RetailerNetworkReco
     id: registry?.id ?? directory.id,
     cloudRetailerId: directory.id,
     name: registry?.name ?? directory.name,
-    website: directory.websiteUrl ?? registry?.website ?? null,
+    website: safeExternalHttpsUrl(directory.websiteUrl ?? registry?.website),
     category: categoryFromClass(directory.retailerClass, registry),
     retailerClass: directory.retailerClass,
     source: "cloud",
@@ -51,15 +52,15 @@ function cloudRow(directory: SignalRetailerDirectoryRecord): RetailerNetworkReco
       lastSuccessAt: directory.monitoring.lastSuccessAt,
       productsSeen: directory.monitoring.productsSeen,
     },
-    relationship: registry?.partnerStatus ?? "network",
-    storefrontStatus: registry?.catalogueStatus ?? "connected",
+    relationship: registry?.partnerStatus ?? "unknown",
+    storefrontStatus: registry?.catalogueStatus ?? "unknown",
   };
 }
 
-export async function getRetailerNetwork(): Promise<RetailerNetworkRecord[]> {
+export async function getRetailerNetwork(timeoutMs = 8_000): Promise<RetailerNetworkRecord[]> {
   const [status, directoryResponse] = await Promise.all([
-    getSignalEngineStatus(),
-    getSignalRetailerDirectory(),
+    getSignalEngineStatus(timeoutMs),
+    getSignalRetailerDirectory(timeoutMs),
   ]);
   const directory = directoryResponse?.retailers ?? [];
   const seen = new Set<string>();
@@ -76,12 +77,18 @@ export async function getRetailerNetwork(): Promise<RetailerNetworkRecord[]> {
     rows = cloud.map((runtime) => {
       const registry = retailerByCloudId(runtime.id);
       if (registry) seen.add(registry.id);
-      const retailerClass = registry?.category === "major-retail" ? "national" : registry?.category === "tcg-specialist" ? "specialist" : registry?.category === "indie" ? "independent" : "unknown";
+      const retailerClass = registry?.category === "major-retail"
+        ? "national"
+        : registry?.category === "tcg-specialist"
+          ? "specialist"
+          : registry?.category === "indie"
+            ? "independent"
+            : "unknown";
       return {
         id: registry?.id ?? runtime.id,
         cloudRetailerId: runtime.id,
         name: registry?.name ?? runtime.name,
-        website: registry?.website ?? null,
+        website: safeExternalHttpsUrl(registry?.website),
         category: registry?.category ?? "unknown",
         retailerClass,
         source: "cloud" as const,
@@ -107,7 +114,7 @@ export async function getRetailerNetwork(): Promise<RetailerNetworkRecord[]> {
       id: registry.id,
       cloudRetailerId: registry.cloudRetailerId ?? null,
       name: registry.name,
-      website: registry.website,
+      website: safeExternalHttpsUrl(registry.website),
       category: registry.category,
       retailerClass: registry.category === "major-retail" ? "national" : registry.category === "tcg-specialist" ? "specialist" : "independent",
       source: "registry",

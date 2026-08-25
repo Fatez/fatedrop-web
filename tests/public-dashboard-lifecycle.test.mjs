@@ -6,19 +6,33 @@ const dashboardPage = readFileSync(new URL("../app/dashboard/page.tsx", import.m
 const dashboardData = readFileSync(new URL("../lib/dashboard.ts", import.meta.url), "utf8");
 
 test("dashboard keeps all four canonical lifecycle counters distinct", () => {
-  assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\.whisper\)/);
-  assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\.echo\)/);
-  assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\.manifested\)/);
-  assert.match(dashboardData, /whisper: network\?\.metrics\.whisper/);
-  assert.match(dashboardData, /echo: network\?\.metrics\.echo/);
-  assert.match(dashboardData, /manifested: network\?\.metrics\.manifested/);
-  assert.doesNotMatch(dashboardData, /echo: network\?\.metrics\.whisper/);
+  for (const row of [
+    '["whisper", "Whisper", "Early movement detected."]',
+    '["echo", "Echo", "Access or traffic is building."]',
+    '["manifested", "Manifested", "Confirmed live. Get in."]',
+    '["vanished", "Vanished", "Confirmed availability is gone."]',
+  ]) assert.ok(dashboardPage.includes(row));
+  assert.match(dashboardPage, /metric\(data\.publicSignalMetrics\[key\]\)/);
+  assert.match(dashboardData, /whisper: signalSummary\?\.whisper\.total \?\? null/);
+  assert.match(dashboardData, /echo: signalSummary\?\.echo\.total \?\? null/);
+  assert.match(dashboardData, /manifested: signalSummary\?\.manifested\.total \?\? null/);
+  assert.match(dashboardData, /vanished: signalSummary\?\.vanished\.total \?\? null/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.whisper\.total \?\? network\?\.metrics\.whisper/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.echo\.total \?\? network\?\.metrics\.echo/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.manifested\.total \?\? network\?\.metrics\.manifested/);
+  assert.doesNotMatch(dashboardData, /signalSummary\?\.vanished\.total \?\? network\?\.metrics\.vanished/);
+  assert.doesNotMatch(dashboardData, /echo: signalSummary\?\.whisper\.total/);
+  assert.doesNotMatch(dashboardData, /manifested: signalSummary\?\.echo\.total/);
   assert.doesNotMatch(dashboardData, /\(network\.metrics\.manifested \?\? 0\) \+ \(network\.metrics\.echo \?\? 0\)/);
 });
 
 test("dashboard exposes the final four-stage lifecycle terminology", () => {
-  assert.match(dashboardPage, /Whisper, Echo, Manifested and Vanished lifecycle intelligence/);
-  assert.match(dashboardPage, /Whisper and Echo activity will surface here/);
+  assert.match(dashboardPage, /Signals Overview/);
+  assert.match(dashboardPage, /Whisper/);
+  assert.match(dashboardPage, /Echo/);
+  assert.match(dashboardPage, /Manifested/);
+  assert.match(dashboardPage, /Vanished/);
+  assert.match(dashboardPage, /Confirmed live stock/);
   assert.match(dashboardData, /if \(kind === "whisper"\) return "Whisper"/);
   assert.match(dashboardData, /kind === "echo" \|\| kind === "queue" \|\| kind === "security"/);
   assert.match(dashboardData, /if \(kind === "manifested"\) return "Manifested"/);

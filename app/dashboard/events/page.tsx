@@ -1,123 +1,61 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
+import { EventCalendar } from "@/components/event-calendar";
+import { FateEncountersLive } from "@/components/fate-encounters-live";
+import { loadUpcomingEncounters } from "@/lib/encounters";
 
-export const metadata: Metadata = { title: "UK Card Events | FateDrop Dashboard", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Events | FateDrop Dashboard", robots: { index: false, follow: false } };
+export const dynamic = "force-dynamic";
 
-type Event = {
-  name: string;
-  date: string;
-  endDate?: string;
-  city: string;
-  region: string;
-  venue?: string;
-  price: string;
-  type: "Major" | "Regional" | "Community" | "Pokémon";
-  source: string;
-  booking?: string;
-};
+export default async function DashboardEventsPage() {
+  const feed = await loadUpcomingEncounters(1000);
+  const events = feed.events;
+  const upcoming = events;
+  const locations = new Set(upcoming.map((event) => event.venueName || event.townCity || event.postcode).filter(Boolean));
+  const organisers = new Set(upcoming.map((event) => event.organiserName).filter(Boolean));
 
-const events: Event[] = [
-  { name:"Worcester Card Show", date:"2026-08-22", endDate:"2026-08-23", city:"Worcester", region:"West Midlands", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/tcg-trade-events-uk/" },
-  { name:"Spalding Card Show", date:"2026-08-23", city:"Spalding", region:"East Midlands", price:"£2.99–£13.99", type:"Regional", source:"https://www.ukcardshows.co.uk/copy-of-home" },
-  { name:"The Elite Card Show", date:"2026-08-30", city:"Belfast", region:"Northern Ireland", venue:"Waterfront Hall", price:"See tickets", type:"Major", source:"https://cardshowfinder.uk/events/K07ZkNkSjJlMvjYRkiQD/" },
-  { name:"Glasgow Card Show", date:"2026-09-05", endDate:"2026-09-06", city:"Glasgow", region:"Scotland", venue:"Hampden Park", price:"See tickets", type:"Major", source:"https://cardshowfinder.uk/events/ugbqgog20eE4rZrYw1yJ/" },
-  { name:"CARD CON IV", date:"2026-09-05", endDate:"2026-09-06", city:"Farnborough", region:"South East", venue:"Farnborough International", price:"Free–£63.50", type:"Major", source:"https://cardshowfinder.uk/events/2A9Jtlqv3seM4kruN0te/" },
-  { name:"Ipswich Card Show #6", date:"2026-09-06", city:"Ipswich", region:"East of England", venue:"Inspire: Sports Dome", price:"£2–£12", type:"Regional", source:"https://www.ukcardshows.co.uk/" },
-  { name:"Midlands Card Expo #3", date:"2026-09-12", city:"Solihull", region:"West Midlands", venue:"National Conference Centre", price:"See tickets", type:"Major", source:"https://cardshowfinder.uk/events/uINwZk1nGYrOURWb7Bys/" },
-  { name:"London Card Show: TCG Fest", date:"2026-09-13", city:"Esher", region:"South East", venue:"Sandown Park Racecourse", price:"See tickets", type:"Major", source:"https://cardshowfinder.uk/events/bK5vr0Dzij6mU3hTuFhg/" },
-  { name:"Derby Card Show #4", date:"2026-09-19", city:"Derby", region:"East Midlands", venue:"Reach Conference Centre", price:"£2–£12", type:"Regional", source:"https://www.ukcardshows.co.uk/" },
-  { name:"Birmingham Card Show", date:"2026-09-19", endDate:"2026-09-20", city:"Birmingham", region:"West Midlands", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/tcg-trade-events-uk/" },
-  { name:"Sheffield Card Show #2", date:"2026-09-20", city:"Sheffield", region:"Yorkshire", venue:"Sheffield United Stadium", price:"£2–£10", type:"Regional", source:"https://www.ukcardshows.co.uk/" },
-  { name:"Cards Convention London", date:"2026-09-20", city:"Wembley", region:"London", venue:"BOXPARK Wembley", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/events/BGUfhCG47IPpBUyTxV18/" },
-  { name:"Lee Valley Card Show", date:"2026-09-20", city:"London", region:"London", venue:"Lee Valley Athletics Centre", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/events/zyzZc2QAFFUTTZ4aVOJ1/" },
-  { name:"Card Co Manchester", date:"2026-09-27", city:"Manchester", region:"North West", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/card-co-events/" },
-  { name:"Cardmania Worthing", date:"2026-09-27", city:"Worthing", region:"South East", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/cardmania-events/" },
-  { name:"Swindon Card Show", date:"2026-10-03", endDate:"2026-10-04", city:"Swindon", region:"South West", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/tcg-trade-events-uk/" },
-  { name:"Cardmania Stoke", date:"2026-10-03", city:"Stoke-on-Trent", region:"West Midlands", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/cardmania-events/" },
-  { name:"South Coast Card Show", date:"2026-10-04", city:"Plymouth", region:"South West", price:"See tickets", type:"Community", source:"https://cardshowfinder.uk/updates/" },
-  { name:"Milton Keynes Card Show", date:"2026-10-11", city:"Milton Keynes", region:"South East", venue:"Unity Place", price:"£2.50–£10", type:"Regional", source:"https://www.ukcardshows.co.uk/" },
-  { name:"Cardmania Glasgow", date:"2026-10-11", city:"Glasgow", region:"Scotland", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/cardmania-events/" },
-  { name:"The Card Show UK – Luton", date:"2026-10-11", city:"Luton", region:"East of England", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/the-card-show-uk/" },
-  { name:"Card Co Birmingham", date:"2026-10-11", city:"Birmingham", region:"West Midlands", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/card-co-events/" },
-  { name:"NCS Brighton Card Show", date:"2026-10-17", city:"Brighton", region:"South East", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/northern-card-shows/" },
-  { name:"CollectorCon Manchester", date:"2026-10-18", city:"Manchester", region:"North West", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/updates/" },
-  { name:"NCS Southampton Card Show", date:"2026-10-18", city:"Southampton", region:"South East", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/northern-card-shows/" },
-  { name:"Card Market London", date:"2026-10-18", city:"London", region:"London", venue:"Royal National Hotel", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/events/8rvvjkqv0rqrXjjwbY2Y/" },
-  { name:"Preston Card Fest – Halloween Special", date:"2026-10-24", city:"Preston", region:"North West", price:"See tickets", type:"Community", source:"https://cardshowfinder.uk/updates/" },
-  { name:"Game of Binders Aberdeen Card Show", date:"2026-10-24", city:"Aberdeen", region:"Scotland", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/updates/" },
-  { name:"Newmarket Card Show #3", date:"2026-10-25", city:"Newmarket", region:"East of England", venue:"Newmarket Racecourse", price:"£5–£15", type:"Regional", source:"https://www.ukcardshows.co.uk/" },
-  { name:"Card Co Bristol 2", date:"2026-10-25", city:"Bristol", region:"South West", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/card-co-events/" },
-  { name:"NCS Stoke Card Show 2", date:"2026-10-25", city:"Stoke-on-Trent", region:"West Midlands", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/northern-card-shows/" },
-  { name:"London Card Show", date:"2026-10-30", endDate:"2026-11-01", city:"Esher", region:"South East", venue:"Sandown Park Racecourse", price:"See tickets", type:"Major", source:"https://cardshowfinder.uk/events/rEVuRpKHCrkNCmMD8LS2/" },
-  { name:"Perth Scotland Pokémon Card Show/Market", date:"2026-10-31", city:"Perth", region:"Scotland", venue:"West Carse Hall", price:"See tickets", type:"Pokémon", source:"https://cardshowfinder.uk/events/Ly5oVy2emEnpnE3No4eJ/" },
-  { name:"Birmingham Card Show #7", date:"2026-11-07", city:"Birmingham", region:"West Midlands", venue:"The New Bingley Hall", price:"See tickets", type:"Major", source:"https://www.ukcardshows.co.uk/" },
-  { name:"Cardmania XL Coventry", date:"2026-11-07", city:"Coventry", region:"West Midlands", price:"See tickets", type:"Major", source:"https://cardshowfinder.uk/organisers/cardmania-events/" },
-  { name:"Newark Card Show", date:"2026-11-07", city:"Newark", region:"East Midlands", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/updates/" },
-  { name:"Cheltenham Card Show", date:"2026-11-14", endDate:"2026-11-15", city:"Cheltenham", region:"South West", venue:"Leonardo Hotel Cheltenham", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/events/ORV3fyCNY3ylw0YQr4wh/" },
-  { name:"The Scotland Card Show – Edinburgh", date:"2026-11-14", city:"Edinburgh", region:"Scotland", price:"See tickets", type:"Major", source:"https://www.cardpulse.club/card-shows/united-kingdom" },
-  { name:"London Card Fest", date:"2026-11-15", city:"London", region:"London", venue:"Canons Leisure Centre", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/events/xL65MrZod6SdnAVfg7Bn/" },
-  { name:"NCS Carlisle Card Show", date:"2026-11-15", city:"Carlisle", region:"North West", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/northern-card-shows/" },
-  { name:"Collectors Showcase", date:"2026-11-21", endDate:"2026-11-22", city:"London", region:"London", venue:"Olympia", price:"£5–£30", type:"Major", source:"https://www.ukcardshows.co.uk/" },
-  { name:"Cotswold Card Show", date:"2026-11-21", city:"Evesham", region:"West Midlands", price:"See tickets", type:"Community", source:"https://cardshowfinder.uk/updates/" },
-  { name:"Chepstow 2 – TCG Cymru", date:"2026-11-28", city:"Chepstow", region:"Wales", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/updates/" },
-  { name:"The Card Market Camden", date:"2026-11-29", city:"London", region:"London", venue:"Haverstock School", price:"See tickets", type:"Community", source:"https://cardshowfinder.uk/events/gLMQl5ovKACmiJEPZ0St/" },
-  { name:"Cards Convention North East", date:"2026-11-29", city:"Houghton-le-Spring", region:"North East", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/updates/" },
-  { name:"Cambridge Card Show #12", date:"2026-12-05", city:"Cambridge", region:"East of England", venue:"Cambridge Regional College", price:"£2–£12", type:"Regional", source:"https://www.ukcardshows.co.uk/" },
-  { name:"The Card Show UK – London", date:"2026-12-05", city:"London", region:"London", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/the-card-show-uk/" },
-  { name:"Twickenham Card Show", date:"2026-12-05", endDate:"2026-12-06", city:"Twickenham", region:"London", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/tcg-trade-events-uk/" },
-  { name:"Livingston Pokémon Card Show & Market", date:"2026-12-05", city:"Livingston", region:"Scotland", price:"See tickets", type:"Pokémon", source:"https://cardshowfinder.uk/organisers/top-deck-organisers/" },
-  { name:"The Vault Kon UK", date:"2026-12-12", city:"Fleet", region:"South East", price:"See tickets", type:"Community", source:"https://cardshowfinder.uk/updates/" },
-  { name:"NCS Manchester Card Show 3", date:"2026-12-13", city:"Manchester", region:"North West", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/northern-card-shows/" },
-  { name:"Birmingham Card Show", date:"2026-12-19", endDate:"2026-12-20", city:"Birmingham", region:"West Midlands", price:"See tickets", type:"Regional", source:"https://cardshowfinder.uk/organisers/tcg-trade-events-uk/" },
-];
+  return <DashboardPageShell title="Events" eyebrow="FATE ENCOUNTERS · UK TCG EVENTS">
+    <div className="fd-events-live-page">
+      <section className="fd-dash-card fd-events-live-hero">
+        <div className="fd-events-live-copy">
+          <span>FATE ENCOUNTERS</span>
+          <h1>Find events.<br/>Find your people.</h1>
+          <p>FateDrop brings card shows, TCG events and participating vendors into one clearer place. Think of it like a calendar for the hobby: find what is happening, check the source, then plan where you want to go.</p>
+          <div className="fd-events-live-actions"><a href="#event-calendar">See the calendar ↓</a><Link href="/events">Open public Events page ↗</Link></div>
+        </div>
+        <div className="fd-events-live-stats">
+          <div><strong>{feed.live ? upcoming.length : "—"}</strong><span>UPCOMING EVENTS</span><small>Source-backed listings</small></div>
+          <div><strong>{feed.live ? locations.size : "—"}</strong><span>LOCATIONS</span><small>Venue, town or postcode evidence</small></div>
+          <div><strong>{feed.live ? organisers.size : "—"}</strong><span>ORGANISERS NAMED</span><small>Only where the source provides one</small></div>
+        </div>
+      </section>
 
-const months = ["August", "September", "October", "November", "December"];
-const monthNumber: Record<string, number> = { August:8, September:9, October:10, November:11, December:12 };
-const reviewedAt = "19 Aug 2026";
-const regionCount = new Set(events.map((event) => event.region)).size;
+      <section className="fd-dash-card fd-events-how">
+        <div><b>1</b><strong>FIND AN EVENT</strong><span>See upcoming shows and dates.</span></div>
+        <i>→</i>
+        <div><b>2</b><strong>CHECK THE SOURCE</strong><span>Confirm venue, ticket and organiser details.</span></div>
+        <i>→</i>
+        <div><b>3</b><strong>SEE WHO IS THERE</strong><span>Vendor information appears only when it is actually published.</span></div>
+      </section>
 
-function dayLabel(date: string, endDate?: string) {
-  const start = new Date(`${date}T12:00:00Z`);
-  const first = new Intl.DateTimeFormat("en-GB", { day:"numeric", month:"short" }).format(start);
-  if (!endDate) return first;
-  const end = new Date(`${endDate}T12:00:00Z`);
-  return `${first}–${new Intl.DateTimeFormat("en-GB", { day:"numeric", month:"short" }).format(end)}`;
-}
+      <section className="fd-dash-card fd-events-calendar-card" id="event-calendar">
+        <header><div><span>EVENT CALENDAR</span><h2>What is coming up?</h2></div><small>{feed.live ? `${upcoming.length} live listing${upcoming.length === 1 ? "" : "s"}` : "Live feed unavailable"}</small></header>
+        {feed.live ? <EventCalendar events={upcoming} /> : <div className="fd-events-empty"><strong>The live Fate Encounters feed is unavailable.</strong><span>FateDrop does not replace it with made-up events or stale demo listings.</span></div>}
+      </section>
 
-export default function DashboardEventsPage() {
-  return (
-    <DashboardPageShell title="Events" eyebrow="UK EVENTS · STATIC SOURCED BETA">
-      <div className="fd-events-wrap">
-        <section className="fd-dash-card fd-events-hero">
-          <div><span>FATEDROP / SOURCED EVENT RADAR</span><h1>Find the next card show.<br/>Then verify before you travel.</h1><p>This is a curated static launch dataset of TCG, Pokémon and collector events, reviewed {reviewedAt}. It is not yet the live FateDrop Cloud event feed. Dates, venues and ticket prices can change, so each listing links back to a reference source for confirmation.</p></div>
-          <div className="fd-events-stats"><div><strong>{events.length}</strong><small>SOURCED LISTINGS</small></div><div><strong>{regionCount}</strong><small>REGIONS REPRESENTED</small></div><div><strong>{months.length}</strong><small>MONTHS MAPPED</small></div></div>
-        </section>
+      <section className="fd-dash-card fd-events-explorer-card">
+        <header><div><span>LIVE EXPLORER</span><h2>Search the event network.</h2><p>Filter real listings, inspect organiser-backed vendor information and use postcode or device location where available. A vendor being present does not automatically mean we know what is on their table.</p></div></header>
+        <FateEncountersLive initialEvents={events} live={feed.live} />
+      </section>
 
-        <section className="fd-events-sources">
-          <div><b>PRIMARY DISCOVERY</b><span>CardShow Finder UK is one discovery source for the current static dataset.</span><a href="https://cardshowfinder.uk/events/" target="_blank" rel="noreferrer">Verify directory ↗</a></div>
-          <div><b>PRICE CROSS-CHECK</b><span>UK Card Shows publishes organiser/ticket information for many established shows.</span><a href="https://www.ukcardshows.co.uk/" target="_blank" rel="noreferrer">Verify ticket listings ↗</a></div>
-          <div><b>POKÉMON CROSS-CHECK</b><span>PokePrices maintains a Pokémon-focused UK show calendar that can be checked separately.</span><a href="https://www.pokeprices.io/card-shows/uk" target="_blank" rel="noreferrer">Verify Pokémon shows ↗</a></div>
-        </section>
-
-        {months.map((month) => {
-          const monthEvents = events.filter((event) => Number(event.date.slice(5,7)) === monthNumber[month]);
-          return <section className="fd-dash-card fd-event-month" key={month}>
-            <div className="fd-dash-card-head"><span>{month.toUpperCase()} 2026</span><small>{monthEvents.length} sourced listings · verify before travel</small></div>
-            <div className="fd-event-calendar">
-              {monthEvents.map((event) => <article key={`${event.date}-${event.name}`}>
-                <time><strong>{new Date(`${event.date}T12:00:00Z`).getUTCDate()}</strong><small>{new Intl.DateTimeFormat("en-GB",{weekday:"short"}).format(new Date(`${event.date}T12:00:00Z`)).toUpperCase()}</small></time>
-                <div className="fd-event-info"><div className="fd-event-tags"><span>{event.type}</span><i>{event.region}</i></div><h2>{event.name}</h2><p>{event.venue ? `${event.venue} · ` : ""}{event.city}</p><small>{dayLabel(event.date,event.endDate)}</small></div>
-                <div className="fd-event-price"><small>PUBLISHED / REFERENCED ENTRY</small><strong>{event.price}</strong><a href={event.source} target="_blank" rel="noreferrer">Verify details / tickets ↗</a></div>
-              </article>)}
-            </div>
-          </section>;
-        })}
-
-        <section className="fd-event-note"><strong>Coverage + freshness note</strong><p>This is a static sourced beta dataset reviewed {reviewedAt}, not a guarantee that every UK event is present or that every detail is still unchanged. The canonical Cloud snapshot schema already supports upcoming events, but the current Cloud publisher does not yet populate that feed. The production direction is an ingestion pipeline with source timestamps and update handling—not indefinite hand-maintenance of this array.</p></section>
-      </div>
-      <style>{`
-        .fd-events-wrap{display:grid;gap:18px}.fd-events-hero{padding:32px;display:flex;justify-content:space-between;gap:30px;align-items:end;background:radial-gradient(circle at 82% 20%,rgba(112,66,190,.18),transparent 30%),#0a090e}.fd-events-hero>div:first-child{max-width:720px}.fd-events-hero span{font-size:10px;letter-spacing:.16em;color:#9e72e8;font-weight:800}.fd-events-hero h1{font-size:34px;line-height:1.04;margin:10px 0}.fd-events-hero p{color:#96909d;font-size:13px;line-height:1.65}.fd-events-stats{display:flex;gap:12px}.fd-events-stats div{min-width:105px;padding:15px;border:1px solid #25212c;border-radius:14px;background:#0d0b11}.fd-events-stats strong{display:block;font-size:22px}.fd-events-stats small{font-size:7px;letter-spacing:.11em;color:#716b79}.fd-events-sources{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.fd-events-sources>div{border:1px solid #211d27;background:#0a090e;border-radius:16px;padding:17px}.fd-events-sources b{display:block;font-size:9px;letter-spacing:.13em;color:#a879f1}.fd-events-sources span{display:block;color:#8c8593;font-size:11px;line-height:1.5;margin:8px 0}.fd-events-sources a,.fd-event-price a{color:#c7a9ff;font-size:10px}.fd-event-month{overflow:hidden}.fd-event-calendar article{display:grid;grid-template-columns:72px 1fr 170px;align-items:center;min-height:116px;border-top:1px solid #19161e;padding:0 20px}.fd-event-calendar article:first-child{border-top:0}.fd-event-calendar time{display:flex;flex-direction:column;align-items:center;border-right:1px solid #1d1922;padding-right:20px}.fd-event-calendar time strong{font-size:26px}.fd-event-calendar time small{font-size:8px;color:#8c6cc3;letter-spacing:.1em}.fd-event-info{padding:18px 22px}.fd-event-tags{display:flex;gap:7px;margin-bottom:7px}.fd-event-tags span,.fd-event-tags i{font-size:7px;text-transform:uppercase;letter-spacing:.1em;border:1px solid #2c2437;padding:4px 6px;border-radius:999px;color:#a37adf;font-style:normal}.fd-event-tags i{color:#77717e}.fd-event-info h2{font-size:15px;margin:0 0 5px}.fd-event-info p,.fd-event-info>small{font-size:10px;color:#817a88;margin:0}.fd-event-price{text-align:right}.fd-event-price>small{display:block;font-size:7px;letter-spacing:.12em;color:#625c69}.fd-event-price strong{display:block;font-size:13px;margin:4px 0 7px}.fd-event-note{border:1px solid rgba(159,111,234,.22);border-radius:16px;padding:18px 20px;background:rgba(100,55,150,.06)}.fd-event-note strong{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#a77be8}.fd-event-note p{font-size:11px;color:#85808b;line-height:1.6;margin:7px 0 0}@media(max-width:900px){.fd-events-hero{display:block}.fd-events-stats{margin-top:20px;flex-wrap:wrap}.fd-events-sources{grid-template-columns:1fr}.fd-event-calendar article{grid-template-columns:58px 1fr}.fd-event-price{grid-column:2;text-align:left;padding:0 22px 18px}.fd-event-calendar time{padding-right:12px}.fd-event-info{padding-right:4px}}
-      `}</style>
-    </DashboardPageShell>
-  );
+      <section className="fd-dash-card fd-events-truth">
+        <div><span>ONE SIMPLE RULE</span><h2>An event listing tells you where the hobby is. It does not invent stock.</h2></div>
+        <p>FateDrop keeps event evidence separate from ordinary retailer stock. If an organiser confirms a vendor, we can show the vendor. If a vendor explicitly publishes event inventory, we can show that too. If neither exists, we say we do not know.</p>
+      </section>
+    </div>
+    <style>{`
+      .fd-events-live-page{display:grid;gap:12px;max-width:1600px;margin:0 auto}.fd-events-live-page .fd-dash-card{border-color:rgba(221,203,188,.085);background:linear-gradient(145deg,#0e1216,#090d11 74%);border-radius:12px}.fd-events-live-hero{padding:28px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(360px,.7fr);gap:30px;overflow:hidden;background:radial-gradient(circle at 92% 12%,rgba(133,89,164,.16),transparent 29%),linear-gradient(145deg,#101318,#090c10 70%)!important}.fd-events-live-copy>span,.fd-events-calendar-card header span,.fd-events-explorer-card header span,.fd-events-truth span{color:#aa886d;font-size:7px;font-weight:900;letter-spacing:.16em}.fd-events-live-copy h1{margin:10px 0 14px;color:#eee4da;font-family:Georgia,'Times New Roman',serif;font-size:clamp(2.5rem,4.3vw,4.9rem);font-weight:500;line-height:.92;letter-spacing:-.05em}.fd-events-live-copy p{max-width:790px;margin:0;color:#948b87;font-size:12px;line-height:1.75}.fd-events-live-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.fd-events-live-actions a{padding:10px 13px;border:1px solid rgba(172,129,193,.2);border-radius:9px;background:rgba(120,76,151,.08);color:#d3b8de;font-size:8px;font-weight:850;text-decoration:none}.fd-events-live-stats{display:grid;grid-template-columns:1fr;gap:8px;align-content:center}.fd-events-live-stats div{padding:16px;border:1px solid rgba(221,203,188,.07);border-radius:10px;background:rgba(255,255,255,.018)}.fd-events-live-stats strong{display:block;color:#e9dfd5;font-family:Georgia,serif;font-size:29px;font-weight:500}.fd-events-live-stats span{display:block;margin-top:3px;color:#a98972;font-size:7px;font-weight:900;letter-spacing:.12em}.fd-events-live-stats small{color:#6f6867;font-size:7px}.fd-events-how{padding:16px 18px;display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:center}.fd-events-how>div{display:grid;grid-template-columns:28px 1fr;gap:2px 8px;align-items:center}.fd-events-how b{grid-row:1 / 3;width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(172,129,193,.2);border-radius:8px;color:#b68cc7;font-size:8px}.fd-events-how strong{font-size:8px;letter-spacing:.08em;color:#cfc4bd}.fd-events-how span{font-size:7px;color:#71696b}.fd-events-how>i{color:#51484f;font-style:normal}.fd-events-calendar-card,.fd-events-explorer-card{padding:22px}.fd-events-calendar-card>header,.fd-events-explorer-card>header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}.fd-events-calendar-card h2,.fd-events-explorer-card h2,.fd-events-truth h2{margin:6px 0 0;color:#e6dcd2;font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:500}.fd-events-calendar-card header small{color:#756e6d;font-size:8px}.fd-events-explorer-card header p{max-width:780px;margin:7px 0 0;color:#7d7575;font-size:9px;line-height:1.6}.fd-events-empty{min-height:180px;display:grid;place-content:center;gap:6px;text-align:center;color:#756e6d}.fd-events-empty strong{color:#c6bbb4;font-size:11px}.fd-events-empty span{font-size:8px}.fd-events-truth{padding:24px 26px;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:30px;align-items:center}.fd-events-truth p{margin:0;color:#89807e;font-size:10px;line-height:1.7}@media(max-width:980px){.fd-events-live-hero,.fd-events-truth{grid-template-columns:1fr}.fd-events-live-stats{grid-template-columns:repeat(3,1fr)}.fd-events-how{grid-template-columns:1fr}.fd-events-how>i{display:none}}@media(max-width:650px){.fd-events-live-hero,.fd-events-calendar-card,.fd-events-explorer-card{padding:18px}.fd-events-live-stats{grid-template-columns:1fr}.fd-events-how{padding:12px}.fd-events-live-copy h1{font-size:2.7rem}}
+    `}</style>
+  </DashboardPageShell>;
 }

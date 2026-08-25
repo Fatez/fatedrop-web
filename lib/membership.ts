@@ -3,7 +3,7 @@ import { hasCapability } from "./entitlements";
 
 export const DISCORD_INVITE_URL = "https://discord.gg/QK9ahpYSFk";
 export const DISCORD_COMMUNITY_OPEN = process.env.NEXT_PUBLIC_DISCORD_ENABLED === "true";
-export const TRIAL_DAYS = 14;
+export const TRIAL_DAYS = 7;
 
 export function hasPremiumAccess(membership: MembershipRecord) {
   return hasCapability(membership, "advanced_fate_match");
@@ -18,8 +18,7 @@ export function membershipLabel(membership: MembershipRecord) {
 }
 
 export function tierLabel(tier: MembershipTier) {
-  if (tier === "plus") return "FateDrop Plus";
-  if (tier === "pro") return "FateDrop Pro";
+  if (tier === "plus" || tier === "pro") return "FateDrop Plus";
   return "Free";
 }
 

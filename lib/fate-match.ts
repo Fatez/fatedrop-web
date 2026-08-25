@@ -20,7 +20,7 @@ export type FateMatch = {
   preferredRetailerIds: string[];
   excludedRetailerIds: string[];
   stockRequirement: FateMatchStockRequirement;
-  notificationPreferences: Record<string, boolean>;
+  notificationPreferences: Record<string, boolean | string>;
   enabled: boolean;
   createdAt: number;
   updatedAt: number;

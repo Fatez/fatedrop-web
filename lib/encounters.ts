@@ -1,6 +1,7 @@
 import type { EncounterEvent, EncounterVendor, LocalRadarResponse } from "@/lib/encounter-types";
 
 const FALLBACK_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
+const ENCOUNTERS_TIMEOUT_MS = 4500;
 
 export function getSignalEngineUrl() {
   const raw = process.env.FATEDROP_SIGNAL_ENGINE_URL || FALLBACK_SIGNAL_ENGINE_URL;
@@ -20,6 +21,7 @@ export async function loadUpcomingEncounters(limit = 1000) {
   try {
     const response = await fetch(`${getSignalEngineUrl()}/api/encounters?${params.toString()}`, {
       next: { revalidate: 300 },
+      signal: AbortSignal.timeout(ENCOUNTERS_TIMEOUT_MS),
     });
     const data = await readJson<{ success?: boolean; events?: EncounterEvent[] }>(response);
     return {
@@ -34,6 +36,7 @@ export async function loadUpcomingEncounters(limit = 1000) {
 export async function loadEncounterVendors(eventId: string) {
   const response = await fetch(`${getSignalEngineUrl()}/api/encounters/${encodeURIComponent(eventId)}/vendors`, {
     cache: "no-store",
+    signal: AbortSignal.timeout(ENCOUNTERS_TIMEOUT_MS),
   });
   const data = await readJson<{ vendors?: EncounterVendor[] }>(response);
   return Array.isArray(data.vendors) ? data.vendors : [];
@@ -42,6 +45,7 @@ export async function loadEncounterVendors(eventId: string) {
 export async function loadLocalRadar(searchParams: URLSearchParams) {
   const response = await fetch(`${getSignalEngineUrl()}/api/local-radar?${searchParams.toString()}`, {
     cache: "no-store",
+    signal: AbortSignal.timeout(ENCOUNTERS_TIMEOUT_MS),
   });
   const data = await readJson<LocalRadarResponse>(response);
   return {

@@ -1,15 +1,15 @@
 export const siteConfig = {
   name: "FateDrop",
-  title: "FateDrop — UK TCG Discovery Network",
+  title: "FateDrop — UK TCG Signal Intelligence & Indie Discovery",
   description:
-    "Search participating TCG catalogues, independent retailers and clearly labelled event discovery across the UK.",
-  tagline: "Find the drop. Support independents. Collect smarter.",
+    "Follow evidence-backed stock signals, use FateFind to compare live value against verified RRP/reference, create FateMatch watches and discover independent TCG retailers and events across the UK.",
+  tagline: "Follow the signal. Find the retailer. Collect smarter.",
   nav: [
     { label: "Collectors", href: "/collectors" },
     { label: "Retailers", href: "/businesses" },
     { label: "Events", href: "/events" },
-    { label: "Free Drops", href: "/free-drops" },
     { label: "Trust", href: "/trust" },
+    { label: "About", href: "/about" },
     { label: "Merch", href: "/merch" },
   ],
   marketCategories: ["Major retail products", "Independent catalogues", "Singles", "Sealed products", "Graded cards", "Accessories", "Preorders", "Local stock", "Event-vendor inventory"],
@@ -30,58 +30,47 @@ export const siteConfig = {
       name: "FateDrop Plus",
       price: "£4.99 / month",
       featured: true,
-      features: ["Premium signal detail", "Echo, Manifested and Vanished lifecycle alerts", "FateFind saved intent", "True Price context", "Local Radar tools where configured", "Premium Discord entitlement when enabled"],
-    },
-    {
-      name: "FateDrop Pro",
-      price: "£14.99 / month",
-      features: ["Shared Premium capability foundation", "Higher-tier feature split under product review", "Future advanced intelligence only as released", "No guaranteed-first or fabricated priority claims"],
+      features: ["Full FateFind value intelligence", "FateMatch personal monitoring and buying conditions", "Whisper, Echo, Manifested and Vanished lifecycle alerts", "Instant eligible app + Discord notifications", "Advanced alert filters", "True Price context inside FateFind when delivery is known", "Local Radar tools where configured"],
     },
   ],
   retailerPlans: [
     {
       name: "Free Retailer",
       price: "£0",
-      features: ["Basic verified profile", "Limited catalogue", "Direct retailer links", "Organic discovery"],
+      features: ["Basic verified profile", "Organic evidence-based discovery", "Direct retailer links", "No paid ranking or trust advantage"],
     },
     {
-      name: "Indie",
+      name: "FateDrop Indie",
       price: "£9.99 / month",
       secondaryPrice: "or £99 / year",
       featured: true,
-      features: ["Complete catalogue", "Verified FateDrop storefront", "Search visibility", "Events and preorders", "Catalogue monitoring", "Basic referral analytics when available"],
-    },
-    {
-      name: "Indie Pro",
-      price: "£24.99 / month",
-      secondaryPrice: "or £249 / year",
-      features: ["Advanced analytics when released", "Aggregated demand insight when released", "Event Vendor Mode when released", "Priority catalogue support", "Clearly labelled promotional tools"],
+      features: ["Complete connected catalogue", "Verified FateDrop storefront", "Search and FateFind eligibility from genuine offer evidence", "Events and preorders", "Catalogue monitoring", "Basic referral analytics when available", "Retailer keeps customer, checkout and fulfilment"],
     },
   ],
   audiences: [
     {
       eyebrow: "01 / Collectors",
-      title: "Spend less time searching and more time collecting.",
+      title: "Find the right drop with better context.",
       description:
-        "Search participating retailers, save wanted intent, compare the real cost, receive relevant signals and discover local shops and events.",
+        "Follow signals, use FateFind to compare real value, let FateMatch watch your buying conditions and discover independent retailers and events through one network.",
       cta: "Explore collector tools",
       href: "/collectors",
       accent: "cyan",
     },
     {
       eyebrow: "02 / Retailers & vendors",
-      title: "Put your products in front of collectors already looking.",
+      title: "Be found by collectors already looking.",
       description:
-        "Connect a catalogue, gain relevant discovery, send buyers to your checkout and build toward evidence-backed demand insight.",
+        "Connect a catalogue, keep your checkout and become visible inside relevant collector journeys without becoming a marketplace listing.",
       cta: "See retailer value",
       href: "/businesses",
       accent: "violet",
     },
     {
       eyebrow: "03 / Event organisers",
-      title: "Make every event discoverable before the doors open.",
+      title: "Make the real-world TCG scene easier to discover.",
       description:
-        "Build toward one journey for dates, tickets, vendors and clearly labelled temporary event inventory.",
+        "Bring source-backed dates, venues and participating vendors into the same wider FateDrop network.",
       cta: "Explore event discovery",
       href: "/events",
       accent: "green",
@@ -90,38 +79,38 @@ export const siteConfig = {
   features: [
     {
       number: "01",
-      title: "Unified Search",
+      title: "Signal Intelligence",
       description:
-        "Search products across connected catalogue offers through one network model as feeds come online.",
-      meta: "One query / connected sources",
+        "Whisper catches product or catalogue movement. Echo says access, queue, traffic or security conditions changed. Manifested confirms purchasable stock is live. Vanished closes the loop when previously confirmed availability is gone.",
+      meta: "Four states / one meaning",
     },
     {
       number: "02",
-      title: "True Price",
+      title: "FateFind",
       description:
-        "Compare item price, verified RRP and known mandatory delivery. Unknown delivery remains unknown.",
-      meta: "Item + RRP + known delivery",
+        "Compare genuinely equivalent live offers using the correct RRP/reference and identify the strongest-value option rather than confusing value with the smallest raw checkout number. Known delivery is kept separate and True Price is shown as supporting checkout context.",
+      meta: "Best value now / verified RRP context",
     },
     {
       number: "03",
-      title: "Watchlist",
+      title: "FateMatch",
       description:
-        "Keep wanted products in one account-level collector list as the shared save model develops.",
-      meta: "Saved products / account-wide",
+        "Choose a specific product and the conditions you would actually buy at — stock, item-price, True Price, RRP percentage or retailer rules — and let FateDrop alert you when a qualifying live offer appears.",
+      meta: "Watch my conditions / alert when qualified",
     },
     {
       number: "04",
-      title: "FateFind",
+      title: "Independent Discovery",
       description:
-        "Create a structured wanted search using product, maximum True Price or RRP premium and online/local scope.",
-      meta: "Saved intent / network monitoring",
+        "Find products through participating independents and continue to the retailer's own product page and checkout. FateDrop helps with discovery and context; the retailer remains the seller.",
+      meta: "Discover here / buy direct",
     },
     {
       number: "05",
-      title: "Drop Pulse",
+      title: "Universal Wishlist",
       description:
-        "Summarise timestamp-supported network movement without turning weak evidence into manufactured urgency.",
-      meta: "Evidence-supported context",
+        "Keep products you care about in one account-level list without turning every saved item into a live watch.",
+      meta: "Saved products / account-wide",
     },
     {
       number: "06",
@@ -132,17 +121,17 @@ export const siteConfig = {
     },
     {
       number: "07",
-      title: "Events",
+      title: "Fate Encounters",
       description:
-        "Browse clearly labelled demonstration or sourced event information and verify organiser details before travel.",
-      meta: "Demo / sourced beta",
+        "Browse source-backed UK card shows, venues and participating vendors and verify organiser details before travel.",
+      meta: "Real-world network",
     },
     {
       number: "08",
-      title: "Event Vendor Mode",
+      title: "Drop Pulse",
       description:
-        "Planned temporary inventory search that stays clearly separate from ordinary shop stock.",
-      meta: "Planned event-stock layer",
+        "Summarise timestamp-supported network movement without turning weak evidence into manufactured urgency.",
+      meta: "Evidence-supported context",
     },
   ],
   roadmap: [

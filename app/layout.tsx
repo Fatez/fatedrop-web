@@ -1,24 +1,28 @@
 import type { Metadata } from "next";
 import { canonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
+import "./accessibility.css";
+import "./koru-theme.css";
+import "./koru-product-theme.css";
+import "./companion-presentation.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalSiteUrl()),
-  title: "FateDrop — UK TCG Discovery Network",
+  title: "FateDrop — UK TCG Signal Intelligence & Indie Discovery",
   description:
-    "A UK TCG founding-beta network for catalogue discovery, evidence-backed stock intelligence, independent retailers and events.",
+    "FateDrop connects collectors with evidence-backed stock signals, FateFind live value comparison, FateMatch personal monitoring, independent retailers and real-world TCG events.",
   openGraph: {
-    title: "FateDrop — Find stock. Support independents. Collect smarter.",
+    title: "FateDrop — You don't chase drops. You get the signal.",
     description:
-      "A founding-beta TCG discovery network connecting collector demand with participating catalogues, evidence-backed stock intelligence, independent retailers and events.",
+      "Follow the signal, use FateFind to identify the strongest live value and let FateMatch watch the buying conditions that matter to you across the UK TCG network.",
     type: "website",
-    images: [{ url: "/assets/fatedrop-header.webp", width: 1817, height: 866, alt: "FateDrop ultraviolet network artwork" }],
+    images: [{ url: "/assets/home/koru-home-hero.png", width: 1672, height: 941, alt: "Koru overlooking the FateDrop landscape at sunset" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "FateDrop — Find stock. Support independents. Collect smarter.",
-    description: "Search participating UK TCG catalogues, compare known costs and follow evidence-backed stock signals.",
-    images: ["/assets/fatedrop-header.webp"],
+    title: "FateDrop — You don't chase drops. You get the signal.",
+    description: "Signals, FateFind live value comparison, FateMatch monitoring and independent-retailer discovery for TCG collectors.",
+    images: ["/assets/home/koru-home-hero.png"],
   },
   icons: {
     icon: "/favicon.svg",
@@ -27,11 +31,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className="antialiased">{children}</body>

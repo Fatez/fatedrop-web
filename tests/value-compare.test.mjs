@@ -5,15 +5,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const page = fs.readFileSync(path.join(root, "app/dashboard/true-price/page.tsx"), "utf8");
+const page = fs.readFileSync(path.join(root, "app/dashboard/fatefind/page.tsx"), "utf8");
 const compare = fs.readFileSync(path.join(root, "components/value-compare.tsx"), "utf8");
 const client = fs.readFileSync(path.join(root, "lib/signal-engine-client.ts"), "utf8");
 
-test("RRP percentage uses item price and stays separate from True Price delivery", () => {
+test("FateFind uses the proven RRP comparison and presents True Price separately", () => {
+  assert.match(page, /searchSignalTruePrice/);
   assert.match(page, /rrpDelta\(offer\.priceGbp, group\.rrpGbp\)/);
-  assert.match(page, /ITEM PRICE VS VALUE BASELINE/);
-  assert.match(page, /TRUE PRICE/);
   assert.match(page, /VS RRP \/ REF/);
+  assert.match(page, /TRUE PRICE/);
 });
 
 test("two-item compare chooses value by item-price RRP position before unit cost", () => {

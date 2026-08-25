@@ -48,7 +48,8 @@ export async function GET(request: Request) {
       updatedAt: snapshot.membership.updatedAt,
     },
     wishlist: wishlistResult.status === "fulfilled" ? wishlistResult.value : [],
-    fateFinds: fateFindResult.status === "fulfilled" ? fateFindResult.value : [],
+    fateMatchWatches: fateFindResult.status === "fulfilled" ? fateFindResult.value : [],
+    fateFinds: fateFindResult.status === "fulfilled" ? fateFindResult.value : [], // legacy response alias
     fateMatches: fateMatchResult.status === "fulfilled" ? fateMatchResult.value : [],
     notificationPreferences: preferenceResult.status === "fulfilled" ? preferenceResult.value : DEFAULT_NOTIFICATION_PREFERENCES,
     pendingMigrations,

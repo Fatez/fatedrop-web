@@ -1,6 +1,6 @@
 import { saveDiscordLink } from "@/lib/account-storage";
 import { getCurrentSnapshot } from "@/lib/auth";
-import { exchangeDiscordCode, fetchDiscordIdentity, syncPremiumDiscordRole, validateDiscordState } from "@/lib/discord";
+import { ensureDiscordGuildMember, exchangeDiscordCode, fetchDiscordIdentity, syncPremiumDiscordRole, validateDiscordState } from "@/lib/discord";
 import { hasPremiumAccess } from "@/lib/membership";
 
 export const runtime = "nodejs";
@@ -24,9 +24,13 @@ export async function GET(request: Request) {
       connectedAt: Math.floor(Date.now() / 1000),
       roleSyncedAt: null,
     });
+
+    const guild = await ensureDiscordGuildMember(identity.id, token.access_token);
+    if (guild.configured && !guild.joined) return Response.redirect(new URL("/account?discord=join-error", request.url));
+
     if (!hasPremiumAccess(snapshot.membership)) return Response.redirect(new URL("/account?discord=linked-free", request.url));
     const role = await syncPremiumDiscordRole(link, snapshot.membership);
-    const result = role.configured && !role.memberFound ? "join" : role.synced ? "linked" : "linked-no-role";
+    const result = role.synced ? "linked" : role.configured && !role.memberFound ? "join" : "linked-no-role";
     return Response.redirect(new URL(`/account?discord=${result}`, request.url));
   } catch {
     return Response.redirect(new URL("/account?discord=error", request.url));

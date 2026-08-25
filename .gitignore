@@ -51,6 +51,10 @@ next-env.d.ts
 /data/accounts.json
 /data/accounts.json.*.tmp
 
+# local Koru & Friends companion selection storage
+/data/fatedrop-avatars.json
+/data/fatedrop-avatars.json.*.tmp
+
 # local FateDrop dashboard metric/audit storage
 /data/dashboard-metrics.json
 /data/dashboard-metrics.json.*.tmp

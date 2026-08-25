@@ -10,9 +10,8 @@ export async function POST(request: Request) {
     const snapshot = await getCurrentSnapshot();
     if (!snapshot) return Response.json({ error: "Create or sign in to your FateDrop ID first." }, { status: 401 });
     const payload = await request.json() as { tier?: unknown };
-    const tier = payload.tier === "plus" || payload.tier === "pro" ? payload.tier : null;
-    if (!tier) return Response.json({ error: "Choose a valid membership tier." }, { status: 400 });
-    if (hasPremiumAccess(snapshot.membership)) return Response.json({ error: "This FateDrop ID already has Premium access. Use Manage billing from Membership to change the subscription." }, { status: 409 });
+    if (payload.tier !== "plus") return Response.json({ error: "FateDrop Plus is the only collector membership available." }, { status: 400 });
+    if (hasPremiumAccess(snapshot.membership)) return Response.json({ error: "This FateDrop ID already has FateDrop Plus access. Use Manage billing from Membership to change the subscription." }, { status: 409 });
     if (snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled") {
       return Response.json({ error: "An existing Stripe subscription needs attention. Open Manage billing instead of creating a second subscription." }, { status: 409 });
     }
@@ -22,7 +21,7 @@ export async function POST(request: Request) {
       userId: snapshot.account.id,
       email: snapshot.account.email,
       fateId: snapshot.account.fateId,
-      tier,
+      tier: "plus",
       existingCustomerId: snapshot.membership.stripeCustomerId,
       trialEligible,
       origin: new URL(request.url).origin,

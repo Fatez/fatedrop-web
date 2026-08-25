@@ -1,30 +1,68 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
+import { FutureExpansion } from "@/components/future-expansion";
+import { siteConfig } from "@/lib/site-data";
 
 export const metadata: Metadata = {
-  title: "About FateDrop",
-  description: "FateDrop exists to make collecting easier while helping independent UK TCG businesses become more visible.",
+  title: "About FateDrop | The Collector & Indie Network",
+  description: "Why FateDrop exists, the principles behind the collector-to-independent-retailer bridge and the longer-term TCG network vision.",
 };
 
 export default function AboutPage() {
   return (
     <SiteShell>
-      <PageHero eyebrow="Why FateDrop exists" title="A connected network, built independent-first." description="FateDrop is a UK TCG founding-beta discovery network connecting collectors with participating catalogues, evidence-backed stock signals, independent retailers, local shops, events and vendors.">
-        <div className="button-row"><Link className="button button-primary" href="/join">Join the beta <span>↗</span></Link></div>
-      </PageHero>
-      <section className="content-section section-shell"><div className="quote-band"><blockquote>Discovery should be useful for the collector and fair to the business holding the stock.</blockquote><p>That simple idea shapes every part of FateDrop—from direct retailer links to local event visibility.</p></div></section>
-      <section className="content-section section-shell">
-        <SectionHeading eyebrow="Our principles" title="Build the network we would want to use." body="FateDrop is being shaped around practical value, honest claims and a healthier relationship between technology and independent trade." />
-        <div className="mission-grid" style={{ marginTop: 60 }}>
+      <MarketStoryHero
+        eyebrow="Why FateDrop exists"
+        title="A better bridge between collectors and the stores holding the stock."
+        description="Collectors face fragmented stock, noisy alerts and weak price context. Independent TCG retailers can hold exactly the right product and still be difficult to discover. FateDrop is being built between those two problems."
+        image="/assets/market/about.png"
+        alt="FateDrop companions overlooking a distant city and mountain landscape at sunrise"
+        proof={["Collector clarity", "Independent visibility", "Evidence-led signals", "One connected TCG network"]}
+        focal="right"
+      >
+        <div className="button-row"><Link className="button button-primary" href="/join">Join the beta <span>↗</span></Link><Link className="text-link" href="#principles">Why we built FateDrop <span>↓</span></Link></div>
+      </MarketStoryHero>
+
+      <section className="content-section section-shell"><div className="quote-band"><blockquote>Discovery should be useful for the collector and fair to the business holding the stock.</blockquote><p>That principle is why FateDrop sends customers to retailers instead of replacing them, why price context matters and why the signal lifecycle is designed to say only what the evidence supports.</p></div></section>
+
+      <section className="content-section section-shell" id="principles">
+        <SectionHeading eyebrow="The principles" title="A useful network before a noisy one." body="The product can grow, but these rules should stay recognisable as FateDrop expands." />
+        <div className="mission-grid" style={{ marginTop: 52 }}>
           {[
-            ["01", "Collector clarity", "Make products, availability, independents and events easier to understand without burying the useful signal."],
-            ["02", "Independent visibility", "Help smaller businesses be found while preserving their own identity, website and checkout."],
-            ["03", "Local connection", "Treat card shows, vendors and local shops as part of the same discovery journey—not an afterthought."],
-            ["04", "Earned trust", "Label demos, roadmap ideas and changing beta figures honestly. Credibility is built in the small print too."],
+            ["01", "Collector clarity", "Make stock movement, price context and the next buying step easier to understand."],
+            ["02", "Independent visibility", "Help smaller retailers be found without taking away their brand, checkout or customer relationship."],
+            ["03", "Evidence before urgency", "Whisper, Echo, Manifested and Vanished should never claim more certainty than the observed evidence supports."],
+            ["04", "One connected network", "Search, FateFind/FateMatch, True Price, Local Radar, events and alerts should reinforce one another rather than become disconnected products."],
           ].map(([number, title, body]) => <article className="mission-card" key={title}><span>{number}</span><h3>{title}</h3><p>{body}</p></article>)}
         </div>
       </section>
+
+      <section className="content-section section-shell split-section">
+        <div className="copy-stack"><p className="eyebrow"><span />What we are proving first</p><h2>Make Pokémon UK genuinely useful before pretending FateDrop is everywhere.</h2><p>The immediate work is simple to describe even if the engineering is not: stronger retailer coverage, reliable signal intelligence, cleaner product identity, transparent True Price and a FateFind-to-FateMatch journey collectors can trust.</p><p>Events and Local Radar extend that network into the physical hobby. Retailer insight grows only when the underlying data is strong enough to support it.</p></div>
+        <div className="insight-panel"><small>CURRENT PRODUCT CORE</small><div className="point-list"><div><span>01</span><p>Signals: Whisper → Echo → Manifested → Vanished</p></div><div><span>02</span><p>True Price and official RRP context</p></div><div><span>03</span><p>FateFind hunts → FateMatch results</p></div><div><span>04</span><p>Independent retailer and event discovery</p></div></div></div>
+      </section>
+
+      <FutureExpansion />
+
+      <section className="content-section section-shell" id="roadmap">
+        <SectionHeading
+          eyebrow="Planned network ideas"
+          title="Keep the future visible—just not in the way of the product today."
+          body="These concepts remain planned rather than promised. They live here so the homepage can stay focused on what collectors and independents can understand now."
+        />
+        <div className="value-network-grid" style={{ marginTop: 42 }}>
+          {siteConfig.roadmap.map((item, index) => (
+            <article key={item.name}>
+              <span>{String(index + 1).padStart(2, "0")} · {item.status.toUpperCase()}</span>
+              <h3>{item.name}</h3>
+              <p>Planned direction. Scope, release order and final availability remain subject to product validation.</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <FinalCta />
     </SiteShell>
   );

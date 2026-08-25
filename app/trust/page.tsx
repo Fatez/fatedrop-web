@@ -1,36 +1,72 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FinalCta, PageHero, SectionHeading, SiteShell } from "@/components/page-shell";
+import { MarketStoryHero } from "@/components/market-story-hero";
+import { FinalCta, SectionHeading, SiteShell } from "@/components/page-shell";
 import { StockLifecycle } from "@/components/stock-lifecycle";
 
 export const metadata: Metadata = {
-  title: "Trust & Stock Signals | FateDrop",
-  description: "How FateDrop separates verification, measured evidence, public Echo/Manifested/Vanished signals and planned price guidance.",
+  title: "Trust, Signals & True Price | FateDrop",
+  description: "See exactly what Whisper, Echo, Manifested and Vanished mean, how FateDrop handles price context and why commercial placement cannot buy trust.",
 };
 
 export default function TrustPage() {
   return (
     <SiteShell>
-      <PageHero eyebrow="Trust by design" title="Evidence—not manufactured confidence." description="FateDrop separates business verification from measured evidence, supports stock labels with observed transitions and keeps promotions clearly labelled.">
-        <div className="button-row"><Link className="button button-primary" href="/join?type=collector">Join the Collector Beta <span>↗</span></Link><Link className="text-link" href="#stock-lifecycle">See the stock lifecycle <span>↓</span></Link></div>
-      </PageHero>
+      <MarketStoryHero
+        eyebrow="Trust by design"
+        title="Evidence first. Urgency only when it’s earned."
+        description="FateDrop separates early movement from confirmed stock, keeps price context transparent and makes the rules behind every signal clear enough to question."
+        image="/assets/market/trust.png"
+        alt="FateDrop trust network artwork with a compass-like signal mark above a dark mountain landscape"
+        proof={["Four signal states", "Evidence before urgency", "True Price transparency", "Trust cannot be bought"]}
+        focal="right"
+      >
+        <div className="button-row"><Link className="button button-primary" href="#stock-lifecycle">See the signal lifecycle <span>↓</span></Link><Link className="button button-secondary" href="/collectors">Explore collector tools</Link></div>
+      </MarketStoryHero>
 
-      <section className="content-section section-shell">
-        <SectionHeading eyebrow="Three trust layers" title="Confidence should be earned in public." body="A verified business is not automatically a top performer, a sponsored placement is not a recommendation and missing evidence never becomes an invented score." />
-        <div className="trust-grid standalone">
-          <article><span>Evidence model · foundation</span><h3>Verification and performance stay separate.</h3><p>FateScore is a planned evidence-led retailer trust model, not a live public ranking. Until the scoring inputs and publication policy are implemented and validated, FateDrop should show the evidence it actually has rather than invent a score.</p></article>
-          <article><span>Drop Pulse · foundation</span><h3>Activity needs observed movement.</h3><p>Drop Pulse is an evidence-context layer, not a lifecycle state. Labels such as high activity, just listed, recently restocked or price dropped need timestamps or catalogue history before they are shown.</p></article>
-          <article><span>FateFair · planned</span><h3>Price guidance needs context.</h3><p>Future FateFair guidance is intended to consider comparable offers, condition, grade, delivery, history, freshness and sample size. It is not presented as live guidance today.</p></article>
+      <section className="content-section section-shell" id="stock-lifecycle">
+        <SectionHeading
+          eyebrow="The final FateDrop lifecycle"
+          title="Whisper. Echo. Manifested. Vanished."
+          body="These four words are the network language. They should keep the same meaning on the website, app, Discord and push notifications."
+        />
+        <div style={{ marginTop: 42 }}><StockLifecycle /></div>
+      </section>
+
+      <section className="content-section section-shell split-section">
+        <div className="copy-stack">
+          <p className="eyebrow"><span />What the stages mean</p>
+          <h2>Early movement is useful. Confirmation is different.</h2>
+          <p><strong>Whisper</strong> is the pre-event warning: catalogue additions, product movement or other changes suggest something may be coming.</p>
+          <p><strong>Echo</strong> is the confirmation layer around traffic, queues, security or access conditions: activity is real enough to get ready, but stock is not yet confirmed.</p>
+          <p><strong>Manifested</strong> means confirmed purchasable stock is live. <strong>Vanished</strong> means that previously confirmed availability is gone.</p>
+        </div>
+        <div className="insight-panel">
+          <small>THE RULE</small>
+          <div className="quote-band" style={{ margin: 0 }}><blockquote>No stage should promise more than the evidence supports.</blockquote><p>Drop Pulse and other context can describe observed movement, but they do not replace the four lifecycle states.</p></div>
         </div>
       </section>
 
-      <section className="content-section section-shell" id="stock-lifecycle">
-        <div className="copy-stack lifecycle-page-copy"><p className="eyebrow"><span />From early movement to confirmed stock</p><h2>Echo when something is moving. Manifested when it is real.</h2><p>Echo is the public early-intelligence state for meaningful precursor movement such as catalogue, metadata, queue or security-condition changes. It does not guarantee that stock is imminent. Manifested marks confirmed meaningful availability or restock evidence, while Vanished records previously confirmed availability being lost. Whisper remains internal engine terminology.</p><span className="status-chip validated">Evidence-backed beta lifecycle</span></div>
-        <StockLifecycle />
+      <section className="content-section section-shell">
+        <SectionHeading
+          eyebrow="True Price"
+          title="A price without context can be a bad signal too."
+          body="FateDrop separates the observed offer from the context used to judge it. Unknown information stays unknown rather than being silently guessed."
+        />
+        <div className="trust-grid standalone">
+          <article><span>Official RRP</span><h3>Start with a real reference point.</h3><p>Where a reliable official RRP is available, FateDrop shows it as the comparison basis rather than inventing a market benchmark.</p></article>
+          <article><span>Known delivered cost</span><h3>Include mandatory delivery when it is known.</h3><p>True Price can combine item price with known mandatory delivery. If delivery cannot be established, it remains visibly unknown.</p></article>
+          <article><span>RRP difference</span><h3>Show the £ and percentage context.</h3><p>Collectors can see how far an observed offer sits above or below RRP instead of being told that every in-stock listing is automatically a good buy.</p></article>
+        </div>
       </section>
 
       <section className="content-section section-shell">
-        <div className="quote-band"><p className="eyebrow"><span />No pay-to-trust</p><blockquote>A retailer cannot purchase a stronger trust result.</blockquote><p>Commercial placements must be clearly labelled. Outbound clicks are referrals—not confirmed sales unless proper conversion attribution exists.</p></div>
+        <div className="quote-band">
+          <p className="eyebrow"><span />FateScore · planned</p>
+          <blockquote>Trust should be earned by evidence, never bought.</blockquote>
+          <p>FateScore is a planned evidence-led retailer trust model. It is not a live final score today, and any future model must remain explainable, evidence-led and separate from commercial placement.</p>
+          <p>A retailer cannot purchase a stronger verification or trust result. Sponsorship and promotion must stay clearly labelled and separate from stock evidence.</p>
+        </div>
       </section>
       <FinalCta />
     </SiteShell>

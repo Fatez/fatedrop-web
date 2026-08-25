@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AvatarBuilder } from "@/components/avatar-builder";
-import { KoruMascot } from "@/components/koru-mascot";
+import { CompanionSelector } from "@/components/companion-selector";
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { defaultAvatarRecord, getUserAvatar } from "@/lib/avatar-storage";
-import { KORU_BRAND, KORU_LIFECYCLE } from "@/lib/koru-brand";
+import { ACTIVE_COMPANION_ROSTER, LEGACY_COMPANION_ARCHIVE, companionRendererMode } from "@/lib/companion-contract";
+import { KORU_LIFECYCLE } from "@/lib/koru-brand";
 
-export const metadata: Metadata = { title: "Koru | FateDrop Dashboard", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Koru & Friends | FateDrop Dashboard", robots: { index: false, follow: false } };
 
 export default async function DashboardAvatarPage() {
   const snapshot = await getCurrentSnapshot();
@@ -18,34 +18,46 @@ export default async function DashboardAvatarPage() {
     const stored = await getUserAvatar(snapshot.account.id);
     if (stored) { record = stored; persistent = true; }
   } catch {
-    // Profile customisation remains usable in preview mode while storage is unavailable.
+    // Companion selection remains previewable while account storage is unavailable.
   }
 
-  return <DashboardPageShell title="Koru" eyebrow="FATEDROP · SIGNAL COMPANION">
-    <div className="koru-page">
-      <section className="hero">
-        <div><span>KORU · {KORU_BRAND.code}</span><h1>Meet Koru.<br/><em>FateDrop&apos;s signal voice.</em></h1><p>Koru is the fixed mascot of FateDrop — the character collectors see when the network whispers, echoes, manifests or vanishes. Koru is not tied to one TCG and is not replaced by a user-selected skin.</p></div>
-        <div className="hero-tags"><span>FATEDROP MASCOT</span><span>SIGNAL VOICE</span><span>KORU &amp; FRIENDS</span><span>WEB + APP DIRECTION</span></div>
+  const readyModels = ACTIVE_COMPANION_ROSTER.filter((companion) => companionRendererMode(companion) === "webgl-3d").length;
+
+  return <DashboardPageShell title="Koru & Friends" eyebrow="FATEDROP · COMPANIONS">
+    <div className="companions-page">
+      <section className="companion-hero">
+        <div>
+          <span>KORU &amp; FRIENDS · FIVE ACTIVE COMPANIONS</span>
+          <h1>Choose who walks<br/><em>the network with you.</em></h1>
+          <p>Koru remains the mascot and signal voice of FateDrop. Your account can choose Koru, Fenn, Aeris, Nyxen or Solix as its personal companion. All five use the same FateDrop signal language; the character changes, the evidence does not.</p>
+        </div>
+        <div className="hero-facts"><span>5 ACTIVE SLOTS</span><span>{readyModels}/5 3D MODELS REGISTERED</span><span>ONE SIGNAL SYSTEM</span></div>
       </section>
 
-      <section className="mascot-grid">
-        <KoruMascot variant="full" reaction="watching" label={`Koru · ${KORU_BRAND.code}`}/>
-        <div className="mascot-copy">
-          <p className="eyebrow">ONE CHARACTER · FOUR SIGNAL STATES</p>
-          <h2>Koru explains what FateDrop knows.</h2>
-          <p>The mascot never changes the evidence. Koru simply gives the network a recognisable face and voice while the alert itself stays precise.</p>
+      <CompanionSelector initialCompanionId={record.loadout.companion} persistent={persistent}/>
+
+      <section className="system-grid">
+        <div className="signal-system">
+          <p className="eyebrow">ONE LANGUAGE · EVERY COMPANION</p>
+          <h2>The character reacts. The signal meaning stays fixed.</h2>
+          <p>Companions are a personality layer on top of FateDrop intelligence. They never change the evidence, confidence or lifecycle state behind an alert.</p>
           <div className="lifecycle">{KORU_LIFECYCLE.map((item) => <article key={item.state}><strong>{item.state}</strong><span>{item.copy}</span></article>)}</div>
-          <div className="model-note"><b>3D STATUS</b><p>A genuine Koru 3D GLB is not connected yet. The website deliberately uses the approved Koru artwork rather than relabelling the retired Scout/Droid models. When a real Koru model is approved it can be added behind the existing renderer boundary and re-tested.</p></div>
+        </div>
+        <div className="model-system">
+          <small>3D MODEL BOUNDARY</small>
+          <h2>Five stable slots. One renderer contract.</h2>
+          <p>Registered GLBs render through the current Koru &amp; Friends WebGL boundary. A character can use one approved GLB or a verified reaction-specific pack without creating new companion IDs or bringing the retired Droid/Scout system back.</p>
+          <div className="model-list">{ACTIVE_COMPANION_ROSTER.map((companion) => <div key={companion.id}><span>{String(companion.slot).padStart(2,"0")}</span><b>{companion.name}</b><small>{companionRendererMode(companion) === "webgl-3d" ? "MODEL REGISTERED" : companion.isMascot ? "2D FALLBACK ACTIVE" : "AWAITING GLB"}</small></div>)}</div>
         </div>
       </section>
 
-      <section className="profile-separation"><div><span>YOUR ACCOUNT</span><h2>Your profile is separate from Koru.</h2><p>Collectors can still customise their own FateDrop profile. Favourite TCGs remain useful account preferences, but they no longer select or reskin FateDrop&apos;s mascot.</p></div></section>
-      <AvatarBuilder initialLoadout={record.loadout} initialFavouriteTcgs={record.favouriteTcgs} persistent={persistent}/>
-
-      <section className="usage"><article><span>01</span><strong>MARKETING</strong><p>Koru is the recurring face of FateDrop across launch creative, social posts and campaigns.</p></article><article><span>02</span><strong>ALERTS</strong><p>Whisper uses anticipation, Echo uses readiness, Manifested confirms live stock and Vanished communicates loss.</p></article><article><span>03</span><strong>KORU &amp; FRIENDS</strong><p>The wider original character universe can support branded apparel, collectibles and future storytelling without becoming TCG-specific mascots.</p></article><article><span>04</span><strong>PROFILE</strong><p>User avatar cosmetics remain personal account identity and do not alter Koru or the evidence behind FateDrop signals.</p></article></section>
+      <section className="legacy-note">
+        <div><span>LEGACY ARCHIVE</span><h2>Old concepts stay out of the live selector.</h2><p>Kael and Nyra are retained only as legacy FateDrop character references. They do not occupy one of the five active Koru &amp; Friends companion slots and are not selectable in the current companion system.</p></div>
+        <div className="legacy-list">{LEGACY_COMPANION_ARCHIVE.map((companion) => <span key={companion.id}><b>{companion.name}</b><small>{companion.code} · ARCHIVED</small></span>)}</div>
+      </section>
     </div>
     <style>{`
-      .koru-page{display:grid;gap:18px;padding-bottom:38px}.hero{position:relative;overflow:hidden;min-height:270px;padding:34px;border:1px solid rgba(157,109,255,.18);border-radius:24px;background:radial-gradient(circle at 82% 30%,rgba(104,232,251,.1),transparent 23%),radial-gradient(circle at 72% 50%,rgba(157,109,255,.14),transparent 32%),linear-gradient(145deg,#0d0b17,#08090e 68%)}.hero>div:first-child{max-width:760px}.hero span,.eyebrow,.profile-separation span{color:#75eaff;font-size:8px;font-weight:900;letter-spacing:.18em}.hero h1{margin:12px 0;font-size:clamp(2.6rem,4.4vw,4.9rem);line-height:.9;letter-spacing:-.06em}.hero h1 em{font-style:normal;background:linear-gradient(90deg,#fff,#a7efff,#c09cff);-webkit-background-clip:text;color:transparent}.hero p{max-width:700px;color:#9b95a1;font-size:13px;line-height:1.65}.hero-tags{position:absolute;left:34px;bottom:24px;display:flex;gap:7px;flex-wrap:wrap}.hero-tags span{padding:6px 8px;border:1px solid rgba(255,255,255,.08);border-radius:999px;color:#817b87!important;background:rgba(255,255,255,.025);font-size:6px!important;letter-spacing:.1em!important}.mascot-grid{display:grid;grid-template-columns:minmax(340px,.85fr) minmax(0,1.15fr);gap:18px}.mascot-copy,.profile-separation{padding:28px;border:1px solid rgba(255,255,255,.07);border-radius:24px;background:#0b0a10}.mascot-copy h2,.profile-separation h2{margin:7px 0 10px;font-size:clamp(1.8rem,3vw,3rem);letter-spacing:-.05em}.mascot-copy>p:not(.eyebrow),.profile-separation p{color:#89828f;font-size:11px;line-height:1.6}.lifecycle{display:grid;gap:8px;margin:22px 0}.lifecycle article{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.06);border-radius:12px;background:rgba(255,255,255,.018)}.lifecycle strong{color:#fff;font-size:10px}.lifecycle span{color:#85808a;font-size:9px;line-height:1.5}.model-note{padding:15px;border:1px solid rgba(117,234,255,.13);border-radius:14px;background:rgba(117,234,255,.035)}.model-note b{color:#75eaff;font-size:7px;letter-spacing:.14em}.model-note p{margin:6px 0 0;color:#88818e;font-size:9px;line-height:1.55}.profile-separation{padding:24px}.usage{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;overflow:hidden;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(255,255,255,.07)}.usage article{padding:18px;background:#0b0a10}.usage span{color:#8e6cff;font-size:8px;font-weight:900}.usage strong{display:block;margin:5px 0;font-size:10px;letter-spacing:.08em}.usage p{margin:0;color:#77717e;font-size:9px;line-height:1.5}@media(max-width:900px){.mascot-grid{grid-template-columns:1fr}.usage{grid-template-columns:1fr 1fr}}@media(max-width:560px){.hero{padding:24px;min-height:360px}.hero-tags{left:24px}.usage{grid-template-columns:1fr}.lifecycle article{grid-template-columns:1fr}}
+      .companions-page{display:grid;gap:18px;padding-bottom:42px}.companion-hero{position:relative;overflow:hidden;min-height:330px;padding:38px;border:1px solid rgba(206,187,207,.13);border-radius:26px;background:radial-gradient(circle at 80% 28%,rgba(120,88,139,.18),transparent 26%),radial-gradient(circle at 68% 82%,rgba(158,102,80,.07),transparent 24%),linear-gradient(145deg,#11131a,#090b10 68%)}.companion-hero>div:first-child{max-width:820px}.companion-hero>div>span,.eyebrow,.legacy-note>div>span{color:#a989b5;font-size:7px;font-weight:900;letter-spacing:.17em}.companion-hero h1{margin:14px 0;color:#eee5df;font-family:Georgia,serif;font-size:clamp(2.8rem,5vw,5.3rem);font-weight:500;line-height:.91;letter-spacing:-.055em}.companion-hero h1 em{font-style:normal;color:#bba4be}.companion-hero p{max-width:720px;color:#989198;font-size:12px;line-height:1.7}.hero-facts{position:absolute;left:38px;bottom:26px;display:flex;gap:7px;flex-wrap:wrap}.hero-facts span{padding:7px 9px;border:1px solid rgba(255,255,255,.07);border-radius:999px;color:#77717a!important;background:rgba(255,255,255,.018);font-size:6px!important;letter-spacing:.1em!important}.system-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.signal-system,.model-system,.legacy-note{padding:30px;border:1px solid rgba(255,255,255,.07);border-radius:24px;background:#0b0d12}.signal-system h2,.model-system h2,.legacy-note h2{margin:7px 0 10px;color:#e5ddd8;font-family:Georgia,serif;font-size:clamp(1.8rem,3vw,3rem);font-weight:500;line-height:1;letter-spacing:-.045em}.signal-system>p:not(.eyebrow),.model-system>p,.legacy-note p{color:#878188;font-size:10px;line-height:1.65}.lifecycle{display:grid;gap:7px;margin-top:21px}.lifecycle article{display:grid;grid-template-columns:105px 1fr;gap:12px;padding:11px 12px;border:1px solid rgba(255,255,255,.055);border-radius:11px;background:rgba(255,255,255,.014)}.lifecycle strong{color:#d9d0cc;font-size:9px}.lifecycle span{color:#77727a;font-size:8px;line-height:1.5}.model-system>small{color:#a989b5;font-size:7px;font-weight:900;letter-spacing:.15em}.model-list{display:grid;gap:6px;margin-top:20px}.model-list div{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.055)}.model-list div>span{color:#625a65;font-family:Georgia,serif;font-size:15px}.model-list b{color:#ccc3c1;font-size:9px}.model-list small{color:#716875;font-size:6px;font-weight:900;letter-spacing:.11em}.legacy-note{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center}.legacy-note>div:first-child{max-width:760px}.legacy-list{display:flex;gap:8px}.legacy-list>span{min-width:125px;padding:14px;border:1px solid rgba(255,255,255,.06);border-radius:13px;background:rgba(255,255,255,.012)}.legacy-list b{display:block;color:#a39ca0;font-family:Georgia,serif;font-size:17px;font-weight:500}.legacy-list small{display:block;margin-top:5px;color:#5f5961;font-size:6px;font-weight:900;letter-spacing:.1em}@media(max-width:900px){.system-grid{grid-template-columns:1fr}.legacy-note{grid-template-columns:1fr}}@media(max-width:560px){.companion-hero{min-height:410px;padding:25px}.hero-facts{left:25px;bottom:22px}.legacy-list{display:grid;grid-template-columns:1fr 1fr}.lifecycle article{grid-template-columns:1fr}}
     `}</style>
   </DashboardPageShell>;
 }

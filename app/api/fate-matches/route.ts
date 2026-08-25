@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
 import type { FateMatch } from "@/lib/fate-match";
-import { createFateMatch, listUserFateMatches } from "@/lib/fate-match-storage";
+import { createFateMatch, deleteFateMatch, listUserFateMatches, setFateMatchEnabled } from "@/lib/fate-match-storage";
 import { hasCapability } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
@@ -18,10 +18,12 @@ function finiteOrNull(value: unknown, options: { min?: number; max?: number } = 
 function strings(value: unknown) { return Array.isArray(value) ? value.map(String).map((item)=>item.trim()).filter(Boolean).slice(0, 50) : []; }
 function notifications(value: unknown) {
   const input = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const companionId = typeof input.companionId === "string" && ["koru","fenn","aeris","nyxen","solix"].includes(input.companionId) ? input.companionId : "koru";
   return {
     website: input.website !== false,
     discord: input.discord === true,
     app: input.app === true,
+    companionId,
   };
 }
 
@@ -29,10 +31,10 @@ export async function GET(request: Request) {
   const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
   try {
-    const fateFinds = await listUserFateMatches(snapshot.account.id);
-    return Response.json({ fateFinds, matches: fateFinds }, { headers: { "Cache-Control": "private, no-store" } });
+    const fateMatchHunts = await listUserFateMatches(snapshot.account.id);
+    return Response.json({ fateMatchHunts, fateFinds: fateMatchHunts, matches: fateMatchHunts }, { headers: { "Cache-Control": "private, no-store" } });
   } catch {
-    return Response.json({ fateFinds: [], matches: [], pendingMigration: true }, { headers: { "Cache-Control": "private, no-store" } });
+    return Response.json({ fateMatchHunts: [], fateFinds: [], matches: [], pendingMigration: true }, { headers: { "Cache-Control": "private, no-store" } });
   }
 }
 
@@ -41,9 +43,9 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const snapshot = await getSnapshotForRequest(request);
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
-    if (!hasCapability(snapshot.membership, "advanced_fate_match")) return Response.json({ error: "Premium FateFind monitoring is required." }, { status: 403 });
+    if (!hasCapability(snapshot.membership, "advanced_fate_match")) return Response.json({ error: "Premium FateMatch monitoring is required." }, { status: 403 });
     const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
-    if (!payload) return Response.json({ error: "Invalid FateFind payload." }, { status: 400 });
+    if (!payload) return Response.json({ error: "Invalid FateMatch payload." }, { status: 400 });
     const query = typeof payload.query === "string" ? payload.query.trim().slice(0, 180) : "";
     const productIdentityId = typeof payload.productIdentityId === "string" && payload.productIdentityId.trim() ? payload.productIdentityId.trim().slice(0, 180) : null;
     if (!query && !productIdentityId) return Response.json({ error: "A product search or product identity is required." }, { status: 400 });
@@ -66,15 +68,62 @@ export async function POST(request: Request) {
       notificationPreferences: notifications(payload.notificationPreferences),
       enabled: true, createdAt: now, updatedAt: now,
     };
-    if ((scope === "local" || scope === "either") && match.radiusKm !== null && (match.latitude === null || match.longitude === null)) return Response.json({ error: "Local-radius FateFind matching requires a resolved location." }, { status: 400 });
+    if (scope === "local" && (match.radiusKm === null || match.latitude === null || match.longitude === null)) {
+      return Response.json({ error: "Local FateMatch monitoring requires a resolved location and radius." }, { status: 400 });
+    }
+    if (scope === "either" && match.radiusKm !== null && (match.latitude === null || match.longitude === null)) {
+      return Response.json({ error: "A local FateMatch radius can only be saved after location is resolved." }, { status: 400 });
+    }
     try {
       const saved = await createFateMatch(match);
-      return Response.json({ fateFind: saved, match: saved, message: "FateFind saved. A qualifying observed result can become a FateMatch." }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+      return Response.json({ fateFind: saved, match: saved, message: "FateMatch watch saved. Your companion will alert you when a qualifying observed offer goes live." }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
     } catch {
-      return Response.json({ error: "FateFind storage is not ready. Apply the Fate Network migration first." }, { status: 503 });
+      return Response.json({ error: "FateMatch storage is not ready. Apply the Fate Network migration first." }, { status: 503 });
     }
   } catch (error) {
     if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
-    return Response.json({ error: "FateFind could not be saved." }, { status: 500 });
+    return Response.json({ error: "FateMatch could not be saved." }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    assertSameOrigin(request);
+    const snapshot = await getSnapshotForRequest(request);
+    if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
+    const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const id = typeof payload?.id === "string" ? payload.id.trim() : "";
+    if (!id || typeof payload?.enabled !== "boolean") return Response.json({ error: "FateMatch watch id and enabled state are required." }, { status: 400 });
+    try {
+      const updated = await setFateMatchEnabled(snapshot.account.id, id, payload.enabled);
+      if (!updated) return Response.json({ error: "FateMatch watch not found." }, { status: 404 });
+      return Response.json({ fateFind: updated, message: updated.enabled ? "FateMatch watch resumed." : "FateMatch watch paused." }, { headers: { "Cache-Control": "private, no-store" } });
+    } catch {
+      return Response.json({ error: "FateMatch watch could not be updated." }, { status: 503 });
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
+    return Response.json({ error: "FateMatch watch could not be updated." }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    assertSameOrigin(request);
+    const snapshot = await getSnapshotForRequest(request);
+    if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
+    const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const id = typeof payload?.id === "string" ? payload.id.trim() : "";
+    if (!id) return Response.json({ error: "FateMatch watch id is required." }, { status: 400 });
+    try {
+      const deleted = await deleteFateMatch(snapshot.account.id, id);
+      if (!deleted) return Response.json({ error: "FateMatch watch not found." }, { status: 404 });
+      return Response.json({ deleted: true, message: "FateMatch watch deleted." }, { headers: { "Cache-Control": "private, no-store" } });
+    } catch {
+      return Response.json({ error: "FateMatch watch could not be deleted." }, { status: 503 });
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
+    return Response.json({ error: "FateMatch watch could not be deleted." }, { status: 500 });
   }
 }

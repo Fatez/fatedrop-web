@@ -4,104 +4,222 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import styles from "./interactive-phone-demo-v2.module.css";
 
-type Screen = "home" | "search" | "indies" | "alerts" | "more";
-type MoreView = "wishlist" | "radar" | "events";
+type Screen = "home" | "alerts" | "network" | "profile" | "search" | "fatefind" | "fatematch";
 
-const nav: { id: Screen; label: string }[] = [
-  { id: "home", label: "Home" },
-  { id: "search", label: "Search" },
-  { id: "indies", label: "Indies" },
-  { id: "alerts", label: "Alerts" },
-  { id: "more", label: "More" },
-];
+type Tab = "home" | "alerts" | "tools" | "network" | "profile";
 
 const offers = [
-  { retailer: "Northstar Cards", item: 49.99, postage: 3.49, rrp: 49.99, stock: "In stock" },
-  { retailer: "Card Corner UK", item: 54.99, postage: 0, rrp: 49.99, stock: "In stock" },
-  { retailer: "The Indie Deck", item: 51.5, postage: 2.99, rrp: 49.99, stock: "Low stock" },
+  { retailer: "Cob & Pip", item: 8.99, postage: 2.95, rrp: 4.29, stock: "In stock" },
+  { retailer: "Card Collective UK", item: 16.95, postage: 0, rrp: 17.16, stock: "In stock" },
+  { retailer: "Northstar Cards", item: 41.0, postage: 3.49, rrp: 42.9, stock: "Low stock" },
 ];
 
 const money = (value: number) => `£${value.toFixed(2)}`;
-const markup = (price: number, rrp: number) => Math.round(((price - rrp) / rrp) * 100);
+const delta = (price: number, rrp: number) => ((price - rrp) / rrp) * 100;
+
+function activeTab(screen: Screen): Exclude<Tab, "tools"> | null {
+  if (["home", "alerts", "network", "profile"].includes(screen)) return screen as Exclude<Tab, "tools">;
+  return null;
+}
 
 export function InteractivePhoneDemo() {
   const [screen, setScreen] = useState<Screen>("home");
-  const [moreView, setMoreView] = useState<MoreView>("wishlist");
-  const [truePrice, setTruePrice] = useState(true);
-  const [saved, setSaved] = useState(false);
-  const [huntActive, setHuntActive] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [watchActive, setWatchActive] = useState(false);
   const [matchSeen, setMatchSeen] = useState(false);
 
   const journey = useMemo(() => {
     if (matchSeen) return 6;
-    if (huntActive) return 5;
-    if (saved) return 4;
-    if (screen === "search" && truePrice) return 3;
+    if (watchActive) return 5;
+    if (screen === "fatematch") return 4;
+    if (screen === "fatefind") return 3;
     if (screen === "search") return 2;
     return 1;
-  }, [huntActive, matchSeen, saved, screen, truePrice]);
+  }, [matchSeen, screen, watchActive]);
 
-  function openFateFind() {
-    setScreen("alerts");
+  function openTool(next: "search" | "fatefind" | "fatematch") {
+    setToolsOpen(false);
+    setScreen(next);
   }
+
+  const tab = activeTab(screen);
 
   return (
     <div className={styles.showcase}>
       <div className={styles.heading}>
         <span>TRY FATEDROP</span>
-        <strong>A working miniature of the collector journey.</strong>
-        <small>Interactive preview · sample data · retailer checkout remains external</small>
+        <strong>A miniature of the real FateDrop mobile journey.</strong>
+        <small>Current app structure · sample data · retailer checkout remains external</small>
       </div>
 
       <div className={styles.productGrid}>
         <div className={styles.phoneColumn}>
           <div className={styles.phone}>
             <div className={styles.island} />
-            <header className={styles.phoneHeader}><span>09:41</span><b>Fate<em>Drop</em></b><small>SAMPLE</small></header>
+            <header className={styles.phoneHeader}>
+              <span>09:41</span>
+              <b>FATEDROP</b>
+              <small>SAMPLE</small>
+            </header>
+
             <main className={styles.phoneBody}>
-              {screen === "home" && <HomeScreen onSearch={() => setScreen("search")} onAlerts={() => setScreen("alerts")} onMore={(view) => { setMoreView(view); setScreen("more"); }} />}
-              {screen === "search" && <SearchScreen truePrice={truePrice} setTruePrice={setTruePrice} saved={saved} setSaved={setSaved} openFateFind={openFateFind} />}
-              {screen === "indies" && <IndiesScreen />}
-              {screen === "alerts" && <AlertsScreen huntActive={huntActive} setHuntActive={setHuntActive} matchSeen={matchSeen} setMatchSeen={setMatchSeen} />}
-              {screen === "more" && <MoreScreen view={moreView} setView={setMoreView} saved={saved} />}
+              {screen === "home" ? <HomeScreen onTool={openTool} onAlerts={() => setScreen("alerts")} onNetwork={() => setScreen("network")} /> : null}
+              {screen === "alerts" ? <AlertsScreen watchActive={watchActive} matchSeen={matchSeen} onMatchSeen={() => setMatchSeen(true)} onFateFind={() => setScreen("fatefind")} /> : null}
+              {screen === "network" ? <NetworkScreen onSearch={() => setScreen("search")} /> : null}
+              {screen === "profile" ? <ProfileScreen /> : null}
+              {screen === "search" ? <SearchScreen onFateFind={() => setScreen("fatefind")} onFateMatch={() => setScreen("fatematch")} /> : null}
+              {screen === "fatefind" ? <FateFindScreen onWatch={() => setScreen("fatematch")} /> : null}
+              {screen === "fatematch" ? <FateMatchScreen watchActive={watchActive} setWatchActive={setWatchActive} onAlerts={() => setScreen("alerts")} /> : null}
             </main>
-            <nav className={styles.phoneNav}>{nav.map((item) => <button key={item.id} type="button" className={screen === item.id ? styles.active : ""} onClick={() => setScreen(item.id)}>{item.label}</button>)}</nav>
+
+            <nav className={styles.phoneNav} aria-label="Demo app tabs">
+              <button type="button" className={tab === "home" ? styles.active : ""} onClick={() => setScreen("home")}><i>⌂</i><span>Home</span></button>
+              <button type="button" className={tab === "alerts" ? styles.active : ""} onClick={() => setScreen("alerts")}><i>♧</i><span>Alerts</span>{watchActive ? <b>2</b> : null}</button>
+              <button type="button" className={styles.toolButton} onClick={() => setToolsOpen(true)} aria-label="Open FateDrop tools"><i>◇</i></button>
+              <button type="button" className={tab === "network" ? styles.active : ""} onClick={() => setScreen("network")}><i>⌁</i><span>Network</span></button>
+              <button type="button" className={tab === "profile" ? styles.active : ""} onClick={() => setScreen("profile")}><i>◎</i><span>Profile</span></button>
+            </nav>
+
+            {toolsOpen ? <div className={styles.toolBackdrop} onClick={() => setToolsOpen(false)}>
+              <div className={styles.toolSheet} onClick={(event) => event.stopPropagation()}>
+                <header><span className={styles.toolEmblem}>◇</span><div><small>FATEDROP TOOLS</small><strong>What do you want FateDrop to do?</strong><p>Choose the job. The intelligence stays shared underneath.</p></div><button onClick={() => setToolsOpen(false)}>×</button></header>
+                <button onClick={() => openTool("fatefind")}><i>⌕</i><span><strong>FateFind</strong><small>Compare live value and get the strongest-value verdict now.</small></span><b>→</b></button>
+                <button onClick={() => openTool("fatematch")}><i>◇</i><span><strong>FateMatch</strong><small>Set the product and buying conditions. FateDrop watches for you.</small></span><b>→</b></button>
+                <button onClick={() => openTool("search")}><i>⌕</i><span><strong>Search live database</strong><small>Browse current products and retailer offers without starting a watch.</small></span><b>→</b></button>
+              </div>
+            </div> : null}
           </div>
-          <div className={styles.progress}><span>COLLECTOR FLOW · {journey}/6</span><i><b style={{ width: `${journey / 6 * 100}%` }} /></i><small>{["Start with live network context", "Find one product", "Compare RRP + True Price", "Save it or define a hunt", "FateFind watches in Cloud", "FateMatch arrives when conditions are met"][journey - 1]}</small></div>
+
+          <div className={styles.progress}>
+            <span>COLLECTOR FLOW · {journey}/6</span>
+            <i><b style={{ width: `${journey / 6 * 100}%` }} /></i>
+            <small>{[
+              "Start from the live network overview",
+              "Search one product across the network",
+              "Use FateFind to compare real value",
+              "Turn intent into a FateMatch watch",
+              "FateDrop Cloud keeps watching",
+              "FATEMATCH — LIVE NOW when the rules are met",
+            ][journey - 1]}</small>
+          </div>
         </div>
 
         <DashboardShowcase />
       </div>
 
-      <section className={styles.companionStrip} aria-label="FateDrop Companion preview">
-        <div className={styles.companionOrb}><span>FD</span><i /></div>
-        <div><small>COMPANION · 3D ASSET SLOT READY</small><h3>Your signal has a face.</h3><p>The production 3D Companion will react to Echo, Manifested, Vanished and FateMatch across mobile and dashboard. This slot uses the renderer contract now and will accept the final GLB character + signal droid without rebuilding the account system.</p></div>
-        <div className={styles.reactions}><span>ECHO <b>scanner wakes</b></span><span>MANIFESTED <b>strong confirm</b></span><span>FATEMATCH <b>hunt complete</b></span></div>
+      <section className={styles.companionStrip} aria-label="Koru and Friends companion preview">
+        <div className={styles.companionOrb}><span>K</span><i /></div>
+        <div><small>KORU &amp; FRIENDS · PERSONALITY LAYER</small><h3>Choose who carries the signal with you.</h3><p>Koru, Fenn, Aeris, Nyxen and Solix can represent your personal FateDrop experience. The companion changes the presentation; the evidence, RRP logic and lifecycle meaning remain fixed.</p></div>
+        <div className={styles.reactions}><span>WHISPER <b>movement noticed</b></span><span>ECHO <b>get ready</b></span><span>MANIFESTED <b>stock live</b></span><span>VANISHED <b>availability gone</b></span></div>
       </section>
     </div>
   );
 }
 
-function HomeScreen({ onSearch, onAlerts, onMore }: { onSearch: () => void; onAlerts: () => void; onMore: (view: MoreView) => void }) {
-  return <div className={styles.screen}><small>NETWORK ACTIVITY · SAMPLE</small><h3>Know what moved.</h3><div className={styles.signalCard}><b>MANIFESTED</b><strong>Journey Together ETB</strong><span>Confirmed example availability · 2m ago</span></div><div className={`${styles.signalCard} ${styles.echo}`}><b>ECHO</b><strong>Prismatic Evolutions Bundle</strong><span>Meaningful early catalogue movement · not confirmed stock</span></div><div className={styles.quickGrid}><button onClick={onSearch}>Search market</button><button onClick={onAlerts}>My alerts</button><button onClick={() => onMore("radar")}>Local Radar</button><button onClick={() => onMore("events")}>Events</button></div></div>;
+function HomeScreen({ onTool, onAlerts, onNetwork }: { onTool: (tool: "search" | "fatefind" | "fatematch") => void; onAlerts: () => void; onNetwork: () => void }) {
+  return <div className={styles.screen}>
+    <div className={styles.mobileBrand}><span>FATEDROP</span><small>COLLECTOR FIRST</small><button onClick={onAlerts}>♧<b>3</b></button></div>
+    <section className={styles.homeHero}><div className={styles.networkPill}><i/>12 MONITORS HEALTHY</div><small>KORU IS LISTENING</small><h3>Welcome back, Seeker.</h3><p>Live evidence, value context and your personal watches stay together.</p></section>
+    <SectionTitle eyebrow="SIGNAL OVERVIEW" title="Your recent network" action="VIEW ALL" onAction={onAlerts}/>
+    <div className={styles.metricGrid}><Metric label="ECHO" value="3"/><Metric label="MANIFESTED" value="7"/><Metric label="FATEMATCH" value="2"/><Metric label="NETWORK" value="92%"/></div>
+    <SectionTitle eyebrow="QUICK ACCESS" title="Collector tools"/>
+    <div className={styles.quickGrid}><Quick label="ECHO" copy="Readiness signals" onClick={onAlerts}/><Quick label="MANIFESTED" copy="Confirmed live drops" onClick={onAlerts}/><Quick label="FATEFIND" copy="Compare live value" onClick={() => onTool("fatefind")}/><Quick label="FATEMATCH" copy="Watch until it fits" onClick={() => onTool("fatematch")}/></div>
+    <button className={styles.networkSummary} onClick={onNetwork}><i>⌁</i><span><small>NETWORK HEALTH</small><strong>Evidence is flowing.</strong><em>Inspect retailer monitors and network coverage.</em></span><b>→</b></button>
+  </div>;
 }
 
-function SearchScreen({ truePrice, setTruePrice, saved, setSaved, openFateFind }: { truePrice: boolean; setTruePrice: (v: boolean) => void; saved: boolean; setSaved: (v: boolean) => void; openFateFind: () => void }) {
-  return <div className={styles.screen}><small>SEARCH · PRODUCT FIRST</small><h3>Journey Together ETB</h3><p className={styles.rrp}>Official RRP <b>£49.99</b></p>{offers.map((offer) => { const delivered = offer.item + offer.postage; return <article className={styles.offer} key={offer.retailer}><div><strong>{offer.retailer}</strong><span>{offer.stock}</span></div><div><b>{money(offer.item)}</b><small>{markup(offer.item, offer.rrp) === 0 ? "At RRP" : `+${markup(offer.item, offer.rrp)}% above RRP`}</small></div>{truePrice && <p>True Price <b>{money(delivered)}</b> delivered</p>}</article>; })}<button className={styles.primary} onClick={() => setTruePrice(!truePrice)}>{truePrice ? "Hide True Price" : "Compare True Price"}</button><button className={styles.secondary} onClick={() => setSaved(!saved)}>{saved ? "✓ Saved to Wishlist" : "+ Save to Wishlist"}</button><button className={styles.hunt} onClick={openFateFind}>Create FateFind →</button></div>;
+function SearchScreen({ onFateFind, onFateMatch }: { onFateFind: () => void; onFateMatch: () => void }) {
+  return <div className={styles.screen}>
+    <RouteHeader eyebrow="SEARCH · FIND WHAT EXISTS" title="Destined Rivals" copy="Search shows the current observed catalogue. It does not decide the best value for you."/>
+    <div className={styles.searchBox}>⌕ <span>Destined Rivals</span></div>
+    <article className={styles.productResult}><small>BOOSTER PACK · 2 OFFERS</small><strong>Pokémon TCG: Destined Rivals — Booster Pack</strong><div><span><b>£8.99</b><small>Cob & Pip</small></span><span><b>£9.49</b><small>Northstar Cards</small></span></div></article>
+    <article className={styles.productResult}><small>SEALED · 1 OFFER</small><strong>Destined Rivals — 4 Pack Bundle</strong><div><span><b>£16.95</b><small>Card Collective UK</small></span><span><b>RRP £17.16</b><small>Component reference</small></span></div></article>
+    <button className={styles.primary} onClick={onFateFind}>FateFind · compare best value →</button>
+    <button className={styles.secondary} onClick={onFateMatch}>FateMatch · watch my conditions</button>
+  </div>;
 }
 
-function IndiesScreen() {
-  return <div className={styles.screen}><small>INDIES · DISCOVERY</small><h3>Independent stores, connected.</h3><article className={styles.store}><span>VERIFIED BUSINESS · SAMPLE</span><strong>Northstar Cards</strong><p>1.8 mi · supplied delivery from £3.49</p><button>View storefront</button></article><article className={styles.store}><span>NETWORK RETAILER · SAMPLE</span><strong>The Indie Deck</strong><p>Online catalogue · direct retailer checkout</p><button>Compare offers</button></article></div>;
+function FateFindScreen({ onWatch }: { onWatch: () => void }) {
+  const single = offers[0];
+  const bundle = offers[1];
+  return <div className={styles.screen}>
+    <RouteHeader eyebrow="FATEFIND · VALUE INTELLIGENCE" title="Which option is stronger value?" copy="Choose comparable configurations. FateDrop judges item price against the correct RRP/reference before adding known delivery context."/>
+    <div className={styles.compareSelect}><label><small>ITEM A</small><span>Destined Rivals · Booster Pack⌄</span></label><b>vs</b><label><small>ITEM B</small><span>Destined Rivals · 4 Pack Bundle⌄</span></label></div>
+    <div className={styles.valueCards}>
+      <article><small>PACK RRP REFERENCE</small><strong>Booster Pack</strong><div><span>ITEM<b>{money(single.item)}</b></span><span>VS RRP<b className={delta(single.item,single.rrp)>0?styles.negative:styles.positive}>+{delta(single.item,single.rrp).toFixed(1)}%</b></span><span>TRUE PRICE<b>{money(single.item+single.postage)}</b></span></div></article>
+      <article className={styles.bestValue}><small>BEST VALUE</small><strong>4 Pack Bundle</strong><div><span>ITEM<b>{money(bundle.item)}</b></span><span>VS RRP<b className={styles.positive}>{delta(bundle.item,bundle.rrp).toFixed(1)}%</b></span><span>TRUE PRICE<b>{money(bundle.item+bundle.postage)}</b></span></div></article>
+    </div>
+    <article className={styles.verdict}><small>FATEDROP VALUE VERDICT</small><strong>The 4 Pack Bundle is the stronger-value option.</strong><p>It costs more in absolute £, but sits much closer to its verified value reference.</p></article>
+    <button className={styles.primary} onClick={onWatch}>FateMatch · watch my conditions →</button>
+  </div>;
 }
 
-function AlertsScreen({ huntActive, setHuntActive, matchSeen, setMatchSeen }: { huntActive: boolean; setHuntActive: (v: boolean) => void; matchSeen: boolean; setMatchSeen: (v: boolean) => void }) {
-  return <div className={styles.screen}><small>ALERTS · YOUR ACTIVITY</small><h3>FateFind + notification history.</h3><article className={styles.huntCard}><b>FATEFIND</b><strong>Journey Together ETB</strong><span>Max £55 delivered · UK · sealed</span><button onClick={() => setHuntActive(true)}>{huntActive ? "Watching in Cloud ✓" : "Activate sample hunt"}</button></article>{huntActive && <article className={styles.matchCard}><b>FATEMATCH</b><strong>Northstar Cards · £53.48 delivered</strong><span>Conditions satisfied · sample event</span><button onClick={() => setMatchSeen(true)}>{matchSeen ? "Viewed ✓" : "Open match"}</button></article>}<p className={styles.note}>Global Echo / Manifested / Vanished activity belongs on Home. Alerts is personal delivery and history.</p></div>;
+function FateMatchScreen({ watchActive, setWatchActive, onAlerts }: { watchActive: boolean; setWatchActive: (value: boolean) => void; onAlerts: () => void }) {
+  return <div className={styles.screen}>
+    <RouteHeader eyebrow="FATEMATCH · WATCH MY CONDITIONS" title="Let FateDrop keep watching." copy="Choose the product. Stock-only works immediately; add budget or RRP rules when you need them."/>
+    <article className={styles.watchBuilder}><small>PRODUCT</small><strong>Destined Rivals · 4 Pack Bundle</strong><div><span><small>STOCK</small><b>IN STOCK</b></span><span><small>MAX ITEM</small><b>£18.00</b></span><span><small>MAX RRP</small><b>+5%</b></span></div><p>Companion: Koru · online retailers</p></article>
+    <button className={styles.primary} onClick={() => setWatchActive(true)}>{watchActive ? "✓ Koru is watching" : "Start FateMatch watch →"}</button>
+    {watchActive ? <article className={styles.activeWatch}><i>◇</i><span><small>ACTIVE FATEMATCH</small><strong>Waiting for an observed offer that genuinely fits.</strong><p>FateDrop Cloud continues even when the app is closed.</p></span></article> : null}
+    {watchActive ? <button className={styles.secondary} onClick={onAlerts}>See how the alert arrives →</button> : null}
+  </div>;
 }
 
-function MoreScreen({ view, setView, saved }: { view: MoreView; setView: (v: MoreView) => void; saved: boolean }) {
-  return <div className={styles.screen}><small>MORE · SECONDARY TOOLS</small><div className={styles.tabs}><button onClick={() => setView("wishlist")}>Wishlist</button><button onClick={() => setView("radar")}>Radar</button><button onClick={() => setView("events")}>Events</button></div>{view === "wishlist" && <><h3>Universal Wishlist</h3><p>{saved ? "Journey Together ETB is saved regardless of retailer or stock state." : "Save products you want without creating a monitored price rule."}</p></>}{view === "radar" && <><h3>Local Radar</h3><div className={styles.radar}><i /><span>Northstar Cards · 1.8 mi</span><span>Example card show · 2.4 mi</span></div></>}{view === "events" && <><h3>Fate Encounters</h3><article className={styles.event}><b>12 SEP</b><strong>Demo Card Show · Birmingham</strong><span>Sample event · vendors + schedule</span></article></>}</div>;
+function AlertsScreen({ watchActive, matchSeen, onMatchSeen, onFateFind }: { watchActive: boolean; matchSeen: boolean; onMatchSeen: () => void; onFateFind: () => void }) {
+  return <div className={styles.screen}>
+    <RouteHeader eyebrow="ALERTS · PRECISE SIGNAL HISTORY" title="Know what happened." copy="Lifecycle tells you where the opportunity is. Cause tells you why the record exists."/>
+    <div className={styles.stageTabs}><span>WHISPER <b>4</b></span><span>ECHO <b>3</b></span><span className={styles.stageLive}>MANIFESTED <b>7</b></span><span>VANISHED <b>2</b></span></div>
+    {watchActive ? <article className={styles.matchCard}><b>FATEMATCH — LIVE NOW</b><strong>4 Pack Bundle · Card Collective UK</strong><span>£16.95 item · £16.95 True Price · −1.2% vs reference</span><small>Your max £18 / +5% conditions are satisfied.</small><button onClick={onMatchSeen}>{matchSeen ? "Viewed ✓" : "Open retailer"}</button></article> : null}
+    <article className={styles.alertCard}><b>MANIFESTED · RESTOCK</b><strong>Journey Together ETB</strong><span>Confirmed purchasable availability · 2m ago</span><button onClick={onFateFind}>Compare value</button></article>
+    <article className={styles.alertCard}><b>ECHO · QUEUE</b><strong>Pokémon Center UK</strong><span>Access readiness changed · stock is not confirmed</span></article>
+    <article className={`${styles.alertCard} ${styles.vanished}`}><b>VANISHED · SOLD OUT</b><strong>Destined Rivals ETB</strong><span>Previously confirmed availability is gone</span><small>Observed live · 6m 24s</small></article>
+  </div>;
+}
+
+function NetworkScreen({ onSearch }: { onSearch: () => void }) {
+  return <div className={styles.screen}>
+    <RouteHeader eyebrow="NETWORK · SOURCE HEALTH" title="See where the evidence comes from." copy="Retailer monitoring, independent discovery and physical-location evidence remain transparent instead of being blended together."/>
+    <div className={styles.networkMetrics}><Metric label="RETAILERS" value="18"/><Metric label="HEALTHY" value="12"/><Metric label="PRODUCTS" value="6.3K"/></div>
+    <article className={styles.networkRow}><i className={styles.good}/><span><strong>Pokémon Center UK</strong><small>National · reference / stock evidence</small></span><b>HEALTHY</b></article>
+    <article className={styles.networkRow}><i className={styles.good}/><span><strong>Cob & Pip</strong><small>Independent · connected catalogue</small></span><b>CONNECTED</b></article>
+    <article className={styles.networkRow}><i/><span><strong>Local discovery</strong><small>Physical location evidence · stock separate</small></span><b>DISCOVERY</b></article>
+    <button className={styles.primary} onClick={onSearch}>Search this network →</button>
+  </div>;
+}
+
+function ProfileScreen() {
+  return <div className={styles.screen}>
+    <RouteHeader eyebrow="FATEDROP ID" title="One identity everywhere." copy="Your username, membership, companion and preferences travel with the same FateDrop account."/>
+    <article className={styles.profileCard}><div className={styles.avatar}>FD</div><span><small>FATEDROP ID · FD-000247</small><strong>Collector</strong><p>@seeker · member since Aug 2026</p></span></article>
+    <div className={styles.profileFacts}><span><small>MEMBERSHIP</small><b>FateDrop Plus</b></span><span><small>COMPANION</small><b>Koru</b></span><span><small>DISCORD</small><b>Linked</b></span><span><small>SYNC</small><b>Web · App</b></span></div>
+    <article className={styles.identityNote}><small>ONE ENTITLEMENT</small><strong>Pay once. Use the same Plus access across supported FateDrop surfaces.</strong><p>Discord role access and app membership consume the same authoritative entitlement.</p></article>
+  </div>;
+}
+
+function RouteHeader({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
+  return <header className={styles.routeHeader}><small>{eyebrow}</small><h3>{title}</h3><p>{copy}</p></header>;
+}
+
+function SectionTitle({ eyebrow, title, action, onAction }: { eyebrow: string; title: string; action?: string; onAction?: () => void }) {
+  return <div className={styles.sectionTitle}><span><small>{eyebrow}</small><strong>{title}</strong></span>{action && onAction ? <button onClick={onAction}>{action} →</button> : null}</div>;
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <article className={styles.metric}><i/><strong>{value}</strong><small>{label}</small></article>;
+}
+
+function Quick({ label, copy, onClick }: { label: string; copy: string; onClick: () => void }) {
+  return <button className={styles.quick} onClick={onClick}><i>◇</i><strong>{label}</strong><small>{copy}</small></button>;
 }
 
 function DashboardShowcase() {
-  return <aside className={styles.dashboard}><div className={styles.dashboardTop}><div><small>FATEDROP / COMMAND CENTRE</small><strong>Good afternoon, Collector.</strong></div><span>PREVIEW</span></div><div className={styles.dashboardStats}><article><small>ACTIVE FATEFINDS</small><b>04</b></article><article><small>FATEMATCHES TODAY</small><b>02</b></article><article><small>WISHLIST</small><b>17</b></article></div><div className={styles.dashboardColumns}><section><small>NETWORK ACTIVITY</small><article><b>MANIFESTED</b><span>Journey Together ETB</span><em>2m</em></article><article><b>ECHO</b><span>Catalogue movement detected</span><em>6m</em></article><article><b>VANISHED</b><span>Example stock no longer observed</span><em>19m</em></article></section><section><small>YOUR HUNTS</small><article><b>FATEFIND</b><span>Destined Rivals ETB · ≤ £65 delivered</span></article><article><b>FATEMATCH</b><span>Matched · £61.49 delivered</span></article></section></div><div className={styles.dashboardFooter}><span>One FateDrop ID</span><span>One entitlement</span><span>Web · App · Discord</span></div><Link href="/dashboard">Open dashboard preview →</Link></aside>;
+  return <aside className={styles.dashboard}>
+    <div className={styles.dashboardTop}><div><small>FATEDROP / COLLECTOR WORKSPACE</small><strong>Know what moved. Know what matters.</strong></div><span>BETA PREVIEW</span></div>
+    <div className={styles.dashboardStats}><article><small>ACTIVE FATEMATCH</small><b>04</b></article><article><small>FATEMATCHES TODAY</small><b>02</b></article><article><small>WISHLIST</small><b>17</b></article></div>
+    <div className={styles.dashboardColumns}>
+      <section><small>NETWORK ACTIVITY</small><article><b>MANIFESTED</b><span>Journey Together ETB</span><em>2m</em></article><article><b>ECHO</b><span>Queue/access readiness</span><em>6m</em></article><article><b>VANISHED</b><span>Observed stock gone</span><em>19m</em></article></section>
+      <section><small>VALUE + MONITORING</small><article><b>FATEFIND</b><span>Compare strongest live value</span></article><article><b>FATEMATCH</b><span>Watching Destined Rivals · ≤ £18</span></article></section>
+    </div>
+    <div className={styles.dashboardFooter}><span>One FateDrop ID</span><span>One Plus entitlement</span><span>Web · App · Discord</span></div>
+    <Link href="/dashboard">Open collector dashboard →</Link>
+  </aside>;
 }

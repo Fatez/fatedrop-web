@@ -31,6 +31,9 @@ export async function PATCH(request: Request) {
     const next: NotificationPreferences = {
       whisper: boolean(payload.whisper, current.whisper), echo: boolean(payload.echo, current.echo), manifested: boolean(payload.manifested, current.manifested), vanished: boolean(payload.vanished, current.vanished),
       priceChange: boolean(payload.priceChange, current.priceChange), fateMatch: boolean(payload.fateMatch, current.fateMatch),
+      sealedTcg: boolean(payload.sealedTcg, current.sealedTcg), singleCards: boolean(payload.singleCards, current.singleCards),
+      accessories: boolean(payload.accessories, current.accessories), merchandise: boolean(payload.merchandise, current.merchandise),
+      unknownProducts: boolean(payload.unknownProducts, current.unknownProducts),
       web: boolean(payload.web, current.web), push: boolean(payload.push, current.push), discord: boolean(payload.discord, current.discord),
       quietHours: boolean(payload.quietHours, current.quietHours), quietStart: time(payload.quietStart), quietEnd: time(payload.quietEnd), timezone,
       updatedAt: Math.floor(Date.now() / 1000),
