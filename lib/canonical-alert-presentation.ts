@@ -72,14 +72,18 @@ export function confidenceLabel(value?: number | null) {
   return `${band} · ${Math.round(score * 100)}%`;
 }
 
-export async function listCanonicalAlertPresentations(limit = 120) {
+export async function listCanonicalAlertPresentations(input: { id?: string | null; limit?: number } = {}) {
   const sql = await fateDropPostgres();
-  const rows = await sql`
-    SELECT id, evidence
-    FROM fatedrop_signals
-    WHERE state IN ('whisper','echo','manifested','vanished')
-    ORDER BY detected_at DESC
-    LIMIT ${Math.max(1, Math.min(250, Math.trunc(limit)))}
-  ` as SignalPresentationRow[];
+  const id = input.id?.trim() || null;
+  const limit = Math.max(1, Math.min(250, Math.trunc(input.limit ?? 120)));
+  const rows = id
+    ? await sql`SELECT id, evidence FROM fatedrop_signals WHERE id = ${id} LIMIT 1` as SignalPresentationRow[]
+    : await sql`
+        SELECT id, evidence
+        FROM fatedrop_signals
+        WHERE state IN ('whisper','echo','manifested','vanished')
+        ORDER BY detected_at DESC
+        LIMIT ${limit}
+      ` as SignalPresentationRow[];
   return new Map(rows.map((row) => [row.id, presentationFromEvidence(row.evidence)]));
 }
