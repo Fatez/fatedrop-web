@@ -9,6 +9,12 @@
   "vars": {
     "FATEDROP_ACCOUNT_STORE": "postgres"
   },
+  "routes": [
+    {
+      "pattern": "fatedrop.co.uk",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
