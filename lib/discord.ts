@@ -30,7 +30,7 @@ export async function buildDiscordAuthorizeUrl(origin: string) {
     client_id: clientId,
     response_type: "code",
     redirect_uri: `${origin}/api/discord/callback`,
-    scope: "identify",
+    scope: "identify guilds.join",
     state,
     prompt: "consent",
   });
@@ -79,6 +79,27 @@ export async function fetchDiscordIdentity(accessToken: string) {
     username: user.global_name || user.username,
     avatar: user.avatar ?? null,
   };
+}
+
+export async function ensureDiscordGuildMember(discordUserId: string, accessToken: string) {
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!botToken || !guildId) return { configured: false, joined: false };
+
+  const response = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${discordUserId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bot ${botToken}`,
+      "Content-Type": "application/json",
+      "X-Audit-Log-Reason": "FateDrop account link",
+    },
+    body: JSON.stringify({ access_token: accessToken }),
+    cache: "no-store",
+  });
+
+  if (response.status === 201) return { configured: true, joined: true, alreadyMember: false };
+  if (response.status === 204) return { configured: true, joined: true, alreadyMember: true };
+  return { configured: true, joined: false, alreadyMember: false, status: response.status };
 }
 
 export async function syncPremiumDiscordRole(link: DiscordLinkRecord, membership: MembershipRecord) {
