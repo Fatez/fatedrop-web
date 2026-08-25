@@ -22,6 +22,22 @@ test("saved FateFinds can read their latest real qualifying offer without crossi
   assert.ok(route.includes('"Cache-Control": "private, no-store"'));
 });
 
+test("chosen FateFind companion is carried into both hit and mobile-sync FateMatch results", () => {
+  const hitStorage = read("lib/fate-match-storage.ts");
+  const hostedStorage = read("lib/hosted-fate-match-storage.ts");
+  const syncRoute = read("app/api/mobile/sync/route.ts");
+
+  assert.ok(hitStorage.includes("m.notification_preferences_json"));
+  assert.ok(hitStorage.includes("companionId: objectValue(row.notification_preferences_json).companionId"));
+  assert.ok(hostedStorage.includes("find.notification_preferences_json AS fate_find_notification_preferences_json"));
+  assert.ok(hostedStorage.includes("LEFT JOIN fatedrop_fate_matches find"));
+  assert.ok(hostedStorage.includes("AND find.user_id = hosted.user_id"));
+  assert.ok(hostedStorage.includes("companionId: companionIdFrom(row.fate_find_notification_preferences_json)"));
+  assert.ok(hostedStorage.includes('return companionId === "fenn" || companionId === "oru" || companionId === "nyxen" || companionId === "koru" ? companionId : "koru"'));
+  assert.ok(syncRoute.includes("fateMatches"));
+  assert.ok(syncRoute.includes("listHostedFateMatches"));
+});
+
 test("FateFind controls surface a real FateMatch only when hit evidence exists", () => {
   const actions = read("components/fatefind-actions.tsx");
   const observer = read("components/retailer-handoff-observer.tsx");
