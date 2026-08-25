@@ -18,8 +18,7 @@ export function membershipLabel(membership: MembershipRecord) {
 }
 
 export function tierLabel(tier: MembershipTier) {
-  if (tier === "plus") return "FateDrop Plus";
-  if (tier === "pro") return "FateDrop Pro";
+  if (tier === "plus" || tier === "pro") return "FateDrop Plus";
   return "Free";
 }
 
