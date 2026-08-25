@@ -33,6 +33,7 @@ test("billing readiness identifies complete Stripe test configuration without ex
     assert.equal(status.mode, "test");
     assert.deepEqual(status.missing, []);
     assert.equal(status.requireCardForTrial, true);
+    assert.equal(status.trialDays, 7);
     assert.equal(JSON.stringify(status).includes("sk_test_example"), false);
   });
 });
