@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { assertSameOrigin } from "@/lib/auth";
 import { requestFateVerdict } from "@/lib/fatefind-verdict-client";
 
+// Read-only market intelligence endpoint. It does not mutate account/session
+// state, so both the website and native FateDrop clients may call it.
 export async function POST(request: Request) {
-  try {
-    assertSameOrigin(request);
-  } catch {
-    return NextResponse.json({ success: false, error: "Cross-site request rejected" }, { status: 403 });
-  }
-
   let body: { query?: unknown; leftId?: unknown; rightId?: unknown };
   try {
     body = await request.json() as typeof body;
@@ -23,5 +18,24 @@ export async function POST(request: Request) {
 
   const result = await requestFateVerdict(query, { leftId, rightId });
   if (!result) return NextResponse.json({ success: false, error: "FateDrop Cloud verdict unavailable" }, { status: 502 });
-  return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(result, {
+    headers: {
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type, Accept",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+    },
+  });
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type, Accept",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
 }
