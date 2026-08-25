@@ -61,38 +61,48 @@ test("first-class public routes remain discoverable while private surfaces stay 
   assert.ok(robots.includes('allow: "/"'));
 });
 
-test("interactive phone preview retains every controlled screen and safeguard", async () => {
+test("interactive phone mirrors the current app shell and preserves product truth", async () => {
   const source = await readFile(new URL("components/interactive-phone-demo-v2.tsx", root), "utf8");
 
-  for (const screen of ["home", "search", "indies", "alerts", "more"]) {
-    assert.match(source, new RegExp(`id: \\"${screen}\\"`));
+  assert.ok(source.includes('type Screen = "home" | "alerts" | "network" | "profile" | "search" | "fatefind" | "fatematch"'));
+  assert.ok(source.includes('type Tab = "home" | "alerts" | "tools" | "network" | "profile"'));
+
+  for (const screen of ["home", "alerts", "network", "profile", "search", "fatefind", "fatematch"]) {
     assert.match(source, new RegExp(`screen === \\"${screen}\\"`));
   }
+
+  for (const primaryTab of [">Home<", ">Alerts<", ">Network<", ">Profile<"]) {
+    assert.ok(source.includes(primaryTab), `${primaryTab} is missing from the current mobile shell`);
+  }
+  assert.ok(source.includes('aria-label="Open FateDrop tools"'));
+  for (const tool of ["Search live database", "FateFind", "FateMatch"]) assert.ok(source.includes(tool));
 
   for (const state of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) {
     assert.ok(source.includes(state), `${state} is missing from the public phone preview`);
   }
 
   for (const requirement of [
-    "Interactive preview · sample data",
-    "Compare True Price",
-    "Save to Wishlist",
-    "FateFind best value",
-    "FATEMATCH WATCH",
+    "Current app structure · sample data · retailer checkout remains external",
+    "Search shows the current observed catalogue. It does not decide the best value for you.",
+    "FATEFIND · VALUE INTELLIGENCE",
+    "Which option is stronger value?",
+    "FATEDROP VALUE VERDICT",
+    "FATEMATCH · WATCH MY CONDITIONS",
     "FATEMATCH — LIVE NOW",
-    "FATEMATCH",
-    "Global Whisper / Echo / Manifested / Vanished activity belongs on Home",
-    "Local Radar",
-    "Fate Encounters",
-    "FATEDROP / COMMAND CENTRE",
-    "KORU &amp; FRIENDS · FIVE COMPANION SLOTS",
+    "FateDrop Cloud continues even when the app is closed.",
+    "NETWORK · SOURCE HEALTH",
+    "FATEDROP ID",
+    "One identity everywhere.",
+    "One Plus entitlement",
+    "KORU &amp; FRIENDS · PERSONALITY LAYER",
     "Koru, Fenn, Aeris, Nyxen and Solix",
   ]) {
     assert.ok(source.includes(requirement), `${requirement} is missing from the current product showcase`);
   }
 
-  assert.ok(source.includes("Catalogue or product movement detected · stock not confirmed"));
-  assert.ok(source.includes("Queue/access readiness changed"));
+  assert.ok(source.includes("RRP/reference"));
+  assert.ok(source.includes("TRUE PRICE"));
+  assert.ok(source.includes("Queue/access readiness"));
   assert.equal(source.includes("signal droid"), false);
   assert.ok(!source.includes("navigator.geolocation"));
   assert.ok(!source.includes("localStorage"));
