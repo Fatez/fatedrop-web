@@ -25,11 +25,12 @@ test("billing readiness identifies complete Stripe test configuration without ex
     STRIPE_SECRET_KEY: "sk_test_example",
     STRIPE_WEBHOOK_SECRET: "whsec_example",
     STRIPE_PRICE_PLUS: "price_plus",
-    STRIPE_PRICE_PRO: "price_pro",
+    STRIPE_PRICE_PRO: undefined,
     FATEDROP_TRIAL_REQUIRE_CARD: "true",
   }, () => {
     const status = billing.billingReadiness();
     assert.equal(status.configured, true);
+    assert.equal(status.checkoutConfigured, true);
     assert.equal(status.mode, "test");
     assert.deepEqual(status.missing, []);
     assert.equal(status.requireCardForTrial, true);
@@ -38,12 +39,12 @@ test("billing readiness identifies complete Stripe test configuration without ex
   });
 });
 
-test("billing readiness reports missing production configuration", async () => {
+test("billing readiness only requires the single public FateDrop Plus price", async () => {
   await withEnv({ STRIPE_SECRET_KEY: undefined, STRIPE_WEBHOOK_SECRET: undefined, STRIPE_PRICE_PLUS: undefined, STRIPE_PRICE_PRO: undefined }, () => {
     const status = billing.billingReadiness();
     assert.equal(status.configured, false);
     assert.equal(status.mode, "unconfigured");
-    assert.deepEqual(status.missing.sort(), ["STRIPE_PRICE_PLUS", "STRIPE_PRICE_PRO", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"].sort());
+    assert.deepEqual(status.missing.sort(), ["STRIPE_PRICE_PLUS", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"].sort());
   });
 });
 
@@ -57,10 +58,12 @@ test("Stripe webhook verification accepts a current valid v1 signature and rejec
   });
 });
 
-test("Stripe price IDs map back to FateDrop membership tiers", async () => {
-  await withEnv({ STRIPE_PRICE_PLUS: "price_plus", STRIPE_PRICE_PRO: "price_pro" }, () => {
+test("new checkout uses Plus while an old Pro price can still be recognised safely", async () => {
+  await withEnv({ STRIPE_PRICE_PLUS: "price_plus", STRIPE_PRICE_PRO: "price_legacy_pro" }, () => {
+    assert.equal(billing.priceIdForTier("plus"), "price_plus");
+    assert.equal(billing.priceIdForTier("pro"), "price_plus");
     assert.equal(billing.tierForPriceId("price_plus"), "plus");
-    assert.equal(billing.tierForPriceId("price_pro"), "pro");
+    assert.equal(billing.tierForPriceId("price_legacy_pro"), "pro");
     assert.equal(billing.tierForPriceId("unknown"), "free");
   });
 });
