@@ -2,14 +2,14 @@
 
 import { useEffect } from "react";
 
-type HandoffContext = "alerts" | "fatefind" | "search" | "true_price" | "independent_stores";
+type HandoffContext = "alerts" | "fatefind" | "fatematch" | "search" | "independent_stores";
 
 function contextForPath(pathname: string): HandoffContext | null {
   if (pathname === "/dashboard/alerts") return "alerts";
-  if (pathname === "/dashboard/watchlist") return "fatefind";
+  if (pathname === "/dashboard/watchlist") return "fatematch";
+  if (pathname === "/dashboard/fatefind" || pathname === "/dashboard/true-price") return "fatefind";
   if (pathname === "/dashboard/search") return "search";
-  if (pathname === "/dashboard/true-price") return "true_price";
-  if (pathname === "/dashboard/stores") return "independent_stores";
+  if (pathname === "/dashboard/stores" || pathname.startsWith("/dashboard/stores/")) return "independent_stores";
   return null;
 }
 
@@ -43,7 +43,7 @@ function handoffDetails(anchor: HTMLAnchorElement, context: HandoffContext) {
     };
   }
 
-  if (context === "true_price") {
+  if (context === "fatefind") {
     const offer = anchor.closest(".fd-tp-offer");
     const group = anchor.closest(".fd-tp-group");
     return {
@@ -52,11 +52,21 @@ function handoffDetails(anchor: HTMLAnchorElement, context: HandoffContext) {
     };
   }
 
-  if (context === "fatefind") return { retailer: null, productTitle: null };
+  if (context === "fatematch") return { retailer: null, productTitle: null };
 
   const card = anchor.closest(".fd-indies-network-grid article");
   const retailer = textFrom(card, "h3");
   return { retailer, productTitle: retailer };
+}
+
+function send(payload: Record<string, unknown>) {
+  void fetch("/api/dashboard/activity", {
+    method: "POST",
+    credentials: "same-origin",
+    keepalive: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch(() => undefined);
 }
 
 export function RetailerHandoffObserver() {
@@ -71,31 +81,23 @@ export function RetailerHandoffObserver() {
       if (!context) return;
 
       let destination: URL;
-      try {
-        destination = new URL(anchor.href, window.location.href);
-      } catch {
-        return;
-      }
+      try { destination = new URL(anchor.href, window.location.href); }
+      catch { return; }
       if (destination.protocol !== "https:" || destination.origin === window.location.origin) return;
 
       const details = handoffDetails(anchor, context);
       if (!details.retailer) return;
-
-      const payload = JSON.stringify({
-        type: "store_tracked",
+      const storeId = destination.hostname.toLowerCase().replace(/^www\./, "");
+      const common = {
         retailer: details.retailer,
-        storeId: destination.hostname.toLowerCase(),
+        storeId,
         title: details.productTitle || details.retailer,
-        subtitle: `Retailer handoff · ${context}`,
-      });
+      };
 
-      void fetch("/api/dashboard/activity", {
-        method: "POST",
-        credentials: "same-origin",
-        keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-      }).catch(() => undefined);
+      send({ type: "store_tracked", ...common, subtitle: `Retailer handoff · ${context}` });
+      if (anchor.dataset.fdHandoff === "fatematch" || context === "fatematch") {
+        send({ type: "fatematch_handoff", ...common, subtitle: "Qualified FateMatch retailer handoff" });
+      }
     };
 
     document.addEventListener("click", onClick, { capture: true });
