@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
-import type { FateMatch } from "@/lib/fate-match";
+import type { FateFindCompanionId, FateMatch } from "@/lib/fate-match";
 import { createFateMatch, deleteFateMatch, listUserFateMatches, setFateMatchEnabled } from "@/lib/fate-match-storage";
 import { hasCapability } from "@/lib/entitlements";
 
@@ -16,12 +16,16 @@ function finiteOrNull(value: unknown, options: { min?: number; max?: number } = 
   return number;
 }
 function strings(value: unknown) { return Array.isArray(value) ? value.map(String).map((item)=>item.trim()).filter(Boolean).slice(0, 50) : []; }
+function isCompanionId(value: unknown): value is FateFindCompanionId {
+  return value === "koru" || value === "fenn" || value === "oru" || value === "nyxen";
+}
 function notifications(value: unknown) {
   const input = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   return {
     website: input.website !== false,
     discord: input.discord === true,
     app: input.app === true,
+    companionId: isCompanionId(input.companionId) ? input.companionId : "koru",
   };
 }
 
