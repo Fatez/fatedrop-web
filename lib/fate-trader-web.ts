@@ -48,8 +48,10 @@ export type FateTraderEnvelope<T> = {
   meta?: { requestId?: string | null; apiVersion?: string };
 };
 
+// Server/runtime gate so Cloudflare can enable or disable the authenticated
+// audit surface without baking a public client flag into the JavaScript bundle.
 export function fateTraderWebEnabled() {
-  return process.env.NEXT_PUBLIC_FATE_TRADER_ENABLED === "true";
+  return process.env.FATE_TRADER_WEB_ENABLED === "true";
 }
 
 const safeSingle = /^[A-Za-z0-9_.:-]+$/;
