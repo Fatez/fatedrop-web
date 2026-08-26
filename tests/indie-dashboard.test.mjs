@@ -4,18 +4,31 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
-test("Indie dashboard proves retailer value without claiming sales", () => {
+test("Retailer Dashboard proves network value without claiming sales", () => {
   const page = read("app/dashboard/indie/page.tsx");
   const insights = read("lib/retailer-insights.ts");
+  assert.ok(page.includes("Retailer Dashboard"));
+  assert.ok(page.includes("FATE NETWORK · RETAILER VALUE PROOF"));
   assert.ok(page.includes("PRODUCT APPEARANCES"));
   assert.ok(page.includes("FATEFIND APPEARANCES"));
   assert.ok(page.includes("BEST VALUE WINS"));
   assert.ok(page.includes("RETAILER VISITS SENT"));
   assert.ok(page.includes("FATEMATCH HANDOFFS"));
-  assert.ok(page.includes("COLLECTOR DEMAND"));
+  assert.ok(page.includes("AGGREGATED COLLECTOR DEMAND"));
   assert.ok(page.includes("Traffic and intent, not invented sales."));
   assert.ok(page.includes("insights?.definition"));
+  assert.equal(page.includes("FATEDROP INDIE"), false);
+  assert.equal(page.includes('title="Indie Dashboard"'), false);
   assert.ok(insights.includes("does not mean a purchase was completed"));
+});
+
+test("legacy retailer route remains compatible while the visible product is Retailer Dashboard", () => {
+  const page = read("app/dashboard/indie/page.tsx");
+  const nav = read("components/dashboard-nav.tsx");
+  assert.ok(nav.includes('"Retailer Dashboard", "/dashboard/indie"'));
+  assert.ok(page.includes("/dashboard/indie?retailer=cob-and-pip"));
+  assert.ok(page.includes("/dashboard/indie?retailer=wishlist-collectables"));
+  assert.equal(nav.includes('"Indie Dashboard"'), false);
 });
 
 test("production retailer workspace access requires a verified FateDrop ID mapping", () => {
