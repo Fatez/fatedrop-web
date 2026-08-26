@@ -157,12 +157,17 @@ test("collector page keeps retail buying and Fate Trader as separate journeys", 
 test("retired Indie umbrella and old FateFind hunt semantics do not return", () => {
   const siteData = read("lib/site-data.ts");
   const dashboardNav = read("components/dashboard-nav.tsx");
+  const retailerDashboard = read("app/dashboard/indie/page.tsx");
+  const subscriptions = read("app/subscriptions/page.tsx");
   const about = read("app/about/page.tsx");
   const home = read("app/page.tsx");
   assert.equal(siteData.includes("Signal Intelligence & Indie Discovery"), false);
   assert.equal(siteData.includes('title: "Independent Discovery"'), false);
+  assert.equal(siteData.includes('name: "FateDrop Indie"'), false);
   assert.equal(dashboardNav.includes('["⌘", "Indies"'), false);
   assert.equal(dashboardNav.includes('"Indie Dashboard"'), false);
+  assert.equal(retailerDashboard.includes("FATEDROP INDIE"), false);
+  assert.equal(subscriptions.includes("£9.99"), false);
   assert.equal(about.includes("FateFind hunts → FateMatch results"), false);
   assert.equal(home.includes("<IndieBridgeSection"), false);
   assert.ok(siteData.includes('title: "Fate Network"'));
@@ -192,8 +197,9 @@ test("dashboard home matches the approved evidence-backed collector workspace", 
   assert.ok(dashboard.includes("FateMatch"));
   assert.ok(dashboard.includes("Network Pulse"));
   assert.ok(dashboard.includes("Recent Manifested Drops"));
-  assert.ok(dashboard.includes("Independent Stores"));
-  assert.ok(dashboard.includes("Discover more places to buy"));
+  assert.ok(dashboard.includes("Fate Network"));
+  assert.ok(dashboard.includes("Retailers you have discovered or interacted with."));
+  assert.ok(dashboard.includes("Explore Fate Network"));
   assert.ok(dashboard.includes("/assets/dashboard/koru-network-guide.png"));
   assert.ok(dashboard.includes("Choose your companion"));
   assert.ok(fs.existsSync("public/assets/dashboard/koru-network-guide.png"));
