@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { AccountConflictError, AccountStorageUnavailableError, createAccount, findAccountByUsername, type AccountRecord } from "@/lib/account-storage";
+import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, readBoundedJson } from "@/lib/auth-abuse";
 import { assertSameOrigin, hashPassword, startSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -34,7 +35,10 @@ async function uniqueUsername(displayName: string) {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    const payload = await request.json() as Record<string, unknown>;
+    const rateLimit = checkAuthRateLimit(request, "register");
+    if (!rateLimit.allowed) return authRateLimitResponse(rateLimit);
+
+    const payload = await readBoundedJson(request);
     const displayName = clean(payload.displayName, 60);
     const email = clean(payload.email, 254).toLowerCase();
     const password = typeof payload.password === "string" ? payload.password : "";
@@ -68,7 +72,8 @@ export async function POST(request: Request) {
     await startSession(account.id);
     return Response.json({ created: true, fateId: account.fateId }, { status: 201 });
   } catch (error) {
-    if (error instanceof AccountConflictError) return Response.json({ error: error.message }, { status: 409 });
+    if (isRequestTooLargeError(error)) return Response.json({ error: "Request is too large." }, { status: 413 });
+    if (error instanceof AccountConflictError) return Response.json({ error: "An account could not be created with those details." }, { status: 409 });
     if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
     if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
     return Response.json({ error: "Your FateDrop ID could not be created. Please try again." }, { status: 500 });
