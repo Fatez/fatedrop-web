@@ -13,7 +13,7 @@ const primary: readonly NavItem[] = [
   ["♧", "Alerts", "/dashboard/alerts", "See the signals and personal alerts FateDrop has detected or delivered."],
   ["♡", "Wishlist", "/dashboard/wishlist", "Save products you want without creating a monitoring rule."],
   ["□", "Events", "/dashboard/events", "Discover relevant TCG events and Fate Encounters."],
-  ["⌘", "Indies", "/dashboard/stores", "Discover independent retailers across the FateDrop network."],
+  ["⌘", "Fate Network", "/dashboard/stores", "Browse major, specialist and independent retailers connected to the Fate Network."],
 ];
 
 const trader: NavItem = [
@@ -24,7 +24,7 @@ const trader: NavItem = [
 ];
 
 const secondary: readonly NavItem[] = [
-  ["▥", "Indie Dashboard", "/dashboard/indie", "Verified retailers can see privacy-safe FateDrop traffic, FateFind visibility and collector demand."],
+  ["▥", "Retailer Dashboard", "/dashboard/indie", "Verified retailers can see privacy-safe FateDrop traffic, FateFind visibility and collector demand."],
   ["⌖", "Local Radar", "/dashboard/local-radar", "Discover useful physical TCG locations around you."],
   ["#", "Discord", "/dashboard/discord", "Connect your FateDrop account to Discord delivery and community features."],
   ["◇", "Koru & Friends", "/dashboard/avatar", "Choose the companion that represents your FateDrop experience and FateMatch watches."],

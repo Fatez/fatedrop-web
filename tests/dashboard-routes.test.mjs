@@ -10,6 +10,7 @@ const dashboardRoutes = [
   "app/dashboard/wishlist/page.tsx",
   "app/dashboard/notifications/page.tsx",
   "app/dashboard/stores/page.tsx",
+  "app/dashboard/indie/page.tsx",
   "app/dashboard/events/page.tsx",
   "app/dashboard/true-price/page.tsx",
   "app/dashboard/local-radar/page.tsx",
@@ -35,7 +36,9 @@ test("core dashboard navigation keeps every collector destination in the approve
   assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Wishlist", "/dashboard/wishlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
-  assert.ok(nav.includes('"Indies", "/dashboard/stores"'));
+  assert.ok(nav.includes('"Fate Network", "/dashboard/stores"'));
+  assert.ok(nav.includes('"Retailer Dashboard", "/dashboard/indie"'));
+  assert.equal(nav.includes('"Indies", "/dashboard/stores"'), false);
 });
 
 test("dashboard home uses the shared shell and retains personal collector identity", () => {
@@ -228,6 +231,8 @@ test("retailer discovery separates Cloud runtime health from storefront lab feed
   const stores = fs.readFileSync("app/dashboard/stores/page.tsx", "utf8");
   const network = fs.readFileSync("lib/retailer-network.ts", "utf8");
   const registry = fs.readFileSync("lib/retailer-registry.ts", "utf8");
+  assert.ok(stores.includes("Fate Network"));
+  assert.ok(stores.includes("One network. Different retailer types. More places to buy."));
   assert.ok(stores.includes("CANONICAL CLOUD RETAILERS · MARKET DIRECTORY"));
   assert.ok(stores.includes("EXPERIMENTAL STOREFRONT LAB"));
   assert.ok(stores.includes("Cloud monitor health describes FateDrop evidence collection"));

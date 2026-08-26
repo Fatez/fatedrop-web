@@ -166,11 +166,11 @@ export default async function DashboardPage() {
         </article>
 
         <article className="fd-ref-card fd-retailer-card">
-          <div className="fd-ref-card-head compact"><div><h2>Independent Stores</h2><p>Discover more places to buy.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>Fate Network</h2><p>Retailers you have discovered or interacted with.</p></div></div>
           <div className="fd-retailer-list">
-            {stores.length ? stores.map((store) => <div key={`${store.name}-${store.latestAt}`}><span className="fd-store-mark">◇</span><strong>{store.name}</strong><small>{store.count} tracked action{store.count === 1 ? "" : "s"}</small><b>{relativeTime(store.latestAt, data.generatedAt)}</b></div>) : <div className="fd-ref-empty"><strong>No independent stores in your activity yet.</strong><span>Explore the FateDrop network to discover more places to buy directly from the retailer.</span></div>}
+            {stores.length ? stores.map((store) => <div key={`${store.name}-${store.latestAt}`}><span className="fd-store-mark">◇</span><strong>{store.name}</strong><small>{store.count} tracked action{store.count === 1 ? "" : "s"}</small><b>{relativeTime(store.latestAt, data.generatedAt)}</b></div>) : <div className="fd-ref-empty"><strong>No Fate Network retailers in your activity yet.</strong><span>Explore the network to discover more places to buy directly from the retailer.</span></div>}
           </div>
-          <Link className="fd-card-link" href="/dashboard/stores">Explore Independent Stores <span>→</span></Link>
+          <Link className="fd-card-link" href="/dashboard/stores">Explore Fate Network <span>→</span></Link>
         </article>
 
         <article className="fd-koru-dashboard-card" aria-label="Koru FateDrop network guide artwork">
