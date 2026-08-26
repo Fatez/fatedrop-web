@@ -10,7 +10,9 @@ const traderSurface = await readFile(new URL("../components/fate-trader-surface.
 
 test("Stores exposes the locked presence model without inventing Near Me or capability data", () => {
   assert.match(stores, /aria-label="Store presence"/);
-  for (const label of [">All<", ">Online<", ">Physical<", ">Near Me "]) assert.match(stores, new RegExp(label));
+  for (const label of [">All<", ">Online<", ">Physical Stores<", ">Near Me "]) assert.match(stores, new RegExp(label));
+  assert.match(stores, /RRP \/ Major Retailers/);
+  assert.match(stores, /Independent Retailers/);
   assert.match(stores, /Near Me will activate when the shared branch registry exposes a resolved location scope/);
   assert.match(stores, /disabled title="Awaiting canonical retailer capability fields from Cloud\."/);
   assert.match(stores, /no hard-coded classifications/);
@@ -20,6 +22,7 @@ test("Stores exposes the locked presence model without inventing Near Me or capa
 
 test("Local Radar is prepared as Overview, Local Stores and Events using evidence-first language", () => {
   assert.match(radarPage, /LocalRadarDashboard/);
+  assert.match(radarPage, /canonical FateDrop Cloud discovery engine/);
   for (const section of ["Overview", "Local Stores", "Events"]) assert.match(radar, new RegExp(`>${section}<`));
   for (const state of ["NEARBY", "ECHO / PREPARATION", "MANIFESTED", "VANISHED"]) assert.match(radar, new RegExp(state.replace("/", "\\/")));
   assert.match(radar, /does <strong>not<\/strong> mean stock is confirmed/);
