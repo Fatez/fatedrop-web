@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- raster map tiles must be requested directly from the configured tile provider */
 "use client";
 
 import { useMemo, useState } from "react";
