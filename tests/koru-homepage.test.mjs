@@ -24,26 +24,27 @@ test("homepage explains the product before the brand world and keeps the phone o
   const koruPosition = home.indexOf("<KoruFriendsMerchSection");
   assert.ok(valuePosition >= 0);
   assert.ok(koruPosition > valuePosition);
-  assert.ok(home.includes("<IndieBridgeSection"));
+  assert.ok(home.includes("<FateNetworkHomeSection"));
+  assert.equal(home.includes("<IndieBridgeSection"), false);
   assert.ok(home.includes("<EventsHomeLink"));
   assert.ok(home.includes("<MembershipConversionSection"));
   assert.equal(home.includes("<FateDropPhoneSection"), false);
   assert.equal(home.includes("<FutureExpansion"), false);
 });
 
-test("homepage sells the four core FateDrop USPs accurately", () => {
-  const sections = read("components/koru-final-sections.tsx");
-  assert.ok(sections.includes("WHAT FATEDROP DOES"));
-  assert.ok(sections.includes("FateDrop does the work before checkout."));
-  assert.ok(sections.includes("Product or catalogue movement. Something may be coming."));
-  assert.ok(sections.includes("Queue, traffic or security conditions changed. Get ready."));
-  assert.ok(sections.includes("Confirmed purchasable stock is live."));
-  assert.ok(sections.includes("Previously confirmed availability is gone."));
-  assert.ok(sections.includes("OFFICIAL RRP"));
-  assert.ok(sections.includes("FateFind"));
-  assert.ok(sections.includes("FateMatch"));
-  assert.ok(sections.includes("buy direct from the store"));
-  assert.ok(sections.includes("£4.99"));
+test("homepage sells the core FateDrop USPs accurately", () => {
+  const value = read("components/fatedrop-value-section-v2.tsx");
+  assert.ok(value.includes("WHAT FATEDROP ACTUALLY DOES"));
+  assert.ok(value.includes("FateDrop does the checking before you reach checkout."));
+  assert.ok(value.includes("Product or catalogue movement. Stock is not confirmed."));
+  assert.ok(value.includes("Access, queue, traffic or security readiness changed."));
+  assert.ok(value.includes("Purchasable availability is confirmed live."));
+  assert.ok(value.includes("Previously confirmed availability is no longer live."));
+  assert.ok(value.includes("RRP / REFERENCE"));
+  assert.ok(value.includes("FATEFIND · BEST VALUE NOW"));
+  assert.ok(value.includes("FATEMATCH · WATCH MY CONDITIONS"));
+  assert.ok(value.includes("FATE NETWORK"));
+  assert.ok(value.includes("buy directly from the retailer"));
 });
 
 test("interactive phone has moved to a dedicated demo page", () => {
@@ -63,7 +64,7 @@ test("public product language preserves FateFind, FateMatch and the final lifecy
   assert.ok(siteData.includes('title: "FateFind"'));
   assert.ok(siteData.includes('title: "FateMatch"'));
   assert.ok(siteData.includes("strongest-value option"));
-  assert.ok(siteData.includes("watch your buying conditions"));
+  assert.ok(siteData.includes("buying conditions"));
   assert.ok(layout.includes("FateFind live value comparison"));
   assert.ok(layout.includes("FateMatch personal monitoring"));
   assert.ok(trust.includes("Whisper. Echo. Manifested. Vanished."));
@@ -136,12 +137,36 @@ test("collector and retailer pages stay visibly grounded in the TCG market", () 
   const retailers = read("app/businesses/page.tsx");
   assert.ok(fs.existsSync("public/assets/market/collectors.png"));
   assert.ok(fs.existsSync("public/assets/market/retailers.png"));
-  assert.ok(collectors.includes("One network. More places to find what you collect."));
+  assert.ok(collectors.includes("One network. More ways to find what you collect."));
   assert.ok(collectors.includes("Search connected stock"));
-  assert.ok(collectors.includes("Buy direct from retailers"));
+  assert.ok(collectors.includes("Trade with Fate Trader"));
   assert.ok(retailers.includes("Put your stock where collectors are already looking."));
   assert.ok(retailers.includes("Connect genuine stock"));
   assert.ok(retailers.includes("Keep your checkout"));
+});
+
+test("collector page keeps retail buying and Fate Trader as separate journeys", () => {
+  const collectors = read("app/collectors/page.tsx");
+  assert.ok(collectors.includes("Buying and trading are different journeys."));
+  assert.ok(collectors.includes("Fate Trade Finder"));
+  assert.ok(collectors.includes("Fate Trade Found"));
+  assert.ok(collectors.includes("Fate Trade Hunt"));
+  assert.ok(collectors.includes("fateTraderWebEnabled"));
+});
+
+test("retired Indie umbrella and old FateFind hunt semantics do not return", () => {
+  const siteData = read("lib/site-data.ts");
+  const dashboardNav = read("components/dashboard-nav.tsx");
+  const about = read("app/about/page.tsx");
+  const home = read("app/page.tsx");
+  assert.equal(siteData.includes("Signal Intelligence & Indie Discovery"), false);
+  assert.equal(siteData.includes('title: "Independent Discovery"'), false);
+  assert.equal(dashboardNav.includes('["⌘", "Indies"'), false);
+  assert.equal(dashboardNav.includes('"Indie Dashboard"'), false);
+  assert.equal(about.includes("FateFind hunts → FateMatch results"), false);
+  assert.equal(home.includes("<IndieBridgeSection"), false);
+  assert.ok(siteData.includes('title: "Fate Network"'));
+  assert.ok(siteData.includes('title: "Fate Trader"'));
 });
 
 test("events page uses the rebuilt hero and fails open when the hosted encounters service is slow", () => {
