@@ -12,7 +12,16 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const tools = [
+type NetworkTool = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  href: string;
+  action: string;
+  feature?: "trader";
+};
+
+const tools: readonly NetworkTool[] = [
   {
     eyebrow: "FIND & BUY",
     title: "FateFind",
@@ -49,7 +58,7 @@ const tools = [
     href: "/dashboard/stores",
     action: "Browse Stores",
   },
-] as const;
+];
 
 export default async function DashboardNetworkPage() {
   const snapshot = await getCurrentSnapshot();
@@ -57,9 +66,10 @@ export default async function DashboardNetworkPage() {
 
   const data = await buildDashboardData(snapshot);
   const network = data.network;
-  const signalActivity7d = Object.values(data.publicSignalMetrics).every((value) => value === null || value === undefined)
+  const signalMetrics = Object.values(data.publicSignalMetrics);
+  const signalActivity7d = signalMetrics.every((value) => value === null || value === undefined)
     ? null
-    : Object.values(data.publicSignalMetrics).reduce((total, value) => total + (value ?? 0), 0);
+    : signalMetrics.reduce<number>((total, value) => total + (value ?? 0), 0);
   const traderEnabled = process.env.NEXT_PUBLIC_FATE_TRADER_ENABLED === "true";
   const visibleTools = tools.filter((tool) => tool.feature !== "trader" || traderEnabled);
 
