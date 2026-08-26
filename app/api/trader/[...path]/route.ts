@@ -1,4 +1,4 @@
-import { assertSameOrigin, getCurrentSessionToken } from "@/lib/auth";
+import { assertSameOrigin, bearerTokenFromRequest, getCurrentSessionToken } from "@/lib/auth";
 import { fateTraderCloudPath, fateTraderWebEnabled } from "@/lib/fate-trader-web";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
@@ -40,7 +40,10 @@ async function proxy(request: Request, context: RouteContext) {
   const target = new URL(cloudPath, `${base}/`);
   target.search = new URL(request.url).search;
 
-  const token = await getCurrentSessionToken();
+  // Browser requests use the httpOnly FateDrop cookie. Native/mobile clients use
+  // the same opaque session as a Bearer token. Cloud performs the authoritative
+  // session lookup, so forward whichever authenticated transport the caller used.
+  const token = bearerTokenFromRequest(request) || await getCurrentSessionToken();
   const headers = new Headers({ Accept: "application/json" });
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
