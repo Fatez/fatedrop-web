@@ -40,9 +40,11 @@ test("Fate Trader audit client uses the same-site proxy and never embeds Cloud o
   assert.match(source, /It is not a public listing yet/);
 });
 
-test("Trader proxy forwards the HttpOnly session only on the server and protects mutations", async () => {
+test("Trader proxy forwards browser cookies or native Bearer sessions and protects mutations", async () => {
   const proxy = await read("../app/api/trader/[...path]/route.ts");
   assert.match(proxy, /getCurrentSessionToken/);
+  assert.match(proxy, /bearerTokenFromRequest/);
+  assert.match(proxy, /bearerTokenFromRequest\(request\) \|\| await getCurrentSessionToken\(\)/);
   assert.match(proxy, /Authorization/);
   assert.match(proxy, /assertSameOrigin/);
   assert.match(proxy, /fateTraderCloudPath/);
