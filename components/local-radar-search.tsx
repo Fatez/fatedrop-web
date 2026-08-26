@@ -1,53 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { LocalRadarMap, type LocalRadarMapPoint } from "@/components/local-radar-map";
 
-type RadarValue = {
-  priceKnown?: boolean;
-  itemPricePence?: number | null;
-  priceQuality?: string | null;
-  rrp?: { known?: boolean; pence?: number | null; source?: string | null } | null;
-  itemVsRrp?: { deltaPence?: number | null; deltaPercent?: number | null; aboveRrp?: boolean | null } | null;
+type LocalAvailabilityExpected = {
+  title?: string | null;
+  productIdentityId?: string | null;
+  expectedFrom?: string | null;
+  expectedTo?: string | null;
+  expectedLabel?: string | null;
+  advisory?: boolean | null;
+  sourceLabel?: string | null;
+  sourceUrl?: string | null;
+};
+
+type LocalAvailabilityConfirmed = {
+  title?: string | null;
+  productIdentityId?: string | null;
+  observedAt?: string | null;
+  sourceLabel?: string | null;
+  sourceUrl?: string | null;
 };
 
 type RadarStockProduct = {
   productIdentityId?: string | null;
   title?: string | null;
-  lifecycleState?: string | null;
-  status?: string | null;
-  observedAt?: string | null;
-  expiresAt?: string | null;
-  evidenceLevel?: string | null;
-  confidence?: number | null;
-  freshnessAgeMinutes?: number | null;
-  corroborationCount?: number | null;
-  sourceDiversityCount?: number | null;
-  contradictionCount?: number | null;
-  orphanVanished?: boolean | null;
-  value?: RadarValue | null;
+  localState?: "expected" | "confirmed" | "unknown" | null;
+  scope?: string | null;
+  expectedFrom?: string | null;
+  expectedTo?: string | null;
+  expectedLabel?: string | null;
 };
 
 type RadarShop = {
   id: string;
+  retailerId?: string | null;
   name: string;
   address?: string | null;
   websiteUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   distanceMiles?: number | null;
-  networkStatus?: string | null;
-  localStockStatus?: string | null;
-  localStockEvidence?: {
-    lifecycleState?: string | null;
-    confidence?: number | null;
-    freshnessAgeMinutes?: number | null;
-    verifiedBranchStock?: boolean | null;
+  localAvailability?: {
+    status?: "expected" | "confirmed" | "unknown" | null;
+    expected?: LocalAvailabilityExpected | null;
+    confirmed?: LocalAvailabilityConfirmed | null;
+    disclaimer?: string | null;
   } | null;
   localStockProducts?: RadarStockProduct[] | null;
-  onlineCatalogue?: { availableOffers?: number | null } | null;
 };
 
 type RadarEvent = {
   id: string;
   name: string;
+  latitude?: number | null;
+  longitude?: number | null;
   venueName?: string | null;
   townCity?: string | null;
   postcode?: string | null;
@@ -64,14 +71,14 @@ type RadarResponse = {
   providers?: { shops?: { status?: string | null }; localStock?: { status?: string | null }; events?: { status?: string | null } };
   shops?: RadarShop[];
   events?: RadarEvent[];
-  counts?: {
-    shops?: number;
-    events?: number;
-    localInStockBranches?: number;
-    localLowStockBranches?: number;
-    incomingWatchBranches?: number;
-  };
 };
+
+type SearchOrigin = { latitude: number; longitude: number } | null;
+
+function hasCoords(point: { latitude?: number | null; longitude?: number | null }) {
+  return typeof point.latitude === "number" && Number.isFinite(point.latitude)
+    && typeof point.longitude === "number" && Number.isFinite(point.longitude);
+}
 
 function distance(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value)
@@ -92,64 +99,59 @@ function eventDate(value: string | null | undefined) {
   }).format(date);
 }
 
-function money(pence: number | null | undefined) {
-  return typeof pence === "number" && Number.isFinite(pence)
-    ? new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(pence / 100)
-    : null;
+function observedTime(value: string | null | undefined) {
+  if (!value) return "Observation time unavailable";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Observation time unavailable";
+  return `Confirmed ${new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date)}`;
 }
 
-function confidenceLabel(value: number | null | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "UNKNOWN";
-  if (value >= 0.85) return "HIGH";
-  if (value >= 0.6) return "MEDIUM";
-  return "LOW";
+function expectedTime(expected: LocalAvailabilityExpected | null | undefined) {
+  if (expected?.expectedLabel) return expected.expectedLabel;
+  if (!expected?.expectedFrom) return "Expected timing unavailable";
+  const date = new Date(expected.expectedFrom);
+  if (Number.isNaN(date.getTime())) return "Expected timing unavailable";
+  return `Expected ${new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" }).format(date)}`;
 }
 
-function ageLabel(minutes: number | null | undefined) {
-  if (typeof minutes !== "number" || !Number.isFinite(minutes)) return "Freshness unknown";
-  if (minutes < 1) return "Observed just now";
-  if (minutes < 60) return `Observed ${Math.round(minutes)} min ago`;
-  const hours = Math.round(minutes / 60);
-  return `Observed ${hours} hr${hours === 1 ? "" : "s"} ago`;
+function availabilityStatus(shop: RadarShop): "expected" | "confirmed" | "unknown" {
+  const status = shop.localAvailability?.status;
+  return status === "expected" || status === "confirmed" ? status : "unknown";
 }
 
-function lifecycleLabel(value: string | null | undefined) {
-  const state = String(value || "unknown").toLowerCase();
-  if (state === "manifested") return "LOCAL MANIFESTED";
-  if (state === "echo") return "LOCAL ECHO";
-  if (state === "whisper") return "LOCAL WHISPER";
-  if (state === "vanished") return "LOCAL VANISHED";
-  return "LOCAL STATUS UNKNOWN";
+function expectedScope(shop: RadarShop) {
+  const expected = shop.localAvailability?.expected;
+  if (!expected) return null;
+  const product = (shop.localStockProducts ?? []).find((item) => item.localState === "expected"
+    && (!expected.productIdentityId || item.productIdentityId === expected.productIdentityId)
+    && (!expected.title || item.title === expected.title));
+  return product?.scope ?? null;
 }
 
-function valueText(value: RadarValue | null | undefined) {
-  const price = value?.priceKnown ? money(value.itemPricePence) : null;
-  const rrp = value?.rrp?.known ? money(value.rrp.pence) : null;
-  const delta = value?.itemVsRrp?.deltaPercent;
-  const parts: string[] = [];
-  if (price) parts.push(price);
-  else parts.push("Price unknown");
-  if (rrp) parts.push(`RRP ${rrp}`);
-  else parts.push("RRP unknown");
-  if (typeof delta === "number" && Number.isFinite(delta)) {
-    if (Math.abs(delta) < 0.05) parts.push("0.0% · AT RRP");
-    else parts.push(`${delta > 0 ? "+" : ""}${delta.toFixed(1)}% ${delta > 0 ? "ABOVE" : "BELOW"} RRP`);
-  }
-  return parts.join(" · ");
+function sourceStatus(value: string | null | undefined) {
+  return String(value || "unknown").replaceAll("_", " ").toUpperCase();
 }
 
 export function LocalRadarSearch() {
   const [radiusMiles, setRadiusMiles] = useState(25);
   const [postcode, setPostcode] = useState("");
   const [result, setResult] = useState<RadarResponse | null>(null);
-  const [status, setStatus] = useState("Use device location or a UK postcode when you want nearby physical stock intelligence.");
+  const [origin, setOrigin] = useState<SearchOrigin>(null);
+  const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
+  const [status, setStatus] = useState("Choose your location or enter a UK postcode to start Local Radar.");
   const [loading, setLoading] = useState<"device" | "postcode" | null>(null);
 
-  async function runSearch(params: URLSearchParams, mode: "device" | "postcode") {
+  async function runSearch(params: URLSearchParams, mode: "device" | "postcode", nextOrigin: SearchOrigin = null) {
     setLoading(mode);
+    setSelectedMapId(null);
     setStatus(mode === "device"
-      ? "Checking nearby branch intelligence from your current area…"
-      : "Resolving postcode and checking the FateDrop local network…");
+      ? "Finding nearby Pokémon and TCG stores…"
+      : "Resolving postcode and finding nearby stores…");
     try {
       params.set("radiusMiles", String(radiusMiles));
       params.set("types", "shops,events");
@@ -157,22 +159,26 @@ export function LocalRadarSearch() {
       const payload = await response.json() as RadarResponse;
       if (!response.ok) {
         setResult(null);
+        setOrigin(null);
         setStatus(payload.error || "Local Radar could not search.");
         return;
       }
-      setResult(payload);
       if (payload.locationResolution?.status === "invalid" || payload.locationResolution?.status === "not_found") {
+        setResult(null);
+        setOrigin(null);
         setStatus(payload.locationResolution.reason || "That location could not be resolved.");
         return;
       }
-      const shops = payload.counts?.shops ?? payload.shops?.length ?? 0;
-      const confirmed = (payload.counts?.localInStockBranches ?? 0) + (payload.counts?.localLowStockBranches ?? 0);
-      const incoming = payload.counts?.incomingWatchBranches ?? 0;
-      setStatus(
-        `${shops} nearby shop${shops === 1 ? "" : "s"} · ${confirmed} branch${confirmed === 1 ? "" : "es"} with fresh verified stock · ${incoming} preparation watch${incoming === 1 ? "" : "es"}.`,
-      );
+
+      const shops = payload.shops ?? [];
+      const confirmed = shops.filter((shop) => availabilityStatus(shop) === "confirmed").length;
+      const expected = shops.filter((shop) => availabilityStatus(shop) === "expected").length;
+      setResult(payload);
+      setOrigin(nextOrigin);
+      setStatus(`${shops.length} nearby store${shops.length === 1 ? "" : "s"} · ${expected} expected stock update${expected === 1 ? "" : "s"} · ${confirmed} confirmed physical stock update${confirmed === 1 ? "" : "s"}.`);
     } catch {
       setResult(null);
+      setOrigin(null);
       setStatus("Local Radar could not reach the FateDrop discovery network.");
     } finally {
       setLoading(null);
@@ -185,19 +191,23 @@ export function LocalRadarSearch() {
       return;
     }
     setLoading("device");
-    setStatus("Requesting your location once for this Radar search…");
+    setStatus("Requesting your location once for this Local Radar search…");
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const nextOrigin = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
         void runSearch(new URLSearchParams({
-          lat: String(position.coords.latitude),
-          lng: String(position.coords.longitude),
-        }), "device");
+          lat: String(nextOrigin.latitude),
+          lng: String(nextOrigin.longitude),
+        }), "device", nextOrigin);
       },
       (error) => {
         setLoading(null);
         setStatus(error.code === error.PERMISSION_DENIED
-          ? "Location permission was declined. FateDrop will not keep requesting it — use a postcode instead."
-          : "Device location could not be resolved. Use a postcode instead.");
+          ? "Location permission was declined. Use a UK postcode instead."
+          : "Device location could not be resolved. Use a UK postcode instead.");
       },
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
     );
@@ -214,85 +224,138 @@ export function LocalRadarSearch() {
 
   const shops = result?.shops ?? [];
   const events = result?.events ?? [];
-  const confirmed = (result?.counts?.localInStockBranches ?? 0) + (result?.counts?.localLowStockBranches ?? 0);
-  const incoming = result?.counts?.incomingWatchBranches ?? 0;
+  const expected = shops.filter((shop) => availabilityStatus(shop) === "expected").length;
+  const confirmed = shops.filter((shop) => availabilityStatus(shop) === "confirmed").length;
+  const unknown = shops.filter((shop) => availabilityStatus(shop) === "unknown").length;
+  const mappedShops = shops.filter(hasCoords).length;
 
-  return <div className="fd-radar-tool">
-    <div className="fd-radar-controls">
-      <label><small>RADIUS</small><select value={radiusMiles} onChange={(event)=>setRadiusMiles(Number(event.target.value))}><option value={5}>5 miles</option><option value={10}>10 miles</option><option value={25}>25 miles</option><option value={50}>50 miles</option></select></label>
-      <button type="button" onClick={locate} disabled={Boolean(loading)}>{loading === "device" ? "LOCATING…" : "USE MY LOCATION →"}</button>
-      <span className="fd-radar-or">OR</span>
-      <label><small>UK POSTCODE</small><input value={postcode} onChange={(event)=>setPostcode(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"){event.preventDefault();searchPostcode();}}} placeholder="e.g. ME14 1XX" autoComplete="postal-code" /></label>
-      <button type="button" className="secondary" onClick={searchPostcode} disabled={Boolean(loading)}>{loading === "postcode" ? "SEARCHING…" : "SEARCH POSTCODE →"}</button>
-    </div>
+  const mapPoints = useMemo<LocalRadarMapPoint[]>(() => [
+    ...shops.filter(hasCoords).map((shop) => ({
+      id: `shop:${shop.id}`,
+      kind: "shop" as const,
+      name: shop.name,
+      latitude: shop.latitude as number,
+      longitude: shop.longitude as number,
+      status: availabilityStatus(shop),
+      subtitle: `${distance(shop.distanceMiles) || "Distance unavailable"} · ${availabilityStatus(shop).toUpperCase()}`,
+    })),
+    ...events.filter(hasCoords).map((event) => ({
+      id: `event:${event.id}`,
+      kind: "event" as const,
+      name: event.name,
+      latitude: event.latitude as number,
+      longitude: event.longitude as number,
+      subtitle: `${eventDate(event.startDateTime)}${distance(event.distanceMiles) ? ` · ${distance(event.distanceMiles)}` : ""}`,
+    })),
+  ], [events, shops]);
 
-    <div className="fd-radar-status-row">
+  return <div className="fd-radar-workspace">
+    <section className="fd-radar-panel fd-radar-location">
+      <div className="fd-radar-panel-head">
+        <div><small>YOUR AREA</small><h2>Find stores near you.</h2></div>
+        <p>Use location once or enter a postcode. FateDrop uses the canonical Cloud branch coordinates returned by the same Local Radar contract as the App.</p>
+      </div>
+      <div className="fd-radar-controls">
+        <label><small>RADIUS</small><select value={radiusMiles} onChange={(event)=>setRadiusMiles(Number(event.target.value))}><option value={5}>5 miles</option><option value={10}>10 miles</option><option value={25}>25 miles</option><option value={50}>50 miles</option></select></label>
+        <button type="button" onClick={locate} disabled={Boolean(loading)}>{loading === "device" ? "LOCATING…" : "USE MY LOCATION"}</button>
+        <span className="fd-radar-or">OR</span>
+        <label className="postcode"><small>UK POSTCODE</small><input value={postcode} onChange={(event)=>setPostcode(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"){event.preventDefault();searchPostcode();}}} placeholder="e.g. WD17 1AA" autoComplete="postal-code" /></label>
+        <button type="button" className="secondary" onClick={searchPostcode} disabled={Boolean(loading)}>{loading === "postcode" ? "SEARCHING…" : "SEARCH"}</button>
+      </div>
       <p className="fd-radar-status">{status}</p>
-      {result ? <div className="fd-radar-summary"><span><b>{shops.length}</b><small>SHOPS</small></span><span><b>{confirmed}</b><small>PHYSICAL</small></span><span><b>{incoming}</b><small>PREPARING</small></span><span><b>{events.length}</b><small>EVENTS</small></span></div> : null}
-    </div>
+    </section>
 
-    {result ? <div className="fd-radar-provider-state">
-      <span>SHOP SOURCE · {String(result.providers?.shops?.status || "unknown").replaceAll("_"," ").toUpperCase()}</span>
-      <span>LOCAL STOCK · {String(result.providers?.localStock?.status || "unknown").replaceAll("_"," ").toUpperCase()}</span>
-      <span>EVENT SOURCE · {String(result.providers?.events?.status || "unknown").replaceAll("_"," ").toUpperCase()}</span>
-      {result.locationResolution?.postcode ? <span>ORIGIN · {result.locationResolution.postcode}</span> : null}
-    </div> : null}
+    <section className="fd-radar-panel fd-radar-map-panel">
+      <div className="fd-radar-panel-head compact">
+        <div><small>LOCAL RADAR MAP</small><h2>Nearby stores and events.</h2></div>
+        <p>{result ? `${mappedShops} of ${shops.length} store${shops.length === 1 ? "" : "s"} currently have map coordinates.` : "Choose an area to populate the live map."}</p>
+      </div>
+      <LocalRadarMap points={mapPoints} origin={origin} active={Boolean(result)} selectedId={selectedMapId} onSelect={setSelectedMapId} />
+      {result ? <div className="fd-radar-summary" aria-label="Local Radar summary">
+        <span><b>{shops.length}</b><small>STORES</small></span>
+        <span className="expected"><b>{expected}</b><small>EXPECTED</small></span>
+        <span className="confirmed"><b>{confirmed}</b><small>CONFIRMED</small></span>
+        <span><b>{unknown}</b><small>UNKNOWN</small></span>
+        <span><b>{events.length}</b><small>EVENTS</small></span>
+      </div> : null}
+    </section>
 
-    {shops.length ? <section className="fd-radar-section">
-      <div className="fd-radar-section-head"><div><small>LOCAL RADAR</small><h3>Nearby physical stock intelligence.</h3></div><span>Branch stock is shown only from fresh branch-specific evidence.</span></div>
-      <div className="fd-radar-results">{shops.map((shop)=>{
-        const connected = shop.networkStatus === "live_connected";
-        const physicalVerified = shop.localStockEvidence?.verifiedBranchStock === true && ["in_stock","low_stock"].includes(String(shop.localStockStatus));
-        const preparing = shop.localStockStatus === "incoming_watch";
-        const availableOffers = shop.onlineCatalogue?.availableOffers;
+    {result ? <section className="fd-radar-panel fd-radar-stores">
+      <div className="fd-radar-panel-head">
+        <div><small>NEARBY STORES</small><h2>Where can you buy Pokémon and TCG products?</h2></div>
+        <p>Every result is a real physical branch/location returned by Cloud. Stock remains separate from store discovery.</p>
+      </div>
+
+      {shops.length ? <div className="fd-store-grid">{shops.map((shop) => {
+        const localStatus = availabilityStatus(shop);
+        const expectedStock = shop.localAvailability?.expected ?? null;
+        const confirmedStock = shop.localAvailability?.confirmed ?? null;
+        const scope = expectedScope(shop);
         const shopDistance = distance(shop.distanceMiles);
-        const stockProducts = shop.localStockProducts ?? [];
-        const badge = physicalVerified
-          ? "LOCAL MANIFESTED"
-          : preparing
-            ? lifecycleLabel(shop.localStockEvidence?.lifecycleState)
-            : connected ? "LIVE CONNECTED" : "LOCAL DISCOVERY";
-        const badgeClass = physicalVerified ? "status-manifested" : preparing ? "status-echo" : connected ? "status-network" : "status-external";
-        return <article key={shop.id}>
-          <div className="fd-radar-shop-main">
-            <span className={badgeClass}>{badge}</span>
+        const mapId = `shop:${shop.id}`;
+        return <article className={`fd-store-card ${localStatus}`} key={shop.id}>
+          <header>
+            <div className="fd-store-badges"><span>STORE</span><b>{localStatus.toUpperCase()}</b></div>
             <strong>{shop.name}</strong>
-            <small>{shop.address || "Address unavailable"}{shopDistance ? " · " + shopDistance : ""}</small>
-            {physicalVerified ? <p className="physical-copy">Physical stock is currently supported by fresh branch-specific evidence. Check the observation age before travelling.</p>
-              : preparing ? <p className="echo-copy">Preparation evidence is strengthening at this branch. Stock is <b>not yet confirmed physically available</b>.</p>
-              : <p>{connected
-                ? "FateDrop has a connected online catalogue" + (typeof availableOffers === "number" ? " with " + availableOffers + " currently available offer" + (availableOffers === 1 ? "" : "s") : "") + ". This does not prove stock at this physical branch."
-                : "External discovery only. No FateDrop partnership or live branch stock is claimed."}</p>}
+            <small>{shop.address || "Address unavailable"}{shopDistance ? ` · ${shopDistance}` : ""}</small>
+          </header>
 
-            {stockProducts.length ? <div className="fd-radar-stock-list">{stockProducts.map((product,index)=>{
-              const state = lifecycleLabel(product.lifecycleState);
-              const verified = product.lifecycleState === "manifested" && ["in_stock","low_stock"].includes(String(product.status));
-              return <div className="fd-radar-stock-row" key={`${product.productIdentityId || product.title || "product"}-${index}`}>
-                <div><span className={verified ? "stock-manifested" : product.lifecycleState === "echo" ? "stock-echo" : "stock-neutral"}>{state}</span><strong>{product.title || "Product identity pending"}</strong><small>{ageLabel(product.freshnessAgeMinutes)} · Confidence {confidenceLabel(product.confidence)}</small></div>
-                <aside><b>{valueText(product.value)}</b>{(product.contradictionCount ?? 0) > 0 ? <small>{product.contradictionCount} recent contradiction{product.contradictionCount === 1 ? "" : "s"} reflected in confidence</small> : null}</aside>
-              </div>;
-            })}</div> : null}
-          </div>
-          <aside>{shop.websiteUrl ? <a href={shop.websiteUrl} target="_blank" rel="noreferrer">VIEW STORE ↗</a> : null}<small>{shopDistance || "Distance unavailable"}</small></aside>
+          {localStatus === "expected" && expectedStock ? <div className="fd-stock-notice expected">
+            <small>EXPECTED STOCK</small>
+            <strong>{expectedStock.title || "Pokémon / TCG stock"}</strong>
+            <b>{expectedTime(expectedStock)}</b>
+            {scope === "retailer_chain" ? <span>Retailer-wide intelligence · not confirmed for this specific store.</span> : <span>Expected-stock intelligence applies to this store, but physical availability is not yet confirmed.</span>}
+            {shop.localAvailability?.disclaimer ? <p>{shop.localAvailability.disclaimer}</p> : null}
+          </div> : null}
+
+          {localStatus === "confirmed" && confirmedStock ? <div className="fd-stock-notice confirmed">
+            <small>CONFIRMED PHYSICAL STOCK</small>
+            <strong>{confirmedStock.title || "Pokémon / TCG stock"}</strong>
+            <b>{observedTime(confirmedStock.observedAt)}</b>
+            <span>FateDrop has genuine evidence that this product is physically available at this exact branch.</span>
+          </div> : null}
+
+          {localStatus === "unknown" ? <div className="fd-stock-notice unknown">
+            <small>CURRENT STOCK · UNKNOWN</small>
+            <strong>No reliable current stock information.</strong>
+            <span>The store is still a valid nearby retailer. FateDrop does not treat missing data or online sold-out status as physical-store stock truth.</span>
+          </div> : null}
+
+          <footer>
+            {hasCoords(shop) ? <button type="button" onClick={() => setSelectedMapId(mapId)}>SHOW ON MAP</button> : <span>MAP POSITION UNAVAILABLE</span>}
+            {shop.websiteUrl ? <a href={shop.websiteUrl} target="_blank" rel="noreferrer">VIEW RETAILER ↗</a> : null}
+          </footer>
         </article>;
-      })}</div>
+      })}</div> : <div className="fd-radar-empty"><strong>No nearby stores found in this radius.</strong><span>Try a wider radius. FateDrop does not invent branches to fill an empty result.</span></div>}
     </section> : null}
 
-    {events.length ? <section className="fd-radar-section">
-      <div className="fd-radar-section-head"><div><small>NEARBY FATE ENCOUNTERS</small><h3>Events inside your Radar.</h3></div><span>Verify organiser details before travel.</span></div>
-      <div className="fd-radar-events">{events.map((event)=>{
+    {result && events.length ? <section className="fd-radar-panel fd-radar-events-panel">
+      <div className="fd-radar-panel-head">
+        <div><small>EVENTS</small><h2>Card shows and events near you.</h2></div>
+        <p>Events remain part of Local Radar but separate from store-stock status.</p>
+      </div>
+      <div className="fd-event-list">{events.map((event) => {
         const eventDistance = distance(event.distanceMiles);
         return <article key={event.id}>
-          <div><span>{String(event.verificationStatus || "listed").replaceAll("_"," ").toUpperCase()}</span><strong>{event.name}</strong><small>{eventDate(event.startDateTime)} · {event.venueName || event.townCity || event.postcode || "Venue pending"}{eventDistance ? " · " + eventDistance : ""}</small></div>
-          <aside>{event.officialTicketUrl ? <a href={event.officialTicketUrl} target="_blank" rel="noreferrer">TICKETS ↗</a> : event.officialEventUrl ? <a href={event.officialEventUrl} target="_blank" rel="noreferrer">EVENT ↗</a> : null}</aside>
+          <div><span>EVENT</span><strong>{event.name}</strong><small>{eventDate(event.startDateTime)} · {event.venueName || event.townCity || event.postcode || "Venue pending"}{eventDistance ? ` · ${eventDistance}` : ""}</small></div>
+          <aside>
+            {hasCoords(event) ? <button type="button" onClick={() => setSelectedMapId(`event:${event.id}`)}>SHOW ON MAP</button> : null}
+            {event.officialTicketUrl ? <a href={event.officialTicketUrl} target="_blank" rel="noreferrer">TICKETS ↗</a> : event.officialEventUrl ? <a href={event.officialEventUrl} target="_blank" rel="noreferrer">EVENT ↗</a> : null}
+          </aside>
         </article>;
       })}</div>
     </section> : null}
 
-    {result && !shops.length && !events.length ? <div className="fd-radar-empty"><strong>No nearby FateDrop results in this radius.</strong><span>Try a wider radius. FateDrop does not invent local shops, stock or events to fill an empty result.</span></div> : null}
+    <section className="fd-radar-truth">
+      <div><span>✓</span><strong>Physical truth stays physical.</strong></div>
+      <p>Online stock never becomes confirmed store stock automatically. Expected stock is indicative, not guaranteed. When FateDrop has no reliable current physical information, Local Radar says <b>Unknown</b>.</p>
+      {result ? <small>CLOUD DATA STATUS · STORES {sourceStatus(result.providers?.shops?.status)} · STOCK {sourceStatus(result.providers?.localStock?.status)} · EVENTS {sourceStatus(result.providers?.events?.status)}{result.locationResolution?.postcode ? ` · ORIGIN ${result.locationResolution.postcode}` : ""}</small> : null}
+    </section>
 
-    <p className="fd-radar-privacy">Location is used on demand for this search. FateDrop does not silently turn Local Radar into continuous background tracking. A stale physical observation expires rather than remaining labelled as current stock.</p>
+    <p className="fd-radar-privacy">Location is used on demand for this search. FateDrop does not silently turn Local Radar into continuous background tracking.</p>
 
-    <style jsx>{".fd-radar-tool{display:grid;gap:18px}.fd-radar-controls{display:grid;grid-template-columns:120px auto 34px minmax(180px,1fr) auto;gap:10px;align-items:end}.fd-radar-controls label{display:grid;gap:7px}.fd-radar-controls label>small{font-size:10px;font-weight:900;letter-spacing:.12em;color:#918a96}.fd-radar-controls select,.fd-radar-controls input,.fd-radar-controls button{height:46px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:#0c0b11;color:#fff;padding:0 13px;font-size:12px}.fd-radar-controls button{border-color:rgba(88,232,255,.24);background:linear-gradient(135deg,rgba(88,232,255,.08),rgba(157,109,255,.12));font-size:10px;font-weight:900;letter-spacing:.04em;cursor:pointer}.fd-radar-controls button.secondary{border-color:rgba(157,109,255,.24)}.fd-radar-controls button:disabled{opacity:.55;cursor:wait}.fd-radar-or{height:46px;display:grid;place-items:center;color:#696370;font-size:9px;font-weight:900}.fd-radar-status-row{display:flex;align-items:center;justify-content:space-between;gap:16px}.fd-radar-status{margin:0;color:#aaa2ad;font-size:12px;line-height:1.55}.fd-radar-summary{display:flex;gap:8px;flex-wrap:wrap}.fd-radar-summary span{min-width:66px;padding:8px 10px;display:grid;gap:2px;text-align:center;border:1px solid rgba(255,255,255,.07);border-radius:9px;background:rgba(255,255,255,.02)}.fd-radar-summary b{font-size:16px}.fd-radar-summary small{color:#837c88;font-size:8px;font-weight:900;letter-spacing:.1em}.fd-radar-provider-state{display:flex;flex-wrap:wrap;gap:7px}.fd-radar-provider-state span{padding:5px 7px;border:1px solid rgba(255,255,255,.06);border-radius:999px;color:#817a86;background:rgba(255,255,255,.018);font-size:8px;font-weight:800;letter-spacing:.06em}.fd-radar-section{display:grid;gap:10px;padding-top:4px}.fd-radar-section-head{display:flex;justify-content:space-between;gap:16px;align-items:end}.fd-radar-section-head small{color:#74eaff;font-size:9px;font-weight:900;letter-spacing:.12em}.fd-radar-section-head h3{margin:4px 0 0;font-size:17px}.fd-radar-section-head>span{color:#7f7884;font-size:9px}.fd-radar-results,.fd-radar-events{display:grid;gap:8px}.fd-radar-results>article,.fd-radar-events article{display:flex;justify-content:space-between;gap:18px;padding:16px;border:1px solid rgba(255,255,255,.075);border-radius:13px;background:rgba(255,255,255,.02)}.fd-radar-shop-main,.fd-radar-events article>div{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.fd-radar-results span,.fd-radar-events span{font-size:8px;font-weight:900;letter-spacing:.11em;color:#9a929e}.fd-radar-results .status-network{color:#71e8ae}.fd-radar-results .status-external{color:#c19ce0}.fd-radar-results .status-manifested,.stock-manifested{color:#78efb5}.fd-radar-results .status-echo,.stock-echo{color:#9eeeff}.fd-radar-results strong,.fd-radar-events strong{font-size:14px}.fd-radar-results small,.fd-radar-events small{color:#918a96;font-size:10px}.fd-radar-results p{max-width:720px;margin:3px 0 0;color:#77717c;font-size:9px;line-height:1.5}.fd-radar-results .physical-copy{color:#a7cdbd}.fd-radar-results .echo-copy{color:#9baeb4}.fd-radar-results>article>aside,.fd-radar-events article>aside{display:flex;flex-direction:column;align-items:flex-end;gap:7px;white-space:nowrap}.fd-radar-results a,.fd-radar-events a{font-size:10px;font-weight:900;color:#9eeeff}.fd-radar-results>article>aside small{font-size:9px}.fd-radar-stock-list{display:grid;gap:7px;margin-top:8px}.fd-radar-stock-row{display:flex;justify-content:space-between;gap:14px;padding:11px;border:1px solid rgba(255,255,255,.065);border-radius:10px;background:rgba(0,0,0,.18)}.fd-radar-stock-row>div{display:grid;gap:3px}.fd-radar-stock-row strong{font-size:12px}.fd-radar-stock-row>aside{display:grid;gap:3px;text-align:right;align-content:center}.fd-radar-stock-row>aside b{font-size:10px;font-weight:700;color:#d8d3dc}.stock-neutral{color:#9a929e}.fd-radar-empty{padding:22px;border:1px dashed rgba(255,255,255,.08);border-radius:13px;display:grid;gap:7px}.fd-radar-empty strong{font-size:13px}.fd-radar-empty span{color:#87808b;font-size:11px;line-height:1.5}.fd-radar-privacy{margin:0;padding-top:12px;border-top:1px solid rgba(255,255,255,.055);color:#756f7a;font-size:9px;line-height:1.5}@media(max-width:980px){.fd-radar-controls{grid-template-columns:120px 1fr}.fd-radar-or{display:none}}@media(max-width:650px){.fd-radar-controls{grid-template-columns:1fr}.fd-radar-status-row,.fd-radar-section-head{align-items:flex-start;flex-direction:column}.fd-radar-results>article,.fd-radar-events article,.fd-radar-stock-row{flex-direction:column}.fd-radar-results>article>aside,.fd-radar-events article>aside,.fd-radar-stock-row>aside{align-items:flex-start;text-align:left}}"}</style>
+    <style jsx>{`
+      .fd-radar-workspace{display:grid;gap:12px}.fd-radar-panel,.fd-radar-truth{border:1px solid rgba(221,203,188,.085);border-radius:13px;background:linear-gradient(145deg,#0f1317,#090d11 74%)}.fd-radar-panel{padding:24px}.fd-radar-panel-head{display:flex;justify-content:space-between;gap:28px;align-items:flex-end;margin-bottom:18px}.fd-radar-panel-head.compact{margin-bottom:14px}.fd-radar-panel-head>div{min-width:0}.fd-radar-panel-head small{color:#b6977d;font-size:9px;font-weight:900;letter-spacing:.14em}.fd-radar-panel-head h2{margin:6px 0 0;color:#e8ded6;font-family:Georgia,'Times New Roman',serif;font-size:25px;font-weight:500}.fd-radar-panel-head p{max-width:560px;margin:0;color:#938c91;font-size:11px;line-height:1.55;text-align:right}.fd-radar-controls{display:grid;grid-template-columns:120px auto 32px minmax(220px,1fr) auto;gap:9px;align-items:end}.fd-radar-controls label{display:grid;gap:6px}.fd-radar-controls label>small{color:#89828c;font-size:8px;font-weight:900;letter-spacing:.11em}.fd-radar-controls select,.fd-radar-controls input,.fd-radar-controls button{height:46px;border:1px solid rgba(221,203,188,.1);border-radius:10px;background:#0b0f13;color:#eee4dc;padding:0 13px;font:inherit;font-size:11px}.fd-radar-controls button{border-color:rgba(164,116,193,.24);background:linear-gradient(135deg,rgba(117,73,145,.18),rgba(146,108,83,.06));font-size:9px;font-weight:900;letter-spacing:.05em;cursor:pointer}.fd-radar-controls button.secondary{border-color:rgba(221,203,188,.12);background:rgba(255,255,255,.025)}.fd-radar-controls button:disabled{opacity:.5;cursor:wait}.fd-radar-or{height:46px;display:grid;place-items:center;color:#6f6871;font-size:8px;font-weight:900}.fd-radar-status{margin:12px 0 0;padding-top:12px;border-top:1px solid rgba(221,203,188,.055);color:#aaa2a7;font-size:11px;line-height:1.55}.fd-radar-map-panel{padding:18px}.fd-radar-map-panel .fd-radar-panel-head{padding:4px 6px 0}.fd-radar-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}.fd-radar-summary span{padding:11px 9px;display:grid;gap:3px;text-align:center;border:1px solid rgba(221,203,188,.065);border-radius:9px;background:rgba(255,255,255,.014)}.fd-radar-summary b{color:#eee4dc;font-family:Georgia,serif;font-size:22px;font-weight:500}.fd-radar-summary small{color:#7f787e;font-size:7px;font-weight:900;letter-spacing:.11em}.fd-radar-summary .expected b{color:#c7a2de}.fd-radar-summary .confirmed b{color:#96cbb0}.fd-store-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.fd-store-card{padding:17px;display:flex;flex-direction:column;gap:13px;border:1px solid rgba(221,203,188,.07);border-radius:12px;background:rgba(255,255,255,.014)}.fd-store-card.expected{border-color:rgba(170,123,215,.18)}.fd-store-card.confirmed{border-color:rgba(111,201,154,.2)}.fd-store-card header{display:grid;gap:4px}.fd-store-badges{display:flex;gap:6px;align-items:center}.fd-store-badges span,.fd-store-badges b{padding:4px 6px;border-radius:999px;font-size:7px;font-weight:900;letter-spacing:.09em}.fd-store-badges span{border:1px solid rgba(169,223,232,.15);color:#9bcbd3;background:rgba(95,169,184,.045)}.fd-store-badges b{border:1px solid rgba(221,203,188,.08);color:#8e878b;background:rgba(255,255,255,.018)}.fd-store-card.expected .fd-store-badges b{color:#c7a2de;border-color:rgba(170,123,215,.18)}.fd-store-card.confirmed .fd-store-badges b{color:#96cbb0;border-color:rgba(111,201,154,.2)}.fd-store-card header>strong{margin-top:4px;color:#e6dcd4;font-size:16px}.fd-store-card header>small{color:#8c858a;font-size:9px;line-height:1.45}.fd-stock-notice{padding:13px;display:grid;gap:4px;border:1px solid rgba(221,203,188,.06);border-radius:10px;background:rgba(0,0,0,.14)}.fd-stock-notice>small{font-size:7px;font-weight:900;letter-spacing:.11em}.fd-stock-notice>strong{color:#ddd3cb;font-size:13px}.fd-stock-notice>b{font-size:10px;font-weight:800}.fd-stock-notice>span{color:#928b90;font-size:9px;line-height:1.45}.fd-stock-notice p{margin:6px 0 0;padding-top:7px;border-top:1px solid rgba(221,203,188,.055);color:#827b80;font-size:8px;line-height:1.5}.fd-stock-notice.expected>small,.fd-stock-notice.expected>b{color:#c7a2de}.fd-stock-notice.confirmed>small,.fd-stock-notice.confirmed>b{color:#96cbb0}.fd-stock-notice.unknown>small{color:#8e878b}.fd-store-card footer,.fd-event-list aside{display:flex;gap:10px;align-items:center;margin-top:auto}.fd-store-card footer button,.fd-event-list button{appearance:none;padding:0;border:0;background:none;color:#bd99d2;font:inherit;font-size:8px;font-weight:900;letter-spacing:.04em;cursor:pointer}.fd-store-card footer a,.fd-event-list a{color:#cbb09d;font-size:8px;font-weight:900;text-decoration:none}.fd-store-card footer>span{color:#706a6e;font-size:7px;font-weight:800}.fd-event-list{display:grid;gap:7px}.fd-event-list article{padding:14px 15px;display:flex;justify-content:space-between;gap:18px;align-items:center;border:1px solid rgba(221,203,188,.065);border-radius:10px;background:rgba(255,255,255,.012)}.fd-event-list article>div{display:grid;gap:4px}.fd-event-list article>div span{color:#b997cf;font-size:7px;font-weight:900;letter-spacing:.1em}.fd-event-list strong{font-size:13px}.fd-event-list small{color:#8b8489;font-size:9px}.fd-radar-empty{padding:22px;display:grid;gap:6px;border:1px dashed rgba(221,203,188,.08);border-radius:11px}.fd-radar-empty strong{font-size:13px}.fd-radar-empty span{color:#8d868b;font-size:10px}.fd-radar-truth{padding:17px 20px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 16px;align-items:center}.fd-radar-truth>div{display:flex;gap:8px;align-items:center}.fd-radar-truth>div span{width:24px;height:24px;display:grid;place-items:center;border:1px solid rgba(111,201,154,.18);border-radius:50%;color:#96cbb0;font-size:10px}.fd-radar-truth>div strong{color:#ddd3cb;font-size:12px}.fd-radar-truth p{margin:0;color:#958e93;font-size:10px;line-height:1.55}.fd-radar-truth>small{grid-column:1/-1;padding-top:8px;border-top:1px solid rgba(221,203,188,.05);color:#6f696d;font-size:7px;font-weight:800;letter-spacing:.06em}.fd-radar-privacy{margin:0;padding:2px 4px;color:#736d71;font-size:8px;line-height:1.5}@media(max-width:1050px){.fd-radar-controls{grid-template-columns:120px 1fr}.fd-radar-controls .postcode{grid-column:1/2}.fd-radar-or{display:none}.fd-store-grid{grid-template-columns:1fr}.fd-radar-panel-head{align-items:flex-start;flex-direction:column;gap:7px}.fd-radar-panel-head p{text-align:left}}@media(max-width:700px){.fd-radar-panel{padding:17px}.fd-radar-map-panel{padding:10px}.fd-radar-controls{grid-template-columns:1fr}.fd-radar-controls .postcode{grid-column:auto}.fd-radar-summary{grid-template-columns:repeat(2,1fr)}.fd-radar-summary span:last-child{grid-column:1/-1}.fd-event-list article{align-items:flex-start;flex-direction:column}.fd-radar-truth{grid-template-columns:1fr}.fd-radar-truth>small{grid-column:auto}}
+    `}</style>
   </div>;
 }
