@@ -222,8 +222,8 @@ export function LocalRadarSearch() {
     void runSearch(new URLSearchParams({ postcode: clean.toUpperCase() }), "postcode");
   }
 
-  const shops = result?.shops ?? [];
-  const events = result?.events ?? [];
+  const shops = useMemo(() => result?.shops ?? [], [result]);
+  const events = useMemo(() => result?.events ?? [], [result]);
   const expected = shops.filter((shop) => availabilityStatus(shop) === "expected").length;
   const confirmed = shops.filter((shop) => availabilityStatus(shop) === "confirmed").length;
   const unknown = shops.filter((shop) => availabilityStatus(shop) === "unknown").length;
@@ -260,7 +260,7 @@ export function LocalRadarSearch() {
         <button type="button" onClick={locate} disabled={Boolean(loading)}>{loading === "device" ? "LOCATING…" : "USE MY LOCATION"}</button>
         <span className="fd-radar-or">OR</span>
         <label className="postcode"><small>UK POSTCODE</small><input value={postcode} onChange={(event)=>setPostcode(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"){event.preventDefault();searchPostcode();}}} placeholder="e.g. WD17 1AA" autoComplete="postal-code" /></label>
-        <button type="button" className="secondary" onClick={searchPostcode} disabled={Boolean(loading)}>{loading === "postcode" ? "SEARCHING…" : "SEARCH"}</button>
+        <button type="button" className="secondary" onClick={searchPostcode} disabled={Boolean(loading)}>{loading === "postcode" ? "SEARCHING…" : "SEARCH POSTCODE"}</button>
       </div>
       <p className="fd-radar-status">{status}</p>
     </section>
@@ -348,7 +348,7 @@ export function LocalRadarSearch() {
 
     <section className="fd-radar-truth">
       <div><span>✓</span><strong>Physical truth stays physical.</strong></div>
-      <p>Online stock never becomes confirmed store stock automatically. Expected stock is indicative, not guaranteed. When FateDrop has no reliable current physical information, Local Radar says <b>Unknown</b>.</p>
+      <p>Online stock never becomes confirmed store stock automatically. This does not prove stock at this physical branch. Expected stock is indicative, not guaranteed. When FateDrop has no reliable current physical information, Local Radar says <b>Unknown</b>.</p>
       {result ? <small>CLOUD DATA STATUS · STORES {sourceStatus(result.providers?.shops?.status)} · STOCK {sourceStatus(result.providers?.localStock?.status)} · EVENTS {sourceStatus(result.providers?.events?.status)}{result.locationResolution?.postcode ? ` · ORIGIN ${result.locationResolution.postcode}` : ""}</small> : null}
     </section>
 
