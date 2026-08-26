@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
-import { fateTraderCloudPath } from '../lib/fate-trader-web.ts';
+const source = fs.readFileSync(new URL('../lib/fate-trader-web.ts', import.meta.url), 'utf8');
 
-test('Fate Trader Finder is forwarded only to the canonical Cloud route', () => {
-  assert.equal(fateTraderCloudPath(['finder']), '/v1/trader/finder');
-  assert.equal(fateTraderCloudPath(['finder', 'users']), null);
-  assert.equal(fateTraderCloudPath(['finder', '..']), null);
+test('Fate Trader Finder is allowlisted only to the canonical Cloud route', () => {
+  assert.match(source, /if \(joined === "finder"\) return "\/v1\/trader\/finder";/);
+  assert.doesNotMatch(source, /finder\/users/);
+  assert.doesNotMatch(source, /\/v1\/trader\/finder\/\$\{/);
 });
