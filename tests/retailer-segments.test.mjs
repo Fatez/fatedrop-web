@@ -7,13 +7,14 @@ const page = await readFile(new URL('../app/dashboard/stores/page.tsx', import.m
 const network = await readFile(new URL('../lib/retailer-network.ts', import.meta.url), 'utf8');
 const signalClient = await readFile(new URL('../lib/signal-engine-client.ts', import.meta.url), 'utf8');
 
-test('retailer hub separates RRP/major and specialist/independent markets inside Fate Network', () => {
+test('Stores keeps major and independent retailer discovery inside Fate Network without becoming FateFind', () => {
   assert.match(component, /RRP \/ Major Retailers/);
   assert.match(component, /Independent Retailers/);
   assert.match(component, /retailerClass === "national"/);
   assert.match(component, /\["independent", "specialist", "regional"\]/);
-  assert.match(page, /MAJOR · SPECIALIST · INDEPENDENT · ONLINE · PHYSICAL/);
-  assert.match(page, /One network\. Different retailer types\. More places to buy\./);
+  assert.match(page, /ALL STORES · ONLINE · PHYSICAL · NEAR ME/);
+  assert.match(page, /Stores is retailer-first\./);
+  assert.match(page, /Stores helps you discover retailers\. FateFind compares the buying opportunity\./);
 });
 
 test('independent online and physical tabs use explicit presence evidence', () => {
