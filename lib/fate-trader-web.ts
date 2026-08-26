@@ -63,6 +63,7 @@ export function fateTraderCloudPath(parts: string[]) {
   if (/^card-sets(?:\/[A-Za-z0-9_.:-]+\/cards)?$/.test(joined)) return `/v1/${joined}`;
   if (/^collection(?:\/items(?:\/[A-Za-z0-9_.:-]+(?:\/media)?)?)?$/.test(joined)) return `/v1/${joined}`;
   if (/^wants(?:\/[A-Za-z0-9_.:-]+)?$/.test(joined)) return `/v1/${joined}`;
+  if (joined === "finder") return "/v1/trader/finder";
   if (/^binder(?:\/items(?:\/[A-Za-z0-9_.:-]+)?)?$/.test(joined)) return `/v1/trader/${joined}`;
   if (/^structured-wants(?:\/[A-Za-z0-9_.:-]+)?$/.test(joined)) {
     return `/v1/trader/wants${joined === "structured-wants" ? "" : `/${joined.slice("structured-wants/".length)}`}`;
