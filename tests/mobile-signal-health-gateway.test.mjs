@@ -8,7 +8,7 @@ test("mobile signal health gateway reuses canonical lifecycle aggregation", asyn
   const source = await readFile(new URL("app/api/mobile/signal-health/route.ts", root), "utf8");
 
   assert.ok(source.includes("getSignalLifecycleSummary"));
-  assert.ok(source.includes("getSignalDeliverySummary"));
+  assert.equal(source.includes("getSignalDeliverySummary"), false, "Home pulse must not fail because unrelated delivery telemetry is unavailable");
   assert.ok(source.includes("available: true"));
   assert.ok(source.includes("available: false"));
   assert.ok(source.includes("Math.max(2, Math.min(30"));
