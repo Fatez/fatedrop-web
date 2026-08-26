@@ -5,11 +5,25 @@ import { LocalRadarSearch } from "@/components/local-radar-search";
 export const metadata: Metadata = { title: "Local Radar | FateDrop Dashboard", robots: { index: false, follow: false } };
 
 export default function DashboardLocalRadarPage() {
-  return <DashboardPageShell title="Local Radar" eyebrow="LOCAL DISCOVERY · EVIDENCE FIRST">
-    <div className="fd-dashboard-grid">
-      <section className="fd-dash-card fd-network-card"><div className="fd-dash-card-head"><span>LOCAL RADAR</span><i className="pending">LOCATION ON DEMAND</i></div><div className="fd-network-message"><h1>Find useful TCG places around you.<br/>Keep location and stock claims separate.</h1><p>Local Radar uses the canonical FateDrop Cloud discovery engine to help you discover nearby hobby shops and location-aware FateDrop information using device location or a UK postcode. A shop appearing nearby does <b>not</b> mean FateDrop has verified stock at that physical branch. Connected inventory is only shown when the retailer, location and product evidence support that claim.</p></div></section>
-      <section className="fd-dash-card" style={{padding:25}}><div className="fd-dash-card-head"><span>DISCOVER NEARBY TCG STORES</span><small>Device location or UK postcode · up to 50 miles</small></div><LocalRadarSearch/></section>
-      <section className="fd-dash-card" style={{padding:25}}><div className="fd-dash-card-head"><span>HOW LOCAL RADAR CONNECTS</span><small>Discovery first · inventory second</small></div><div className="fd-network-message"><h2>Nearby discovery can lead into the wider FateDrop network.</h2><p>From a local business you can inspect its FateDrop presence, search the network or compare qualifying online offers. Local stock rules only become actionable when FateDrop has a resolved participating retailer location and verified inventory evidence for that scope.</p></div></section>
+  return <DashboardPageShell title="Local Radar" eyebrow="NEARBY STORES · EXPECTED STOCK · CONFIRMED STOCK">
+    <div className="fd-local-radar-page">
+      <section className="fd-local-radar-hero">
+        <span>FATE NETWORK · LOCAL RADAR</span>
+        <h1>Find nearby stores. See what may be arriving.</h1>
+        <p>Local Radar uses the canonical FateDrop Cloud discovery engine to answer two simple questions: <strong>where can you buy Pokémon and TCG products near you</strong>, and <strong>what stock may be arriving there</strong>. Expected stock is never presented as guaranteed availability, and only genuine exact-branch evidence becomes Confirmed.</p>
+        <div className="fd-local-radar-model" aria-label="Local Radar status model">
+          <div><b>STORE</b><small>Known physical retailer branch.</small></div>
+          <div><b>EXPECTED</b><small>Credible incoming-stock intelligence. Not guaranteed.</small></div>
+          <div><b>CONFIRMED</b><small>Physical availability verified at that exact branch.</small></div>
+          <div><b>UNKNOWN</b><small>No reliable current stock information.</small></div>
+        </div>
+      </section>
+
+      <LocalRadarSearch />
     </div>
+
+    <style>{`
+      .fd-local-radar-page{display:grid;gap:12px;max-width:1600px;margin:0 auto}.fd-local-radar-hero{padding:30px;border:1px solid rgba(221,203,188,.085);border-radius:13px;background:radial-gradient(circle at 90% 10%,rgba(126,87,143,.15),transparent 30%),linear-gradient(145deg,#101419,#090d11 72%)}.fd-local-radar-hero>span{color:#b6977d;font-size:9px;font-weight:900;letter-spacing:.15em}.fd-local-radar-hero h1{max-width:950px;margin:10px 0 12px;color:#eee4dc;font-family:Georgia,'Times New Roman',serif;font-size:clamp(2.5rem,4.6vw,5rem);font-weight:500;line-height:.96;letter-spacing:-.05em}.fd-local-radar-hero>p{max-width:980px;margin:0;color:#9d9599;font-size:13px;line-height:1.72}.fd-local-radar-hero>p strong{color:#d4c5ba}.fd-local-radar-model{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:22px}.fd-local-radar-model div{padding:12px;border:1px solid rgba(221,203,188,.065);border-radius:10px;background:rgba(255,255,255,.014)}.fd-local-radar-model b{display:block;color:#d7cbc2;font-size:8px;letter-spacing:.1em}.fd-local-radar-model small{display:block;margin-top:4px;color:#847d81;font-size:8px;line-height:1.45}.fd-local-radar-model div:nth-child(2) b{color:#c7a2de}.fd-local-radar-model div:nth-child(3) b{color:#96cbb0}@media(max-width:850px){.fd-local-radar-hero{padding:23px 20px}.fd-local-radar-model{grid-template-columns:1fr 1fr}}@media(max-width:520px){.fd-local-radar-model{grid-template-columns:1fr}}
+    `}</style>
   </DashboardPageShell>;
 }
