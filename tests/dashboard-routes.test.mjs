@@ -9,6 +9,7 @@ const dashboardRoutes = [
   "app/dashboard/watchlist/page.tsx",
   "app/dashboard/wishlist/page.tsx",
   "app/dashboard/notifications/page.tsx",
+  "app/dashboard/network/page.tsx",
   "app/dashboard/stores/page.tsx",
   "app/dashboard/indie/page.tsx",
   "app/dashboard/events/page.tsx",
@@ -27,8 +28,9 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation keeps every collector destination in the approved workspace", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
-  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/network", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
   assert.equal(nav.includes('"/dashboard/true-price"'), false);
+  assert.equal(nav.includes('"/dashboard/events"'), false);
   assert.ok(shell.includes('href="/dashboard/notifications"'));
   assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search",'));
@@ -36,7 +38,8 @@ test("core dashboard navigation keeps every collector destination in the approve
   assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
   assert.ok(nav.includes('"Wishlist", "/dashboard/wishlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
-  assert.ok(nav.includes('"Fate Network", "/dashboard/stores"'));
+  assert.ok(nav.includes('"Fate Network", "/dashboard/network"'));
+  assert.ok(nav.includes('"Retailers", "/dashboard/stores"'));
   assert.ok(nav.includes('"Retailer Dashboard", "/dashboard/indie"'));
   assert.equal(nav.includes('"Indies", "/dashboard/stores"'), false);
 });
