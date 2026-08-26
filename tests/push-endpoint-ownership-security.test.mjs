@@ -8,7 +8,7 @@ test("push token conflict cannot transfer ownership between FateDrop accounts", 
   assert.match(source, /WHERE fatedrop_push_endpoints\.user_id=EXCLUDED\.user_id/);
   assert.match(source, /RETURNING user_id/);
   assert.match(source, /already registered to another FateDrop ID/);
-  assert.doesNotMatch(source, /user_id=EXCLUDED\.user_id/);
+  assert.doesNotMatch(source, /DO UPDATE SET[\s\S]{0,220}user_id\s*=\s*EXCLUDED\.user_id/);
 });
 
 test("push endpoint deletion remains scoped to the authenticated owner", () => {
