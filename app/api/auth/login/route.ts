@@ -1,5 +1,5 @@
 import { AccountStorageUnavailableError, findAccountByEmail } from "@/lib/account-storage";
-import { authRateLimitResponse, checkAuthRateLimit } from "@/lib/auth-abuse";
+import { AuthRequestBodyError, authRateLimitResponse, checkAuthRateLimit, readAuthJsonBody } from "@/lib/auth-abuse";
 import { assertSameOrigin, startSession, verifyPassword } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const limit = checkAuthRateLimit(request, "login");
     if (!limit.allowed) return authRateLimitResponse(limit);
 
-    const payload = await request.json() as Record<string, unknown>;
+    const payload = await readAuthJsonBody(request);
     const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase().slice(0, 254) : "";
     const password = typeof payload.password === "string" ? payload.password.slice(0, 200) : "";
     const account = email ? await findAccountByEmail(email) : null;
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     await startSession(account.id);
     return Response.json({ authenticated: true }, { status: 200 });
   } catch (error) {
+    if (error instanceof AuthRequestBodyError) return Response.json({ error: error.message }, { status: error.status });
     if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
     if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
     return Response.json({ error: "Sign-in could not be completed." }, { status: 500 });
