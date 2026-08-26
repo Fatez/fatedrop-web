@@ -20,17 +20,21 @@ export async function POST(request: Request) {
   const now = Math.floor(Date.now() / 1000);
   try {
     const sql = await fateDropPostgres();
-    await sql`
+    const rows = await sql`
       INSERT INTO fatedrop_push_endpoints (id,user_id,expo_push_token,platform,device_label,enabled,created_at,updated_at)
       VALUES (${randomUUID()},${snapshot.account.id},${token},${platform},${deviceLabel},true,${now},${now})
       ON CONFLICT (expo_push_token) DO UPDATE SET
-        user_id=EXCLUDED.user_id,
         platform=EXCLUDED.platform,
         device_label=EXCLUDED.device_label,
         enabled=true,
         updated_at=EXCLUDED.updated_at,
         failure_reason=NULL
+      WHERE fatedrop_push_endpoints.user_id=EXCLUDED.user_id
+      RETURNING user_id
     `;
+    if (!rows[0]) {
+      return Response.json({ error: "This push endpoint is already registered to another FateDrop ID." }, { status: 409, headers: { "cache-control": "no-store" } });
+    }
     return Response.json({ registered: true }, { status: 201, headers: { "cache-control": "private, no-store" } });
   } catch {
     return Response.json({ error: "Push endpoint storage is not ready. Apply the hosted notification migration first." }, { status: 503 });
