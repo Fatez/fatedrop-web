@@ -133,10 +133,13 @@ test("trust, roadmap and launch membership copy do not sell unimplemented tiers 
   assert.ok(trust.includes("FateScore is a planned evidence-led retailer trust model"));
   assert.ok(about.includes("<FutureExpansion"));
   assert.ok(about.includes("siteConfig.roadmap"));
-  assert.ok(siteData.includes('{ name: "FateFair", status: "Planned" }'));
+  assert.ok(siteData.includes('{ name: "Fate Trader matching expansion", status: "Beta roadmap" }'));
   assert.ok(siteData.includes('name: "FateDrop Plus"'));
   assert.equal(siteData.includes('name: "FateDrop Pro"'), false);
-  assert.ok(siteData.includes('name: "FateDrop Indie"'));
+  assert.ok(siteData.includes('name: "Founding Fate Network Retailer"'));
+  assert.ok(siteData.includes('price: "Free during beta"'));
+  assert.ok(siteData.includes("future pricing not yet set"));
+  assert.equal(siteData.includes('name: "FateDrop Indie"'), false);
   assert.equal(siteData.includes('name: "Indie Pro"'), false);
   assert.ok(subscriptions.includes("one simple upgrade: FateDrop Plus"));
   assert.ok(subscriptions.includes("cannot buy a false RRP verdict, alert priority or better organic ranking"));
