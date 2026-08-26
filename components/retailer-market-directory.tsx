@@ -133,7 +133,7 @@ export function RetailerMarketDirectory({ retailers, labStorefronts }: { retaile
     </section>
 
     {visibleLabs.length ? <section className="fd-dash-card fd-lab-retailers">
-      <div className="fd-dash-card-head"><span>EXPERIMENTAL INDEPENDENT STOREFRONTS</span><span>LAB · NOT CANONICAL MONITOR TRUTH</span></div>
+      <div className="fd-dash-card-head"><span>EXPERIMENTAL STOREFRONT LAB</span><span>LAB · NOT CANONICAL MONITOR TRUTH</span></div>
       <p>These direct storefront feeds remain explicitly experimental. They demonstrate retailer presentation and do not imply a formal partner, Verified status, or canonical Cloud monitoring.</p>
       <div className="fd-lab-grid">{visibleLabs.map((store) => <article key={store.id}><span>EXPERIMENTAL STOREFRONT</span><h3>{store.name}</h3><p>{store.location}</p><dl><div><dt>LAB INDEXED</dt><dd>{store.indexed}</dd></div><div><dt>OBSERVED AVAILABLE</dt><dd>{store.available}</dd></div></dl><Link href={store.href}>Explore lab storefront →</Link></article>)}</div>
     </section> : null}
