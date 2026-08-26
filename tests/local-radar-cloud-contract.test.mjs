@@ -15,15 +15,25 @@ test("Local Radar uses canonical Cloud discovery instead of a second Web Places 
 
 test("Local Radar supports both on-demand device location and UK postcode search", () => {
   assert.match(component, /USE MY LOCATION/);
-  assert.match(component, /SEARCH POSTCODE/);
+  assert.match(component, /searchPostcode/);
   assert.match(component, /postal-code/);
   assert.match(route, /postcode/);
   assert.match(route, /radiusMiles/);
 });
 
 test("Local Radar keeps physical discovery separate from online catalogue stock evidence", () => {
-  assert.match(component, /This does not prove stock at this physical branch/);
-  assert.match(component, /External discovery only/);
-  assert.match(component, /NEARBY FATE ENCOUNTERS/);
+  assert.match(component, /Online stock never becomes confirmed store stock automatically/);
+  assert.match(component, /missing data or online sold-out status as physical-store stock truth/);
+  assert.match(component, /CURRENT STOCK · UNKNOWN/);
+  assert.match(component, /EVENTS/);
   assert.match(component, /continuous background tracking/);
+});
+
+test("Local Radar exposes only the simple consumer-facing physical states", () => {
+  assert.match(page, /STORE/);
+  assert.match(page, /EXPECTED/);
+  assert.match(page, /CONFIRMED/);
+  assert.match(page, /UNKNOWN/);
+  assert.match(component, /localAvailability/);
+  assert.doesNotMatch(component, /LOCAL WHISPER|LOCAL ECHO|LOCAL MANIFESTED|LOCAL VANISHED/);
 });
