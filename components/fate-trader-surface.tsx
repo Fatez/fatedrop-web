@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FateTraderAudit } from "@/components/fate-trader-audit";
 
 type Availability = "checking" | "ready" | "unavailable";
@@ -22,12 +22,19 @@ async function checkTraderAvailability() {
 export function FateTraderSurface() {
   const [availability, setAvailability] = useState<Availability>("checking");
 
-  const check = useCallback(async () => {
-    setAvailability("checking");
-    setAvailability(await checkTraderAvailability() ? "ready" : "unavailable");
+  useEffect(() => {
+    let cancelled = false;
+    void checkTraderAvailability().then((ready) => {
+      if (!cancelled) setAvailability(ready ? "ready" : "unavailable");
+    });
+    return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { void check(); }, [check]);
+  async function retry() {
+    setAvailability("checking");
+    const ready = await checkTraderAvailability();
+    setAvailability(ready ? "ready" : "unavailable");
+  }
 
   if (availability === "checking") {
     return <section className="fd-dash-card fd-trader-product-state" aria-live="polite">
@@ -43,7 +50,7 @@ export function FateTraderSurface() {
       <small>FATE TRADER · PREPARING</small>
       <h1>Verified trading data is not available right now.</h1>
       <p>Fate Trader only opens when the shared card catalogue and trade service are responding correctly. No demo cards, fake matches or raw backend errors are shown while that verified data is unavailable.</p>
-      <button type="button" onClick={() => void check()}>TRY AGAIN</button>
+      <button type="button" onClick={() => void retry()}>TRY AGAIN</button>
       <style>{styles}</style>
     </section>;
   }
