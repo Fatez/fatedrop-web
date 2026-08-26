@@ -8,7 +8,10 @@ test("push token conflict cannot transfer ownership between FateDrop accounts", 
   assert.match(source, /WHERE fatedrop_push_endpoints\.user_id=EXCLUDED\.user_id/);
   assert.match(source, /RETURNING user_id/);
   assert.match(source, /already registered to another FateDrop ID/);
-  assert.doesNotMatch(source, /DO UPDATE SET[\s\S]{0,220}user_id\s*=\s*EXCLUDED\.user_id/);
+
+  const conflict = source.match(/ON CONFLICT \(expo_push_token\) DO UPDATE SET([\s\S]*?)WHERE fatedrop_push_endpoints\.user_id=EXCLUDED\.user_id/);
+  assert.ok(conflict, "push token conflict must include an owner-scoped update");
+  assert.doesNotMatch(conflict[1], /\buser_id\s*=/);
 });
 
 test("push endpoint deletion remains scoped to the authenticated owner", () => {
