@@ -10,9 +10,9 @@ import {
 } from "@/components/koru-final-sections";
 
 export const metadata: Metadata = {
-  title: "FateDrop | UK TCG Signal Intelligence & Indie Discovery",
+  title: "FateDrop | UK TCG Intelligence & Fate Network",
   description:
-    "FateDrop helps collectors follow evidence-backed stock signals, use FateFind to compare live value, create FateMatch watches and discover independent TCG retailers and events.",
+    "FateDrop helps collectors follow evidence-backed stock signals, use FateFind to compare live value, create FateMatch watches, discover retailers through the Fate Network and access Fate Trader as collector trading enters beta.",
 };
 
 export default function Home() {
