@@ -125,14 +125,14 @@ export function RetailerMarketDirectory({ retailers, labStorefronts }: { retaile
     <section className="fd-presence-tabs" aria-label="Store presence">
       <button type="button" className={presence === "all" ? "active" : ""} onClick={() => setPresence("all")}>All</button>
       <button type="button" className={presence === "online" ? "active" : ""} onClick={() => setPresence("online")}>Online</button>
-      <button type="button" className={presence === "physical" ? "active" : ""} onClick={() => setPresence("physical")}>Physical</button>
+      <button type="button" className={presence === "physical" ? "active" : ""} onClick={() => setPresence("physical")}>Physical Stores</button>
       <button type="button" disabled title="Near Me will activate when the shared branch registry exposes a resolved location scope.">Near Me <small>SOON</small></button>
     </section>
 
     <section className="fd-market-tabs" aria-label="Retailer type">
       <button type="button" className={market === "all" ? "active" : ""} onClick={() => setMarket("all")}>All Retailers <b>{canonical.length + labStorefronts.length}</b></button>
-      <button type="button" className={market === "major" ? "active" : ""} onClick={() => setMarket("major")}>Major <b>{major.length}</b></button>
-      <button type="button" className={market === "indies" ? "active" : ""} onClick={() => setMarket("indies")}>Independent / Specialist <b>{indies.length + labStorefronts.length}</b></button>
+      <button type="button" className={market === "major" ? "active" : ""} onClick={() => setMarket("major")}>RRP / Major Retailers <b>{major.length}</b></button>
+      <button type="button" className={market === "indies" ? "active" : ""} onClick={() => setMarket("indies")}>Independent Retailers <b>{indies.length + labStorefronts.length}</b></button>
     </section>
 
     <section className="fd-dash-card fd-market-context">
@@ -141,7 +141,7 @@ export function RetailerMarketDirectory({ retailers, labStorefronts }: { retaile
         <h2>{market === "major" ? "Compare major retailers without turning Stores into FateFind." : market === "indies" ? "Discover specialist and independent retailers beyond cheapest-price ranking." : "Browse the retailer network by verified channel and retailer identity."}</h2>
       </div>
       <p>{presence === "physical"
-        ? "Physical presence is fail-closed: FateDrop only includes a retailer when a physical store is explicitly known. This does not confirm branch stock."
+        ? "Physical presence is fail-closed: FateDrop only includes a retailer when physical presence is explicitly known. This does not confirm branch stock."
         : market === "major"
           ? "RRP is FateDrop's verified/reference comparison baseline. Retailer prices can still be above or below that figure; the label describes the comparison lane, not a promise of RRP pricing."
           : "Online and physical presence remain separate facts. The same canonical retailer can be hybrid without being duplicated as two businesses."}</p>
