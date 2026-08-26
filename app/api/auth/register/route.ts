@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { AccountConflictError, AccountStorageUnavailableError, createAccount, findAccountByUsername, type AccountRecord } from "@/lib/account-storage";
+import { authRateLimitResponse, checkAuthRateLimit } from "@/lib/auth-abuse";
 import { assertSameOrigin, hashPassword, startSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -34,6 +35,9 @@ async function uniqueUsername(displayName: string) {
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
+    const limit = checkAuthRateLimit(request, "register");
+    if (!limit.allowed) return authRateLimitResponse(limit);
+
     const payload = await request.json() as Record<string, unknown>;
     const displayName = clean(payload.displayName, 60);
     const email = clean(payload.email, 254).toLowerCase();
@@ -68,7 +72,7 @@ export async function POST(request: Request) {
     await startSession(account.id);
     return Response.json({ created: true, fateId: account.fateId }, { status: 201 });
   } catch (error) {
-    if (error instanceof AccountConflictError) return Response.json({ error: error.message }, { status: 409 });
+    if (error instanceof AccountConflictError) return Response.json({ error: "An account could not be created with those details." }, { status: 409 });
     if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
     if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
     return Response.json({ error: "Your FateDrop ID could not be created. Please try again." }, { status: 500 });
