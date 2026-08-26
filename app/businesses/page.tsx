@@ -14,7 +14,7 @@ const retailerBenefits = [
   ["02", "Search + FateFind exposure", "Your stock can appear in normal Search and in FateFind comparisons when product identity, availability and comparison evidence make the offer relevant."],
   ["03", "FateMatch handoffs", "When your live offer satisfies a collector's personal FateMatch conditions, FateDrop can route that high-intent collector directly to your product page."],
   ["04", "Your checkout stays yours", "FateDrop is not trying to become the merchant of record. You keep your website, payment flow, fulfilment, returns policy and customer relationship."],
-  ["05", "Proof of network value", "The Indie workspace can measure product appearances, FateFind appearances, best-value wins, storefront views, outbound retailer visits and FateMatch handoffs without pretending every click became a sale."],
+  ["05", "Proof of network value", "The Retailer Dashboard can measure product appearances, FateFind appearances, best-value wins, storefront views, outbound retailer visits and FateMatch handoffs without pretending every click became a sale."],
   ["06", "Aggregated demand insight", "As evidence grows, privacy-safe demand signals can show what collectors are looking for and where connected catalogue stock may be missing without exposing individual users."],
 ] as const;
 
@@ -34,7 +34,7 @@ const retailerFaq = [
   ["How can a catalogue connect?", "Shopify, WooCommerce, feeds, APIs, CSV, sitemaps or a guided manual route can be assessed during founding-beta onboarding. The exact method depends on the evidence your store can provide reliably."],
   ["What about singles?", "The Fate Network is designed to support more than headline sealed drops. Where a retailer can expose reliable singles catalogue, identity, condition and availability data, those listings can become part of the connected discovery model as coverage develops."],
   ["Can I review my storefront before it is public?", "Yes. Retailer identity and catalogue presentation should be reviewed before approved products become discoverable."],
-  ["Can paying improve trust or ranking?", "No. A retailer subscription pays for catalogue connection and business tools. It cannot buy stronger verification, a better RRP verdict, alert priority or organic FateFind ranking."],
+  ["Can paying improve trust or ranking?", "No. Retailer tools can fund catalogue connection and business capabilities. They cannot buy stronger verification, a better RRP verdict, alert priority or organic FateFind ranking."],
   ["Does FateDrop claim it generated my sales?", "Not from a click alone. FateDrop can truthfully measure visibility and retailer handoffs. Verified revenue attribution would only be shown later where the retailer deliberately provides suitable conversion evidence."],
 ] as const;
 
@@ -128,7 +128,7 @@ export default function BusinessesPage() {
       <section className="content-section section-shell" id="proof">
         <SectionHeading
           eyebrow="Prove the value first"
-          title="The retailer dashboard should show what FateDrop actually did for you."
+          title="The Retailer Dashboard should show what FateDrop actually did for you."
           body="The founding-retailer strategy is simple: connect good businesses, create useful collector traffic and measure it honestly. Instead of asking a retailer to believe a sales pitch, FateDrop can show the visibility and high-intent handoffs the network has already created."
         />
         <div className="value-network-grid" style={{ marginTop: 42 }}>
@@ -140,7 +140,7 @@ export default function BusinessesPage() {
         <div className="quote-band">
           <p className="eyebrow"><span />Commercial trust</p>
           <blockquote>Retailers pay for tools — not for a better answer.</blockquote>
-          <p>FateDrop Indie can fund catalogue connection, storefront control, analytics, demand insight and other business capabilities. It cannot buy stronger verification, a better RRP verdict, alert priority or organic FateFind placement. Collector trust is more valuable to the network than sponsored manipulation.</p>
+          <p>Founding retailer access can support catalogue connection, storefront control, analytics, demand insight and other business capabilities while we prove the network's value. Future paid retailer tools still cannot buy stronger verification, a better RRP verdict, alert priority or organic FateFind placement.</p>
           <div className="button-row" style={{ marginTop: 28 }}><Link className="button button-secondary" href="/collectors">See the collector side</Link><Link className="text-link" href="/trust">Read the trust model <span>→</span></Link></div>
         </div>
       </section>
@@ -163,7 +163,7 @@ export default function BusinessesPage() {
       </section>
 
       <section className="content-section section-shell">
-        <div className="quote-band"><p className="eyebrow"><span />Where this grows</p><blockquote>More connected supply makes the collector tools better. More collector intent makes the retailer network more valuable.</blockquote><p>That is the network effect FateDrop is designed around: better catalogue coverage improves Search, FateFind and FateMatch; stronger collector usage creates more qualified discovery for connected retailers; measured results make it easier for more good stores to justify joining.</p><div className="button-row" style={{ marginTop: 28 }}><Link className="button button-secondary" href="/subscriptions#retailers">See retailer membership</Link><Link className="text-link" href="/about#future">See the wider vision <span>→</span></Link></div></div>
+        <div className="quote-band"><p className="eyebrow"><span />Where this grows</p><blockquote>More connected supply makes the collector tools better. More collector intent makes the retailer network more valuable.</blockquote><p>That is the network effect FateDrop is designed around: better catalogue coverage improves Search, FateFind and FateMatch; stronger collector usage creates more qualified discovery for connected retailers; measured results make it easier for more good stores to justify joining.</p><div className="button-row" style={{ marginTop: 28 }}><Link className="button button-secondary" href="/subscriptions#retailers">See retailer access</Link><Link className="text-link" href="/about#future">See the wider vision <span>→</span></Link></div></div>
       </section>
 
       <FinalCta />
