@@ -1,9 +1,9 @@
 export const siteConfig = {
   name: "FateDrop",
-  title: "FateDrop — UK TCG Signal Intelligence & Indie Discovery",
+  title: "FateDrop — UK TCG Intelligence & Fate Network",
   description:
-    "Follow evidence-backed stock signals, use FateFind to compare live value against verified RRP/reference, create FateMatch watches and discover independent TCG retailers and events across the UK.",
-  tagline: "Follow the signal. Find the retailer. Collect smarter.",
+    "Follow evidence-backed stock signals, use FateFind to compare live value against verified RRP/reference, create FateMatch watches, discover retailers through the Fate Network and access collector trading through Fate Trader as beta access expands.",
+  tagline: "Follow the signal. Find the right path. Collect smarter.",
   nav: [
     { label: "Collectors", href: "/collectors" },
     { label: "Retailers", href: "/businesses" },
@@ -50,9 +50,9 @@ export const siteConfig = {
   audiences: [
     {
       eyebrow: "01 / Collectors",
-      title: "Find the right drop with better context.",
+      title: "Find, compare, watch and trade through one network.",
       description:
-        "Follow signals, use FateFind to compare real value, let FateMatch watch your buying conditions and discover independent retailers and events through one network.",
+        "Follow signals, use FateFind to compare real value, let FateMatch watch your buying conditions, discover retailers through the Fate Network and use Fate Trader for collector-to-collector trading as beta access expands.",
       cta: "Explore collector tools",
       href: "/collectors",
       accent: "cyan",
@@ -100,34 +100,41 @@ export const siteConfig = {
     },
     {
       number: "04",
-      title: "Independent Discovery",
+      title: "Fate Network",
       description:
-        "Find products through participating independents and continue to the retailer's own product page and checkout. FateDrop helps with discovery and context; the retailer remains the seller.",
-      meta: "Discover here / buy direct",
+        "Search one connected view of major, specialist and independent retailer supply, then continue directly to the retailer's own product page and checkout. FateDrop provides discovery and intelligence; the retailer remains the seller.",
+      meta: "Connected supply / buy direct",
     },
     {
       number: "05",
+      title: "Fate Trader",
+      description:
+        "Collector-to-collector trading uses the same verified card identity foundation. Record what you have and what you want, then let Fate Trade Finder look for compatible trade intent as beta access expands.",
+      meta: "Collector trading / beta rollout",
+    },
+    {
+      number: "06",
       title: "Universal Wishlist",
       description:
         "Keep products you care about in one account-level list without turning every saved item into a live watch.",
       meta: "Saved products / account-wide",
     },
     {
-      number: "06",
+      number: "07",
       title: "Local Radar",
       description:
         "Discover nearby TCG businesses while keeping external Places results separate from verified FateDrop-network stock.",
       meta: "Nearby discovery / evidence separated",
     },
     {
-      number: "07",
+      number: "08",
       title: "Fate Encounters",
       description:
         "Browse source-backed UK card shows, venues and participating vendors and verify organiser details before travel.",
       meta: "Real-world network",
     },
     {
-      number: "08",
+      number: "09",
       title: "Drop Pulse",
       description:
         "Summarise timestamp-supported network movement without turning weak evidence into manufactured urgency.",
@@ -135,15 +142,11 @@ export const siteConfig = {
     },
   ],
   roadmap: [
-    { name: "Basket Breaker", status: "Planned" },
-    { name: "FateBounty + Demand Signal", status: "Planned" },
-    { name: "FateFair", status: "Planned" },
-    { name: "Collection Gap Finder", status: "Planned" },
-    { name: "Release Command Centre", status: "Planned" },
-    { name: "Preorder Confidence + Forecast", status: "Planned" },
-    { name: "Indie Exclusives + Fair Drop", status: "Planned" },
-    { name: "Event Companion + Shop Trails", status: "Planned" },
-    { name: "Future multi-TCG support", status: "Planned" },
+    { name: "Fate Trader matching expansion", status: "Beta roadmap" },
+    { name: "Collection intelligence", status: "Planned" },
+    { name: "Preorder confidence", status: "Planned" },
+    { name: "Retailer demand intelligence", status: "Planned" },
+    { name: "Multi-TCG expansion", status: "Planned" },
   ],
 } as const;
 
