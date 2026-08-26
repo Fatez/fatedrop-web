@@ -5,6 +5,7 @@ import fs from "node:fs";
 const dashboardRoutes = [
   "app/dashboard/search/page.tsx",
   "app/dashboard/alerts/page.tsx",
+  "app/dashboard/network/page.tsx",
   "app/dashboard/fatefind/page.tsx",
   "app/dashboard/watchlist/page.tsx",
   "app/dashboard/wishlist/page.tsx",
@@ -24,21 +25,33 @@ test("every retained dashboard destination has a real page", () => {
   for (const route of dashboardRoutes) assert.equal(fs.existsSync(route), true, `${route} is missing`);
 });
 
-test("core dashboard navigation keeps every collector destination in the approved workspace", () => {
+test("core dashboard navigation keeps the universal utilities separate and groups collector intelligence under Fate Network", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
-  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/events", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  const networkPage = fs.readFileSync("app/dashboard/network/page.tsx", "utf8");
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/wishlist", "/dashboard/network", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/trader", "/dashboard/local-radar", "/dashboard/stores", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
   assert.equal(nav.includes('"/dashboard/true-price"'), false);
+  assert.equal(nav.includes('"Events", "/dashboard/events"'), false, "Events should no longer be a top-level dashboard product");
   assert.ok(shell.includes('href="/dashboard/notifications"'));
   assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search",'));
+  assert.ok(nav.includes('"Fate Network", "/dashboard/network"'));
   assert.ok(nav.includes('"FateFind", "/dashboard/fatefind"'));
   assert.ok(nav.includes('"FateMatch", "/dashboard/watchlist"'));
+  assert.ok(nav.includes('"Fate Trader", "/dashboard/trader"'));
+  assert.ok(nav.includes('"Local Radar", "/dashboard/local-radar"'));
+  assert.ok(nav.includes('"Stores", "/dashboard/stores"'));
   assert.ok(nav.includes('"Wishlist", "/dashboard/wishlist"'));
   assert.ok(nav.includes('"Koru & Friends", "/dashboard/avatar"'));
-  assert.ok(nav.includes('"Fate Network", "/dashboard/stores"'));
   assert.ok(nav.includes('"Retailer Dashboard", "/dashboard/indie"'));
   assert.equal(nav.includes('"Indies", "/dashboard/stores"'), false);
+  assert.ok(networkPage.includes("Search remains FateDrop&apos;s universal catalogue utility"));
+  assert.ok(networkPage.includes("FateFind</strong> for value"));
+  assert.ok(networkPage.includes("FateMatch</strong> for monitoring"));
+  assert.ok(networkPage.includes("Fate Trader</strong> for collector trading"));
+  assert.ok(networkPage.includes("Local Radar</strong> for physical intelligence"));
+  assert.ok(networkPage.includes("Stores</strong> for retailer discovery"));
+  assert.ok(networkPage.includes("DashboardNetworkPulse"));
 });
 
 test("dashboard home uses the shared shell and retains personal collector identity", () => {
@@ -227,16 +240,18 @@ test("True Price remains a FateFind calculation rather than a standalone dashboa
   assert.ok(client.includes('"/api/true-price"'));
 });
 
-test("retailer discovery separates Cloud runtime health from storefront lab feeds", () => {
+test("Stores remains retailer-first while preserving Cloud runtime and storefront-lab evidence boundaries", () => {
   const stores = fs.readFileSync("app/dashboard/stores/page.tsx", "utf8");
+  const directory = fs.readFileSync("components/retailer-market-directory.tsx", "utf8");
   const network = fs.readFileSync("lib/retailer-network.ts", "utf8");
   const registry = fs.readFileSync("lib/retailer-registry.ts", "utf8");
-  assert.ok(stores.includes("Fate Network"));
-  assert.ok(stores.includes("One network. Different retailer types. More places to buy."));
-  assert.ok(stores.includes("CANONICAL CLOUD RETAILERS · MARKET DIRECTORY"));
-  assert.ok(stores.includes("EXPERIMENTAL STOREFRONT LAB"));
-  assert.ok(stores.includes("Cloud monitor health describes FateDrop evidence collection"));
+  assert.ok(stores.includes('title="Stores"'));
+  assert.ok(stores.includes("Stores is retailer-first."));
+  assert.ok(stores.includes("ALL STORES · ONLINE · PHYSICAL · NEAR ME"));
+  assert.ok(stores.includes("Stores helps you discover retailers. FateFind compares the buying opportunity."));
+  assert.ok(stores.includes("One retailer identity can have more than one buying channel."));
   assert.ok(stores.includes("<RetailerMarketDirectory"));
+  assert.ok(directory.includes("EXPERIMENTAL STOREFRONT LAB"));
   assert.ok(network.includes("getSignalEngineStatus"));
   assert.ok(network.includes("getSignalRetailerDirectory"));
   assert.ok(registry.includes("cloudRetailerId"));
