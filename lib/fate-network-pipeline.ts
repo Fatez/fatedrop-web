@@ -1,13 +1,6 @@
-import { createHash } from "node:crypto";
-import { evaluateActiveFateMatches } from "@/lib/fate-match";
-import { listActiveFateMatches, saveFateMatchHit } from "@/lib/fate-match-storage";
 import { saveInventoryObservation, saveSignalEvent, upsertNetworkLocation, upsertNetworkOffer, upsertNetworkProduct, upsertNetworkRetailer, upsertProductIdentity } from "@/lib/fate-network-storage";
 import type { NetworkInventoryObservation, NetworkLocation, NetworkOffer, NetworkProduct, NetworkProductIdentity, NetworkRetailer, NetworkSignalEvent } from "@/lib/network-domain";
 import { calculateTruePrice } from "@/lib/true-price";
-
-function stableId(prefix: string, ...parts: string[]) {
-  return `${prefix}_${createHash("sha256").update(parts.join("\u001f")).digest("hex").slice(0, 24)}`;
-}
 
 export type NetworkOpportunity = {
   retailer: NetworkRetailer;
@@ -23,6 +16,15 @@ export async function processRrpReferenceProduct(productIdentity: NetworkProduct
   return upsertProductIdentity(productIdentity);
 }
 
+/**
+ * Mirror one authoritative Cloud observation into the Web network ledger.
+ *
+ * IMPORTANT: FateMatch evaluation does not belong here. The hosted Cloud
+ * evaluator is the single authority for FateMatch outcomes and notifications;
+ * Web only stores/renders those hosted results. Keeping this function free of
+ * matcher calls prevents the snapshot bridge from becoming a second, divergent
+ * FateMatch engine when Cloud -> Web publishing is enabled.
+ */
 export async function processNetworkOpportunity(input: NetworkOpportunity) {
   await upsertNetworkRetailer(input.retailer);
   const resolvedProductIdentity = await upsertProductIdentity(input.productIdentity);
@@ -39,18 +41,8 @@ export async function processNetworkOpportunity(input: NetworkOpportunity) {
     deliveryKnown: input.offer.deliveryKnown,
     officialRrpPence: resolvedProductIdentity.officialRrpPence,
   });
-  const matches = await listActiveFateMatches(resolvedProductIdentity.id);
-  const results = evaluateActiveFateMatches(matches, input.offer, truePrice, input.location ?? null);
-  const occurredAt = input.signal?.occurredAt ?? input.inventory?.observedAt ?? input.offer.observedAt;
-  for (const result of results) {
-    await saveFateMatchHit({
-      id: stableId("fmh", result.matchId, result.offerId, input.signal?.id ?? String(occurredAt)),
-      matchId: result.matchId,
-      signalEventId: input.signal?.id ?? null,
-      offerId: result.offerId,
-      reasons: result.reasons,
-      occurredAt,
-    });
-  }
-  return { productIdentity: resolvedProductIdentity, truePrice, matches: results };
+
+  // Compatibility field for the existing snapshot response. Web must never
+  // manufacture FateMatch outcomes from mirrored observations.
+  return { productIdentity: resolvedProductIdentity, truePrice, matches: [], matchAuthority: "cloud" as const };
 }
