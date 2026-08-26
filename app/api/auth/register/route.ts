@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     return Response.json({ created: true, fateId: account.fateId }, { status: 201 });
   } catch (error) {
     if (isRequestTooLargeError(error)) return Response.json({ error: "Request is too large." }, { status: 413 });
-    if (error instanceof AccountConflictError) return Response.json({ error: error.message }, { status: 409 });
+    if (error instanceof AccountConflictError) return Response.json({ error: "An account could not be created with those details." }, { status: 409 });
     if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
     if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
     return Response.json({ error: "Your FateDrop ID could not be created. Please try again." }, { status: 500 });
