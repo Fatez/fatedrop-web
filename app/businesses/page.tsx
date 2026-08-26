@@ -140,7 +140,7 @@ export default function BusinessesPage() {
         <div className="quote-band">
           <p className="eyebrow"><span />Commercial trust</p>
           <blockquote>Retailers pay for tools — not for a better answer.</blockquote>
-          <p>Founding retailer access can support catalogue connection, storefront control, analytics, demand insight and other business capabilities while we prove the network's value. Future paid retailer tools still cannot buy stronger verification, a better RRP verdict, alert priority or organic FateFind placement.</p>
+          <p>Founding retailer access can support catalogue connection, storefront control, analytics, demand insight and other business capabilities while we prove the network&apos;s value. Future paid retailer tools still cannot buy stronger verification, a better RRP verdict, alert priority or organic FateFind placement.</p>
           <div className="button-row" style={{ marginTop: 28 }}><Link className="button button-secondary" href="/collectors">See the collector side</Link><Link className="text-link" href="/trust">Read the trust model <span>→</span></Link></div>
         </div>
       </section>
