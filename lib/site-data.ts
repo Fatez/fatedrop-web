@@ -40,11 +40,11 @@ export const siteConfig = {
       features: ["Basic verified profile", "Organic evidence-based discovery", "Direct retailer links", "No paid ranking or trust advantage"],
     },
     {
-      name: "FateDrop Indie",
-      price: "£9.99 / month",
-      secondaryPrice: "or £99 / year",
+      name: "Founding Fate Network Retailer",
+      price: "Free during beta",
+      secondaryPrice: "Founding cohort · future pricing not yet set",
       featured: true,
-      features: ["Complete connected catalogue", "Verified FateDrop storefront", "Search and FateFind eligibility from genuine offer evidence", "Events and preorders", "Catalogue monitoring", "Basic referral analytics when available", "Retailer keeps customer, checkout and fulfilment"],
+      features: ["Connected catalogue onboarding", "Verified FateDrop storefront", "Search and FateFind eligibility from genuine offer evidence", "Events and preorders", "Catalogue monitoring", "Privacy-safe referral analytics as available", "Retailer keeps customer, checkout and fulfilment"],
     },
   ],
   audiences: [
