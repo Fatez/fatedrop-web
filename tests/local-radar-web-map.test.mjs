@@ -6,18 +6,27 @@ const page = fs.readFileSync("app/dashboard/local-radar/page.tsx", "utf8");
 const search = fs.readFileSync("components/local-radar-search.tsx", "utf8");
 const map = fs.readFileSync("components/local-radar-map.tsx", "utf8");
 const api = fs.readFileSync("app/api/local-radar/route.ts", "utf8");
+const config = fs.readFileSync("next.config.ts", "utf8");
 
 test("Local Radar Web renders a real geographic map from the shared Cloud coordinates", () => {
   assert.ok(search.includes("LocalRadarMap"));
   assert.ok(search.includes("latitude"));
   assert.ok(search.includes("longitude"));
-  assert.ok(map.includes("tile.openstreetmap.org"));
-  assert.ok(map.includes("OpenStreetMap contributors"));
-  assert.ok(map.includes("leaflet@1.9.4"));
-  assert.ok(map.includes("circleMarker"));
-  assert.ok(map.includes("fitBounds"));
+  assert.ok(map.includes("tile.openstreetmap.org/{z}/{x}/{y}.png"));
+  assert.ok(map.includes("© OpenStreetMap contributors"));
+  assert.ok(map.includes("project(coordinate"));
+  assert.ok(map.includes("fd-map-marker"));
+  assert.ok(map.includes("chooseZoom"));
   assert.equal(map.includes("fake"), false);
   assert.equal(map.includes("sample store"), false);
+});
+
+test("Local Radar map stays compatible with the production CSP", () => {
+  assert.ok(config.includes("script-src 'self' 'unsafe-inline'"));
+  assert.ok(config.includes("img-src 'self' data: blob: https:"));
+  assert.equal(map.includes("unpkg.com"), false, "map must not depend on an external executable script CDN");
+  assert.equal(map.toLowerCase().includes("leaflet"), false, "map should not require Leaflet runtime assets outside the production CSP");
+  assert.ok(map.includes("NEXT_PUBLIC_LOCAL_RADAR_TILE_URL"), "tile provider must remain replaceable without rewriting map logic");
 });
 
 test("Web and App stay behind the same canonical Local Radar Cloud route", () => {
