@@ -56,8 +56,8 @@ test("founding retailer beta does not publish an unconfirmed paid retailer tier"
   ]);
   assert.ok(siteData.includes("Founding Fate Network Retailer"));
   assert.ok(siteData.includes("Free during beta"));
+  assert.ok(siteData.includes("future pricing not yet set"));
   assert.ok(subscriptions.includes("Founding beta access"));
-  assert.ok(subscriptions.includes("future pricing not yet set"));
   assert.equal(siteData.includes('name: "FateDrop Indie"'), false);
   assert.equal(subscriptions.includes("£9.99"), false);
   assert.equal(businesses.includes("FateDrop Indie"), false);
