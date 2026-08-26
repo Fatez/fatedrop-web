@@ -48,3 +48,14 @@ test("repository product truth locks one shared meaning across App and Web", () 
   assert.ok(truth.includes("preserves the same comparison behaviour across App and Web"));
   assert.ok(truth.includes("FATEMATCH — LIVE NOW"));
 });
+
+test("Cloud is the sole FateMatch outcome authority; Web snapshot ingestion cannot create match hits", () => {
+  const pipeline = read("lib/fate-network-pipeline.ts");
+  const hitsRoute = read("app/api/fate-matches/hits/route.ts");
+  assert.equal(pipeline.includes("evaluateActiveFateMatches"), false);
+  assert.equal(pipeline.includes("listActiveFateMatches"), false);
+  assert.equal(pipeline.includes("saveFateMatchHit"), false);
+  assert.ok(pipeline.includes('matchAuthority: "cloud"'));
+  assert.ok(hitsRoute.includes("listHostedFateMatches"));
+  assert.ok(hitsRoute.includes("fatedrop_hosted_fate_matches") === false);
+});
