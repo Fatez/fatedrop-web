@@ -1,6 +1,7 @@
 import type { AccountSnapshot } from "./account-storage";
 import { getCanonicalAlertDeliverySummary } from "./canonical-alert-delivery";
-import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal } from "./dashboard-storage";
+import { getCanonicalRecentSignals } from "./canonical-signals";
+import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal, type NetworkMetricSnapshot } from "./dashboard-storage";
 import { getSignalDeliverySummary, getSignalLifecycleSummary } from "./signal-trends";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
@@ -16,7 +17,7 @@ export function publicSignalLabel(signal: NetworkSignal) {
   if (signal.state === "manifested") return "Manifested";
   if (signal.state === "vanished") return "Vanished";
 
-  // Legacy fallback only. New network snapshots always carry a canonical lifecycle state.
+  // Legacy fallback only. New canonical ledger reads always carry a lifecycle state.
   const kind = signal.kind ?? signal.state;
   if (kind === "whisper") return "Whisper";
   if (kind === "echo" || kind === "queue" || kind === "security") return "Echo";
@@ -44,14 +45,40 @@ export function signalCauseLabel(signal: NetworkSignal) {
   return null;
 }
 
+function signalBackedNetwork(network: NetworkMetricSnapshot | null, recentSignals: NetworkSignal[], now: number): NetworkMetricSnapshot | null {
+  if (network) return { ...network, recentSignals };
+  if (!recentSignals.length) return null;
+  return {
+    id: "canonical-signal-ledger",
+    sourceEventId: "canonical-signal-ledger",
+    source: "FateDrop signal ledger",
+    measuredAt: recentSignals[0]?.occurredAt ?? now,
+    recordedAt: now,
+    metrics: {
+      whisper: null,
+      manifested: null,
+      vanished: null,
+      echo: null,
+      changes24h: null,
+      productsTracked: null,
+      inStock: null,
+      catalogueRetailers: null,
+      healthyMonitors: null,
+    },
+    recentSignals,
+    upcomingEvents: [],
+  };
+}
+
 export async function buildDashboardData(snapshot: AccountSnapshot) {
-  const [activity, network, history, signalSummary, signalDeliverySummary, canonicalAlerts] = await Promise.all([
+  const [activity, storedNetwork, history, signalSummary, signalDeliverySummary, canonicalAlerts, recentSignals] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
     getLatestNetworkMetricSnapshot(),
     listNetworkMetricSnapshots(30),
     getSignalLifecycleSummary(7),
     getSignalDeliverySummary(7),
     getCanonicalAlertDeliverySummary(7).catch(() => null),
+    getCanonicalRecentSignals(100).catch(() => []),
   ]);
 
   const stores = new Map<string, { name: string; count: number; latestAt: number }>();
@@ -67,6 +94,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
   }
 
   const now = Math.floor(Date.now() / 1000);
+  const network = signalBackedNetwork(storedNetwork, recentSignals, now);
   const day0 = startOfUtcDay(now) - (29 * 86_400);
   const daily = Array.from({ length: 30 }, (_, index) => ({ timestamp: day0 + index * 86_400, value: 0 }));
   for (const event of activity) {
@@ -81,14 +109,14 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
   const favoriteStores = [...stores.values()].sort((a, b) => b.latestAt - a.latestAt).slice(0, 4);
   const watchlist = activity.filter((item) => item.type === "wishlist_hit").slice(0, 4);
   const personalRecent = activity.slice(0, 6);
-  const confirmed = (network?.recentSignals ?? []).filter((signal) => signal.state === "manifested").slice(0, 4);
-  const early = (network?.recentSignals ?? []).filter((signal) => signal.state === "whisper" || signal.state === "echo").slice(0, 4);
+  const confirmed = recentSignals.filter((signal) => signal.state === "manifested").slice(0, 4);
+  const early = recentSignals.filter((signal) => signal.state === "whisper" || signal.state === "echo").slice(0, 4);
 
   const publishedBaseline = {
-    productsTracked: network?.metrics.productsTracked ?? null,
-    inStock: network?.metrics.inStock ?? null,
-    catalogueRetailers: network?.metrics.catalogueRetailers ?? null,
-    healthyMonitors: network?.metrics.healthyMonitors ?? null,
+    productsTracked: storedNetwork?.metrics.productsTracked ?? null,
+    inStock: storedNetwork?.metrics.inStock ?? null,
+    catalogueRetailers: storedNetwork?.metrics.catalogueRetailers ?? null,
+    healthyMonitors: storedNetwork?.metrics.healthyMonitors ?? null,
   };
 
   return {
@@ -117,7 +145,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     },
     recentManifested: confirmed,
     echoWhispers: early,
-    upcomingEvents: (network?.upcomingEvents ?? []).filter((item) => item.startsAt >= now - 86_400).sort((a, b) => a.startsAt - b.startsAt).slice(0, 3),
+    upcomingEvents: (storedNetwork?.upcomingEvents ?? []).filter((item) => item.startsAt >= now - 86_400).sort((a, b) => a.startsAt - b.startsAt).slice(0, 3),
     provenance: [
       {
         label: "Member since + network age",
@@ -139,9 +167,15 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
       },
       {
         label: "Network lifecycle metrics",
-        source: signalSummary ? "FateDrop signal ledger" : network ? network.source : "Awaiting FateDrop Cloud metric feed",
-        updatedAt: signalSummary ? now : network?.measuredAt ?? null,
-        note: signalSummary ? "The four dashboard lifecycle totals are aggregated directly from persisted Whisper, Echo, Manifested and Vanished signal rows over the last seven UTC days, including zero-activity days." : network ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle counters remain unavailable rather than falling back to invented values.",
+        source: signalSummary ? "FateDrop signal ledger" : storedNetwork ? storedNetwork.source : "Awaiting FateDrop Cloud metric feed",
+        updatedAt: signalSummary ? now : storedNetwork?.measuredAt ?? null,
+        note: signalSummary ? "The four dashboard lifecycle totals are aggregated directly from persisted Whisper, Echo, Manifested and canonically valid Vanished signal rows over the last seven UTC days, including zero-activity days." : storedNetwork ? "Derived from the latest persisted network snapshot." : "Until a live feed is connected, lifecycle counters remain unavailable rather than falling back to invented values.",
+      },
+      {
+        label: "Recent signal feed",
+        source: recentSignals.length ? "FateDrop signal ledger" : "Signal ledger unavailable",
+        updatedAt: recentSignals[0]?.occurredAt ?? null,
+        note: recentSignals.length ? "Recent dashboard signals are read directly from canonical persisted signal rows; stale network snapshots are not used as the signal feed." : "Recent signals remain unavailable rather than falling back to stale snapshot data.",
       },
       {
         label: "Alert delivery health",
