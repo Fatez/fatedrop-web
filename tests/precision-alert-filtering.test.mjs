@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const classifier = await readFile(new URL('../lib/product-alert-intelligence.ts', import.meta.url), 'utf8');
 const preferences = await readFile(new URL('../lib/notification-preferences.ts', import.meta.url), 'utf8');
+const preferenceFilter = await readFile(new URL('../lib/alert-preference-filter.ts', import.meta.url), 'utf8');
 const preferenceRoute = await readFile(new URL('../app/api/notification-preferences/route.ts', import.meta.url), 'utf8');
 const mobileAlerts = await readFile(new URL('../app/api/mobile/alerts/route.ts', import.meta.url), 'utf8');
 const push = await readFile(new URL('../lib/canonical-push.ts', import.meta.url), 'utf8');
@@ -27,12 +28,17 @@ test('product alert intelligence distinguishes collector products from noise and
   assert.doesNotMatch(canonical, /classifyProductAlert\(/);
 });
 
-test('precision defaults reduce noise without silently dropping unknown products', () => {
+test('precision defaults reduce noise without silently dropping core lifecycle alerts or unknown products', () => {
+  assert.match(preferences, /whisper: true/);
+  assert.match(preferences, /echo: true/);
+  assert.match(preferences, /manifested: true/);
+  assert.match(preferences, /vanished: true/);
   assert.match(preferences, /sealedTcg: true/);
   assert.match(preferences, /singleCards: true/);
   assert.match(preferences, /accessories: false/);
   assert.match(preferences, /merchandise: false/);
   assert.match(preferences, /unknownProducts: true/);
+  assert.match(preferenceFilter, /fateStage === "VANISHED"\) return preferences\.vanished/);
   for (const key of ['sealedTcg','singleCards','accessories','merchandise','unknownProducts']) {
     assert.match(preferenceRoute, new RegExp(`${key}: boolean\\(payload\\.${key}`));
   }
