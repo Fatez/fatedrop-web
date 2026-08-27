@@ -41,14 +41,12 @@ function NavLink({ pathname, item, nested = false }: { pathname: string; item: N
 
 export function DashboardNav() {
   const pathname = usePathname();
-  const traderEnabled = process.env.NEXT_PUBLIC_FATE_TRADER_ENABLED === "true";
-  const fateNetworkItems = traderEnabled ? fateNetwork : fateNetwork.filter((item) => item[1] !== "Fate Trader");
 
   return <nav aria-label="Dashboard navigation" className="fd-ref-nav">
     <div className="fd-ref-nav-main">{primary.map((item) => <NavLink key={item[1]} pathname={pathname} item={item}/>)}</div>
     <div className="fd-ref-nav-network">
       <small>FATE NETWORK</small>
-      {fateNetworkItems.map((item, index) => <NavLink key={item[1]} pathname={pathname} item={item} nested={index > 0}/>)}
+      {fateNetwork.map((item, index) => <NavLink key={item[1]} pathname={pathname} item={item} nested={index > 0}/>)}
     </div>
     <div className="fd-ref-nav-more"><small>MORE</small>{secondary.map((item) => <NavLink key={item[1]} pathname={pathname} item={item}/>)}</div>
     <style jsx>{`
