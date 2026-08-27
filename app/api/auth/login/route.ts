@@ -1,6 +1,6 @@
 import { AccountStorageUnavailableError, findAccountByEmail } from "@/lib/account-storage";
 import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, readBoundedJson } from "@/lib/auth-abuse";
-import { assertSameOrigin, startSession, verifyPassword } from "@/lib/auth";
+import { assertSameOrigin, startSession, verifyLoginPassword } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -12,9 +12,9 @@ export async function POST(request: Request) {
 
     const payload = await readBoundedJson(request);
     const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase().slice(0, 254) : "";
-    const password = typeof payload.password === "string" ? payload.password : "";
+    const password = typeof payload.password === "string" && payload.password.length <= 200 ? payload.password : "";
     const account = email ? await findAccountByEmail(email) : null;
-    const valid = account ? await verifyPassword(password, account.passwordHash) : false;
+    const valid = await verifyLoginPassword(password, account?.passwordHash);
     if (!account || !valid) return Response.json({ error: "Email or password is incorrect." }, { status: 401 });
     await startSession(account.id);
     return Response.json({ authenticated: true }, { status: 200 });
