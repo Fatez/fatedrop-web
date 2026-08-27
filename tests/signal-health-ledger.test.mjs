@@ -4,29 +4,31 @@ import fs from "node:fs";
 
 const read = (file) => fs.readFileSync(file, "utf8");
 
-test("dashboard separates real seven-day detections from real alert delivery", () => {
+test("dashboard separates real seven-day detections from real alert delivery through Cloud", () => {
   const dashboard = read("lib/dashboard.ts");
   const trends = read("lib/signal-trends.ts");
+  const live = read("lib/live-signals.ts");
   const chart = read("lib/signal-health-chart.ts");
   const page = read("app/dashboard/page.tsx");
 
-  assert.ok(trends.includes("FROM fatedrop_signals"));
-  assert.ok(trends.includes("COUNT(*)::int AS count"));
-  assert.ok(trends.includes("state IN ('whisper', 'echo', 'manifested', 'vanished')"));
-  assert.ok(trends.includes("safeDays - 1"), "trend must include today plus the preceding UTC days");
+  assert.ok(trends.includes("getLiveCloudSignalSummary"));
+  assert.ok(live.includes('"/api/signal-summary"'));
+  assert.ok(live.includes('cache: "no-store"'));
+  assert.equal(trends.includes("FROM fatedrop_signals"), false);
+  assert.equal(trends.includes("fatedrop_signal_delivery_attempts"), false);
+  assert.equal(live.includes("DATABASE_URL"), false);
 
-  assert.ok(trends.includes("fatedrop_signal_delivery_attempts"));
-  assert.ok(trends.includes("INNER JOIN fatedrop_signals"));
-  assert.ok(trends.includes('result === "sent"'));
-  assert.ok(trends.includes('result === "skipped" && detail === "disabled"'));
-  assert.ok(trends.includes("point.policySkipped"));
-  assert.ok(trends.includes("point.issues"));
+  assert.ok(trends.includes("const sent = finite(rawDelivery.sent)"));
+  assert.ok(trends.includes("const policySkipped = finite(rawDelivery.policySkipped)"));
+  assert.ok(trends.includes("const issues = finite(rawDelivery.issues)"));
+  assert.ok(trends.includes("policySkipped: policySkipped!"));
+  assert.ok(trends.includes("issues: issues!"));
 
   assert.ok(dashboard.includes("getSignalDeliverySummary(7)"));
   assert.ok(dashboard.includes("signalDeliverySummary"));
   for (const state of ["whisper", "echo", "manifested", "vanished"]) {
     assert.ok(dashboard.includes(`${state}: signalSummary?.${state}.total ?? null`));
-    assert.equal(dashboard.includes(`signalSummary?.${state}.total ?? network?.metrics.${state}`), false, `${state} must not mix snapshot and seven-day ledger windows`);
+    assert.equal(dashboard.includes(`signalSummary?.${state}.total ?? network?.metrics.${state}`), false, `${state} must not mix snapshot and seven-day live Cloud windows`);
   }
 
   assert.ok(page.includes("7D DETECTED"));
