@@ -23,15 +23,16 @@ const pngDimensions = (buffer) => ({
   height: buffer.readUInt32BE(20),
 });
 
-test("shared Web chrome renders the approved FateDrop wordmark", () => {
+test("shared Web chrome renders the supplied black and white FateDrop logo", () => {
   assert.match(brandMark, /\/assets\/fatedrop-wordmark\.png/);
-  assert.match(brandMark, /width="320"/);
-  assert.match(brandMark, /height="107"/);
+  assert.match(brandMark, /width="192"/);
+  assert.match(brandMark, /height="192"/);
+  assert.match(brandMark, /height: compact \? 44 : 52/);
   assert.doesNotMatch(brandMark, /brand-word|<b>Fate<\/b>/);
 
   const wordmark = readBuffer("public/assets/fatedrop-wordmark.png");
-  assert.deepEqual(pngDimensions(wordmark), { width: 320, height: 107 });
-  assert.equal(gitBlobSha(wordmark), "63f7b5af83b743aeead9949dd33e7b08fe978033");
+  assert.deepEqual(pngDimensions(wordmark), { width: 192, height: 192 });
+  assert.equal(gitBlobSha(wordmark), "3a1cc1ad948db2d745812824b2044f95bde48355");
 });
 
 test("dashboard fallbacks and browser metadata use the approved FateDrop medallion", () => {
