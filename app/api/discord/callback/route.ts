@@ -16,6 +16,11 @@ export async function GET(request: Request) {
   try {
     const token = await exchangeDiscordCode(code, url.origin);
     const identity = await fetchDiscordIdentity(token.access_token);
+
+    const guild = await ensureDiscordGuildMember(identity.id, token.access_token);
+    if (!guild.configured) return Response.redirect(new URL("/account?discord=setup", request.url));
+    if (!guild.joined) return Response.redirect(new URL("/account?discord=join-error", request.url));
+
     const link = await saveDiscordLink({
       userId: snapshot.account.id,
       discordUserId: identity.id,
@@ -24,10 +29,6 @@ export async function GET(request: Request) {
       connectedAt: Math.floor(Date.now() / 1000),
       roleSyncedAt: null,
     });
-
-    const guild = await ensureDiscordGuildMember(identity.id, token.access_token);
-    if (!guild.configured) return Response.redirect(new URL("/account?discord=setup", request.url));
-    if (!guild.joined) return Response.redirect(new URL("/account?discord=join-error", request.url));
 
     const premium = hasPremiumAccess(snapshot.membership);
     const role = await syncPremiumDiscordRole(link, snapshot.membership);
