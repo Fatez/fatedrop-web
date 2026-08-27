@@ -122,7 +122,7 @@ async function eligibleRecipients() {
       COALESCE(np.whisper_enabled,true) AS whisper_enabled,
       COALESCE(np.echo_enabled,true) AS echo_enabled,
       COALESCE(np.manifested_enabled,true) AS manifested_enabled,
-      COALESCE(np.vanished_enabled,false) AS vanished_enabled,
+      COALESCE(np.vanished_enabled,true) AS vanished_enabled,
       COALESCE(np.sealed_tcg_enabled,true) AS sealed_tcg_enabled,
       COALESCE(np.single_cards_enabled,true) AS single_cards_enabled,
       COALESCE(np.accessories_enabled,false) AS accessories_enabled,
