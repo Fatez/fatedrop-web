@@ -30,25 +30,25 @@ type PairResponse = {
   pairVerdict?: SignalFatePairVerdict | null;
 };
 
+type VerdictState = {
+  key: string;
+  verdict: SignalFatePairVerdict | null;
+  unavailable: boolean;
+};
+
 export function ValueCompare({ query, groups }: { query: string; groups: SignalTruePriceGroup[] }) {
   const options = groups.filter((group) => group.offers.length > 0);
   const [leftId, setLeftId] = useState(options[0]?.id ?? "");
   const [rightId, setRightId] = useState(options[1]?.id ?? options[0]?.id ?? "");
-  const [pairVerdict, setPairVerdict] = useState<SignalFatePairVerdict | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [unavailable, setUnavailable] = useState(false);
+  const [verdictState, setVerdictState] = useState<VerdictState>({ key: "", verdict: null, unavailable: false });
+  const selectionKey = `${query}\u0000${leftId}\u0000${rightId}`;
+  const validSelection = Boolean(query && leftId && rightId && leftId !== rightId);
 
   useEffect(() => {
-    if (!query || !leftId || !rightId || leftId === rightId) {
-      setPairVerdict(null);
-      setUnavailable(false);
-      setLoading(false);
-      return;
-    }
+    if (!query || !leftId || !rightId || leftId === rightId) return;
 
     const controller = new AbortController();
-    setLoading(true);
-    setUnavailable(false);
+    const requestKey = `${query}\u0000${leftId}\u0000${rightId}`;
     fetch("/api/fatefind/verdict", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -59,20 +59,13 @@ export function ValueCompare({ query, groups }: { query: string; groups: SignalT
       .then((response) => {
         if (controller.signal.aborted) return;
         if (!response?.success || response.source !== "FATEDROP_CLOUD" || !response.pairVerdict) {
-          setPairVerdict(null);
-          setUnavailable(true);
+          setVerdictState({ key: requestKey, verdict: null, unavailable: true });
           return;
         }
-        setPairVerdict(response.pairVerdict);
+        setVerdictState({ key: requestKey, verdict: response.pairVerdict, unavailable: false });
       })
       .catch(() => {
-        if (!controller.signal.aborted) {
-          setPairVerdict(null);
-          setUnavailable(true);
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) setVerdictState({ key: requestKey, verdict: null, unavailable: true });
       });
 
     return () => controller.abort();
@@ -80,6 +73,10 @@ export function ValueCompare({ query, groups }: { query: string; groups: SignalT
 
   if (options.length < 2) return null;
 
+  const currentState = verdictState.key === selectionKey ? verdictState : null;
+  const pairVerdict = validSelection ? currentState?.verdict ?? null : null;
+  const loading = validSelection && currentState === null;
+  const unavailable = validSelection && currentState?.unavailable === true;
   const positions = [pairVerdict?.left ?? null, pairVerdict?.right ?? null];
   const hasWinner = Boolean(pairVerdict?.winnerId);
   const provisional = positions.some((position) => position?.provisional === true);
