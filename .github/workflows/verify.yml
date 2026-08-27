@@ -2,7 +2,7 @@ name: Verify FateDrop Web
 
 on:
   push:
-    branches: [main]
+    branches: [main, security/p0-web-turnstile-current]
   pull_request:
     branches: [main, fatedrop-network-consistency-audit]
 
