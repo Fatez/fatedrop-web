@@ -7,34 +7,45 @@ const page = await readFile(new URL('../app/dashboard/stores/page.tsx', import.m
 const network = await readFile(new URL('../lib/retailer-network.ts', import.meta.url), 'utf8');
 const signalClient = await readFile(new URL('../lib/signal-engine-client.ts', import.meta.url), 'utf8');
 
-test('retailer hub separates RRP/major and specialist/independent markets inside Fate Network', () => {
-  assert.match(component, /RRP \/ Major Retailers/);
-  assert.match(component, /Independent Retailers/);
-  assert.match(component, /retailerClass === "national"/);
-  assert.match(component, /\["independent", "specialist", "regional"\]/);
-  assert.match(page, /MAJOR · SPECIALIST · INDEPENDENT · ONLINE · PHYSICAL/);
-  assert.match(page, /One network\. Different retailer types\. More places to buy\./);
+test('Retailers segments one canonical Cloud directory into approved discovery views', () => {
+  assert.match(component, /type RetailerView = "all" \| "major" \| "specialist" \| "local"/);
+  assert.match(component, /Major Retailers/);
+  assert.match(component, /TCG Specialists/);
+  assert.match(component, /Independent & Local/);
+  assert.match(component, /retailer\.retailerClass === "national"/);
+  assert.match(component, /retailer\.retailerClass === "specialist"/);
+  assert.match(component, /retailer\.retailerClass === "independent" \|\| retailer\.retailerClass === "regional"/);
+  assert.match(page, /FATE NETWORK · MAJOR · SPECIALIST · INDEPENDENT & LOCAL/);
+  assert.match(page, /Discover the stores behind the hobby\./);
 });
 
-test('independent online and physical tabs use explicit presence evidence', () => {
+test('retailer presence filters fail closed and preserve unknown', () => {
   assert.match(component, /Physical Stores/);
   assert.match(component, /retailer\.physicalStores === true/);
   assert.match(component, /retailer\.online === true/);
-  assert.match(component, /physical presence is explicitly known/);
+  assert.match(component, /physical status unknown/);
   assert.match(network, /physicalStores: boolean \| null/);
   assert.match(network, /physicalLocations: number \| null/);
 });
 
-test('web consumes Cloud public retailer directory and keeps a safe registry fallback', () => {
+test('Web retailer network uses Cloud directory only and never appends static registry truth', () => {
   assert.match(signalClient, /getSignalRetailerDirectory/);
   assert.match(signalClient, /"\/api\/retailers"/);
-  assert.match(network, /Promise\.all/);
-  assert.match(network, /directoryResponse\?\.retailers/);
-  assert.match(network, /registry\?\.physicalStores \?\? null/);
+  assert.match(network, /getSignalRetailerDirectory/);
+  assert.match(network, /available: false, retailers: \[\]/);
+  assert.doesNotMatch(network, /retailerRegistry/);
+  assert.doesNotMatch(network, /retailerByCloudId/);
+  assert.doesNotMatch(network, /getSignalEngineStatus/);
+  assert.doesNotMatch(network, /source: "registry"/);
 });
 
-test('RRP retailer wording does not promise retailer pricing', () => {
-  assert.match(component, /RRP is FateDrop's verified\/reference comparison baseline/);
-  assert.match(component, /Retailer prices can still be above or below/);
-  assert.match(component, /does not mean the retailer always sells at RRP/);
+test('Retailers is A-Z business discovery and sends product comparison to FateFind', () => {
+  assert.match(component, /A–Z · NO RANKING/);
+  assert.match(component, /Search retailer or TCG/);
+  assert.match(component, /Looking for a product\? Use FateFind/);
+  assert.match(component, /same comparison pool/);
+  assert.match(component, /localeCompare/);
+  assert.doesNotMatch(component, /RRP \/ Major Retailers/);
+  assert.doesNotMatch(component, /EXPERIMENTAL INDEPENDENT STOREFRONTS/);
+  assert.doesNotMatch(component, /labStorefronts/);
 });
