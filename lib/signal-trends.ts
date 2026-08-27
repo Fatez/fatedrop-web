@@ -121,8 +121,9 @@ async function getRemoteSignalHealth(days: number): Promise<RemoteSignalHealth |
     try {
       const base = (process.env.FATEDROP_SIGNAL_ENGINE_URL || defaultSignalEngineUrl).replace(/\/$/, "");
       const apiToken = String(process.env.FATEDROP_SIGNAL_API_TOKEN || "").trim();
+      if (!apiToken) return null;
       const headers = new Headers({ Accept: "application/json" });
-      if (apiToken) headers.set("Authorization", `Bearer ${apiToken}`);
+      headers.set("Authorization", `Bearer ${apiToken}`);
       const response = await fetch(`${base}/api/signal-health?days=${safeDays}`, {
         cache: "no-store",
         headers,
@@ -131,7 +132,7 @@ async function getRemoteSignalHealth(days: number): Promise<RemoteSignalHealth |
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return parseRemoteSignalHealth(await response.json());
     } catch (error) {
-      console.error("[dashboard] live Signal Engine health unavailable", String(error instanceof Error ? error.message : error));
+      console.warn("[dashboard] optional Signal Engine health fallback unavailable", String(error instanceof Error ? error.message : error));
       return null;
     }
   })();
