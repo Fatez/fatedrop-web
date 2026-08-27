@@ -27,7 +27,11 @@ test('product alert intelligence distinguishes collector products from noise and
   assert.doesNotMatch(canonical, /classifyProductAlert\(/);
 });
 
-test('precision defaults reduce noise without silently dropping unknown products', () => {
+test('precision defaults reduce noise without silently dropping core lifecycle alarms or unknown products', () => {
+  assert.match(preferences, /whisper: true/);
+  assert.match(preferences, /echo: true/);
+  assert.match(preferences, /manifested: true/);
+  assert.match(preferences, /vanished: true/);
   assert.match(preferences, /sealedTcg: true/);
   assert.match(preferences, /singleCards: true/);
   assert.match(preferences, /accessories: false/);
