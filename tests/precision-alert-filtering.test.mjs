@@ -11,7 +11,7 @@ const canonical = await readFile(new URL('../lib/canonical-alerts.ts', import.me
 const webAlerts = await readFile(new URL('../app/dashboard/alerts/page.tsx', import.meta.url), 'utf8');
 const trends = await readFile(new URL('../lib/canonical-alert-trends.ts', import.meta.url), 'utf8');
 
-test('product alert intelligence distinguishes collector products from noise', () => {
+test('product alert intelligence distinguishes collector products from noise and the inbox consumes Cloud-owned classification', () => {
   assert.match(classifier, /"SEALED_TCG"/);
   assert.match(classifier, /"SINGLE_CARD"/);
   assert.match(classifier, /"ACCESSORY"/);
@@ -22,8 +22,9 @@ test('product alert intelligence distinguishes collector products from noise', (
   assert.match(classifier, /strongSealedEvidence/);
   assert.match(classifier, /tcgCollectionEvidence/);
   assert.match(classifier, /singleCardEvidence/);
-  assert.match(canonical, /product_alert_classification/);
-  assert.match(canonical, /productClassification\(row\)/);
+  assert.match(canonical, /productIntelligence: ProductAlertClassification/);
+  assert.match(canonical, /getLiveCloudAlerts/);
+  assert.doesNotMatch(canonical, /classifyProductAlert\(/);
 });
 
 test('precision defaults reduce noise without silently dropping unknown products', () => {
@@ -55,21 +56,20 @@ test('web inbox applies preferences while seven-day network trends remain indepe
   assert.match(webAlerts, /getCanonicalSignalTrend\(7\)/);
 });
 
-test('observed live time is a Vanished-only closed-window fact', () => {
-  assert.match(canonical, /s\.state='vanished'/);
-  assert.match(canonical, /hs\.state='manifested'/);
-  assert.match(canonical, /hv\.state='vanished'/);
-  assert.match(canonical, /Observed live for/);
-  assert.match(canonical, /row\.state === "vanished" \? row\.observed_duration_seconds : null/);
+test('observed live time remains a Vanished-only Cloud fact at the Web boundary', () => {
+  assert.match(canonical, /observedDurationSeconds: number \| null/);
+  assert.match(canonical, /getLiveCloudAlerts/);
+  assert.doesNotMatch(canonical, /FROM fatedrop_signals/);
   assert.match(webAlerts, /alert\.fateStage === "VANISHED"/);
+  assert.match(webAlerts, /observedDurationLabel\(alert\.observedDurationSeconds\)/);
   assert.match(webAlerts, /OBSERVED LIVE/);
 });
 
-test('canonical inbox and trend graphs reject orphan Vanished events', () => {
-  assert.match(canonical, /s\.state <> 'vanished' OR live_window\.manifested_at IS NOT NULL/);
-  assert.match(trends, /s\.state <> 'vanished'/);
-  assert.match(trends, /m\.state='manifested'/);
-  assert.match(trends, /v\.state='vanished'/);
-  assert.match(trends, /v\.detected_at > m\.detected_at/);
-  assert.match(trends, /v\.detected_at < s\.detected_at/);
+test('canonical inbox and trend graphs consume Cloud-filtered Vanished truth rather than reimplementing it', () => {
+  assert.match(canonical, /getLiveCloudAlerts/);
+  assert.match(trends, /getLiveCloudSignalSummary/);
+  assert.match(trends, /response\.source !== "FATEDROP_CLOUD"/);
+  assert.doesNotMatch(canonical, /s\.state <> 'vanished'/);
+  assert.doesNotMatch(trends, /FROM fatedrop_signals/);
+  assert.doesNotMatch(trends, /m\.state='manifested'/);
 });
