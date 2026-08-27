@@ -3,12 +3,30 @@ export type CloudLifecycleState = "whisper" | "echo" | "manifested" | "vanished"
 export type CloudPublicSignal = {
   id: string;
   state: CloudLifecycleState;
+  productId: string | null;
+  offerId: string | null;
+  retailerId: string | null;
   retailerName: string | null;
   title: string;
+  productType: string | null;
+  productUrl: string | null;
+  imageUrl: string | null;
+  priceGbp?: number;
   deliveredPriceGbp?: number;
+  rrpGbp?: number;
+  markupPercent?: number;
+  stockStatus?: string;
   confidence?: number;
   detectedAt?: string;
   reason: string | null;
+  target?: {
+    type?: string;
+    productId?: string | null;
+    offerId?: string | null;
+    retailerId?: string | null;
+    productUrl?: string | null;
+    query?: string;
+  };
 };
 
 export type CloudSignalResponse = {
@@ -78,11 +96,11 @@ async function liveFetch<T>(pathname: string, params: URLSearchParams, timeoutMs
 export async function getLiveCloudSignals(limit = 100, timeoutMs = 8_000) {
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
   const result = await liveFetch<CloudSignalResponse>("/api/signals", new URLSearchParams({ limit: String(safeLimit) }), timeoutMs);
-  return result?.contractVersion === PUBLIC_SIGNAL_CONTRACT_VERSION ? result : null;
+  return result?.contractVersion === PUBLIC_SIGNAL_CONTRACT_VERSION && result.source === "FATEDROP_CLOUD" ? result : null;
 }
 
 export async function getLiveCloudSignalSummary(days = 7, timeoutMs = 8_000) {
   const safeDays = Math.max(2, Math.min(30, Math.trunc(days)));
   const result = await liveFetch<CloudSignalSummaryResponse>("/api/signal-summary", new URLSearchParams({ days: String(safeDays) }), timeoutMs);
-  return result?.contractVersion === PUBLIC_SIGNAL_CONTRACT_VERSION ? result : null;
+  return result?.contractVersion === PUBLIC_SIGNAL_CONTRACT_VERSION && result.source === "FATEDROP_CLOUD" ? result : null;
 }
