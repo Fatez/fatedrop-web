@@ -33,10 +33,14 @@ test("interactive value comparison asks Cloud for pairVerdict and has no browser
   assert.doesNotMatch(compare, /function bestOffer/);
 });
 
-test("Web verdict transport calls the canonical live Cloud POST contract and fails closed", () => {
+test("Web verdict transport calls Cloud, fails closed, and preserves the shared Web/mobile gateway contract", () => {
   assert.match(cloudClient, /\/api\/fatefind\/matches/);
   assert.match(cloudClient, /mode: "verdict"/);
   assert.match(cloudClient, /result\.source !== "FATEDROP_CLOUD"/);
-  assert.match(proxy, /searchSignalFateVerdict\(query, \{ leftId, rightId \}\)/);
+  assert.match(proxy, /assertSameOrigin\(request\)/);
+  assert.match(proxy, /Boolean\(leftId\) !== Boolean\(rightId\)/);
+  assert.match(proxy, /leftId && rightId \? \{ leftId, rightId \} : \{\}/);
+  assert.match(proxy, /return NextResponse\.json\(result/);
+  assert.match(proxy, /Cache-Control/);
   assert.match(proxy, /FATEDROP_CLOUD_UNAVAILABLE/);
 });
