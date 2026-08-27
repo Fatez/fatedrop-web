@@ -120,7 +120,14 @@ async function getRemoteSignalHealth(days: number): Promise<RemoteSignalHealth |
   const request = (async () => {
     try {
       const base = (process.env.FATEDROP_SIGNAL_ENGINE_URL || defaultSignalEngineUrl).replace(/\/$/, "");
-      const response = await fetch(`${base}/api/signal-health?days=${safeDays}`, { cache: "no-store", signal: AbortSignal.timeout(5_000) });
+      const apiToken = String(process.env.FATEDROP_SIGNAL_API_TOKEN || "").trim();
+      const headers = new Headers({ Accept: "application/json" });
+      if (apiToken) headers.set("Authorization", `Bearer ${apiToken}`);
+      const response = await fetch(`${base}/api/signal-health?days=${safeDays}`, {
+        cache: "no-store",
+        headers,
+        signal: AbortSignal.timeout(5_000),
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return parseRemoteSignalHealth(await response.json());
     } catch (error) {
@@ -145,13 +152,31 @@ export async function getSignalLifecycleSummary(days = 7, now = Math.floor(Date.
       const sql = neon(databaseUrl);
       const rows = await sql`
         SELECT
-          state,
-          (FLOOR(detected_at / 86400.0) * 86400)::bigint AS measured_at,
+          s.state,
+          (FLOOR(s.detected_at / 86400.0) * 86400)::bigint AS measured_at,
           COUNT(*)::int AS count
-        FROM fatedrop_signals
-        WHERE detected_at >= ${day0}
-          AND state IN ('whisper', 'echo', 'manifested', 'vanished')
-        GROUP BY state, measured_at
+        FROM fatedrop_signals s
+        WHERE s.detected_at >= ${day0}
+          AND s.state IN ('whisper', 'echo', 'manifested', 'vanished')
+          AND (
+            s.state <> 'vanished'
+            OR EXISTS (
+              SELECT 1
+              FROM fatedrop_signals m
+              WHERE m.offer_id=s.offer_id
+                AND m.state='manifested'
+                AND m.detected_at < s.detected_at
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM fatedrop_signals v
+                  WHERE v.offer_id=s.offer_id
+                    AND v.state='vanished'
+                    AND v.detected_at > m.detected_at
+                    AND v.detected_at < s.detected_at
+                )
+            )
+          )
+        GROUP BY s.state, measured_at
         ORDER BY measured_at ASC
       `;
 
@@ -199,6 +224,24 @@ export async function getSignalDeliverySummary(days = 7, now = Math.floor(Date.n
         INNER JOIN fatedrop_signals s ON s.id = a.signal_id
         WHERE a.attempted_at >= ${day0}
           AND s.state IN ('whisper', 'echo', 'manifested', 'vanished')
+          AND (
+            s.state <> 'vanished'
+            OR EXISTS (
+              SELECT 1
+              FROM fatedrop_signals m
+              WHERE m.offer_id=s.offer_id
+                AND m.state='manifested'
+                AND m.detected_at < s.detected_at
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM fatedrop_signals v
+                  WHERE v.offer_id=s.offer_id
+                    AND v.state='vanished'
+                    AND v.detected_at > m.detected_at
+                    AND v.detected_at < s.detected_at
+                )
+            )
+          )
         GROUP BY s.state, measured_at, a.result, a.detail
         ORDER BY measured_at ASC
       `;

@@ -1,5 +1,5 @@
 import { assertSameOrigin, bearerTokenFromRequest, getCurrentSessionToken } from "@/lib/auth";
-import { fateTraderCloudPath, fateTraderWebEnabled } from "@/lib/fate-trader-web";
+import { fateTraderCloudPath } from "@/lib/fate-trader-web";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 const MAX_BODY_BYTES = 1_000_000;
@@ -14,10 +14,6 @@ function json(status: number, payload: unknown) {
 }
 
 async function proxy(request: Request, context: RouteContext) {
-  if (!fateTraderWebEnabled()) {
-    return json(404, { ok: false, error: { code: "NOT_FOUND", message: "Fate Trader is not enabled." } });
-  }
-
   const { path } = await context.params;
   const cloudPath = fateTraderCloudPath(path);
   if (!cloudPath) {
