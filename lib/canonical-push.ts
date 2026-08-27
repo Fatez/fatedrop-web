@@ -122,7 +122,7 @@ async function eligibleRecipients() {
       COALESCE(np.whisper_enabled,true) AS whisper_enabled,
       COALESCE(np.echo_enabled,true) AS echo_enabled,
       COALESCE(np.manifested_enabled,true) AS manifested_enabled,
-      COALESCE(np.vanished_enabled,false) AS vanished_enabled,
+      COALESCE(np.vanished_enabled,true) AS vanished_enabled,
       COALESCE(np.sealed_tcg_enabled,true) AS sealed_tcg_enabled,
       COALESCE(np.single_cards_enabled,true) AS single_cards_enabled,
       COALESCE(np.accessories_enabled,false) AS accessories_enabled,
@@ -218,111 +218,59 @@ async function claimPending(limit = 100) {
         AND next_attempt_at <= ${now}
       ORDER BY created_at ASC
       FOR UPDATE SKIP LOCKED
-      LIMIT ${Math.max(1, Math.min(100, limit))}
+      LIMIT ${Math.max(1, Math.min(500, limit))}
     )
-    UPDATE fatedrop_notification_outbox outbox
-    SET state='sending',attempts=outbox.attempts+1,updated_at=${now}
-    FROM candidates
-    WHERE outbox.id=candidates.id
-    RETURNING outbox.id,outbox.user_id,outbox.event_id,outbox.title,outbox.body,outbox.url,outbox.payload_json,outbox.attempts`;
-  return rows as OutboxRow[];
+    UPDATE fatedrop_notification_outbox o
+    SET state='sending',attempts=o.attempts+1,updated_at=${now}
+    FROM candidates c
+    WHERE o.id=c.id
+    RETURNING o.*`;
+  return rows as unknown as OutboxRow[];
 }
 
-async function recordResult(row: OutboxRow, ticket: ExpoTicket, transportError: string | null = null) {
+async function sendExpo(ticket: OutboxRow) {
+  const data = payload(ticket.payload_json);
+  const token = typeof data.expoPushToken === "string" ? data.expoPushToken : null;
+  if (!token) return { ok: false, permanent: true, detail: "missing-push-token" };
+  try {
+    const response = await fetch(EXPO_PUSH_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ to: token, title: ticket.title, body: ticket.body, data: { ...data, expoPushToken: undefined } }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const result = await response.json().catch(() => ({})) as { data?: ExpoTicket | ExpoTicket[] };
+    const first = Array.isArray(result.data) ? result.data[0] : result.data;
+    if (!response.ok || !first || first.status !== "ok") {
+      const detail = first?.details?.error || first?.message || `expo-${response.status}`;
+      return { ok: false, permanent: detail === "DeviceNotRegistered", detail };
+    }
+    return { ok: true, permanent: false, detail: first.id || "accepted" };
+  } catch (error) {
+    return { ok: false, permanent: false, detail: error instanceof Error ? error.message : "expo-request-failed" };
+  }
+}
+
+async function settleOutbox(row: OutboxRow, result: { ok: boolean; permanent: boolean; detail: string }) {
   const sql = await fateDropPostgres();
   const now = Math.floor(Date.now() / 1000);
-  const data = payload(row.payload_json);
-  const endpointId = typeof data.endpointId === "string" ? data.endpointId : null;
-  const ticketOk = !transportError && ticket.status === "ok";
-  const providerMessageId = ticket.id || null;
-  const errorCode = ticket.details?.error || null;
-  const detail = transportError || ticket.message || errorCode || null;
-  const deadToken = errorCode === "DeviceNotRegistered";
-  const finalFailure = deadToken || row.attempts >= MAX_ATTEMPTS;
-  const nextAttempt = finalFailure ? now : retryAt(now, row.attempts);
-
-  await sql`
-    UPDATE fatedrop_notification_outbox
-    SET
-      state=${ticketOk ? "sent" : "failed"},
-      sent_at=${ticketOk ? now : null},
-      last_error=${ticketOk ? null : detail},
-      next_attempt_at=${nextAttempt},
-      updated_at=${now}
-    WHERE id=${row.id}`;
-
-  await sql`
-    INSERT INTO fatedrop_notification_delivery_attempts (
-      id,outbox_id,attempted_at,result,provider_message_id,detail
-    ) VALUES (
-      ${randomUUID()},${row.id},${now},${ticketOk ? "sent" : finalFailure ? "failed" : "retry"},${providerMessageId},${detail}
-    )`;
-
-  if (endpointId) {
-    if (ticketOk) {
-      await sql`
-        UPDATE fatedrop_push_endpoints
-        SET last_success_at=${now},failure_reason=NULL,updated_at=${now}
-        WHERE id=${endpointId}`;
-    } else {
-      await sql`
-        UPDATE fatedrop_push_endpoints
-        SET last_failure_at=${now},failure_reason=${detail},enabled=CASE WHEN ${deadToken} THEN false ELSE enabled END,updated_at=${now}
-        WHERE id=${endpointId}`;
-    }
+  if (result.ok) {
+    await sql`UPDATE fatedrop_notification_outbox SET state='sent',provider_message_id=${result.detail},last_error=NULL,updated_at=${now} WHERE id=${row.id}`;
+    return;
   }
+  const final = result.permanent || row.attempts >= MAX_ATTEMPTS;
+  await sql`UPDATE fatedrop_notification_outbox SET state=${final ? "dead" : "failed"},last_error=${result.detail},next_attempt_at=${retryAt(now,row.attempts)},updated_at=${now} WHERE id=${row.id}`;
 }
 
-async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
-  if (!rows.length) return { claimed: 0, sent: 0, failed: 0 };
-
-  const messages = rows.map((row) => {
-    const data = payload(row.payload_json);
-    return {
-      to: data.expoPushToken,
-      sound: "default",
-      title: row.title,
-      body: row.body,
-      data: Object.fromEntries(Object.entries(data).filter(([key]) => !["expoPushToken","endpointId"].includes(key))),
-    };
-  });
-
-  const headers: Record<string, string> = { Accept: "application/json", "Content-Type": "application/json" };
-  if (process.env.EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
-
-  let tickets: ExpoTicket[] = [];
-  let transportError: string | null = null;
-  try {
-    const response = await fetchImpl(EXPO_PUSH_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(messages),
-      signal: AbortSignal.timeout(8_000),
-    });
-    const result = await response.json().catch(() => null) as { data?: ExpoTicket[] | ExpoTicket; errors?: unknown } | null;
-    if (!response.ok) throw new Error(`Expo push HTTP ${response.status}`);
-    tickets = Array.isArray(result?.data) ? result.data : result?.data ? [result.data] : [];
-    if (tickets.length !== rows.length) throw new Error("Expo push ticket count mismatch");
-  } catch (error) {
-    transportError = error instanceof Error ? error.message : "Expo push transport failed";
-    tickets = rows.map(() => ({ status: "error", message: transportError || undefined }));
+export async function runCanonicalPushWorker({ measuredAt = Math.floor(Date.now() / 1000), lookbackSeconds = 900, claimLimit = 100 } = {}) {
+  const enqueued = await enqueueRecentAlerts({ measuredAt, lookbackSeconds });
+  if (!dispatchEnabled()) return { dispatchEnabled: false, enqueued, claimed: 0, sent: 0, failed: 0 };
+  const claimed = await claimPending(claimLimit);
+  let sent = 0, failed = 0;
+  for (const row of claimed) {
+    const result = await sendExpo(row);
+    await settleOutbox(row, result);
+    if (result.ok) sent += 1; else failed += 1;
   }
-
-  let sent = 0;
-  let failed = 0;
-  for (let index = 0; index < rows.length; index += 1) {
-    const ticket = tickets[index] ?? { status: "error", message: "Missing Expo push ticket" };
-    if (!transportError && ticket.status === "ok") sent += 1;
-    else failed += 1;
-    await recordResult(rows[index], ticket, transportError);
-  }
-  return { claimed: rows.length, sent, failed };
-}
-
-export async function dispatchCanonicalPushAlerts({ measuredAt = Math.floor(Date.now() / 1000), fetchImpl = fetch }: { measuredAt?: number; fetchImpl?: typeof fetch } = {}) {
-  if (!dispatchEnabled()) return { enabled: false, queued: 0, claimed: 0, sent: 0, failed: 0 };
-  const queued = await enqueueRecentAlerts({ measuredAt });
-  const claimed = await claimPending(100);
-  const delivery = await sendClaimed(claimed, fetchImpl);
-  return { enabled: true, queued: queued.queued, ...delivery };
+  return { dispatchEnabled: true, enqueued, claimed: claimed.length, sent, failed };
 }
