@@ -1,32 +1,99 @@
 /* FateDrop lifecycle colour ownership.
-   Echo belongs to Fenn's restrained warm sand / amber family rather than cyan-violet. */
+   One visual language across App + Web:
+   Oru/Whisper gold, Fenn/Echo warm beige, Koru/Manifested violet,
+   Nyxen/Vanished crimson. */
 :root {
-  --fd-echo: #d2a16b;
-  --fd-echo-soft: #e4c296;
-  --fd-echo-deep: #9e6d43;
-  --fd-echo-glow: rgba(210, 161, 107, .3);
+  --fd-whisper: #D2B66F;
+  --fd-whisper-soft: #E2C58D;
+  --fd-whisper-deep: #8D6847;
+  --fd-whisper-glow: rgba(210, 182, 111, .30);
+
+  --fd-echo: #D9CDBB;
+  --fd-echo-soft: #F2E9DA;
+  --fd-echo-deep: #9B8D79;
+  --fd-echo-glow: rgba(217, 205, 187, .28);
+
+  --fd-manifested: #7C6EFF;
+  --fd-manifested-soft: #A899FF;
+  --fd-manifested-deep: #5546C6;
+  --fd-manifested-glow: rgba(124, 110, 255, .30);
+
+  --fd-vanished: #EF4D5A;
+  --fd-vanished-soft: #FF7B86;
+  --fd-vanished-deep: #A72D38;
+  --fd-vanished-glow: rgba(239, 77, 90, .30);
+}
+
+body .fd-signal-thumb.whisper,
+body .fd-mini-thumb.whisper {
+  border-color: rgba(210, 182, 111, .32) !important;
+  color: var(--fd-whisper-soft) !important;
+  background: radial-gradient(circle, rgba(141, 104, 71, .18), transparent 66%), #0b0c11 !important;
 }
 
 body .fd-signal-thumb.echo,
 body .fd-mini-thumb.echo {
-  border-color: rgba(210, 161, 107, .32) !important;
+  border-color: rgba(217, 205, 187, .34) !important;
   color: var(--fd-echo-soft) !important;
-  background: radial-gradient(circle, rgba(173, 118, 67, .2), transparent 66%), #0b0c11 !important;
-  box-shadow: inset 0 0 16px rgba(173, 118, 67, .08) !important;
+  background: radial-gradient(circle, rgba(155, 141, 121, .18), transparent 66%), #0b0c11 !important;
 }
+
+body .fd-signal-thumb.manifested,
+body .fd-mini-thumb.manifested {
+  border-color: rgba(124, 110, 255, .34) !important;
+  color: var(--fd-manifested-soft) !important;
+  background: radial-gradient(circle, rgba(85, 70, 198, .20), transparent 66%), #0b0c11 !important;
+}
+
+body .fd-signal-thumb.vanished,
+body .fd-mini-thumb.vanished {
+  border-color: rgba(239, 77, 90, .34) !important;
+  color: var(--fd-vanished-soft) !important;
+  background: radial-gradient(circle, rgba(167, 45, 56, .20), transparent 66%), #0b0c11 !important;
+}
+
+body .fd-ledger-stages .whisper span,
+body .fd-stage-trend.whisper,
+body .fd-lifecycle-card.whisper { color: var(--fd-whisper) !important; }
 
 body .fd-ledger-stages .echo span,
 body .fd-stage-trend.echo,
-body .fd-lifecycle-card.echo {
-  color: var(--fd-echo) !important;
-}
+body .fd-lifecycle-card.echo { color: var(--fd-echo) !important; }
 
-body .fd-ledger-row.echo .fd-ledger-state i {
-  background: var(--fd-echo) !important;
-  box-shadow: 0 0 12px var(--fd-echo-glow) !important;
-}
+body .fd-ledger-stages .manifested span,
+body .fd-stage-trend.manifested,
+body .fd-lifecycle-card.manifested { color: var(--fd-manifested) !important; }
 
-body .fd-signal-row aside b.echo {
-  color: var(--fd-echo-soft) !important;
-  background: rgba(158, 109, 67, .11) !important;
-}
+body .fd-ledger-stages .vanished span,
+body .fd-stage-trend.vanished,
+body .fd-lifecycle-card.vanished { color: var(--fd-vanished) !important; }
+
+body .fd-ledger-row.whisper .fd-ledger-state i { background: var(--fd-whisper) !important; box-shadow: 0 0 12px var(--fd-whisper-glow) !important; }
+body .fd-ledger-row.echo .fd-ledger-state i { background: var(--fd-echo) !important; box-shadow: 0 0 12px var(--fd-echo-glow) !important; }
+body .fd-ledger-row.manifested .fd-ledger-state i { background: var(--fd-manifested) !important; box-shadow: 0 0 12px var(--fd-manifested-glow) !important; }
+body .fd-ledger-row.vanished .fd-ledger-state i { background: var(--fd-vanished) !important; box-shadow: 0 0 12px var(--fd-vanished-glow) !important; }
+
+body .fd-signal-row aside b.whisper { color: var(--fd-whisper-soft) !important; background: rgba(141, 104, 71, .11) !important; }
+body .fd-signal-row aside b.echo { color: var(--fd-echo-soft) !important; background: rgba(155, 141, 121, .11) !important; }
+body .fd-signal-row aside b.manifested { color: var(--fd-manifested-soft) !important; background: rgba(85, 70, 198, .12) !important; }
+body .fd-signal-row aside b.vanished { color: var(--fd-vanished-soft) !important; background: rgba(167, 45, 56, .12) !important; }
+
+/* Signal-beam presentation follows the same companion lifecycle palette. */
+body .fd-signal-beam.state-whisper { filter: none !important; background: radial-gradient(circle at 82% 50%, rgba(210,182,111,.14), transparent 27%), rgba(255,255,255,.016) !important; }
+body .fd-signal-beam.state-echo { filter: none !important; background: radial-gradient(circle at 82% 50%, rgba(217,205,187,.14), transparent 27%), rgba(255,255,255,.016) !important; }
+body .fd-signal-beam.state-manifested { filter: none !important; background: radial-gradient(circle at 82% 50%, rgba(124,110,255,.16), transparent 27%), rgba(255,255,255,.018) !important; }
+body .fd-signal-beam.state-vanished { filter: none !important; background: radial-gradient(circle at 82% 50%, rgba(239,77,90,.15), transparent 27%), rgba(255,255,255,.016) !important; }
+
+body .fd-signal-beam.state-whisper .beam-core,
+body .fd-signal-beam.state-whisper i { background: linear-gradient(90deg, transparent, rgba(226,197,141,.08), rgba(226,197,141,.92), rgba(210,182,111,.75), transparent) !important; }
+body .fd-signal-beam.state-echo .beam-core,
+body .fd-signal-beam.state-echo i { background: linear-gradient(90deg, transparent, rgba(242,233,218,.08), rgba(242,233,218,.92), rgba(217,205,187,.76), transparent) !important; }
+body .fd-signal-beam.state-manifested .beam-core,
+body .fd-signal-beam.state-manifested i { background: linear-gradient(90deg, transparent, rgba(168,153,255,.08), rgba(168,153,255,.94), rgba(124,110,255,.80), transparent) !important; }
+body .fd-signal-beam.state-vanished .beam-core,
+body .fd-signal-beam.state-vanished i { background: linear-gradient(90deg, transparent, rgba(255,123,134,.08), rgba(255,123,134,.92), rgba(239,77,90,.78), transparent) !important; }
+
+body .fd-signal-beam.state-whisper b { border-color: rgba(210,182,111,.42) !important; color: var(--fd-whisper-soft) !important; background: rgba(141,104,71,.12) !important; box-shadow: 0 0 22px rgba(210,182,111,.14) !important; }
+body .fd-signal-beam.state-echo b { border-color: rgba(217,205,187,.42) !important; color: var(--fd-echo-soft) !important; background: rgba(155,141,121,.12) !important; box-shadow: 0 0 22px rgba(217,205,187,.14) !important; }
+body .fd-signal-beam.state-manifested b { border-color: rgba(124,110,255,.44) !important; color: var(--fd-manifested-soft) !important; background: rgba(85,70,198,.14) !important; box-shadow: 0 0 24px rgba(124,110,255,.18) !important; }
+body .fd-signal-beam.state-vanished b { border-color: rgba(239,77,90,.42) !important; color: var(--fd-vanished-soft) !important; background: rgba(167,45,56,.13) !important; box-shadow: 0 0 22px rgba(239,77,90,.16) !important; }
