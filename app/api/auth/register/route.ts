@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { AccountConflictError, AccountStorageUnavailableError, createAccount, findAccountByUsername, type AccountRecord } from "@/lib/account-storage";
 import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, readBoundedJson } from "@/lib/auth-abuse";
 import { assertSameOrigin, hashPassword, startSession } from "@/lib/auth";
+import { assertTurnstile, TurnstileRejectedError, TurnstileUnavailableError } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,8 @@ export async function POST(request: Request) {
     if (!acceptTerms) fields.acceptTerms = "You need to accept the Terms and Privacy Notice to create a FateDrop ID.";
     if (Object.keys(fields).length) return Response.json({ error: "Check the highlighted fields.", fields }, { status: 400 });
 
+    await assertTurnstile(request, payload.turnstileToken, "register");
+
     const now = Math.floor(Date.now() / 1000);
     const account: AccountRecord = {
       id: crypto.randomUUID(),
@@ -78,6 +81,8 @@ export async function POST(request: Request) {
     return Response.json({ created: true, fateId: account.fateId }, { status: 201 });
   } catch (error) {
     if (isRequestTooLargeError(error)) return Response.json({ error: "Request is too large." }, { status: 413 });
+    if (error instanceof TurnstileRejectedError) return Response.json({ error: "Security verification failed. Please try again." }, { status: 403 });
+    if (error instanceof TurnstileUnavailableError) return Response.json({ error: "Security verification is temporarily unavailable." }, { status: 503 });
     if (error instanceof AccountConflictError) return Response.json({ error: "An account could not be created with those details." }, { status: 409 });
     if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
     if (error instanceof Error && error.message === "CROSS_ORIGIN") return Response.json({ error: "Request rejected." }, { status: 403 });
