@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
+import { assertSameOrigin } from "@/lib/auth";
 import { searchSignalFateVerdict } from "@/lib/fatefind-verdict";
 
 export async function POST(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch {
+    return NextResponse.json({ success: false, error: "CROSS_SITE_REQUEST" }, { status: 403 });
+  }
+
   let body: { query?: unknown; leftId?: unknown; rightId?: unknown };
   try {
     body = await request.json() as typeof body;
