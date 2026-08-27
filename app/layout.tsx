@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     images: ["/assets/home/koru-home-hero.png"],
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: "/assets/fatedrop-logo-mark.png",
+    shortcut: "/assets/fatedrop-logo-mark.png",
+    apple: "/assets/fatedrop-logo-mark.png",
   },
 };
 
