@@ -1,5 +1,5 @@
 import { AccountStorageUnavailableError, findAccountByEmail } from "@/lib/account-storage";
-import { bearerTokenFromRequest, endApiSession, getSnapshotForRequest, startApiSession, verifyPassword } from "@/lib/auth";
+import { bearerTokenFromRequest, endApiSession, getSnapshotForRequest, startApiSession, verifyLoginPassword } from "@/lib/auth";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
@@ -34,10 +34,10 @@ export async function POST(request: Request) {
   try {
     const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
     const email = typeof payload?.email === "string" ? payload.email.trim().toLowerCase().slice(0, 254) : "";
-    const password = typeof payload?.password === "string" ? payload.password : "";
-    if (!email || !password || password.length > 1024) return Response.json({ error: "Email and password are required." }, { status: 400 });
+    const password = typeof payload?.password === "string" && payload.password.length <= 200 ? payload.password : "";
+    if (!email || !password) return Response.json({ error: "Email and password are required." }, { status: 400 });
     const account = await findAccountByEmail(email);
-    const valid = account ? await verifyPassword(password, account.passwordHash) : false;
+    const valid = await verifyLoginPassword(password, account?.passwordHash);
     if (!account || !valid) return Response.json({ error: "Email or password is incorrect." }, { status: 401, headers: { "cache-control": "no-store" } });
     const session = await startApiSession(account.id);
     const snapshot = await getSnapshotForRequest(new Request(request.url, { headers: { authorization: `Bearer ${session.token}` } }));
