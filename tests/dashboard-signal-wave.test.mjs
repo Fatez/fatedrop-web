@@ -9,6 +9,7 @@ test("dashboard lifecycle waves separate real detections from real sent alerts",
   const page = await source("app/dashboard/page.tsx");
   const dashboard = await source("lib/dashboard.ts");
   const trends = await source("lib/signal-trends.ts");
+  const live = await source("lib/live-signals.ts");
 
   assert.ok(page.includes("7D DETECTED"));
   assert.ok(page.includes("ALERTS SENT / UTC DAY"));
@@ -25,12 +26,11 @@ test("dashboard lifecycle waves separate real detections from real sent alerts",
   assert.ok(dashboard.includes("signalSummary?.manifested.total"));
   assert.ok(dashboard.includes("signalSummary?.vanished.total"));
 
-  assert.ok(trends.includes("FROM fatedrop_signals"));
-  assert.ok(trends.includes("fatedrop_signal_delivery_attempts"));
-  assert.ok(trends.includes("detected_at >= ${day0}"));
-  assert.ok(trends.includes("state IN ('whisper', 'echo', 'manifested', 'vanished')"));
-  assert.ok(trends.includes("Array.from({ length: days }"));
-  assert.ok(trends.includes("value: 0"));
+  assert.ok(trends.includes("getLiveCloudSignalSummary"));
+  assert.ok(live.includes('"/api/signal-summary"'));
+  assert.ok(live.includes('cache: "no-store"'));
+  assert.equal(trends.includes("FROM fatedrop_signals"), false);
+  assert.equal(trends.includes("fatedrop_signal_delivery_attempts"), false);
 });
 
 test("dashboard lifecycle wave never derives counts from personal signal_seen events or snapshot trends", async () => {
@@ -41,10 +41,13 @@ test("dashboard lifecycle wave never derives counts from personal signal_seen ev
   assert.equal(page.includes("24H ACTIVITY"), false);
 });
 
-test("signal and delivery trend queries fail closed without taking down the dashboard", async () => {
+test("live signal and delivery reads fail closed without taking down the dashboard", async () => {
   const trends = await source("lib/signal-trends.ts");
-  assert.ok(trends.includes("try {"));
-  assert.ok(trends.includes("return null;"));
-  assert.ok(trends.includes("signal trend aggregation unavailable"));
-  assert.ok(trends.includes("signal delivery aggregation unavailable"));
+  const live = await source("lib/live-signals.ts");
+  assert.ok(trends.includes(".catch(() => null)"));
+  assert.ok(trends.includes("?.lifecycle ?? null"));
+  assert.ok(trends.includes("?.delivery ?? null"));
+  assert.ok(live.includes("if (!response.ok) return null"));
+  assert.ok(live.includes("catch {"));
+  assert.ok(live.includes("return null;"));
 });
