@@ -17,11 +17,19 @@ test("FateFind page consumes the canonical Cloud verdict instead of ranking True
   assert.doesNotMatch(page, /deliveryKnown !== b\.deliveryKnown/);
 });
 
-test("FateFind makes the Cloud-selected value leader the first retailer row without recalculating a winner", () => {
+test("FateFind makes only the Cloud-declared winner a visual value leader", () => {
   assert.match(page, /position\.offerId/);
+  assert.match(page, /isCloudValueWinner = result\.verdict\.winnerId === group\.id && isGroupSelectedOffer/);
+  assert.match(page, /isCloudValueWinner \? "fd-tp-offer value-leader" : "fd-tp-offer"/);
   assert.match(page, /FATEFIND VALUE LEADER/);
   assert.match(page, /CLOUD-RANKED VALUE POSITION/);
-  assert.match(page, /BEST VALUE · FATEDROP CLOUD/);
+});
+
+test("unknown RRP group leaders remain visible without masquerading as best value", () => {
+  assert.match(page, /VALUE UNVERIFIED · RRP UNKNOWN/);
+  assert.match(page, /LOWEST KNOWN TRUE PRICE · VALUE UNVERIFIED/);
+  assert.match(page, /BEST VERIFIED VALUE · FATEDROP CLOUD/);
+  assert.match(page, /hasVerifiedValuePosition/);
 });
 
 test("interactive value comparison asks Cloud for pairVerdict and has no browser RRP winner maths", () => {
