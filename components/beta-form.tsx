@@ -28,7 +28,7 @@ const roleCopy: Record<Role, RolePresentation> = {
     image: "/assets/signup/collector-signup.webp",
     alt: "Collector overlooking the FateDrop signal network with their companion and trading-card products",
     visualLabel: "COLLECTOR ACCESS",
-    lede: "Search the network, compare live value and follow the signal with one FateDrop ID.",
+    lede: "Join the collector beta first, then create your FateDrop ID for signed-in Web and App access.",
   },
   business: {
     tab: "Retailer or vendor",
@@ -170,7 +170,7 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
       <div className="form-heading">
         <small>{presentation.eyebrow}</small>
         <h2>{presentation.title}</h2>
-        <p>Only the details needed for this enquiry are stored. Marketing consent is separate and optional.</p>
+        <p>{role === "collector" ? "This beta registration stores your interest; it does not create your FateDrop ID. You can create your sign-in account after submitting." : "Only the details needed for this enquiry are stored. Marketing consent is separate and optional."}</p>
       </div>
 
       <form onSubmit={handleSubmit} onFocus={beginForm} noValidate>
@@ -232,13 +232,14 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
           <div className="form-actions">
             <button className="button button-primary" type="submit" disabled={status.kind === "loading" || status.kind === "success"}>{status.kind === "loading" ? "Storing securely…" : presentation.button} <span>↗</span></button>
             {status.message ? <p className={`form-status ${status.kind}`} role="status" aria-live="polite">{status.message}</p> : null}
+            {status.kind === "success" && role === "collector" ? <div className="fd-collector-account-next"><p><b>Beta registration saved.</b> Your FateDrop ID is a separate sign-in account for the Website and App.</p><Link className="button button-secondary" href="/account/register">Create your FateDrop ID <span>↗</span></Link></div> : null}
             <small>Stored in FateDrop’s private beta-lead database. Read the <Link href="/privacy">beta privacy notice</Link>.</small>
           </div>
         </div>
       </form>
 
       <style>{`
-        .fd-role-join-panel{overflow:hidden}.fd-join-role-visual{position:relative;height:clamp(260px,32vw,430px);margin:18px 0 28px;overflow:hidden;border:1px solid rgba(220,203,211,.12);border-radius:18px;background:#090b10}.fd-join-role-visual img{object-fit:cover;object-position:center}.fd-join-role-visual.role-collector img{object-position:center 50%}.fd-join-role-visual.role-business img{object-position:center 50%}.fd-join-role-visual.role-event img{object-position:center 50%}.fd-join-role-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,11,0) 44%,rgba(5,7,11,.9) 100%)}.fd-join-role-copy{position:absolute;z-index:2;left:20px;right:20px;bottom:18px;display:grid;gap:6px}.fd-join-role-copy small{color:#d2b66f;font-size:9px;font-weight:900;letter-spacing:.15em}.fd-join-role-copy strong{max-width:680px;color:#f0e7e2;font-family:Georgia,'Times New Roman',serif;font-size:clamp(18px,2vw,27px);font-weight:500;line-height:1.12}@media(max-width:720px){.fd-join-role-visual{height:260px;margin-top:14px;border-radius:14px}.fd-join-role-copy{left:16px;right:16px;bottom:15px}}
+        .fd-role-join-panel{overflow:hidden}.fd-join-role-visual{position:relative;height:clamp(260px,32vw,430px);margin:18px 0 28px;overflow:hidden;border:1px solid rgba(220,203,211,.12);border-radius:18px;background:#090b10}.fd-join-role-visual img{object-fit:cover;object-position:center}.fd-join-role-visual.role-collector img{object-position:center 50%}.fd-join-role-visual.role-business img{object-position:center 50%}.fd-join-role-visual.role-event img{object-position:center 50%}.fd-join-role-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,11,0) 44%,rgba(5,7,11,.9) 100%)}.fd-join-role-copy{position:absolute;z-index:2;left:20px;right:20px;bottom:18px;display:grid;gap:6px}.fd-join-role-copy small{color:#d2b66f;font-size:9px;font-weight:900;letter-spacing:.15em}.fd-join-role-copy strong{max-width:680px;color:#f0e7e2;font-family:Georgia,'Times New Roman',serif;font-size:clamp(18px,2vw,27px);font-weight:500;line-height:1.12}.fd-collector-account-next{display:grid;gap:10px;padding:14px;border:1px solid rgba(210,182,111,.14);border-radius:12px;background:rgba(210,182,111,.035)}.fd-collector-account-next p{margin:0;color:#aaa1a5;font-size:11px;line-height:1.55}.fd-collector-account-next b{color:#e4d7ce}.fd-collector-account-next .button{justify-self:start}@media(max-width:720px){.fd-join-role-visual{height:260px;margin-top:14px;border-radius:14px}.fd-join-role-copy{left:16px;right:16px;bottom:15px}}
       `}</style>
     </div>
   );
