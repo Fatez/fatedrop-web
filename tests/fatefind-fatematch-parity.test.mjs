@@ -4,13 +4,15 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
-test("Web FateFind preserves the proven True Price comparison search and does not save monitoring rules", () => {
+test("Web FateFind preserves the proven comparison experience while taking the value verdict from Cloud", () => {
   const page = read("app/dashboard/fatefind/page.tsx");
-  const client = read("lib/signal-engine-client.ts");
-  assert.ok(page.includes("searchSignalTruePrice"));
+  const verdictClient = read("lib/fatefind-verdict.ts");
+  assert.ok(page.includes("searchSignalFateVerdict"));
   assert.ok(page.includes("ValueCompare"));
   assert.ok(page.includes("FATEFIND · VALUE INTELLIGENCE"));
-  assert.ok(client.includes('"/api/true-price"'));
+  assert.ok(page.includes("TRUE PRICE"));
+  assert.ok(page.includes("VS RRP / REF"));
+  assert.ok(verdictClient.includes('"/api/fatefind/matches"'));
   assert.equal(page.includes('fetch("/api/fate-matches"'), false);
 });
 
