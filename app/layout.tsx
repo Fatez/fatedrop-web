@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { canonicalSiteUrl } from "@/lib/site-url";
 import "./globals.css";
+import "./signal-stage-colours.css";
 import "./accessibility.css";
 import "./koru-theme.css";
 import "./koru-product-theme.css";
