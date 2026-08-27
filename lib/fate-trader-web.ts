@@ -48,6 +48,12 @@ export type FateTraderEnvelope<T> = {
   meta?: { requestId?: string | null; apiVersion?: string };
 };
 
+// Compatibility for older public content only. Fate Trader is now a canonical
+// Fate Network product and is never hidden by a Web build/environment flag.
+export function fateTraderWebEnabled() {
+  return true;
+}
+
 const safeSingle = /^[A-Za-z0-9_.:-]+$/;
 
 export function fateTraderCloudPath(parts: string[]) {
