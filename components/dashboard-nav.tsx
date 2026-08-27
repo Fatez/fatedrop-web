@@ -18,6 +18,7 @@ const fateNetwork: readonly NavItem[] = [
   ["◇", "FateMatch", "/dashboard/watchlist", "Create and manage product monitoring conditions until a qualifying buying opportunity appears."],
   ["⇄", "Fate Trader", "/dashboard/trader", "Find collector-to-collector trade opportunities using canonical card identities."],
   ["⌖", "Local Radar", "/dashboard/local-radar", "Find nearby physical retailers and see expected or confirmed local stock intelligence."],
+  ["◫", "Events", "/dashboard/events", "Browse Fate Encounters and source-backed real-world TCG events from inside your FateDrop dashboard."],
   ["▦", "Retailers", "/dashboard/stores", "Discover major, specialist and independent retailers across Fate Network."],
 ];
 

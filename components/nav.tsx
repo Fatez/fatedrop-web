@@ -24,7 +24,7 @@ export function Nav() {
       <div className="nav-shell">
         <BrandMark />
         <nav className={open ? "nav-links is-open" : "nav-links"} aria-label="Main navigation">
-          {siteConfig.nav.map((item) => item.label === "Merch" ? (
+          {siteConfig.nav.filter((item) => item.href !== "/events").map((item) => item.label === "Merch" ? (
             <div className={`merch-menu${pathname.startsWith("/merch") ? " active" : ""}${merchOpen ? " is-open" : ""}`} key={item.href}>
               <button className="merch-menu-trigger" type="button" aria-haspopup="menu" aria-expanded={merchOpen} onClick={() => { setMerchOpen((current) => !current); setAccountOpen(false); }}>
                 Merch <span aria-hidden="true">⌄</span>

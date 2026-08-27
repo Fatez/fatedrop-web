@@ -28,9 +28,9 @@ test("every retained dashboard destination has a real page", () => {
 test("core dashboard navigation keeps every collector destination in the approved workspace", () => {
   const nav = fs.readFileSync("components/dashboard-nav.tsx", "utf8");
   const shell = fs.readFileSync("components/dashboard-page-shell.tsx", "utf8");
-  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/network", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/local-radar", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
+  for (const href of ["/dashboard", "/dashboard/search", "/dashboard/alerts", "/dashboard/network", "/dashboard/fatefind", "/dashboard/watchlist", "/dashboard/wishlist", "/dashboard/stores", "/dashboard/local-radar", "/dashboard/events", "/dashboard/avatar", "/dashboard/membership", "/dashboard/discord"]) assert.ok(nav.includes(href));
   assert.equal(nav.includes('"/dashboard/true-price"'), false);
-  assert.equal(nav.includes('"/dashboard/events"'), false);
+  assert.ok(nav.includes('"Events", "/dashboard/events"'));
   assert.ok(shell.includes('href="/dashboard/notifications"'));
   assert.ok(shell.includes('href="/dashboard/profile"'));
   assert.ok(nav.includes('["⌕", "Search", "/dashboard/search",'));
