@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import Script from "next/script";
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Mode = "register" | "login";
+
+declare global {
+  interface Window {
+    turnstile?: { reset: () => void };
+  }
+}
 
 function safeNextPath(value: string | null, fallback: string) {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return fallback;
@@ -12,7 +19,7 @@ function safeNextPath(value: string | null, fallback: string) {
   return value;
 }
 
-export function AccountAuthForm({ mode }: { mode: Mode }) {
+export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnstileSiteKey: string }) {
   const router = useRouter();
   const search = useSearchParams();
   const [busy, setBusy] = useState(false);
@@ -22,6 +29,7 @@ export function AccountAuthForm({ mode }: { mode: Mode }) {
   const defaultNext = mode === "register" ? "/account?welcome=1" : "/account";
   const safeNext = safeNextPath(requestedNext, defaultNext);
   const nextQuery = requestedNext ? `?next=${encodeURIComponent(safeNext)}` : "";
+  const turnstileReady = process.env.NODE_ENV !== "production" || Boolean(turnstileSiteKey);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,6 +37,12 @@ export function AccountAuthForm({ mode }: { mode: Mode }) {
     setError("");
     setFields({});
     const data = new FormData(event.currentTarget);
+    const turnstileToken = data.get("cf-turnstile-response");
+    if (turnstileSiteKey && !turnstileToken) {
+      setError("Complete the security check before continuing.");
+      setBusy(false);
+      return;
+    }
     const body = mode === "register"
       ? {
           displayName: data.get("displayName"),
@@ -36,8 +50,9 @@ export function AccountAuthForm({ mode }: { mode: Mode }) {
           password: data.get("password"),
           confirmPassword: data.get("confirmPassword"),
           acceptTerms: data.get("acceptTerms") === "on",
+          turnstileToken,
         }
-      : { email: data.get("email"), password: data.get("password") };
+      : { email: data.get("email"), password: data.get("password"), turnstileToken };
 
     try {
       const response = await fetch(`/api/auth/${mode}`, {
@@ -47,6 +62,7 @@ export function AccountAuthForm({ mode }: { mode: Mode }) {
       });
       const result = await response.json() as { error?: string; fields?: Record<string, string> };
       if (!response.ok) {
+        window.turnstile?.reset();
         setError(result.error || "That did not work. Please try again.");
         setFields(result.fields || {});
         return;
@@ -54,6 +70,7 @@ export function AccountAuthForm({ mode }: { mode: Mode }) {
       router.push(safeNext);
       router.refresh();
     } catch {
+      window.turnstile?.reset();
       setError("FateDrop could not reach the account service.");
     } finally {
       setBusy(false);
@@ -62,6 +79,7 @@ export function AccountAuthForm({ mode }: { mode: Mode }) {
 
   return (
     <form className="identity-auth-form" onSubmit={submit} noValidate>
+      {turnstileSiteKey ? <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" /> : null}
       {mode === "register" ? (
         <label>
           <span>Display name</span>
@@ -93,8 +111,10 @@ export function AccountAuthForm({ mode }: { mode: Mode }) {
           </label>
         </>
       ) : null}
+      {turnstileSiteKey ? <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-action={mode} data-theme="dark" /> : null}
+      {!turnstileReady ? <p className="identity-form-status error" role="alert">Security verification is unavailable.</p> : null}
       {error ? <p className="identity-form-status error" role="alert">{error}</p> : null}
-      <button className="button button-primary" type="submit" disabled={busy}>
+      <button className="button button-primary" type="submit" disabled={busy || !turnstileReady}>
         {busy ? "Connecting…" : mode === "register" ? "Create my FateDrop ID" : "Enter the network"} <span>↗</span>
       </button>
       <p className="identity-auth-switch">
