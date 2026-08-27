@@ -25,8 +25,8 @@ const roleCopy: Record<Role, RolePresentation> = {
     eyebrow: "Free collector beta",
     title: "Find your way in early.",
     button: "Join the Collector Beta",
-    image: "/assets/market/collectors.png",
-    alt: "Collector using FateDrop at a trading-card setup",
+    image: "/assets/signup/collector-signup.webp",
+    alt: "Collector overlooking the FateDrop signal network with their companion and trading-card products",
     visualLabel: "COLLECTOR ACCESS",
     lede: "Search the network, compare live value and follow the signal with one FateDrop ID.",
   },
@@ -35,8 +35,8 @@ const roleCopy: Record<Role, RolePresentation> = {
     eyebrow: "Founding partner enquiry",
     title: "Put your catalogue on the map.",
     button: "Connect Your Catalogue",
-    image: "/assets/market/retailers.png",
-    alt: "Independent TCG retailer inside a trading-card store",
+    image: "/assets/signup/retailer-signup.webp",
+    alt: "FateDrop retailer space with trading-card displays, signal mapping and Oru behind the counter",
     visualLabel: "RETAILER ACCESS",
     lede: "Connect useful stock to collector demand while keeping your own shop, checkout and customer relationship.",
   },
@@ -45,8 +45,8 @@ const roleCopy: Record<Role, RolePresentation> = {
     eyebrow: "Event listing enquiry",
     title: "Bring your event into the network.",
     button: "List an Event",
-    image: "/assets/market/events.png",
-    alt: "Busy trading-card convention and event hall",
+    image: "/assets/signup/events-signup.webp",
+    alt: "Busy FateDrop trading-card event with collectors, vendors and the city beyond",
     visualLabel: "EVENT ACCESS",
     lede: "Make source-backed shows, venues and participating vendors easier for collectors to discover.",
   },
@@ -159,7 +159,7 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
       </div>
 
       <div className={`fd-join-role-visual role-${role}`}>
-        <Image src={presentation.image} alt={presentation.alt} fill sizes="(max-width: 900px) 100vw, 720px" />
+        <Image src={presentation.image} alt={presentation.alt} fill sizes="(max-width: 900px) 100vw, 720px" priority={role === initialRole} />
         <div className="fd-join-role-shade" aria-hidden="true" />
         <div className="fd-join-role-copy">
           <small>{presentation.visualLabel}</small>
@@ -238,7 +238,7 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
       </form>
 
       <style>{`
-        .fd-role-join-panel{overflow:hidden}.fd-join-role-visual{position:relative;height:clamp(230px,29vw,390px);margin:18px 0 28px;overflow:hidden;border:1px solid rgba(220,203,211,.12);border-radius:18px;background:#090b10}.fd-join-role-visual img{object-fit:cover;object-position:center}.fd-join-role-visual.role-collector img{object-position:center 42%}.fd-join-role-visual.role-business img{object-position:center 48%}.fd-join-role-visual.role-event img{object-position:center 46%}.fd-join-role-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,11,.03) 35%,rgba(5,7,11,.92) 100%),linear-gradient(90deg,rgba(80,48,96,.12),transparent 48%)}.fd-join-role-copy{position:absolute;z-index:2;left:20px;right:20px;bottom:18px;display:grid;gap:6px}.fd-join-role-copy small{color:#d2b66f;font-size:9px;font-weight:900;letter-spacing:.15em}.fd-join-role-copy strong{max-width:620px;color:#f0e7e2;font-family:Georgia,'Times New Roman',serif;font-size:clamp(18px,2vw,27px);font-weight:500;line-height:1.12}@media(max-width:720px){.fd-join-role-visual{height:250px;margin-top:14px;border-radius:14px}.fd-join-role-copy{left:16px;right:16px;bottom:15px}}
+        .fd-role-join-panel{overflow:hidden}.fd-join-role-visual{position:relative;height:clamp(260px,32vw,430px);margin:18px 0 28px;overflow:hidden;border:1px solid rgba(220,203,211,.12);border-radius:18px;background:#090b10}.fd-join-role-visual img{object-fit:cover;object-position:center}.fd-join-role-visual.role-collector img{object-position:center 50%}.fd-join-role-visual.role-business img{object-position:center 50%}.fd-join-role-visual.role-event img{object-position:center 50%}.fd-join-role-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,11,0) 44%,rgba(5,7,11,.9) 100%)}.fd-join-role-copy{position:absolute;z-index:2;left:20px;right:20px;bottom:18px;display:grid;gap:6px}.fd-join-role-copy small{color:#d2b66f;font-size:9px;font-weight:900;letter-spacing:.15em}.fd-join-role-copy strong{max-width:680px;color:#f0e7e2;font-family:Georgia,'Times New Roman',serif;font-size:clamp(18px,2vw,27px);font-weight:500;line-height:1.12}@media(max-width:720px){.fd-join-role-visual{height:260px;margin-top:14px;border-radius:14px}.fd-join-role-copy{left:16px;right:16px;bottom:15px}}
       `}</style>
     </div>
   );
