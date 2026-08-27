@@ -45,7 +45,7 @@ const roleCopy: Record<Role, RolePresentation> = {
     eyebrow: "Event listing enquiry",
     title: "Bring your event into the network.",
     button: "List an Event",
-    image: "/assets/signup/events-signup.webp",
+    image: "/assets/signup/event-signup.webp",
     alt: "Busy FateDrop trading-card event with collectors, vendors and the city beyond",
     visualLabel: "EVENT ACCESS",
     lede: "Make source-backed shows, venues and participating vendors easier for collectors to discover.",
