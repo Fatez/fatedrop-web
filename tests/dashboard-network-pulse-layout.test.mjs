@@ -5,25 +5,24 @@ import assert from "node:assert/strict";
 
 const pulse = fs.readFileSync(path.join(process.cwd(), "components/dashboard-network-pulse.tsx"), "utf8");
 
-test("Network Pulse stays a compact dashboard card rather than becoming a full-width hero", () => {
+test("Network Pulse keeps its original compact dashboard-card shape", () => {
+  assert.match(pulse, /min-height:258px/);
+  assert.match(pulse, /grid-template-columns:minmax\(0,1fr\) 128px/);
   assert.doesNotMatch(pulse, /fd-reference-grid>\.fd-network-pulse-card/);
-  assert.match(pulse, /grid-template-columns:minmax\(0,1\.15fr\) minmax\(190px,\.85fr\)/);
-  assert.match(pulse, /min-height:250px/);
 });
 
-test("Network Pulse uses the supplied UK network artwork and canonical metrics", () => {
+test("Network Pulse swaps only the decorative visual for the supplied UK network artwork", () => {
   assert.match(pulse, /\/assets\/dashboard\/network-pulse-map\.svg/);
-  assert.match(pulse, /ACTIVE RETAILERS/);
-  assert.match(pulse, /PRODUCTS TRACKED/);
-  assert.match(pulse, /SIGNALS · 7D/);
+  assert.match(pulse, /The live heartbeat of FateDrop\./);
+  assert.match(pulse, /map is illustrative; the numbers come from real network data/i);
+});
+
+test("Network Pulse displays only canonical metric inputs", () => {
   assert.match(pulse, /metric\(retailers\)/);
   assert.match(pulse, /metric\(products\)/);
   assert.match(pulse, /metric\(signals\)/);
-  assert.match(pulse, /Artwork is illustrative; the displayed metrics come from FateDrop network data/);
-});
-
-test("Network Pulse never hard-codes displayed network counts", () => {
+  assert.match(pulse, /Retailers<br\/>active/);
+  assert.match(pulse, /Products<br\/>tracked/);
+  assert.match(pulse, /Signals<br\/>7D/);
   assert.doesNotMatch(pulse, />\s*\d+\s*<\/b>/);
-  assert.match(pulse, /NETWORK DATA LIVE/);
-  assert.match(pulse, /NETWORK DATA UNAVAILABLE/);
 });
