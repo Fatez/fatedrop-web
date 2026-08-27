@@ -24,27 +24,33 @@ test("every static retailer registry handoff is HTTPS", () => {
   }
 });
 
-test("Cloud catalogue and FateFind handoffs are sanitized before dashboard rendering", () => {
+test("Cloud catalogue FateFind and retailer storefront handoffs are sanitized before dashboard rendering", () => {
   const client = read("lib/signal-engine-client.ts");
   const network = read("lib/retailer-network.ts");
   const search = read("app/dashboard/search/page.tsx");
   const fateFind = read("app/dashboard/fatefind/page.tsx");
   const stores = read("app/dashboard/stores/page.tsx");
   const directory = read("components/retailer-market-directory.tsx");
+  const storefront = read("app/dashboard/stores/[id]/page.tsx");
 
   assert.ok(client.includes("safeExternalHttpsUrl(offer.url)"));
   assert.ok(client.includes("safeExternalHttpsUrl(offer.productUrl)"));
   assert.ok(client.includes("return safe ? [safe] : []"), "unsafe Cloud offers must be removed rather than rendered as broken links");
-  assert.ok(network.includes("safeExternalHttpsUrl(registry?.website)"));
-  assert.ok(network.includes("safeExternalHttpsUrl(registry.website)"));
+  assert.ok(client.includes("safeExternalHttpsUrl(profile.websiteUrl)"));
+  assert.ok(client.includes("safeExternalHttpsUrl(profile.logoUrl)"));
+  assert.ok(client.includes("safeExternalHttpsUrl(location.websiteUrl)"));
+  assert.ok(network.includes("safeExternalHttpsUrl(directory.websiteUrl)"));
+  assert.ok(network.includes("safeExternalHttpsUrl(directory.logoUrl)"));
 
   assert.ok(search.includes('href={offer.url}'));
   assert.ok(fateFind.includes('href={offer.productUrl}'));
   assert.ok(stores.includes("<RetailerMarketDirectory"));
-  assert.ok(directory.includes('href={retailer.website}'));
+  assert.ok(directory.includes('/dashboard/stores/${encodeURIComponent(retailer.id)}'));
+  assert.ok(storefront.includes('href={retailer.websiteUrl}'));
+  assert.ok(storefront.includes('href={offer.url}'));
   assert.ok(search.includes('target="_blank" rel="noreferrer"'));
   assert.ok(fateFind.includes('target="_blank" rel="noreferrer"'));
-  assert.ok(directory.includes('target="_blank" rel="noreferrer"'));
+  assert.ok(storefront.includes('target="_blank" rel="noreferrer"'));
 });
 
 test("lead website and ticket submissions share the HTTPS-only URL guard", () => {
