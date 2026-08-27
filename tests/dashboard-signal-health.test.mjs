@@ -4,10 +4,11 @@ import test from 'node:test';
 
 const dashboardSource = await readFile(new URL('../lib/dashboard.ts', import.meta.url), 'utf8');
 const trendSource = await readFile(new URL('../lib/signal-trends.ts', import.meta.url), 'utf8');
+const liveSource = await readFile(new URL('../lib/live-signals.ts', import.meta.url), 'utf8');
 const chartSource = await readFile(new URL('../lib/signal-health-chart.ts', import.meta.url), 'utf8');
 const pageSource = await readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8');
 
-test('seven-day lifecycle headline totals come only from the persisted signal ledger', () => {
+test('seven-day lifecycle headline totals come only from canonical live signal truth', () => {
   assert.match(dashboardSource, /whisper: signalSummary\?\.whisper\.total \?\? null/);
   assert.match(dashboardSource, /echo: signalSummary\?\.echo\.total \?\? null/);
   assert.match(dashboardSource, /manifested: signalSummary\?\.manifested\.total \?\? null/);
@@ -16,19 +17,20 @@ test('seven-day lifecycle headline totals come only from the persisted signal le
   assert.doesNotMatch(dashboardSource, /signalSummary\?\.manifested\.total \?\? network/);
 });
 
-test('dashboard can use the live Signal Engine aggregate when local Neon credentials are unavailable', () => {
-  assert.match(trendSource, /defaultSignalEngineUrl = "https:\/\/fatedrop-cloud-production\.up\.railway\.app"/);
-  assert.match(trendSource, /\/api\/signal-health\?days=\$\{safeDays\}/);
-  assert.match(trendSource, /cache: "no-store"/);
-  assert.match(trendSource, /return \(await getRemoteSignalHealth\(safeDays\)\)\?\.lifecycle \?\? null/);
-  assert.match(trendSource, /return \(await getRemoteSignalHealth\(safeDays\)\)\?\.delivery \?\? null/);
+test('dashboard uses the live Cloud aggregate without local Neon credentials or private diagnostic auth', () => {
+  assert.match(liveSource, /DEFAULT_SIGNAL_ENGINE_URL = "https:\/\/fatedrop-cloud-production\.up\.railway\.app"/);
+  assert.match(liveSource, /"\/api\/signal-summary"/);
+  assert.match(liveSource, /cache: "no-store"/);
+  assert.doesNotMatch(liveSource, /DATABASE_URL|FATEDROP_SIGNAL_API_TOKEN/);
+  assert.match(trendSource, /getLiveCloudSignalSummary\(safeDays\)/);
   assert.match(trendSource, /source\.available !== true/);
 });
 
 test('delivery ledger keeps sent, policy-disabled suppression and actual issues separate', () => {
-  assert.match(trendSource, /if \(result === "sent"\) point\.sent \+= value/);
-  assert.match(trendSource, /else if \(result === "skipped" && detail === "disabled"\) point\.policySkipped \+= value/);
-  assert.match(trendSource, /else point\.issues \+= value/);
+  assert.match(trendSource, /const sent = finite\(rawDelivery\.sent\)/);
+  assert.match(trendSource, /const policySkipped = finite\(rawDelivery\.policySkipped\)/);
+  assert.match(trendSource, /const issues = finite\(rawDelivery\.issues\)/);
+  assert.match(trendSource, /delivery\[state\] = \{ sent: sent!, policySkipped: policySkipped!, issues: issues!/);
   assert.match(pageSource, /7D SENT/);
   assert.match(pageSource, /POLICY SUPPRESSED/);
   assert.match(pageSource, /DELIVERY ISSUES/);
@@ -49,7 +51,7 @@ test('dashboard chart uses a shared honest scale with a real zero baseline', () 
   assert.doesNotMatch(pageSource, /Math\.max\(1, \.\.\.points\.map\(\(point\) => point\.value\)\)/);
 });
 
-test('dashboard is explicit only when both operational ledger paths are unavailable', () => {
+test('dashboard is explicit only when live operational signal paths are unavailable', () => {
   assert.match(pageSource, /7D DETECTED/);
   assert.match(pageSource, /ALERTS SENT \/ UTC DAY/);
   assert.match(pageSource, /Signal ledger unavailable/);
