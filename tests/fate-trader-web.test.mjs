@@ -48,7 +48,8 @@ test("Trader proxy forwards browser cookies or native Bearer sessions and protec
   assert.match(proxy, /Authorization/);
   assert.match(proxy, /assertSameOrigin/);
   assert.match(proxy, /fateTraderCloudPath/);
-  assert.match(proxy, /fateTraderWebEnabled/);
+  assert.doesNotMatch(proxy, /fateTraderWebEnabled/);
+  assert.doesNotMatch(proxy, /Fate Trader is not enabled/);
   assert.match(proxy, /TRADER_UPSTREAM_UNAVAILABLE/);
 });
 
@@ -73,11 +74,17 @@ test("Want flow persists exact identity before structured trade constraints", as
   assert.match(source, /acceptedGradingCompanies/);
 });
 
-test("dashboard route and nav remain feature gated", async () => {
+test("dashboard route and navigation keep canonical Fate Trader discoverable without a public build flag", async () => {
   const page = await read("../app/dashboard/trader/page.tsx");
   const nav = await read("../components/dashboard-nav.tsx");
-  assert.match(page, /fateTraderWebEnabled\(\)/);
-  assert.match(page, /notFound\(\)/);
-  assert.match(nav, /NEXT_PUBLIC_FATE_TRADER_ENABLED/);
+  const proxy = await read("../app/api/trader/[...path]/route.ts");
+  const env = await read("../.env.example");
+  assert.match(page, /FateTraderAudit/);
+  assert.doesNotMatch(page, /notFound\(\)/);
+  assert.doesNotMatch(page, /fateTraderWebEnabled/);
   assert.match(nav, /Fate Trader/);
+  assert.match(nav, /"\/dashboard\/trader"/);
+  assert.doesNotMatch(nav, /NEXT_PUBLIC_FATE_TRADER_ENABLED/);
+  assert.doesNotMatch(proxy, /NEXT_PUBLIC_FATE_TRADER_ENABLED|fateTraderWebEnabled/);
+  assert.doesNotMatch(env, /NEXT_PUBLIC_FATE_TRADER_ENABLED/);
 });
