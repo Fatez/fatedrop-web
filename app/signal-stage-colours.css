@@ -7,7 +7,8 @@
   --fd-echo-glow: rgba(210, 161, 107, .3);
 }
 
-body .fd-signal-thumb.echo {
+body .fd-signal-thumb.echo,
+body .fd-mini-thumb.echo {
   border-color: rgba(210, 161, 107, .32) !important;
   color: var(--fd-echo-soft) !important;
   background: radial-gradient(circle, rgba(173, 118, 67, .2), transparent 66%), #0b0c11 !important;
@@ -15,11 +16,17 @@ body .fd-signal-thumb.echo {
 }
 
 body .fd-ledger-stages .echo span,
-body .fd-stage-trend.echo {
+body .fd-stage-trend.echo,
+body .fd-lifecycle-card.echo {
   color: var(--fd-echo) !important;
 }
 
 body .fd-ledger-row.echo .fd-ledger-state i {
   background: var(--fd-echo) !important;
   box-shadow: 0 0 12px var(--fd-echo-glow) !important;
+}
+
+body .fd-signal-row aside b.echo {
+  color: var(--fd-echo-soft) !important;
+  background: rgba(158, 109, 67, .11) !important;
 }
