@@ -48,10 +48,6 @@ export type FateTraderEnvelope<T> = {
   meta?: { requestId?: string | null; apiVersion?: string };
 };
 
-export function fateTraderWebEnabled() {
-  return process.env.NEXT_PUBLIC_FATE_TRADER_ENABLED === "true";
-}
-
 const safeSingle = /^[A-Za-z0-9_.:-]+$/;
 
 export function fateTraderCloudPath(parts: string[]) {
