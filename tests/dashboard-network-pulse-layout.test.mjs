@@ -14,15 +14,24 @@ test("Network Pulse keeps its original compact dashboard-card shape", () => {
 test("Network Pulse swaps only the decorative visual for the supplied UK network artwork", () => {
   assert.match(pulse, /\/assets\/dashboard\/network-pulse-map\.svg/);
   assert.match(pulse, /The live heartbeat of FateDrop\./);
-  assert.match(pulse, /map is illustrative; the numbers come from real network data/i);
+  assert.match(pulse, /map is illustrative; stale or unavailable snapshot metrics stay unknown/i);
 });
 
 test("Network Pulse displays only canonical metric inputs", () => {
-  assert.match(pulse, /metric\(retailers\)/);
-  assert.match(pulse, /metric\(products\)/);
+  assert.match(pulse, /metric\(visibleRetailers\)/);
+  assert.match(pulse, /metric\(visibleProducts\)/);
   assert.match(pulse, /metric\(signals\)/);
   assert.match(pulse, /Retailers<br\/>active/);
   assert.match(pulse, /Products<br\/>tracked/);
   assert.match(pulse, /Signals<br\/>7D/);
   assert.doesNotMatch(pulse, />\s*\d+\s*<\/b>/);
+});
+
+test("Network Pulse fails closed when the Cloud snapshot exceeds its 15 minute freshness boundary", () => {
+  assert.match(pulse, /NETWORK_SNAPSHOT_FRESH_SECONDS = 15 \* 60/);
+  assert.match(pulse, /getLatestNetworkMetricSnapshot\(\)/);
+  assert.match(pulse, /snapshotAgeSeconds <= NETWORK_SNAPSHOT_FRESH_SECONDS/);
+  assert.match(pulse, /visibleRetailers = snapshotFresh \? retailers : null/);
+  assert.match(pulse, /visibleProducts = snapshotFresh \? products : null/);
+  assert.match(pulse, /metric\(signals\)/);
 });
