@@ -26,10 +26,17 @@ export async function GET(request: Request) {
     });
 
     const guild = await ensureDiscordGuildMember(identity.id, token.access_token);
-    if (guild.configured && !guild.joined) return Response.redirect(new URL("/account?discord=join-error", request.url));
+    if (!guild.configured) return Response.redirect(new URL("/account?discord=setup", request.url));
+    if (!guild.joined) return Response.redirect(new URL("/account?discord=join-error", request.url));
 
-    if (!hasPremiumAccess(snapshot.membership)) return Response.redirect(new URL("/account?discord=linked-free", request.url));
+    const premium = hasPremiumAccess(snapshot.membership);
     const role = await syncPremiumDiscordRole(link, snapshot.membership);
+
+    if (!premium) {
+      const result = role.configured && !role.synced ? "linked-free-role-error" : "linked-free";
+      return Response.redirect(new URL(`/account?discord=${result}`, request.url));
+    }
+
     const result = role.synced ? "linked" : role.configured && !role.memberFound ? "join" : "linked-no-role";
     return Response.redirect(new URL(`/account?discord=${result}`, request.url));
   } catch {
