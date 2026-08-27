@@ -5,23 +5,25 @@ import assert from "node:assert/strict";
 
 const pulse = fs.readFileSync(path.join(process.cwd(), "components/dashboard-network-pulse.tsx"), "utf8");
 
-test("Network Pulse is promoted to a full-width first dashboard-grid card", () => {
-  assert.match(pulse, /\.fd-reference-grid>\.fd-network-pulse-card\{grid-column:1\/-1;order:-1/);
+test("Network Pulse stays a compact dashboard card rather than becoming a full-width hero", () => {
+  assert.doesNotMatch(pulse, /fd-reference-grid>\.fd-network-pulse-card/);
+  assert.match(pulse, /grid-template-columns:minmax\(0,1\.15fr\) minmax\(190px,\.85fr\)/);
+  assert.match(pulse, /min-height:250px/);
 });
 
-test("Network Pulse presents a UK network visual without inventing metric values", () => {
-  assert.match(pulse, /Schematic United Kingdom FateDrop network footprint/);
+test("Network Pulse uses the supplied UK network artwork and canonical metrics", () => {
+  assert.match(pulse, /\/assets\/dashboard\/network-pulse-map\.svg/);
   assert.match(pulse, /ACTIVE RETAILERS/);
   assert.match(pulse, /PRODUCTS TRACKED/);
   assert.match(pulse, /SIGNALS · 7D/);
   assert.match(pulse, /metric\(retailers\)/);
   assert.match(pulse, /metric\(products\)/);
   assert.match(pulse, /metric\(signals\)/);
-  assert.match(pulse, /node density follows the active-retailer count, not exact branch locations/);
+  assert.match(pulse, /Artwork is illustrative; the displayed metrics come from FateDrop network data/);
 });
 
-test("Network Pulse visual density derives from canonical retailer count rather than a hard-coded displayed count", () => {
-  assert.match(pulse, /visibleNodeCount = retailers/);
-  assert.match(pulse, /Math\.min\(networkNodes\.length/);
-  assert.doesNotMatch(pulse, />\s*\d+\s*<\/b><small>Retailers/);
+test("Network Pulse never hard-codes displayed network counts", () => {
+  assert.doesNotMatch(pulse, />\s*\d+\s*<\/b>/);
+  assert.match(pulse, /NETWORK DATA LIVE/);
+  assert.match(pulse, /NETWORK DATA UNAVAILABLE/);
 });
