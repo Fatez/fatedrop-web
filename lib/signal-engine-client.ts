@@ -1,5 +1,4 @@
 import { safeExternalHttpsUrl } from "./external-url";
-import { retailerRegistry } from "./retailer-registry";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 
@@ -144,30 +143,57 @@ export type SignalEngineStatus = {
   };
 };
 
+export type SignalRetailerMonitoring = {
+  configured: boolean;
+  healthy: boolean;
+  stale: boolean;
+  baselineCompleted: boolean;
+  productsSeen: number | null;
+  lastScanAt: number | null;
+  lastSuccessAt: number | null;
+};
+
 export type SignalRetailerDirectoryRecord = {
   id: string;
   name: string;
   websiteUrl: string | null;
+  logoUrl?: string | null;
+  description?: string | null;
   retailerClass: string;
   verification: string;
   tcgs: string[];
   online: boolean;
   physicalStores: boolean | null;
   physicalLocations: number | null;
-  monitoring: {
-    configured: boolean;
-    healthy: boolean;
-    stale: boolean;
-    baselineCompleted: boolean;
-    productsSeen: number | null;
-    lastScanAt: number | null;
-    lastSuccessAt: number | null;
-  };
+  monitoring: SignalRetailerMonitoring;
+};
+
+export type SignalRetailerLocation = {
+  id: string;
+  retailerId: string;
+  name: string;
+  address: string | null;
+  postcode: string | null;
+  latitude: number;
+  longitude: number;
+  websiteUrl: string | null;
+  phone: string | null;
+  verification: string;
+};
+
+export type SignalRetailerProfile = SignalRetailerDirectoryRecord & {
+  locations: SignalRetailerLocation[];
 };
 
 export type SignalRetailerDirectoryResponse = {
   success: boolean;
   retailers: SignalRetailerDirectoryRecord[];
+  disclaimer?: string;
+};
+
+export type SignalRetailerProfileResponse = {
+  success: boolean;
+  retailer: SignalRetailerProfile;
   disclaimer?: string;
 };
 
@@ -205,11 +231,24 @@ function safeFateFindOpportunity(offer: SignalFateFindOpportunity): SignalFateFi
   return { ...offer, url: offer.url ? safeExternalHttpsUrl(offer.url) : null };
 }
 
-function retailerFilterForQuery(query: string) {
+function safeRetailerProfile(profile: SignalRetailerProfile): SignalRetailerProfile {
+  return {
+    ...profile,
+    websiteUrl: safeExternalHttpsUrl(profile.websiteUrl),
+    logoUrl: safeExternalHttpsUrl(profile.logoUrl),
+    locations: Array.isArray(profile.locations) ? profile.locations.map((location) => ({
+      ...location,
+      websiteUrl: safeExternalHttpsUrl(location.websiteUrl),
+    })) : [],
+  };
+}
+
+async function retailerFilterForQuery(query: string) {
   const normalized = query.trim().toLocaleLowerCase("en-GB");
   if (!normalized) return null;
-  const retailer = retailerRegistry.find((item) => item.name.toLocaleLowerCase("en-GB") === normalized);
-  return retailer ? (retailer.cloudRetailerId ?? retailer.id) : null;
+  const directory = await getSignalRetailerDirectory();
+  const retailer = directory?.retailers.find((item) => item.name.toLocaleLowerCase("en-GB") === normalized);
+  return retailer?.id ?? null;
 }
 
 export async function searchSignalCatalogue(query: string, options: {
@@ -223,15 +262,11 @@ export async function searchSignalCatalogue(query: string, options: {
   cursor?: string;
 } = {}) {
   const clean = query.trim();
-  const inferredRetailer = options.retailer ? null : retailerFilterForQuery(clean);
+  const inferredRetailer = options.retailer ? null : await retailerFilterForQuery(clean);
   const retailerFilter = options.retailer ?? inferredRetailer;
   if (clean.length < 2 && !retailerFilter) return null;
 
   const params = new URLSearchParams({ limit: String(Math.min(Math.max(options.limit ?? 50, 1), 100)) });
-  // Store cards currently open Search using the retailer display name. Cloud's q
-  // field searches product title/SKU, while retailer is the actual catalogue
-  // filter. Resolve an exact known retailer name to that filter instead of
-  // pretending the shop name is a product keyword.
   if (clean.length >= 2 && !inferredRetailer) params.set("q", clean);
   if (retailerFilter) params.set("retailer", retailerFilter);
   if (options.inStock) params.set("inStock", "true");
@@ -286,4 +321,12 @@ export function getSignalEngineStatus(timeoutMs = 8_000) {
 
 export function getSignalRetailerDirectory(timeoutMs = 8_000) {
   return signalFetch<SignalRetailerDirectoryResponse>("/api/retailers", undefined, timeoutMs);
+}
+
+export async function getSignalRetailerProfile(retailerId: string, timeoutMs = 8_000) {
+  const cleanId = retailerId.trim();
+  if (!cleanId) return null;
+  const result = await signalFetch<SignalRetailerProfileResponse>(`/api/retailers/${encodeURIComponent(cleanId)}`, undefined, timeoutMs);
+  if (!result?.retailer) return null;
+  return { ...result, retailer: safeRetailerProfile(result.retailer) };
 }
