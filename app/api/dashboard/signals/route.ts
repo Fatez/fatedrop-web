@@ -17,7 +17,7 @@ export async function GET() {
     kind: signal.kind,
     intensity: signal.intensity,
     confidence: null,
-    title: "Premium signal detail",
+    title: signal.intensity === "major" ? "Major network movement detected" : "Premium signal detail",
     retailer: null,
     detail: null,
     deliveredPricePence: null,
