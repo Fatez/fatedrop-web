@@ -13,6 +13,7 @@ export type CloudPublicSignal = {
 
 export type CloudSignalResponse = {
   success: boolean;
+  contractVersion: number;
   source?: string;
   count: number;
   generatedAt: string;
@@ -31,6 +32,7 @@ export type CloudDeliveryTrendPoint = {
 export type CloudSignalSummaryResponse = {
   success: boolean;
   available: boolean;
+  contractVersion: number;
   source?: string;
   generatedAt: string;
   days?: number;
@@ -51,6 +53,7 @@ export type CloudSignalSummaryResponse = {
 };
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
+const PUBLIC_SIGNAL_CONTRACT_VERSION = 1;
 
 function signalEngineBaseUrl() {
   return (process.env.FATEDROP_SIGNAL_ENGINE_URL || DEFAULT_SIGNAL_ENGINE_URL).replace(/\/+$/, "");
@@ -72,12 +75,14 @@ async function liveFetch<T>(pathname: string, params: URLSearchParams, timeoutMs
   }
 }
 
-export function getLiveCloudSignals(limit = 100, timeoutMs = 8_000) {
+export async function getLiveCloudSignals(limit = 100, timeoutMs = 8_000) {
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
-  return liveFetch<CloudSignalResponse>("/api/signals", new URLSearchParams({ limit: String(safeLimit) }), timeoutMs);
+  const result = await liveFetch<CloudSignalResponse>("/api/signals", new URLSearchParams({ limit: String(safeLimit) }), timeoutMs);
+  return result?.contractVersion === PUBLIC_SIGNAL_CONTRACT_VERSION ? result : null;
 }
 
-export function getLiveCloudSignalSummary(days = 7, timeoutMs = 8_000) {
+export async function getLiveCloudSignalSummary(days = 7, timeoutMs = 8_000) {
   const safeDays = Math.max(2, Math.min(30, Math.trunc(days)));
-  return liveFetch<CloudSignalSummaryResponse>("/api/signal-summary", new URLSearchParams({ days: String(safeDays) }), timeoutMs);
+  const result = await liveFetch<CloudSignalSummaryResponse>("/api/signal-summary", new URLSearchParams({ days: String(safeDays) }), timeoutMs);
+  return result?.contractVersion === PUBLIC_SIGNAL_CONTRACT_VERSION ? result : null;
 }
