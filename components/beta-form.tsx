@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
@@ -7,10 +8,48 @@ import { trackEvent } from "@/lib/analytics";
 type Role = "collector" | "business" | "event";
 type Status = { kind: "idle" | "loading" | "error" | "success"; message: string };
 
-const roleCopy: Record<Role, { tab: string; eyebrow: string; title: string; button: string }> = {
-  collector: { tab: "Collector", eyebrow: "Free collector beta", title: "Find your way in early.", button: "Join the Collector Beta" },
-  business: { tab: "Retailer or vendor", eyebrow: "Founding partner enquiry", title: "Put your catalogue on the map.", button: "Connect Your Catalogue" },
-  event: { tab: "Event organiser", eyebrow: "Event listing enquiry", title: "Bring your event into the network.", button: "List an Event" },
+type RolePresentation = {
+  tab: string;
+  eyebrow: string;
+  title: string;
+  button: string;
+  image: string;
+  alt: string;
+  visualLabel: string;
+  lede: string;
+};
+
+const roleCopy: Record<Role, RolePresentation> = {
+  collector: {
+    tab: "Collector",
+    eyebrow: "Free collector beta",
+    title: "Find your way in early.",
+    button: "Join the Collector Beta",
+    image: "/assets/signup/collector-signup.webp",
+    alt: "Collector overlooking the FateDrop signal network with their companion and trading-card products",
+    visualLabel: "COLLECTOR ACCESS",
+    lede: "Search the network, compare live value and follow the signal with one FateDrop ID.",
+  },
+  business: {
+    tab: "Retailer or vendor",
+    eyebrow: "Founding partner enquiry",
+    title: "Put your catalogue on the map.",
+    button: "Connect Your Catalogue",
+    image: "/assets/signup/retailer-signup.webp",
+    alt: "FateDrop retailer space with trading-card displays, signal mapping and Oru behind the counter",
+    visualLabel: "RETAILER ACCESS",
+    lede: "Connect useful stock to collector demand while keeping your own shop, checkout and customer relationship.",
+  },
+  event: {
+    tab: "Event organiser",
+    eyebrow: "Event listing enquiry",
+    title: "Bring your event into the network.",
+    button: "List an Event",
+    image: "/assets/signup/event-signup.webp",
+    alt: "Busy FateDrop trading-card event with collectors, vendors and the city beyond",
+    visualLabel: "EVENT ACCESS",
+    lede: "Make source-backed shows, venues and participating vendors easier for collectors to discover.",
+  },
 };
 
 const requiredByRole: Record<Role, string[]> = {
@@ -24,6 +63,7 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle", message: "" });
   const started = useRef(false);
+  const presentation = roleCopy[role];
 
   function beginForm() {
     if (started.current) return;
@@ -109,7 +149,7 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
   });
 
   return (
-    <div className="join-panel">
+    <div className="join-panel fd-role-join-panel">
       <div className="role-tabs" role="group" aria-label="Choose how you want to join">
         {(Object.keys(roleCopy) as Role[]).map((item) => (
           <button className={role === item ? "active" : ""} key={item} type="button" aria-pressed={role === item} onClick={() => chooseRole(item)}>
@@ -117,9 +157,19 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
           </button>
         ))}
       </div>
+
+      <div className={`fd-join-role-visual role-${role}`}>
+        <Image src={presentation.image} alt={presentation.alt} fill sizes="(max-width: 900px) 100vw, 720px" priority={role === initialRole} />
+        <div className="fd-join-role-shade" aria-hidden="true" />
+        <div className="fd-join-role-copy">
+          <small>{presentation.visualLabel}</small>
+          <strong>{presentation.lede}</strong>
+        </div>
+      </div>
+
       <div className="form-heading">
-        <small>{roleCopy[role].eyebrow}</small>
-        <h2>{roleCopy[role].title}</h2>
+        <small>{presentation.eyebrow}</small>
+        <h2>{presentation.title}</h2>
         <p>Only the details needed for this enquiry are stored. Marketing consent is separate and optional.</p>
       </div>
 
@@ -180,12 +230,16 @@ export function BetaForm({ initialRole = "collector" }: { initialRole?: Role }) 
             <span>Optional: send me occasional FateDrop product and launch updates. This is not required to join.</span>
           </label>
           <div className="form-actions">
-            <button className="button button-primary" type="submit" disabled={status.kind === "loading" || status.kind === "success"}>{status.kind === "loading" ? "Storing securely…" : roleCopy[role].button} <span>↗</span></button>
+            <button className="button button-primary" type="submit" disabled={status.kind === "loading" || status.kind === "success"}>{status.kind === "loading" ? "Storing securely…" : presentation.button} <span>↗</span></button>
             {status.message ? <p className={`form-status ${status.kind}`} role="status" aria-live="polite">{status.message}</p> : null}
             <small>Stored in FateDrop’s private beta-lead database. Read the <Link href="/privacy">beta privacy notice</Link>.</small>
           </div>
         </div>
       </form>
+
+      <style>{`
+        .fd-role-join-panel{overflow:hidden}.fd-join-role-visual{position:relative;height:clamp(260px,32vw,430px);margin:18px 0 28px;overflow:hidden;border:1px solid rgba(220,203,211,.12);border-radius:18px;background:#090b10}.fd-join-role-visual img{object-fit:cover;object-position:center}.fd-join-role-visual.role-collector img{object-position:center 50%}.fd-join-role-visual.role-business img{object-position:center 50%}.fd-join-role-visual.role-event img{object-position:center 50%}.fd-join-role-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,11,0) 44%,rgba(5,7,11,.9) 100%)}.fd-join-role-copy{position:absolute;z-index:2;left:20px;right:20px;bottom:18px;display:grid;gap:6px}.fd-join-role-copy small{color:#d2b66f;font-size:9px;font-weight:900;letter-spacing:.15em}.fd-join-role-copy strong{max-width:680px;color:#f0e7e2;font-family:Georgia,'Times New Roman',serif;font-size:clamp(18px,2vw,27px);font-weight:500;line-height:1.12}@media(max-width:720px){.fd-join-role-visual{height:260px;margin-top:14px;border-radius:14px}.fd-join-role-copy{left:16px;right:16px;bottom:15px}}
+      `}</style>
     </div>
   );
 }

@@ -42,12 +42,17 @@ export async function POST(request: Request) {
     const displayName = clean(payload.displayName, 60);
     const email = clean(payload.email, 254).toLowerCase();
     const password = typeof payload.password === "string" ? payload.password : "";
+    const confirmPassword = typeof payload.confirmPassword === "string" ? payload.confirmPassword : "";
+    const acceptTerms = payload.acceptTerms === true;
 
     const fields: Record<string, string> = {};
     if (displayName.length < 2) fields.displayName = "Use at least 2 characters.";
     if (!validEmail(email)) fields.email = "Enter a valid email address.";
     if (password.length < 10) fields.password = "Use at least 10 characters.";
     if (password.length > 200) fields.password = "Password is longer than expected.";
+    if (!confirmPassword) fields.confirmPassword = "Confirm your password.";
+    else if (confirmPassword !== password) fields.confirmPassword = "Passwords do not match.";
+    if (!acceptTerms) fields.acceptTerms = "You need to accept the Terms and Privacy Notice to create a FateDrop ID.";
     if (Object.keys(fields).length) return Response.json({ error: "Check the highlighted fields.", fields }, { status: 400 });
 
     const now = Math.floor(Date.now() / 1000);
