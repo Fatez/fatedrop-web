@@ -6,11 +6,13 @@ const trendSource = await readFile(new URL("../lib/canonical-alert-trends.ts", i
 const componentSource = await readFile(new URL("../components/alert-stage-trend.tsx", import.meta.url), "utf8");
 const alertsSource = await readFile(new URL("../app/dashboard/alerts/page.tsx", import.meta.url), "utf8");
 
-test("alert trends are signal-backed and preserve all four canonical states", () => {
-  assert.match(trendSource, /FROM fatedrop_signals/);
-  assert.match(trendSource, /state IN \('whisper','echo','manifested','vanished'\)/);
-  assert.match(trendSource, /Array\.from\(\{ length: safeDays \}/);
-  assert.match(trendSource, /count: 0/);
+test("alert trends consume Cloud signal truth and preserve all four canonical states", () => {
+  assert.match(trendSource, /getLiveCloudSignalSummary/);
+  assert.match(trendSource, /"whisper", "echo", "manifested", "vanished"/);
+  assert.match(trendSource, /response\.available !== true/);
+  assert.match(trendSource, /response\.source !== "FATEDROP_CLOUD"/);
+  assert.doesNotMatch(trendSource, /FROM fatedrop_signals/);
+  assert.doesNotMatch(trendSource, /fateDropPostgres/);
   assert.doesNotMatch(trendSource, /fatedrop_signal_delivery_attempts/);
 });
 
