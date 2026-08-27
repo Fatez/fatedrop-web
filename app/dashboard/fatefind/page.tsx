@@ -53,6 +53,8 @@ export default async function DashboardFateFindPage({ searchParams }: { searchPa
   const winner = result?.verdict.winnerId
     ? ranking.find((position) => position.groupId === result.verdict.winnerId) ?? null
     : null;
+  const hasMixedReferenceCoverage = ranking.some((position) => position.rrpPercent === null)
+    && ranking.some((position) => position.rrpPercent !== null);
 
   return <DashboardPageShell title="FateFind" eyebrow="BEST VALUE · RRP INTELLIGENCE">
     <div className="fd-true-price-page">
@@ -80,7 +82,7 @@ export default async function DashboardFateFindPage({ searchParams }: { searchPa
         <div className="fd-tp-results-head"><div><span>{q ? `FATEFIND · ${q.toUpperCase()}` : "COMPARE OFFERS"}</span><h2>{q ? "Which live option is the strongest value?" : "Search once. Let FateFind compare the network."}</h2></div><small>{result ? `${result.count} product group${result.count === 1 ? "" : "s"}` : q.length >= 2 ? "Cloud response unavailable" : "Enter a product above"}</small></div>
         {!q ? <div className="fd-dashboard-empty"><strong>Type a product above.</strong><span>FateDrop compares qualifying observed retailer offers, RRP/reference position and known checkout cost without inventing missing evidence.</span></div> : q.length < 2 ? <div className="fd-dashboard-empty"><strong>Keep typing.</strong><span>Use at least two characters so FateDrop can resolve a meaningful product search.</span></div> : !result ? <div className="fd-dashboard-empty"><strong>The Signal Engine could not be reached.</strong><span>No sample prices or pretend retailers are substituted.</span></div> : groups.length ? <>
           {winner ? <section className="fd-tp-winner" aria-label="FateFind best value">
-            <div><small>BEST VALUE · FATEDROP CLOUD</small><strong>{winner.title}</strong><span>{winner.retailerName ?? "Qualifying retailer"}</span></div>
+            <div><small>{hasMixedReferenceCoverage ? "BEST VERIFIED VALUE · FATEDROP CLOUD" : "BEST VALUE · FATEDROP CLOUD"}</small><strong>{winner.title}</strong><span>{winner.retailerName ?? "Qualifying retailer"}</span></div>
             <div className="fd-tp-winner-metrics"><span><small>VS RRP / REF</small><b>{percent(winner.rrpPercent)}</b></span><span><small>ITEM PRICE</small><b>{gbp(winner.itemPrice)}</b></span><span><small>TRUE PRICE</small><b>{winner.deliveryKnown ? gbp(winner.truePrice) : "UNKNOWN"}</b></span></div>
             <p>{result.verdict.reason}</p>
           </section> : <div className="fd-tp-no-winner"><strong>No single value winner declared.</strong><span>{result.verdict.reason}</span></div>}
@@ -90,17 +92,30 @@ export default async function DashboardFateFindPage({ searchParams }: { searchPa
             return <article className="fd-tp-group" key={group.id}>
               <header><div><small>{group.category} · {group.retailerCount} RETAILER{group.retailerCount === 1 ? "" : "S"}{result?.verdict.winnerId === group.id ? " · BEST VALUE" : ""}</small><h2>{group.title}</h2><p>{typeof group.rrpGbp === "number" ? `${rrpHeading(group)} ${gbp(group.rrpGbp)} · ${sourceLabel(group)}${group.rrpObservedAt ? ` · observed ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(group.rrpObservedAt))}` : ""}` : "Verified RRP/reference unavailable for this product identity"}</p></div><span>{Math.round(group.matchingConfidence * 100)}% identity confidence</span></header>
               <div className="fd-tp-offers">{orderedOffers(group, position).map((offer) => {
-                const isValueLeader = offer.id === position?.offerId;
-                const statusLabel = isValueLeader && offer.isLowestKnownDelivered
+                const isGroupSelectedOffer = offer.id === position?.offerId;
+                const hasVerifiedValuePosition = typeof position?.rrpPercent === "number" && Number.isFinite(position.rrpPercent);
+                const isCloudValueWinner = result.verdict.winnerId === group.id && isGroupSelectedOffer;
+                const statusLabel = isCloudValueWinner && offer.isLowestKnownDelivered
                   ? "FATEFIND VALUE LEADER · LOWEST TRUE PRICE"
-                  : isValueLeader
+                  : isCloudValueWinner
                     ? "FATEFIND VALUE LEADER"
-                    : offer.isLowestKnownDelivered
-                      ? "LOWEST KNOWN TRUE PRICE"
-                      : offer.stockStatus.replaceAll("_", " ");
-                return <div className={isValueLeader ? "fd-tp-offer value-leader" : "fd-tp-offer"} key={offer.id}>
+                    : isGroupSelectedOffer && !hasVerifiedValuePosition && offer.isLowestKnownDelivered
+                      ? "LOWEST KNOWN TRUE PRICE · VALUE UNVERIFIED"
+                      : isGroupSelectedOffer && !hasVerifiedValuePosition
+                        ? "IN STOCK · VALUE UNVERIFIED"
+                        : offer.isLowestKnownDelivered
+                          ? "LOWEST KNOWN TRUE PRICE"
+                          : offer.stockStatus.replaceAll("_", " ");
+                const valueEvidenceLabel = isCloudValueWinner
+                  ? "CLOUD-RANKED VALUE POSITION"
+                  : isGroupSelectedOffer && hasVerifiedValuePosition
+                    ? "REFERENCE-BACKED GROUP POSITION"
+                    : isGroupSelectedOffer
+                      ? "VALUE UNVERIFIED · RRP UNKNOWN"
+                      : "GROUP LEADER SHOWN ABOVE";
+                return <div className={isCloudValueWinner ? "fd-tp-offer value-leader" : "fd-tp-offer"} key={offer.id}>
                   <div className="fd-tp-store"><small>{statusLabel}</small><strong>{offer.retailerName}</strong><span>{offer.lastCheckedAt ? `Checked ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(offer.lastCheckedAt))}` : "Observed network offer"}</span></div>
-                  <div className="fd-tp-cost"><span><small>ITEM</small><b>{gbp(offer.priceGbp)}</b></span><span><small>DELIVERY</small><b>{offer.deliveryKnown ? offer.shippingGbp === 0 ? "FREE" : gbp(offer.shippingGbp) : "UNKNOWN"}</b></span><span className="true"><small>TRUE PRICE</small><b>{offer.deliveryKnown ? gbp(offer.totalDeliveredGbp) : "—"}</b></span><span><small>VS RRP / REF</small><b>{isValueLeader ? percent(position?.rrpPercent) : "—"}</b><em>{isValueLeader ? "CLOUD-RANKED VALUE POSITION" : "LEADER SHOWN ABOVE"}</em></span></div>
+                  <div className="fd-tp-cost"><span><small>ITEM</small><b>{gbp(offer.priceGbp)}</b></span><span><small>DELIVERY</small><b>{offer.deliveryKnown ? offer.shippingGbp === 0 ? "FREE" : gbp(offer.shippingGbp) : "UNKNOWN"}</b></span><span className="true"><small>TRUE PRICE</small><b>{offer.deliveryKnown ? gbp(offer.totalDeliveredGbp) : "—"}</b></span><span><small>VS RRP / REF</small><b>{isGroupSelectedOffer ? percent(position?.rrpPercent) : "—"}</b><em>{valueEvidenceLabel}</em></span></div>
                   <a href={offer.productUrl} target="_blank" rel="noreferrer">BUY AT RETAILER ↗</a>
                 </div>;
               })}</div>
