@@ -61,7 +61,7 @@ export async function createCheckoutSession(input: {
 
   const body = new URLSearchParams();
   body.set("mode", "subscription");
-  body.set("success_url", `${input.origin}/dashboard/membership?billing=success`);
+  body.set("success_url", `${input.origin}/dashboard/membership?billing=success#discord-access`);
   body.set("cancel_url", `${input.origin}/dashboard/membership?billing=cancelled`);
   body.set("client_reference_id", input.userId);
   body.set("line_items[0][price]", priceId);
