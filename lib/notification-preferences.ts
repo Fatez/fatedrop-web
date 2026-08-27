@@ -26,7 +26,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   whisper: true,
   echo: true,
   manifested: true,
-  vanished: false,
+  vanished: true,
   priceChange: true,
   fateMatch: true,
   sealedTcg: true,
