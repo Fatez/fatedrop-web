@@ -26,8 +26,8 @@ export async function getCanonicalRecentSignals(limit = 100): Promise<NetworkSig
       title,
       retailer: row.retailerName ? String(row.retailerName) : null,
       detail: row.reason ? String(row.reason) : null,
-      deliveredPricePence: Number.isFinite(deliveredGbp) ? Math.round(deliveredGbp * 100) : null,
-      confidence: Number.isFinite(confidence) ? confidence : null,
+      deliveredPricePence: deliveredGbp !== null && Number.isFinite(deliveredGbp) ? Math.round(deliveredGbp * 100) : null,
+      confidence: confidence !== null && Number.isFinite(confidence) ? confidence : null,
       occurredAt,
     }];
   });
