@@ -9,19 +9,21 @@ test("an exact retailer-name search resolves to Cloud's retailer catalogue filte
   const stores = read("app/dashboard/stores/page.tsx");
   const directory = read("components/retailer-market-directory.tsx");
 
-  assert.ok(client.includes('import { retailerRegistry } from "./retailer-registry"'));
-  assert.ok(client.includes("retailerFilterForQuery(clean)"));
-  assert.ok(client.includes("retailer.cloudRetailerId ?? retailer.id"));
+  assert.equal(client.includes('import { retailerRegistry } from "./retailer-registry"'), false);
+  assert.ok(client.includes("const directory = await getSignalRetailerDirectory()"));
+  assert.ok(client.includes("directory?.retailers.find"));
+  assert.ok(client.includes("return retailer?.id ?? null"));
+  assert.ok(client.includes("await retailerFilterForQuery(clean)"));
   assert.ok(client.includes('if (clean.length >= 2 && !inferredRetailer) params.set("q", clean)'));
   assert.ok(client.includes('if (retailerFilter) params.set("retailer", retailerFilter)'));
   assert.ok(stores.includes("<RetailerMarketDirectory"));
-  assert.ok(directory.includes('`/dashboard/search?q=${encodeURIComponent(retailer.name)}`'));
+  assert.ok(directory.includes('/dashboard/stores/${encodeURIComponent(retailer.id)}'));
 });
 
 test("retailer-name catalogue resolution preserves explicit product-plus-retailer filtering", () => {
   const client = read("lib/signal-engine-client.ts");
 
-  assert.ok(client.includes("const inferredRetailer = options.retailer ? null : retailerFilterForQuery(clean)"));
+  assert.ok(client.includes("const inferredRetailer = options.retailer ? null : await retailerFilterForQuery(clean)"));
   assert.ok(client.includes("const retailerFilter = options.retailer ?? inferredRetailer"));
   assert.ok(client.includes("if (clean.length < 2 && !retailerFilter) return null"));
 });

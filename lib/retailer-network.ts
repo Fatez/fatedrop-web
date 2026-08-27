@@ -1,134 +1,71 @@
 import { safeExternalHttpsUrl } from "./external-url";
-import { getSignalEngineStatus, getSignalRetailerDirectory, type SignalRetailerDirectoryRecord } from "./signal-engine-client";
-import { retailerByCloudId, retailerRegistry, type RetailerRecord } from "./retailer-registry";
+import { getSignalRetailerDirectory, type SignalRetailerDirectoryRecord } from "./signal-engine-client";
 
 export type RetailerNetworkRecord = {
   id: string;
-  cloudRetailerId: string | null;
   name: string;
   website: string | null;
-  category: RetailerRecord["category"] | "unknown";
+  logoUrl: string | null;
+  description: string | null;
   retailerClass: string;
-  source: "cloud" | "registry";
-  online: boolean | null;
+  verification: string;
+  tcgs: string[];
+  online: boolean;
   physicalStores: boolean | null;
   physicalLocations: number | null;
-  runtime: {
-    healthy: boolean | null;
-    baselineCompleted: boolean | null;
+  monitoring: {
+    configured: boolean;
+    healthy: boolean;
+    stale: boolean;
+    baselineCompleted: boolean;
     lastScanAt: number | null;
     lastSuccessAt: number | null;
     productsSeen: number | null;
   };
-  relationship: RetailerRecord["partnerStatus"] | "unknown";
-  storefrontStatus: RetailerRecord["catalogueStatus"] | "unknown";
 };
 
-function categoryFromClass(retailerClass: string, registry: RetailerRecord | null) {
-  if (registry) return registry.category;
-  if (retailerClass === "national") return "major-retail" as const;
-  if (retailerClass === "specialist" || retailerClass === "regional") return "tcg-specialist" as const;
-  if (retailerClass === "independent") return "indie" as const;
-  return "unknown" as const;
-}
+export type RetailerNetworkSnapshot = {
+  available: boolean;
+  retailers: RetailerNetworkRecord[];
+};
 
 function cloudRow(directory: SignalRetailerDirectoryRecord): RetailerNetworkRecord {
-  const registry = retailerByCloudId(directory.id);
   return {
-    id: registry?.id ?? directory.id,
-    cloudRetailerId: directory.id,
-    name: registry?.name ?? directory.name,
-    website: safeExternalHttpsUrl(directory.websiteUrl ?? registry?.website),
-    category: categoryFromClass(directory.retailerClass, registry),
+    id: directory.id,
+    name: directory.name,
+    website: safeExternalHttpsUrl(directory.websiteUrl),
+    logoUrl: safeExternalHttpsUrl(directory.logoUrl),
+    description: directory.description ?? null,
     retailerClass: directory.retailerClass,
-    source: "cloud",
-    online: directory.online ?? registry?.onlineCatalogue ?? null,
-    physicalStores: directory.physicalStores ?? registry?.physicalStores ?? null,
+    verification: directory.verification,
+    tcgs: Array.isArray(directory.tcgs) ? directory.tcgs : [],
+    online: directory.online === true,
+    physicalStores: directory.physicalStores ?? null,
     physicalLocations: directory.physicalLocations ?? null,
-    runtime: {
-      healthy: directory.monitoring.healthy,
-      baselineCompleted: directory.monitoring.baselineCompleted,
-      lastScanAt: directory.monitoring.lastScanAt,
-      lastSuccessAt: directory.monitoring.lastSuccessAt,
-      productsSeen: directory.monitoring.productsSeen,
+    monitoring: {
+      configured: directory.monitoring.configured === true,
+      healthy: directory.monitoring.healthy === true,
+      stale: directory.monitoring.stale === true,
+      baselineCompleted: directory.monitoring.baselineCompleted === true,
+      lastScanAt: directory.monitoring.lastScanAt ?? null,
+      lastSuccessAt: directory.monitoring.lastSuccessAt ?? null,
+      productsSeen: directory.monitoring.productsSeen ?? null,
     },
-    relationship: registry?.partnerStatus ?? "unknown",
-    storefrontStatus: registry?.catalogueStatus ?? "unknown",
+  };
+}
+
+export async function getRetailerNetworkSnapshot(timeoutMs = 8_000): Promise<RetailerNetworkSnapshot> {
+  const response = await getSignalRetailerDirectory(timeoutMs);
+  if (!response) return { available: false, retailers: [] };
+
+  return {
+    available: true,
+    retailers: (response.retailers ?? [])
+      .map(cloudRow)
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
   };
 }
 
 export async function getRetailerNetwork(timeoutMs = 8_000): Promise<RetailerNetworkRecord[]> {
-  const [status, directoryResponse] = await Promise.all([
-    getSignalEngineStatus(timeoutMs),
-    getSignalRetailerDirectory(timeoutMs),
-  ]);
-  const directory = directoryResponse?.retailers ?? [];
-  const seen = new Set<string>();
-  let rows: RetailerNetworkRecord[];
-
-  if (directory.length) {
-    rows = directory.map((entry) => {
-      const row = cloudRow(entry);
-      seen.add(row.id);
-      return row;
-    });
-  } else {
-    const cloud = status?.state?.retailers ?? [];
-    rows = cloud.map((runtime) => {
-      const registry = retailerByCloudId(runtime.id);
-      if (registry) seen.add(registry.id);
-      const retailerClass = registry?.category === "major-retail"
-        ? "national"
-        : registry?.category === "tcg-specialist"
-          ? "specialist"
-          : registry?.category === "indie"
-            ? "independent"
-            : "unknown";
-      return {
-        id: registry?.id ?? runtime.id,
-        cloudRetailerId: runtime.id,
-        name: registry?.name ?? runtime.name,
-        website: safeExternalHttpsUrl(registry?.website),
-        category: registry?.category ?? "unknown",
-        retailerClass,
-        source: "cloud" as const,
-        online: registry?.onlineCatalogue ?? null,
-        physicalStores: registry?.physicalStores ?? null,
-        physicalLocations: null,
-        runtime: {
-          healthy: runtime.healthy,
-          baselineCompleted: runtime.baselineCompleted,
-          lastScanAt: runtime.lastScanAt,
-          lastSuccessAt: runtime.lastSuccessAt,
-          productsSeen: runtime.productsSeen ?? null,
-        },
-        relationship: registry?.partnerStatus ?? "unknown" as const,
-        storefrontStatus: registry?.catalogueStatus ?? "unknown" as const,
-      };
-    });
-  }
-
-  for (const registry of retailerRegistry) {
-    if (seen.has(registry.id)) continue;
-    rows.push({
-      id: registry.id,
-      cloudRetailerId: registry.cloudRetailerId ?? null,
-      name: registry.name,
-      website: safeExternalHttpsUrl(registry.website),
-      category: registry.category,
-      retailerClass: registry.category === "major-retail" ? "national" : registry.category === "tcg-specialist" ? "specialist" : "independent",
-      source: "registry",
-      online: registry.onlineCatalogue,
-      physicalStores: registry.physicalStores,
-      physicalLocations: null,
-      runtime: { healthy: null, baselineCompleted: null, lastScanAt: null, lastSuccessAt: null, productsSeen: null },
-      relationship: registry.partnerStatus,
-      storefrontStatus: registry.catalogueStatus,
-    });
-  }
-
-  return rows.sort((a, b) => {
-    if (a.source !== b.source) return a.source === "cloud" ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
+  return (await getRetailerNetworkSnapshot(timeoutMs)).retailers;
 }

@@ -230,20 +230,22 @@ test("True Price remains a FateFind calculation rather than a standalone dashboa
   assert.ok(client.includes('"/api/true-price"'));
 });
 
-test("retailer discovery separates Cloud runtime health from storefront lab feeds", () => {
+test("retailer discovery uses one Cloud directory without storefront lab truth", () => {
   const stores = fs.readFileSync("app/dashboard/stores/page.tsx", "utf8");
   const network = fs.readFileSync("lib/retailer-network.ts", "utf8");
-  const registry = fs.readFileSync("lib/retailer-registry.ts", "utf8");
-  assert.ok(stores.includes("Fate Network"));
-  assert.ok(stores.includes("One network. Different retailer types. More places to buy."));
-  assert.ok(stores.includes("CANONICAL CLOUD RETAILERS · MARKET DIRECTORY"));
-  assert.ok(stores.includes("EXPERIMENTAL STOREFRONT LAB"));
-  assert.ok(stores.includes("Cloud monitor health describes FateDrop evidence collection"));
+  assert.ok(stores.includes("FATE NETWORK · RETAILER DISCOVERY"));
+  assert.ok(stores.includes("Discover the stores behind the hobby."));
   assert.ok(stores.includes("<RetailerMarketDirectory"));
-  assert.ok(network.includes("getSignalEngineStatus"));
+  assert.ok(stores.includes("getRetailerNetworkSnapshot"));
+  assert.equal(stores.includes("EXPERIMENTAL STOREFRONT LAB"), false);
+  assert.equal(stores.includes("Cob & Pip"), false);
+  assert.equal(stores.includes("Wishlist Collectables"), false);
+  assert.equal(stores.includes("getCobAndPipCatalogue"), false);
+  assert.equal(stores.includes("getWishlistCollectablesCatalogue"), false);
   assert.ok(network.includes("getSignalRetailerDirectory"));
-  assert.ok(registry.includes("cloudRetailerId"));
-  assert.ok(registry.includes('cloudRetailerId: "smyths-uk"'));
+  assert.equal(network.includes("getSignalEngineStatus"), false);
+  assert.equal(network.includes("retailerRegistry"), false);
+  assert.equal(network.includes("retailerByCloudId"), false);
 });
 
 test("Events has a canonical network-feed migration endpoint", () => {
