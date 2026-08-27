@@ -6,6 +6,7 @@ import { createSession, deleteSession, findSessionUser, getAccountSnapshot } fro
 const scrypt = promisify(nodeScrypt);
 const COOKIE_NAME = "fd_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
+const DUMMY_PASSWORD_HASH = "scrypt$ZmQtYXV0aC1kdW1teS0wMQ$hkoYODWBtu0hlMF3lAS1Yh2TJdN3e6BJoVdTmpLa8GvPxmzHbC4D5LuTT5GMEY2zXi3WYVmqPrWnOhlwWd7rMg";
 
 export async function hashPassword(password: string) {
   const salt = randomBytes(16);
@@ -20,6 +21,10 @@ export async function verifyPassword(password: string, stored: string) {
   const expected = Buffer.from(hashValue, "base64url");
   const actual = (await scrypt(password, salt, expected.length)) as Buffer;
   return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+export async function verifyLoginPassword(password: string, stored: string | null | undefined) {
+  return verifyPassword(password, stored || DUMMY_PASSWORD_HASH);
 }
 
 async function createOpaqueSession(userId: string) {
