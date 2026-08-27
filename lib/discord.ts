@@ -106,29 +106,35 @@ export async function syncPremiumDiscordRole(link: DiscordLinkRecord, membership
   const botToken = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;
   const roleId = process.env.DISCORD_PREMIUM_ROLE_ID;
-  if (!botToken || !guildId || !roleId) return { configured: false, synced: false, memberFound: false };
+  const premium = hasPremiumAccess(membership);
+  if (!botToken || !guildId || !roleId) return { configured: false, synced: false, memberFound: false, premiumRoleActive: false };
 
-  const method = hasPremiumAccess(membership) ? "PUT" : "DELETE";
   const response = await fetch(`${DISCORD_API}/guilds/${guildId}/members/${link.discordUserId}/roles/${roleId}`, {
-    method,
+    method: premium ? "PUT" : "DELETE",
     headers: {
       Authorization: `Bot ${botToken}`,
-      "X-Audit-Log-Reason": "FateDrop membership sync",
+      "X-Audit-Log-Reason": premium ? "FateDrop Premium membership sync" : "FateDrop Premium access removal",
     },
     cache: "no-store",
   });
 
   if (response.status === 404) {
     await updateDiscordRoleSync(link.userId, null);
-    return { configured: true, synced: false, memberFound: false };
+    return { configured: true, synced: false, memberFound: false, premiumRoleActive: false };
   }
   if (!response.ok && response.status !== 204) {
     await updateDiscordRoleSync(link.userId, null);
-    return { configured: true, synced: false, memberFound: true };
+    return { configured: true, synced: false, memberFound: true, premiumRoleActive: false };
   }
+
+  if (!premium) {
+    await updateDiscordRoleSync(link.userId, null);
+    return { configured: true, synced: true, memberFound: true, premiumRoleActive: false };
+  }
+
   const syncedAt = Math.floor(Date.now() / 1000);
   await updateDiscordRoleSync(link.userId, syncedAt);
-  return { configured: true, synced: true, memberFound: true, syncedAt };
+  return { configured: true, synced: true, memberFound: true, premiumRoleActive: true, syncedAt };
 }
 
 export { DISCORD_INVITE_URL };
