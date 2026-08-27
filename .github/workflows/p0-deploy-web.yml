@@ -1,0 +1,39 @@
+name: P0 Deploy FateDrop Web
+
+on:
+  push:
+    branches:
+      - fix/p0-deploy-web-2026-08-27
+    paths:
+      - ".github/workflows/p0-deploy-web.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact P0 Web candidate
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Require Cloudflare deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_API_TOKEN is not configured in GitHub Actions."
+            exit 2
+          fi
+      - name: Install dependencies
+        run: npm ci
+      - name: Deploy exact P0 Web build to Cloudflare
+        run: npm run deploy
