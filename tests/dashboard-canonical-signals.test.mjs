@@ -32,8 +32,10 @@ test("seven-day detection and delivery summaries apply the same valid-Vanished p
   assert.ok(vanishedMatches.length >= 2, "both lifecycle and delivery queries should reject repeated/unanchored Vanished");
 });
 
-test("private Cloud signal-health fallback preserves security and sends a server-only bearer token when configured", () => {
+test("private Cloud signal-health fallback preserves security and stays quiet when local credentials are absent", () => {
   assert.match(trendSource, /process\.env\.FATEDROP_SIGNAL_API_TOKEN/);
+  assert.match(trendSource, /if \(!apiToken\) return null/);
   assert.match(trendSource, /headers\.set\("Authorization", `Bearer \$\{apiToken\}`\)/);
   assert.doesNotMatch(trendSource, /NEXT_PUBLIC_FATEDROP_SIGNAL_API_TOKEN/);
+  assert.doesNotMatch(trendSource, /console\.error\("\[dashboard\] live Signal Engine health unavailable"/);
 });
