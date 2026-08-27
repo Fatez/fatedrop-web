@@ -127,6 +127,7 @@ test("Search, FateFind and FateMatch form one working collector journey while Tr
   const fateFind = fs.readFileSync("app/dashboard/fatefind/page.tsx", "utf8");
   const fateMatch = fs.readFileSync("app/dashboard/watchlist/page.tsx", "utf8");
   const client = fs.readFileSync("lib/signal-engine-client.ts", "utf8");
+  const verdictClient = fs.readFileSync("lib/fatefind-verdict.ts", "utf8");
   assert.ok(search.includes("searchSignalCatalogue"));
   assert.equal(search.includes('/dashboard/true-price?q='), false);
   assert.ok(search.includes('/dashboard/fatefind?q='));
@@ -135,13 +136,14 @@ test("Search, FateFind and FateMatch form one working collector journey while Tr
   assert.ok(legacyTruePrice.includes("/dashboard/fatefind"));
   assert.ok(fateFind.includes("TRUE PRICE"));
   assert.ok(fateFind.includes("VS RRP / REF"));
-  assert.ok(fateFind.includes("searchSignalTruePrice"));
+  assert.ok(fateFind.includes("searchSignalFateVerdict"));
   assert.ok(fateFind.includes("ValueCompare"));
   assert.ok(fateFind.includes("Which live option is the strongest value?"));
   assert.ok(fateMatch.includes("FateMatchBuilder"));
   assert.ok(fateMatch.includes("FateFindActions"));
   assert.ok(client.includes('"/api/catalogue"'));
   assert.ok(client.includes('"/api/true-price"'));
+  assert.ok(verdictClient.includes('"/api/fatefind/matches"'));
 });
 
 test("FateMatch supports create pause resume delete companion assignment and evidence-based local matching", () => {
