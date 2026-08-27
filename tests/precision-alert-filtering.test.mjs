@@ -44,9 +44,12 @@ test('precision defaults reduce noise without silently dropping core lifecycle a
   }
 });
 
-test('mobile inbox and push both apply the shared precision gate', () => {
+test('mobile inbox and push apply shared preferences without reclassifying canonical Cloud alerts', () => {
   assert.match(mobileAlerts, /notificationPreferencesAllowAlert/);
   assert.match(mobileAlerts, /getNotificationPreferences\(snapshot\.account\.id\)/);
+  assert.match(mobileAlerts, /Cloud owns canonical lifecycle and product classification truth/);
+  assert.doesNotMatch(mobileAlerts, /isBetaAlertRelevant/);
+  assert.doesNotMatch(mobileAlerts, /beta-alert-relevance/);
   assert.match(push, /productAlertEnabled/);
   assert.match(push, /sealed_tcg_enabled/);
   assert.match(push, /single_cards_enabled/);
