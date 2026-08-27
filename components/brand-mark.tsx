@@ -1,13 +1,25 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 
+const FATEDROP_WORDMARK = "/assets/fatedrop-wordmark.png";
+
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <Link className="brand-mark" href="/" aria-label="FateDrop home">
-      <span className="brand-logo-image" aria-hidden="true">
-        <img src="/assets/fatedrop-logo-mark.png" alt="" width="580" height="580" loading="eager" />
-      </span>
-      <span className="brand-word"><b>Fate</b>{compact ? null : <em>Drop</em>}</span>
+      <img
+        src={FATEDROP_WORDMARK}
+        alt=""
+        aria-hidden="true"
+        width="320"
+        height="107"
+        loading="eager"
+        style={{
+          display: "block",
+          width: compact ? 118 : 154,
+          height: "auto",
+          objectFit: "contain",
+        }}
+      />
     </Link>
   );
 }
