@@ -10,13 +10,13 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
         src={FATEDROP_WORDMARK}
         alt=""
         aria-hidden="true"
-        width="320"
-        height="107"
+        width="192"
+        height="192"
         loading="eager"
         style={{
           display: "block",
-          width: compact ? 118 : 154,
-          height: "auto",
+          width: "auto",
+          height: compact ? 44 : 52,
           objectFit: "contain",
         }}
       />
