@@ -51,11 +51,19 @@ export function isValidIanaTimezone(value: string) {
   catch { return false; }
 }
 
+function lifecyclePreference(value: unknown) {
+  return value == null ? true : Boolean(value);
+}
+
 function mapPreferences(row: Record<string, unknown>): NotificationPreferences {
   const timezone = String(row.timezone || "Europe/London");
   return {
-    whisper: row.whisper_enabled == null ? true : Boolean(row.whisper_enabled),
-    echo: Boolean(row.echo_enabled), manifested: Boolean(row.manifested_enabled), vanished: Boolean(row.vanished_enabled),
+    // The four public lifecycle stages are one contract: absent/legacy values
+    // all inherit the same enabled-by-default behaviour.
+    whisper: lifecyclePreference(row.whisper_enabled),
+    echo: lifecyclePreference(row.echo_enabled),
+    manifested: lifecyclePreference(row.manifested_enabled),
+    vanished: lifecyclePreference(row.vanished_enabled),
     priceChange: Boolean(row.price_change_enabled), fateMatch: Boolean(row.fate_match_enabled),
     sealedTcg: row.sealed_tcg_enabled == null ? true : Boolean(row.sealed_tcg_enabled),
     singleCards: row.single_cards_enabled == null ? true : Boolean(row.single_cards_enabled),
