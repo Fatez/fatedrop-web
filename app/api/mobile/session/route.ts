@@ -1,4 +1,5 @@
 import { AccountStorageUnavailableError, findAccountByEmail } from "@/lib/account-storage";
+import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, readBoundedJson } from "@/lib/auth-abuse";
 import { bearerTokenFromRequest, endApiSession, getSnapshotForRequest, startApiSession, verifyLoginPassword } from "@/lib/auth";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
 
@@ -32,10 +33,13 @@ function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnaps
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const rateLimit = checkAuthRateLimit(request, "mobile_login");
+    if (!rateLimit.allowed) return authRateLimitResponse(rateLimit);
+
+    const payload = await readBoundedJson(request);
     const email = typeof payload?.email === "string" ? payload.email.trim().toLowerCase().slice(0, 254) : "";
     const password = typeof payload?.password === "string" && payload.password.length <= 200 ? payload.password : "";
-    if (!email || !password) return Response.json({ error: "Email and password are required." }, { status: 400 });
+    if (!email || !password) return Response.json({ error: "Email and password are required." }, { status: 400, headers: { "cache-control": "no-store" } });
     const account = await findAccountByEmail(email);
     const valid = await verifyLoginPassword(password, account?.passwordHash);
     if (!account || !valid) return Response.json({ error: "Email or password is incorrect." }, { status: 401, headers: { "cache-control": "no-store" } });
@@ -44,6 +48,8 @@ export async function POST(request: Request) {
     if (!snapshot) throw new Error("SESSION_NOT_FOUND");
     return Response.json({ sessionToken: session.token, expiresAt: session.expiresAt, ...sessionPayload(snapshot) }, { headers: { "cache-control": "private, no-store, max-age=0" } });
   } catch (error) {
+    if (isRequestTooLargeError(error)) return Response.json({ error: "Request is too large." }, { status: 413, headers: { "cache-control": "no-store" } });
+    if (error instanceof SyntaxError) return Response.json({ error: "Invalid request." }, { status: 400, headers: { "cache-control": "no-store" } });
     if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
     return Response.json({ error: "Mobile sign-in could not be completed." }, { status: 500 });
   }
