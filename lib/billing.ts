@@ -91,13 +91,17 @@ export async function createBillingPortalSession(customerId: string, origin: str
   return stripeRequest("/billing_portal/sessions", body);
 }
 
-async function stripeRequest(path: string, body: URLSearchParams) {
+function stripeAuthorization() {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new BillingUnavailableError("STRIPE_SECRET_KEY is not configured.");
+  return `Basic ${Buffer.from(`${secret}:`).toString("base64")}`;
+}
+
+async function stripeRequest(path: string, body: URLSearchParams) {
   const response = await fetch(`${STRIPE_API}${path}`, {
     method: "POST",
     headers: {
-      Authorization: `Basic ${Buffer.from(`${secret}:`).toString("base64")}`,
+      Authorization: stripeAuthorization(),
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body,
@@ -109,6 +113,17 @@ async function stripeRequest(path: string, body: URLSearchParams) {
     const message = nested?.message ? String(nested.message) : "Stripe rejected the billing request.";
     throw new Error(message);
   }
+  return payload;
+}
+
+async function stripeRead(path: string) {
+  const response = await fetch(`${STRIPE_API}${path}`, {
+    method: "GET",
+    headers: { Authorization: stripeAuthorization() },
+    cache: "no-store",
+  });
+  const payload = (await response.json()) as StripeJson;
+  if (!response.ok) throw new Error("Stripe subscription state could not be reconciled.");
   return payload;
 }
 
@@ -141,6 +156,7 @@ export type StripeSubscriptionShape = {
   id: string;
   customer: string;
   status: string;
+  created?: number;
   cancel_at_period_end?: boolean;
   current_period_end?: number;
   trial_start?: number | null;
@@ -156,4 +172,12 @@ export function parseStripeSubscription(value: unknown): StripeSubscriptionShape
   const customer = typeof object.customer === "string" ? object.customer : (object.customer && typeof object.customer === "object" && "id" in object.customer ? String((object.customer as Record<string, unknown>).id) : "");
   if (!customer) return null;
   return object as unknown as StripeSubscriptionShape;
+}
+
+export async function listStripeCustomerSubscriptions(customerId: string) {
+  const query = new URLSearchParams({ customer: customerId, status: "all", limit: "100" });
+  const payload = await stripeRead(`/subscriptions?${query.toString()}`);
+  const data = Array.isArray(payload.data) ? payload.data : null;
+  if (!data) throw new Error("Stripe returned an invalid subscription list.");
+  return data.map(parseStripeSubscription).filter((subscription): subscription is StripeSubscriptionShape => Boolean(subscription));
 }

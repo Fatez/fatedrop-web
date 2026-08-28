@@ -1,4 +1,4 @@
-import { BillingUnavailableError, parseStripeSubscription, tierForPriceId, verifyStripeWebhook } from "@/lib/billing";
+import { BillingUnavailableError, listStripeCustomerSubscriptions, parseStripeSubscription, tierForPriceId, type StripeSubscriptionShape, verifyStripeWebhook } from "@/lib/billing";
 import { findUserIdByStripeCustomer, getAccountSnapshot, updateMembership } from "@/lib/account-storage";
 import { hasProcessedBillingEvent, recordBillingAudit } from "@/lib/dashboard-storage";
 import { syncPremiumDiscordRole } from "@/lib/discord";
@@ -22,6 +22,88 @@ function idFrom(value: unknown) {
   return null;
 }
 
+function subscriptionPriceId(subscription: StripeSubscriptionShape) {
+  return subscription.items?.data?.[0]?.price?.id ?? null;
+}
+
+function subscriptionPriority(status: string) {
+  if (status === "active" || status === "trialing") return 5;
+  if (status === "past_due" || status === "unpaid") return 4;
+  if (status === "paused") return 3;
+  if (status === "incomplete") return 2;
+  if (status === "canceled" || status === "incomplete_expired") return 1;
+  return 0;
+}
+
+function compareSubscriptions(left: StripeSubscriptionShape, right: StripeSubscriptionShape) {
+  const priority = subscriptionPriority(left.status) - subscriptionPriority(right.status);
+  if (priority) return priority;
+  return Number(left.created || 0) - Number(right.created || 0);
+}
+
+function canonicalSubscription(
+  subscriptions: StripeSubscriptionShape[],
+  userId: string,
+  currentSubscriptionId: string | null,
+  eventSubscriptionId: string | null,
+) {
+  const candidates = subscriptions.filter((subscription) => {
+    const metadataUserId = subscription.metadata?.fatedrop_user_id || null;
+    if (metadataUserId && metadataUserId !== userId) return false;
+    const recognisedTier = tierForPriceId(subscriptionPriceId(subscription)) !== "free";
+    return metadataUserId === userId
+      || subscription.id === currentSubscriptionId
+      || subscription.id === eventSubscriptionId
+      || recognisedTier;
+  });
+
+  return candidates.sort((left, right) => compareSubscriptions(right, left))[0] ?? null;
+}
+
+async function reconcileSubscription(
+  userId: string,
+  customerId: string,
+  eventSubscriptionId: string,
+  { allowCustomerSwitch = false }: { allowCustomerSwitch?: boolean } = {},
+) {
+  const snapshot = await getAccountSnapshot(userId);
+  const storedCustomerId = snapshot?.membership.stripeCustomerId ?? null;
+  const storedSubscriptionId = snapshot?.membership.stripeSubscriptionId ?? null;
+
+  const subscriptions = await listStripeCustomerSubscriptions(customerId);
+  const selected = canonicalSubscription(subscriptions, userId, storedSubscriptionId, eventSubscriptionId);
+  if (!selected) throw new Error("Canonical Stripe subscription could not be resolved.");
+
+  if (storedCustomerId && storedCustomerId !== customerId) {
+    if (!allowCustomerSwitch) return { applied: false, reason: "superseded_customer" as const };
+
+    // checkout.session.completed is allowed to establish a genuinely newer Stripe
+    // customer, but an old delayed checkout must never move the account backwards.
+    // Reconcile the currently stored customer's subscription too and only switch
+    // when the incoming customer has the stronger/newer canonical FateDrop state.
+    const storedSubscriptions = await listStripeCustomerSubscriptions(storedCustomerId);
+    const storedSelected = canonicalSubscription(storedSubscriptions, userId, storedSubscriptionId, storedSubscriptionId);
+    if (storedSelected && compareSubscriptions(storedSelected, selected) >= 0) {
+      return { applied: false, reason: "superseded_customer" as const };
+    }
+  }
+
+  const priceId = subscriptionPriceId(selected);
+  await updateMembership(userId, {
+    tier: tierForPriceId(priceId),
+    status: membershipStatus(selected.status),
+    stripeCustomerId: selected.customer,
+    stripeSubscriptionId: selected.id,
+    stripePriceId: priceId,
+    trialStartedAt: selected.trial_start ?? null,
+    trialEndsAt: selected.trial_end ?? null,
+    currentPeriodEnd: selected.current_period_end ?? selected.items?.data?.[0]?.current_period_end ?? null,
+    cancelAtPeriodEnd: Boolean(selected.cancel_at_period_end),
+  });
+  await syncUser(userId);
+  return { applied: true, reason: "canonical_stripe_state" as const };
+}
+
 export async function POST(request: Request) {
   try {
     const raw = await request.text();
@@ -41,38 +123,27 @@ export async function POST(request: Request) {
       const userId = typeof session.client_reference_id === "string" ? session.client_reference_id : (typeof metadata.fatedrop_user_id === "string" ? metadata.fatedrop_user_id : null);
       const customerId = idFrom(session.customer);
       const subscriptionId = idFrom(session.subscription);
-      const tier = metadata.fatedrop_tier === "pro" ? "pro" : metadata.fatedrop_tier === "plus" ? "plus" : undefined;
       auditUserId = userId;
       auditCustomerId = customerId;
       auditSubscriptionId = subscriptionId;
-      if (userId) {
-        await updateMembership(userId, { stripeCustomerId: customerId, stripeSubscriptionId: subscriptionId, ...(tier ? { tier } : {}) });
-        await syncUser(userId);
+      if (userId && customerId && subscriptionId) {
+        await reconcileSubscription(userId, customerId, subscriptionId, { allowCustomerSwitch: true });
       }
     }
 
     if (event.type.startsWith("customer.subscription.")) {
-      const subscription = parseStripeSubscription(object);
-      if (subscription) {
-        const metadataUserId = subscription.metadata?.fatedrop_user_id || null;
-        const userId = metadataUserId || await findUserIdByStripeCustomer(subscription.customer);
-        const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
+      const eventSubscription = parseStripeSubscription(object);
+      if (eventSubscription) {
+        const metadataUserId = eventSubscription.metadata?.fatedrop_user_id || null;
+        const userId = metadataUserId || await findUserIdByStripeCustomer(eventSubscription.customer);
         auditUserId = userId;
-        auditCustomerId = subscription.customer;
-        auditSubscriptionId = subscription.id;
+        auditCustomerId = eventSubscription.customer;
+        auditSubscriptionId = eventSubscription.id;
         if (userId) {
-          await updateMembership(userId, {
-            tier: tierForPriceId(priceId),
-            status: event.type === "customer.subscription.deleted" ? "canceled" : membershipStatus(subscription.status),
-            stripeCustomerId: subscription.customer,
-            stripeSubscriptionId: subscription.id,
-            stripePriceId: priceId,
-            trialStartedAt: subscription.trial_start ?? null,
-            trialEndsAt: subscription.trial_end ?? null,
-            currentPeriodEnd: subscription.current_period_end ?? subscription.items?.data?.[0]?.current_period_end ?? null,
-            cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
-          });
-          await syncUser(userId);
+          // The webhook payload identifies what changed, but it is not entitlement
+          // authority. Re-read all current subscriptions for this Stripe customer so
+          // a delayed older event cannot replay stale status over newer billing state.
+          await reconcileSubscription(userId, eventSubscription.customer, eventSubscription.id);
         }
       }
     }
