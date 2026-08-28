@@ -35,9 +35,10 @@ test("App Beta API keeps the existing public-form safety boundaries", () => {
   assert.match(route, /DuplicateAppBetaLeadError/);
 });
 
-test("current iOS beta and later Android interest are described without promising public access", () => {
-  assert.match(form, /iPhone — current TestFlight beta/);
-  assert.match(form, /iPad — current TestFlight beta/);
+test("iOS beta and later Android interest are described without claiming TestFlight is already live", () => {
+  assert.match(form, /iPhone — iOS beta/);
+  assert.match(form, /iPad — iOS beta/);
   assert.match(form, /Android — register interest for the later beta/);
+  assert.doesNotMatch(form, /current TestFlight beta/);
   assert.match(form, /install invite separately/);
 });
