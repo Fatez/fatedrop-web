@@ -24,6 +24,7 @@ const serverToServer = new Set([
   "app/api/dashboard/local-radar-operator-alert/route.ts",
   "app/api/dashboard/push-dispatch/route.ts",
   "app/api/dashboard/production-migrations/route.ts",
+  "app/api/dashboard/push-canary/route.ts",
 ]);
 
 test("every browser-facing API mutation is same-origin guarded", () => {
@@ -81,4 +82,10 @@ test("explicit server-to-server mutation exemptions retain their stronger authen
   assert.ok(productionMigrations.includes("FATEDROP_PUSH_CRON_SECRET"));
   assert.ok(productionMigrations.includes('authorization.startsWith("Bearer ")'));
   assert.ok(productionMigrations.includes("runProductionMigrations"));
+
+  const pushCanary = fs.readFileSync(path.join(root, "app/api/dashboard/push-canary/route.ts"), "utf8");
+  assert.ok(pushCanary.includes("timingSafeEqual"));
+  assert.ok(pushCanary.includes("FATEDROP_PUSH_CRON_SECRET"));
+  assert.ok(pushCanary.includes('authorization.startsWith("Bearer ")'));
+  assert.ok(pushCanary.includes("runVanishedProductionCanary"));
 });
