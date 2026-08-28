@@ -43,6 +43,9 @@ next-env.d.ts
 /outputs/
 /work/
 
+# temporary asset handoff fragments
+/.handoff/
+
 # local FateDrop lead storage
 /data/beta-leads.ndjson
 /data/beta-leads.json
