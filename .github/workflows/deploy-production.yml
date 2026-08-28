@@ -67,6 +67,15 @@ jobs:
         if: steps.latest.outputs.deploy == 'true'
         run: npm ci
 
+      - name: Rotate Web push cron secret
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          push_cron_secret="$(openssl rand -hex 32)"
+          printf '%s' "$push_cron_secret" | npx wrangler secret put FATEDROP_PUSH_CRON_SECRET
+          unset push_cron_secret
+
       - name: Deploy verified commit to Cloudflare
         if: steps.latest.outputs.deploy == 'true'
         run: npm run deploy
