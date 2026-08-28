@@ -120,6 +120,31 @@ jobs:
             if (result.accepted !== true || result.enabled !== true) throw new Error("Canonical push dispatcher production exercise failed");
           '
 
+      - name: Run one-shot Vanished production canary
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git log -1 --pretty=%B | grep -Fq '[vanished-canary]'; then
+            echo "No [vanished-canary] marker on this verified commit; skipping one-shot device canary."
+            exit 0
+          fi
+          WEB="https://fatedrop.co.uk"
+          curl --fail --silent --show-error --retry 2 --retry-delay 2 \
+            -X POST \
+            -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+            -H "Accept: application/json" \
+            "$WEB/api/dashboard/push-canary" \
+            -o /tmp/push-canary.json
+          node -e '
+            const fs=require("fs");
+            const result=JSON.parse(fs.readFileSync("/tmp/push-canary.json","utf8"));
+            if (result.accepted !== true) throw new Error(`Vanished canary was not accepted: ${result.reason || result.state || "unknown"}`);
+            if (result.eventType !== "vanished" || result.state !== "sent") throw new Error("Vanished canary did not reach sent state");
+            if (!result.providerMessageId) throw new Error("Vanished canary is missing the Expo provider message id");
+            console.log(`Vanished canary sent; outbox=${result.outboxId}; provider=${result.providerMessageId}`);
+          '
+
   smoke:
     needs: deploy
     if: needs.deploy.outputs.deployed == 'true'
