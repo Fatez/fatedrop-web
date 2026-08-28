@@ -5,13 +5,19 @@ import { dispatchCanonicalPushAlerts } from "@/lib/canonical-push";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function matchesSecret(provided: string, expected: string | undefined) {
+  if (!expected) return false;
+  const providedBuffer = Buffer.from(provided);
+  const expectedBuffer = Buffer.from(expected);
+  return providedBuffer.length === expectedBuffer.length && timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
 function authorized(request: Request) {
-  const secret = process.env.FATEDROP_METRICS_INGEST_SECRET;
   const authorization = request.headers.get("authorization") || "";
-  if (!secret || !authorization.startsWith("Bearer ")) return false;
-  const provided = Buffer.from(authorization.slice(7));
-  const expected = Buffer.from(secret);
-  return provided.length === expected.length && timingSafeEqual(provided, expected);
+  if (!authorization.startsWith("Bearer ")) return false;
+  const provided = authorization.slice(7);
+  return matchesSecret(provided, process.env.FATEDROP_METRICS_INGEST_SECRET)
+    || matchesSecret(provided, process.env.FATEDROP_PUSH_CRON_SECRET);
 }
 
 export async function POST(request: Request) {
