@@ -44,13 +44,14 @@ export function Nav() {
             </button>
             <div className="account-menu-popover" role="menu">
               <Link href="/account" role="menuitem" onClick={closeMenus}><span><b>My FateDrop ID</b><small>Profile, member since & identity</small></span><i>◎</i></Link>
+              <Link href="/account/register" role="menuitem" onClick={closeMenus}><span><b>Create FateDrop ID</b><small>Register a new Website + App sign-in</small></span><i>＋</i></Link>
               <Link href="/dashboard" role="menuitem" onClick={closeMenus}><span><b>Dashboard</b><small>Search, FateFind, FateMatch & signals</small></span><i>▦</i></Link>
               <Link href="/dashboard/avatar" role="menuitem" onClick={closeMenus}><span><b>Koru &amp; Friends</b><small>Choose your FateDrop companion</small></span><i>◇</i></Link>
               <Link href="/subscriptions#collectors" role="menuitem" onClick={closeMenus}><span><b>Membership</b><small>Free, FateDrop Plus & billing</small></span><i>♛</i></Link>
             </div>
           </div>
-          <Link className="button button-small button-primary nav-cta" href="/join" onClick={() => { trackEvent("cta_click", { location: "navigation", target: "join" }); closeMenus(); }}>
-            Join the beta <span aria-hidden="true">↗</span>
+          <Link className="button button-small button-primary nav-cta" href="/app-beta" onClick={() => { trackEvent("cta_click", { location: "navigation", target: "app_beta" }); closeMenus(); }}>
+            Join App Beta <span aria-hidden="true">↗</span>
           </Link>
         </nav>
         <button className="menu-button" type="button" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => { setOpen((current) => !current); setAccountOpen(false); setMerchOpen(false); }}><span /><span /></button>
