@@ -76,9 +76,40 @@ jobs:
           printf '%s' "$push_cron_secret" | npx wrangler secret put FATEDROP_PUSH_CRON_SECRET
           unset push_cron_secret
 
+      - name: Rotate production migration secret
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$migration_secret"
+          printf '%s' "$migration_secret" | npx wrangler secret put FATEDROP_DEPLOY_MIGRATION_SECRET
+          echo "FATEDROP_DEPLOY_MIGRATION_SECRET=$migration_secret" >> "$GITHUB_ENV"
+          unset migration_secret
+
       - name: Deploy verified commit to Cloudflare
         if: steps.latest.outputs.deploy == 'true'
         run: npm run deploy
+
+      - name: Apply and verify required production database migrations
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WEB="https://fatedrop.co.uk"
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            --request POST \
+            --header "Authorization: Bearer $FATEDROP_DEPLOY_MIGRATION_SECRET" \
+            "$WEB/api/dashboard/database-migrate" \
+            -o /tmp/database-migrate.json
+          node -e '
+            const fs = require("fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/database-migrate.json", "utf8"));
+            if (result.accepted !== true || result.ready !== true || !Array.isArray(result.pending) || result.pending.length !== 0) {
+              throw new Error("Production database migration gate did not reach ready state");
+            }
+            console.log(`Production database migrations ready (${result.applied}/${result.required}).`);
+          '
 
   smoke:
     needs: deploy
