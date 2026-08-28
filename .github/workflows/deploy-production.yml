@@ -1,0 +1,127 @@
+name: Deploy FateDrop Web Production
+
+on:
+  workflow_run:
+    workflows: ["Verify FateDrop Web"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fatedrop-web-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      deployed: ${{ steps.latest.outputs.deploy }}
+      verified_sha: ${{ github.event.workflow_run.head_sha }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout the exact verified main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.VERIFIED_SHA }}
+          fetch-depth: 1
+
+      - name: Reject a superseded verified commit
+        id: latest
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_main="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$current_main" != "$VERIFIED_SHA" ]; then
+            echo "Verified commit $VERIFIED_SHA has been superseded by main $current_main; skipping stale production deployment."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+
+      - name: Use Node.js
+        if: steps.latest.outputs.deploy == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Require production deployment credentials
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 2; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "Missing CLOUDFLARE_ACCOUNT_ID"; exit 2; }
+
+      - name: Install locked dependencies
+        if: steps.latest.outputs.deploy == 'true'
+        run: npm ci
+
+      - name: Deploy verified commit to Cloudflare
+        if: steps.latest.outputs.deploy == 'true'
+        run: npm run deploy
+
+  smoke:
+    needs: deploy
+    if: needs.deploy.outputs.deployed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prove deployed Cloud and Web contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLOUD="https://fatedrop-cloud-production.up.railway.app"
+          WEB="https://fatedrop.co.uk"
+
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 "$CLOUD/api/signals?limit=1" -o /tmp/signals.json
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 "$CLOUD/api/signal-summary" -o /tmp/summary.json
+          node -e '
+            const fs=require("fs");
+            const signals=JSON.parse(fs.readFileSync("/tmp/signals.json","utf8"));
+            const summary=JSON.parse(fs.readFileSync("/tmp/summary.json","utf8"));
+            if (signals.contractVersion !== 1 || signals.source !== "FATEDROP_CLOUD") throw new Error("Cloud /api/signals contract drift");
+            if (summary.contractVersion !== 1 || summary.source !== "FATEDROP_CLOUD" || summary.available !== true) throw new Error("Cloud /api/signal-summary contract drift");
+          '
+
+          health="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$CLOUD/api/signal-health")"
+          test "$health" = "401" || { echo "Cloud private diagnostic boundary changed: $health"; exit 1; }
+
+          check_status() {
+            local path="$1"
+            local expected="$2"
+            local code
+            code="$(curl --silent --show-error --retry 5 --retry-delay 3 --output /tmp/web-route.out --write-out '%{http_code}' "$WEB$path")"
+            test "$code" = "$expected" || {
+              echo "$path expected HTTP $expected but received $code"
+              cat /tmp/web-route.out
+              exit 1
+            }
+          }
+
+          check_available() {
+            local path="$1"
+            local code
+            code="$(curl --silent --show-error --retry 5 --retry-delay 3 --output /tmp/web-route.out --write-out '%{http_code}' "$WEB$path")"
+            if [ "$code" = "404" ] || [ "$code" -ge 500 ]; then
+              echo "$path failed production route smoke with HTTP $code"
+              cat /tmp/web-route.out
+              exit 1
+            fi
+          }
+
+          check_status "/" "200"
+          check_status "/api/mobile/session" "401"
+          check_status "/api/mobile/alerts" "401"
+          check_available "/api/trader/cards?q=Furret&limit=1"
+          check_available "/api/network-status"
