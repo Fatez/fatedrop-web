@@ -17,7 +17,7 @@ export default function AppBetaPage() {
             <p className="eyebrow"><span />FateDrop App Beta</p>
             <h1 style={{ maxWidth: 720 }}>Carry the signal with you.</h1>
             <p style={{ maxWidth: 680 }}>
-              The FateDrop mobile app is in controlled beta. Register your interest here and use one FateDrop ID across the Website and App. There is no public download link yet.
+              The FateDrop mobile app is in controlled beta. Register your interest here and use the same identity — one FateDrop ID — across the Website and App. There is no public download link yet.
             </p>
             <div className="join-promise" style={{ marginTop: 28 }}>
               <span><i>01</i>Join the beta list</span>
