@@ -21,6 +21,7 @@ function relative(file) {
 const serverToServer = new Set([
   "app/api/billing/webhook/route.ts",
   "app/api/dashboard/network-snapshot/route.ts",
+  "app/api/dashboard/local-radar-operator-alert/route.ts",
 ]);
 
 test("every browser-facing API mutation is same-origin guarded", () => {
@@ -60,4 +61,10 @@ test("explicit server-to-server mutation exemptions retain their stronger authen
   assert.ok(metrics.includes("timingSafeEqual"));
   assert.ok(metrics.includes("FATEDROP_METRICS_INGEST_SECRET"));
   assert.ok(metrics.includes('authorization.startsWith("Bearer ")'));
+
+  const localRadarOperator = fs.readFileSync(path.join(root, "app/api/dashboard/local-radar-operator-alert/route.ts"), "utf8");
+  assert.ok(localRadarOperator.includes("timingSafeEqual"));
+  assert.ok(localRadarOperator.includes("FATEDROP_METRICS_INGEST_SECRET"));
+  assert.ok(localRadarOperator.includes('authorization.startsWith("Bearer ")'));
+  assert.ok(localRadarOperator.includes("dispatchLocalRadarOperatorPush"));
 });
