@@ -45,6 +45,21 @@ type ExpoTicket = {
   details?: { error?: string };
 };
 
+export type LocalRadarOperatorPush = {
+  eventId: string;
+  stage: "WHISPER" | "ECHO";
+  title: string;
+  body: string;
+  retailerId: string;
+  retailerName: string;
+  productTitle: string;
+  expectedFrom: string | null;
+  expectedTo: string | null;
+  expectedLabel: string | null;
+  branchCount: number;
+  operatorIssue: number;
+};
+
 function dispatchEnabled() {
   return process.env.FATEDROP_PUSH_DISPATCH_ENABLED === "true";
 }
@@ -60,6 +75,13 @@ function stageEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
   if (alert.fateStage === "ECHO") return recipient.echo_enabled;
   if (alert.fateStage === "MANIFESTED") return recipient.manifested_enabled;
   if (alert.fateStage === "VANISHED") return recipient.vanished_enabled;
+  return false;
+}
+
+function operatorStageEnabled(event: LocalRadarOperatorPush, recipient: RecipientRow) {
+  if (!recipient.push_enabled) return false;
+  if (event.stage === "WHISPER") return recipient.whisper_enabled;
+  if (event.stage === "ECHO") return recipient.echo_enabled;
   return false;
 }
 
@@ -206,6 +228,67 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
   return { alerts: recent.length, recipients: recipients.length, queued: inserted.length };
 }
 
+async function enqueueLocalRadarOperatorPush(event: LocalRadarOperatorPush) {
+  const recipients = await eligibleRecipients();
+  if (!recipients.length) return { recipients: 0, queued: 0 };
+  const nowDate = new Date();
+  const now = Math.floor(nowDate.getTime() / 1000);
+  const queueRows: Array<Record<string, unknown>> = [];
+
+  for (const recipient of recipients) {
+    if (!operatorStageEnabled(event, recipient) || inQuietHours(recipient, nowDate)) continue;
+    queueRows.push({
+      id: randomUUID(),
+      dedupe_key: `local-radar:${event.eventId}:${recipient.endpoint_id}`,
+      user_id: recipient.user_id,
+      event_type: `local_radar_${event.stage.toLowerCase()}`,
+      event_id: event.eventId,
+      channel: "push",
+      title: event.title,
+      body: event.body,
+      url: null,
+      payload_json: {
+        route: "local-radar",
+        localIntelId: event.eventId,
+        stage: event.stage,
+        retailerId: event.retailerId,
+        retailerName: event.retailerName,
+        productTitle: event.productTitle,
+        expectedFrom: event.expectedFrom,
+        expectedTo: event.expectedTo,
+        expectedLabel: event.expectedLabel,
+        branchCount: event.branchCount,
+        operatorIssue: event.operatorIssue,
+        endpointId: recipient.endpoint_id,
+        expoPushToken: recipient.expo_push_token,
+      },
+      state: "pending",
+      attempts: 0,
+      next_attempt_at: now,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+
+  if (!queueRows.length) return { recipients: recipients.length, queued: 0 };
+  const sql = await fateDropPostgres();
+  const serialized = JSON.stringify(queueRows);
+  const inserted = await sql`
+    INSERT INTO fatedrop_notification_outbox (
+      id,dedupe_key,user_id,event_type,event_id,channel,title,body,url,payload_json,state,attempts,next_attempt_at,created_at,updated_at
+    )
+    SELECT
+      item.id,item.dedupe_key,item.user_id,item.event_type,item.event_id,item.channel,item.title,item.body,item.url,
+      item.payload_json,item.state,item.attempts,item.next_attempt_at,item.created_at,item.updated_at
+    FROM jsonb_to_recordset(${serialized}::jsonb) AS item(
+      id text,dedupe_key text,user_id text,event_type text,event_id text,channel text,title text,body text,url text,
+      payload_json jsonb,state text,attempts integer,next_attempt_at bigint,created_at bigint,updated_at bigint
+    )
+    ON CONFLICT (dedupe_key) DO NOTHING
+    RETURNING id`;
+  return { recipients: recipients.length, queued: inserted.length };
+}
+
 async function recoverStaleSending() {
   const sql = await fateDropPostgres();
   const now = Math.floor(Date.now() / 1000);
@@ -343,4 +426,13 @@ export async function dispatchCanonicalPushAlerts({ measuredAt = Math.floor(Date
   const claimed = await claimPending(100);
   const delivery = await sendClaimed(claimed, fetchImpl);
   return { enabled: true, queued: queued.queued, ...delivery };
+}
+
+export async function dispatchLocalRadarOperatorPush(event: LocalRadarOperatorPush, { fetchImpl = fetch }: { fetchImpl?: typeof fetch } = {}) {
+  if (!dispatchEnabled()) return { enabled: false, recipients: 0, queued: 0, claimed: 0, sent: 0, failed: 0 };
+  await recoverStaleSending();
+  const queued = await enqueueLocalRadarOperatorPush(event);
+  const claimed = await claimPending(100);
+  const delivery = await sendClaimed(claimed, fetchImpl);
+  return { enabled: true, recipients: queued.recipients, queued: queued.queued, ...delivery };
 }
