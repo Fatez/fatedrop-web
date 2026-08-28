@@ -101,8 +101,8 @@ export function AppBetaForm() {
             <span>Device you want to test on</span>
             <select id="deviceType" name="deviceType" defaultValue="" {...fieldProps("deviceType")}>
               <option value="" disabled>Select your device</option>
-              <option value="iphone">iPhone — current TestFlight beta</option>
-              <option value="ipad">iPad — current TestFlight beta</option>
+              <option value="iphone">iPhone — iOS beta</option>
+              <option value="ipad">iPad — iOS beta</option>
               <option value="android">Android — register interest for the later beta</option>
               <option value="other">Other / not sure</option>
             </select>
