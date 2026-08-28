@@ -17,17 +17,20 @@ export default function AppBetaPage() {
             <p className="eyebrow"><span />FateDrop App Beta</p>
             <h1 style={{ maxWidth: 720 }}>Carry the signal with you.</h1>
             <p style={{ maxWidth: 680 }}>
-              The FateDrop mobile app is in controlled beta. Register your interest here and we’ll use your existing FateDrop beta record for mobile access. There is no public download link yet.
+              The FateDrop mobile app is in controlled beta. Register your interest here and use one FateDrop ID across the Website and App. There is no public download link yet.
             </p>
             <div className="join-promise" style={{ marginTop: 28 }}>
               <span><i>01</i>Join the beta list</span>
-              <span><i>02</i>Use one FateDrop ID</span>
+              <span><i>02</i>Create or use your FateDrop ID</span>
               <span><i>03</i>Receive app access when invited</span>
             </div>
-            <p style={{ marginTop: 24, opacity: .78 }}>
-              Already have a FateDrop ID? You do not need a second account. Your Website and App sign-in use the same identity.
+            <div className="button-row" style={{ marginTop: 24 }}>
+              <Link className="button button-secondary" href="/account/register">Create FateDrop ID</Link>
+              <Link className="text-link" href="/account/login">Sign in <span>→</span></Link>
+            </div>
+            <p style={{ marginTop: 18, opacity: .78 }}>
+              Beta interest and your sign-in identity are separate records. You do not need a second account if you already have a FateDrop ID.
             </p>
-            <p style={{ marginTop: 12 }}><Link href="/account/login">Already invited? Sign in to your FateDrop ID →</Link></p>
           </div>
           <AppBetaForm />
         </div>
