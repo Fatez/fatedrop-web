@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { dispatchCanonicalPushAlerts } from "@/lib/canonical-push";
+import { databaseMigrationStatus } from "@/lib/database-migrations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    const migrationStatus = await databaseMigrationStatus();
+    if (!migrationStatus.ready) {
+      return Response.json(
+        { error: "Push dispatch blocked because required database migrations are pending.", migrationStatus },
+        { status: 503, headers: { "cache-control": "no-store" } },
+      );
+    }
+
     const result = await dispatchCanonicalPushAlerts();
     if (!result.enabled) {
       return Response.json(
