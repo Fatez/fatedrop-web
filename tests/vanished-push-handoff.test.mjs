@@ -6,14 +6,14 @@ const alerts = fs.readFileSync(new URL("../lib/canonical-alerts.ts", import.meta
 const push = fs.readFileSync(new URL("../lib/canonical-push.ts", import.meta.url), "utf8");
 
 test("Vanished remains a canonical mobile alert stage", () => {
-  assert.match(alerts, /"VANISHED"/);
-  assert.match(alerts, /ALLOWED_STAGES/);
+  assert.match(alerts, /const canonicalStages = new Set<CanonicalSignalStage>\(\["WHISPER", "ECHO", "MANIFESTED", "VANISHED"\]\)/);
+  assert.match(alerts, /if \(state === "vanished"\) return "VANISHED"/);
 });
 
 test("Vanished is enabled by the canonical push preference fallback", () => {
-  assert.match(push, /stage === "VANISHED"/);
+  assert.match(push, /alert\.fateStage === "VANISHED"/);
   assert.match(push, /return recipient\.vanished_enabled/);
-  assert.match(push, /COALESCE\(np\.vanished_enabled, true\)/);
+  assert.match(push, /COALESCE\(np\.vanished_enabled,\s*true\)/);
 });
 
 test("Vanished uses the same canonical outbox and Expo sender as every lifecycle stage", () => {
