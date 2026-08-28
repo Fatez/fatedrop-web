@@ -40,5 +40,5 @@ test("iOS beta and later Android interest are described without claiming TestFli
   assert.match(form, /iPad — iOS beta/);
   assert.match(form, /Android — register interest for the later beta/);
   assert.doesNotMatch(form, /current TestFlight beta/);
-  assert.match(form, /install invite separately/);
+  assert.match(page, /install invite separately/);
 });
