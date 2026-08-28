@@ -7,7 +7,8 @@
     "global_fetch_strictly_public"
   ],
   "vars": {
-    "FATEDROP_ACCOUNT_STORE": "postgres"
+    "FATEDROP_ACCOUNT_STORE": "postgres",
+    "FATEDROP_PUSH_DISPATCH_ENABLED": "true"
   },
   "routes": [
     {
