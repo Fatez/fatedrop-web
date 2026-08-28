@@ -67,6 +67,92 @@ jobs:
         if: steps.latest.outputs.deploy == 'true'
         run: npm ci
 
+      - name: Ensure production Turnstile widget
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        env:
+          TURNSTILE_WIDGET_NAME: FateDrop Web Production
+          TURNSTILE_DOMAIN: fatedrop.co.uk
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/challenges/widgets"
+          auth_header="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+
+          curl --fail --silent --show-error \
+            -H "$auth_header" \
+            "$api?per_page=1000" \
+            -o /tmp/turnstile-widgets.json
+
+          turnstile_sitekey="$(node -e '
+            const fs = require("fs");
+            const payload = JSON.parse(fs.readFileSync("/tmp/turnstile-widgets.json", "utf8"));
+            if (payload.success !== true || !Array.isArray(payload.result)) process.exit(2);
+            const domain = process.env.TURNSTILE_DOMAIN;
+            const name = process.env.TURNSTILE_WIDGET_NAME;
+            const widgets = payload.result;
+            const widget = widgets.find((item) => item?.name === name && item?.domains?.includes(domain))
+              || widgets.find((item) => item?.domains?.includes(domain));
+            process.stdout.write(String(widget?.sitekey || ""));
+          ')"
+
+          if [ -n "$turnstile_sitekey" ]; then
+            curl --fail --silent --show-error \
+              -H "$auth_header" \
+              "$api/$turnstile_sitekey" \
+              -o /tmp/turnstile-widget.json
+          else
+            node -e '
+              const fs = require("fs");
+              fs.writeFileSync("/tmp/turnstile-create.json", JSON.stringify({
+                domains: [process.env.TURNSTILE_DOMAIN],
+                mode: "managed",
+                name: process.env.TURNSTILE_WIDGET_NAME,
+              }));
+            '
+            curl --fail --silent --show-error \
+              -X POST \
+              -H "$auth_header" \
+              -H "Content-Type: application/json" \
+              --data-binary @/tmp/turnstile-create.json \
+              "$api" \
+              -o /tmp/turnstile-widget.json
+          fi
+
+          turnstile_sitekey="$(node -e '
+            const fs = require("fs");
+            const payload = JSON.parse(fs.readFileSync("/tmp/turnstile-widget.json", "utf8"));
+            if (payload.success !== true || !payload.result?.sitekey || !payload.result?.secret) process.exit(2);
+            if (!Array.isArray(payload.result.domains) || !payload.result.domains.includes(process.env.TURNSTILE_DOMAIN)) process.exit(3);
+            process.stdout.write(String(payload.result.sitekey));
+          ')"
+          turnstile_secret="$(node -e '
+            const fs = require("fs");
+            const payload = JSON.parse(fs.readFileSync("/tmp/turnstile-widget.json", "utf8"));
+            process.stdout.write(String(payload.result.secret));
+          ')"
+
+          echo "::add-mask::$turnstile_secret"
+          echo "::add-mask::$turnstile_sitekey"
+
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Content-Type: application/json" \
+            --data "$(node -e 'process.stdout.write(JSON.stringify({secret: process.argv[1], response: ""}))' "$turnstile_secret")" \
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify" \
+            -o /tmp/turnstile-siteverify.json
+          node -e '
+            const fs = require("fs");
+            const result = JSON.parse(fs.readFileSync("/tmp/turnstile-siteverify.json", "utf8"));
+            const codes = Array.isArray(result["error-codes"]) ? result["error-codes"] : [];
+            if (codes.includes("invalid-input-secret") || codes.includes("missing-input-secret")) {
+              throw new Error("Cloudflare rejected the production Turnstile secret");
+            }
+          '
+
+          printf '%s' "$turnstile_sitekey" | npx wrangler secret put TURNSTILE_SITE_KEY
+          printf '%s' "$turnstile_secret" | npx wrangler secret put TURNSTILE_SECRET_KEY
+          unset turnstile_sitekey turnstile_secret
+
       - name: Rotate Web push cron secret
         if: steps.latest.outputs.deploy == 'true'
         shell: bash
@@ -200,3 +286,31 @@ jobs:
           check_status "/api/health/push" "204"
           check_available "/api/trader/cards?q=Furret&limit=1"
           check_available "/api/network-status"
+
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 "$WEB/account/register" -o /tmp/register.html
+          grep -Fq 'cf-turnstile' /tmp/register.html || { echo "Registration page is missing the Turnstile widget"; exit 1; }
+          if grep -Fq 'Security verification is unavailable.' /tmp/register.html; then
+            echo "Registration page still reports unavailable security verification"
+            exit 1
+          fi
+
+          register_status="$(curl --silent --show-error --retry 3 --retry-delay 2 \
+            -o /tmp/register-probe.json \
+            -w '%{http_code}' \
+            -X POST \
+            -H 'Origin: https://fatedrop.co.uk' \
+            -H 'Content-Type: application/json' \
+            --data '{"displayName":"FateDrop Production Probe","email":"production-probe@invalid.example","password":"not-a-real-password-123","confirmPassword":"not-a-real-password-123","acceptTerms":true,"turnstileToken":""}' \
+            "$WEB/api/auth/register")"
+          test "$register_status" = "403" || {
+            echo "Registration Turnstile server gate expected HTTP 403 but received $register_status"
+            cat /tmp/register-probe.json
+            exit 1
+          }
+          node -e '
+            const fs=require("fs");
+            const result=JSON.parse(fs.readFileSync("/tmp/register-probe.json","utf8"));
+            if (result.error !== "Security verification failed. Please try again.") {
+              throw new Error("Registration Turnstile server gate returned an unexpected response");
+            }
+          '
