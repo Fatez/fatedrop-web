@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { dispatchCanonicalPushAlerts } from "@/lib/canonical-push";
+import { recordPushDispatchHeartbeat } from "@/lib/push-dispatch-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,8 +29,22 @@ export async function POST(request: Request) {
     );
   }
 
+  const startedAt = Math.floor(Date.now() / 1000);
+
   try {
     const result = await dispatchCanonicalPushAlerts();
+    const completedAt = Math.floor(Date.now() / 1000);
+    await recordPushDispatchHeartbeat({
+      startedAt,
+      completedAt,
+      status: result.enabled ? "ok" : "disabled",
+      queued: result.queued,
+      claimed: result.claimed,
+      sent: result.sent,
+      failed: result.failed,
+      error: result.enabled ? null : "Push dispatch is not enabled.",
+    }).catch(() => undefined);
+
     if (!result.enabled) {
       return Response.json(
         { error: "Push dispatch is not enabled.", result },
@@ -40,7 +55,19 @@ export async function POST(request: Request) {
       { accepted: true, ...result },
       { status: 200, headers: { "cache-control": "no-store" } },
     );
-  } catch {
+  } catch (error) {
+    const completedAt = Math.floor(Date.now() / 1000);
+    const detail = error instanceof Error ? error.message : "Push dispatch could not run.";
+    await recordPushDispatchHeartbeat({
+      startedAt,
+      completedAt,
+      status: "error",
+      queued: 0,
+      claimed: 0,
+      sent: 0,
+      failed: 0,
+      error: detail.slice(0, 240),
+    }).catch(() => undefined);
     return Response.json(
       { error: "Push dispatch could not run." },
       { status: 503, headers: { "cache-control": "no-store" } },
