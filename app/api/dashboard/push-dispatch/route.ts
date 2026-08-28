@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { dispatchCanonicalPushAlerts } from "@/lib/canonical-push";
+import { recordPushDispatchHeartbeat } from "@/lib/push-dispatch-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,11 +29,39 @@ export async function POST(request: Request) {
     );
   }
 
+  const startedAt = Math.floor(Date.now() / 1000);
+
   try {
     const result = await dispatchCanonicalPushAlerts();
+    const completedAt = Math.floor(Date.now() / 1000);
+    const totalProviderFailure = result.enabled && result.claimed > 0 && result.sent === 0 && result.failed > 0;
+    const status = !result.enabled ? "disabled" : totalProviderFailure ? "error" : "ok";
+    const heartbeatError = !result.enabled
+      ? "Push dispatch is not enabled."
+      : totalProviderFailure
+        ? "Every claimed push delivery failed in the provider batch."
+        : null;
+
+    await recordPushDispatchHeartbeat({
+      startedAt,
+      completedAt,
+      status,
+      queued: result.queued,
+      claimed: result.claimed,
+      sent: result.sent,
+      failed: result.failed,
+      error: heartbeatError,
+    }).catch(() => undefined);
+
     if (!result.enabled) {
       return Response.json(
         { error: "Push dispatch is not enabled.", result },
+        { status: 503, headers: { "cache-control": "no-store" } },
+      );
+    }
+    if (totalProviderFailure) {
+      return Response.json(
+        { error: "Every claimed push delivery failed.", result },
         { status: 503, headers: { "cache-control": "no-store" } },
       );
     }
@@ -40,7 +69,19 @@ export async function POST(request: Request) {
       { accepted: true, ...result },
       { status: 200, headers: { "cache-control": "no-store" } },
     );
-  } catch {
+  } catch (error) {
+    const completedAt = Math.floor(Date.now() / 1000);
+    const detail = error instanceof Error ? error.message : "Push dispatch could not run.";
+    await recordPushDispatchHeartbeat({
+      startedAt,
+      completedAt,
+      status: "error",
+      queued: 0,
+      claimed: 0,
+      sent: 0,
+      failed: 0,
+      error: detail.slice(0, 240),
+    }).catch(() => undefined);
     return Response.json(
       { error: "Push dispatch could not run." },
       { status: 503, headers: { "cache-control": "no-store" } },

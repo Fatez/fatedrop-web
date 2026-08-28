@@ -23,6 +23,7 @@ const serverToServer = new Set([
   "app/api/dashboard/network-snapshot/route.ts",
   "app/api/dashboard/local-radar-operator-alert/route.ts",
   "app/api/dashboard/push-dispatch/route.ts",
+  "app/api/dashboard/production-migrations/route.ts",
 ]);
 
 test("every browser-facing API mutation is same-origin guarded", () => {
@@ -74,4 +75,10 @@ test("explicit server-to-server mutation exemptions retain their stronger authen
   assert.ok(pushDispatch.includes("FATEDROP_METRICS_INGEST_SECRET"));
   assert.ok(pushDispatch.includes('authorization.startsWith("Bearer ")'));
   assert.ok(pushDispatch.includes("dispatchCanonicalPushAlerts"));
+
+  const productionMigrations = fs.readFileSync(path.join(root, "app/api/dashboard/production-migrations/route.ts"), "utf8");
+  assert.ok(productionMigrations.includes("timingSafeEqual"));
+  assert.ok(productionMigrations.includes("FATEDROP_PUSH_CRON_SECRET"));
+  assert.ok(productionMigrations.includes('authorization.startsWith("Bearer ")'));
+  assert.ok(productionMigrations.includes("runProductionMigrations"));
 });
