@@ -20,8 +20,7 @@ async function appliedMigrationIds() {
   const sql = await ensureMigrationLedger();
   const rows = await sql`
     SELECT id
-    FROM fatedrop_schema_migrations
-    WHERE id = ANY(${REQUIRED_DATABASE_MIGRATIONS as unknown as string[]})`;
+    FROM fatedrop_schema_migrations`;
   return new Set(rows.map((row) => String(row.id)));
 }
 
