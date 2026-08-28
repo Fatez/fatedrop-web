@@ -73,12 +73,52 @@ jobs:
         run: |
           set -euo pipefail
           push_cron_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$push_cron_secret"
           printf '%s' "$push_cron_secret" | npx wrangler secret put FATEDROP_PUSH_CRON_SECRET
+          printf 'FATEDROP_PUSH_CRON_SECRET=%s\n' "$push_cron_secret" >> "$GITHUB_ENV"
           unset push_cron_secret
 
       - name: Deploy verified commit to Cloudflare
         if: steps.latest.outputs.deploy == 'true'
         run: npm run deploy
+
+      - name: Apply and verify production database migrations
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WEB="https://fatedrop.co.uk"
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            -X POST \
+            -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+            -H "Accept: application/json" \
+            "$WEB/api/dashboard/production-migrations" \
+            -o /tmp/production-migrations.json
+          node -e '
+            const fs=require("fs");
+            const result=JSON.parse(fs.readFileSync("/tmp/production-migrations.json","utf8"));
+            if (result.accepted !== true) throw new Error("Production migration gate was not accepted");
+            if (!Array.isArray(result.pending) || result.pending.length !== 0) throw new Error("Production migrations remain pending");
+            if (result.vanishedDefaultVerified !== true || Number(result.historicalAsymmetryCount) !== 0) throw new Error("Lifecycle preference migration verification failed");
+          '
+
+      - name: Exercise canonical production push dispatcher
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WEB="https://fatedrop.co.uk"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -X POST \
+            -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+            -H "Accept: application/json" \
+            "$WEB/api/dashboard/push-dispatch" \
+            -o /tmp/push-dispatch.json
+          node -e '
+            const fs=require("fs");
+            const result=JSON.parse(fs.readFileSync("/tmp/push-dispatch.json","utf8"));
+            if (result.accepted !== true || result.enabled !== true) throw new Error("Canonical push dispatcher production exercise failed");
+          '
 
   smoke:
     needs: deploy
@@ -132,5 +172,6 @@ jobs:
           check_status "/" "200"
           check_status "/api/mobile/session" "401"
           check_status "/api/mobile/alerts" "401"
+          check_status "/api/health/push" "204"
           check_available "/api/trader/cards?q=Furret&limit=1"
           check_available "/api/network-status"
