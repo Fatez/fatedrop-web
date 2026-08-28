@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "./custom-worker.mjs",
   "name": "fatedrop-web",
   "compatibility_date": "2026-08-18",
   "compatibility_flags": [
@@ -9,6 +9,9 @@
   "vars": {
     "FATEDROP_ACCOUNT_STORE": "postgres",
     "FATEDROP_PUSH_DISPATCH_ENABLED": "true"
+  },
+  "triggers": {
+    "crons": ["* * * * *"]
   },
   "routes": [
     {
