@@ -44,6 +44,8 @@ test("scheduled production monitor detects a stale push path independently of Cl
 test("canonical push route records heartbeat without introducing a lifecycle-specific sender", () => {
   assert.match(pushRoute, /dispatchCanonicalPushAlerts\(\)/);
   assert.match(pushRoute, /recordPushDispatchHeartbeat/);
+  assert.match(pushRoute, /result\.claimed > 0 && result\.sent === 0 && result\.failed > 0/);
+  assert.match(pushRoute, /Every claimed push delivery failed/);
   assert.doesNotMatch(pushRoute, /VANISHED/);
   assert.match(pushHealth, /STALE_AFTER_SECONDS = 180/);
   assert.match(pushHealth, /historicalAsymmetryCount === 0/);
