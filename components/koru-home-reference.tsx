@@ -24,8 +24,8 @@ export function KoruReferenceLanding() {
                 FateDrop watches participating TCG retailers, adds price context and turns network movement into one clear signal lifecycle.
               </p>
               <div className="kr-actions">
-                <Link className="button kr-primary" href="/join?type=collector">
-                  Start Your Free Trial <span>↗</span>
+                <Link className="button kr-primary" href="/app-beta">
+                  Join the App Beta <span>↗</span>
                 </Link>
                 <Link className="button kr-secondary" href="/demo">
                   Try the Interactive Demo
