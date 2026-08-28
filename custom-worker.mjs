@@ -6,8 +6,8 @@ export default {
   fetch: handler.fetch,
 
   async scheduled(_controller, env, ctx) {
-    const secret = String(env?.FATEDROP_METRICS_INGEST_SECRET || "").trim();
-    if (!secret) throw new Error("FATEDROP_METRICS_INGEST_SECRET is required for scheduled push dispatch");
+    const secret = String(env?.FATEDROP_PUSH_CRON_SECRET || "").trim();
+    if (!secret) throw new Error("FATEDROP_PUSH_CRON_SECRET is required for scheduled push dispatch");
 
     const request = new Request(PUSH_DISPATCH_URL, {
       method: "POST",
