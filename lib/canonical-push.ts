@@ -5,6 +5,7 @@ import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const MAX_ATTEMPTS = 3;
+const SENDING_LEASE_SECONDS = 5 * 60;
 
 type RecipientRow = {
   endpoint_id: string;
@@ -205,6 +206,22 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
   return { alerts: recent.length, recipients: recipients.length, queued: inserted.length };
 }
 
+async function recoverStaleSending() {
+  const sql = await fateDropPostgres();
+  const now = Math.floor(Date.now() / 1000);
+  const staleBefore = now - SENDING_LEASE_SECONDS;
+  await sql`
+    UPDATE fatedrop_notification_outbox
+    SET
+      state='failed',
+      last_error=COALESCE(last_error,'Push delivery lease expired before a result was recorded.'),
+      next_attempt_at=${now},
+      updated_at=${now}
+    WHERE channel='push'
+      AND state='sending'
+      AND updated_at <= ${staleBefore}`;
+}
+
 async function claimPending(limit = 100) {
   const sql = await fateDropPostgres();
   const now = Math.floor(Date.now() / 1000);
@@ -321,6 +338,7 @@ async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
 
 export async function dispatchCanonicalPushAlerts({ measuredAt = Math.floor(Date.now() / 1000), fetchImpl = fetch }: { measuredAt?: number; fetchImpl?: typeof fetch } = {}) {
   if (!dispatchEnabled()) return { enabled: false, queued: 0, claimed: 0, sent: 0, failed: 0 };
+  await recoverStaleSending();
   const queued = await enqueueRecentAlerts({ measuredAt });
   const claimed = await claimPending(100);
   const delivery = await sendClaimed(claimed, fetchImpl);
