@@ -3,6 +3,7 @@ import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
 import type { FateMatch } from "@/lib/fate-match";
 import { createFateMatch, deleteFateMatch, listUserFateMatches, setFateMatchEnabled } from "@/lib/fate-match-storage";
 import { hasCapability } from "@/lib/entitlements";
+import { evaluateHostedFateFindNow } from "@/lib/hosted-fatefind-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,7 +77,20 @@ export async function POST(request: Request) {
     }
     try {
       const saved = await createFateMatch(match);
-      return Response.json({ fateFind: saved, match: saved, message: "FateMatch watch saved. Your companion will alert you when a qualifying observed offer goes live." }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+      const immediateEvaluation = await evaluateHostedFateFindNow(saved.id);
+      const createdImmediately = Number(immediateEvaluation?.evaluation?.created || 0) > 0;
+      return Response.json({
+        fateFind: saved,
+        match: saved,
+        immediateEvaluation: immediateEvaluation
+          ? { status: "completed", created: Number(immediateEvaluation.evaluation?.created || 0) }
+          : { status: "deferred", created: 0 },
+        message: createdImmediately
+          ? "FateFind checked the live network and found a qualifying FateMatch now."
+          : immediateEvaluation
+            ? "FateFind active. Current fresh network evidence was checked immediately and monitoring will continue."
+            : "FateFind active. Immediate evaluation was deferred, so normal hosted monitoring will continue safely.",
+      }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
     } catch {
       return Response.json({ error: "FateMatch storage is not ready. Apply the Fate Network migration first." }, { status: 503 });
     }
