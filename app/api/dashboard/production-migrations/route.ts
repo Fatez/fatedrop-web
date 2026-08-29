@@ -1,6 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { runOwnerProductionMigration } from "@/lib/owner-production-migration";
 import { runProductionMigrations } from "@/lib/production-migrations";
 
 export const runtime = "nodejs";
@@ -27,8 +26,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await runProductionMigrations();
-    const owner = await runOwnerProductionMigration();
-    return Response.json({ accepted: true, ...result, ownerMigrationVerified: owner.verified, ownerMigrationId: owner.migrationId }, { status: 200, headers: { "cache-control": "no-store" } });
+    return Response.json({ accepted: true, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Production migration failed.";
     return Response.json({ error: detail.slice(0, 300) }, { status: 503, headers: { "cache-control": "no-store" } });
