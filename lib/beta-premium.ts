@@ -49,15 +49,20 @@ async function collectorIsInBeta(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail) return false;
 
-  const { neon } = await import("@neondatabase/serverless");
-  const sql: NeonQueryFunction<false, false> = neon(connectionString);
-  const rows = await sql`
-    SELECT 1
-    FROM beta_leads
-    WHERE lower(email) = ${normalizedEmail}
-      AND role = 'collector'
-      AND contact_consent = TRUE
-    LIMIT 1
-  `;
-  return Boolean(rows[0]);
+  try {
+    const { neon } = await import("@neondatabase/serverless");
+    const sql: NeonQueryFunction<false, false> = neon(connectionString);
+    const rows = await sql`
+      SELECT 1
+      FROM beta_leads
+      WHERE lower(email) = ${normalizedEmail}
+        AND role = 'collector'
+        AND contact_consent = TRUE
+      LIMIT 1
+    `;
+    return Boolean(rows[0]);
+  } catch {
+    // Premium beta eligibility must never make a valid FateDrop sign-in fail.
+    return false;
+  }
 }
