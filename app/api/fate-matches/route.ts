@@ -81,8 +81,7 @@ export async function POST(request: Request) {
       const immediateEvaluation = await evaluateHostedFateFindNow(saved.id);
       const createdImmediately = Number(immediateEvaluation?.evaluation?.created || 0) > 0;
       return Response.json({
-        fateFind: saved,
-        match: saved,
+        fateFind: saved, match: saved,
         immediateEvaluation: immediateEvaluation
           ? { status: "completed", created: Number(immediateEvaluation.evaluation?.created || 0) }
           : { status: "deferred", created: 0 },
