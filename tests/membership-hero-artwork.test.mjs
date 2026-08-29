@@ -5,15 +5,20 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const source = (path) => readFile(new URL(path, root), "utf8");
 
-test("membership page uses only the approved dedicated balance artwork", async () => {
+test("membership page owns a direct dedicated artwork hero", async () => {
   const page = await source("app/subscriptions/page.tsx");
-  const hero = await source("components/market-story-hero.tsx");
+  const hero = await source("components/membership-hero.tsx");
 
-  const membershipImage = "/assets/membership/fatedrop-balance-membership.webp?v=20260829";
-  assert.ok(page.includes(`image="${membershipImage}"`));
-  assert.ok(page.includes('focal="center"'));
-  assert.ok(hero.includes(`new Set(["${membershipImage}"])`));
-  assert.ok(hero.includes('/\\.png(?:\\?|$)/i.test(image)'));
-  assert.equal(hero.includes('/\\.(?:png|webp)'), false);
+  assert.ok(page.includes('import { MembershipHero } from "@/components/membership-hero"'));
+  assert.ok(page.includes("<MembershipHero />"));
+  assert.equal(page.includes("MarketStoryHero"), false);
+
+  assert.ok(hero.includes('const MEMBERSHIP_ART = "/assets/membership/fatedrop-balance-membership.webp"'));
+  assert.ok(hero.includes("src={MEMBERSHIP_ART}"));
+  assert.equal(hero.includes("FALLBACK_HERO"), false);
+  assert.equal(hero.includes("APPROVED_NON_PNG_HEROES"), false);
+  assert.equal(hero.includes("reliableHeroSource"), false);
+  assert.ok(hero.includes("object-position:center 18%"));
+
   await access(new URL("public/assets/membership/fatedrop-balance-membership.webp", root));
 });
