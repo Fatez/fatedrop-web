@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createHash, randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { createSession, deleteSession, findSessionUser, getAccountSnapshot } from "./account-storage";
+import { applyTemporaryBetaPremium } from "./beta-premium";
 
 const scrypt = promisify(nodeScrypt);
 const COOKIE_NAME = "fd_session";
@@ -80,7 +81,8 @@ export async function getCurrentUser() {
 export async function getCurrentSnapshot() {
   const account = await getCurrentUser();
   if (!account) return null;
-  return getAccountSnapshot(account.id);
+  const snapshot = await getAccountSnapshot(account.id);
+  return applyTemporaryBetaPremium(snapshot);
 }
 
 export async function getSnapshotForRequest(request: Request) {
@@ -88,7 +90,9 @@ export async function getSnapshotForRequest(request: Request) {
   const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
   if (match?.[1]) {
     const account = await findSessionUser(hashSessionToken(match[1]));
-    return account ? getAccountSnapshot(account.id) : null;
+    if (!account) return null;
+    const snapshot = await getAccountSnapshot(account.id);
+    return applyTemporaryBetaPremium(snapshot);
   }
   return getCurrentSnapshot();
 }
