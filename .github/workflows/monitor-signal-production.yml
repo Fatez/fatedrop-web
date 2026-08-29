@@ -1,0 +1,71 @@
+name: Monitor FateDrop Signal Production
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitor-fatedrop-signal-production
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Require healthy production signal network
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          response="$(curl --silent --show-error --fail-with-body --retry 3 --retry-delay 5 --max-time 20 https://fatedrop.co.uk/api/health/signal)"
+
+          HEALTH_RESPONSE="$response" node <<'NODE'
+          const raw = process.env.HEALTH_RESPONSE || "";
+          let health;
+          try {
+            health = JSON.parse(raw);
+          } catch {
+            console.error("FateDrop production signal health returned invalid JSON.");
+            process.exit(1);
+          }
+
+          if (health.available !== true) {
+            console.error("FateDrop production signal health is unavailable.");
+            process.exit(1);
+          }
+
+          const retailers = health.retailers || {};
+          const total = Number(retailers.total || 0);
+          const fresh = Number(retailers.fresh || 0);
+          const stale = Number(retailers.stale || 0);
+          const unhealthy = Number(retailers.unhealthy || 0);
+
+          if (total <= 0) {
+            console.error("No production retailer monitors are represented in signal health.");
+            process.exit(1);
+          }
+
+          if (fresh <= 0 || stale + unhealthy >= total) {
+            console.error(`Production retailer monitoring is globally stale/unhealthy: total=${total} fresh=${fresh} stale=${stale} unhealthy=${unhealthy}`);
+            process.exit(1);
+          }
+
+          const discord = health.discord || {};
+          if (discord.telemetryStoppedWhileSignalsContinue === true) {
+            console.error("Discord delivery telemetry stopped while production signals continue.");
+            process.exit(1);
+          }
+
+          const orphanedSignals = Number(discord.orphanedSignals || 0);
+          if (orphanedSignals > 0) {
+            console.error(`Production has ${orphanedSignals} signal(s) with no Discord delivery attempt after the grace period.`);
+            process.exit(1);
+          }
+
+          console.log(`FateDrop signal network healthy: retailers=${total}, fresh=${fresh}, stale=${stale}, unhealthy=${unhealthy}, blocked=${Number(retailers.blocked || 0)}, recentSignals=${Number(discord.recentSignals || 0)}, recentDiscordAttempts=${Number(discord.recentDiscordAttempts || 0)}`);
+          NODE
