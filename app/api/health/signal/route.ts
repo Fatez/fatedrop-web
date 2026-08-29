@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
+const SUCCESS_CACHE_CONTROL = "public, max-age=0, s-maxage=30, stale-while-revalidate=120";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -108,7 +109,7 @@ export async function GET() {
           oldestActiveAt: timestamp(discovery.oldestActiveAt),
         },
       },
-      { status: 200, headers: { "cache-control": "no-store" } },
+      { status: 200, headers: { "cache-control": SUCCESS_CACHE_CONTROL } },
     );
   } catch {
     return unavailable();
