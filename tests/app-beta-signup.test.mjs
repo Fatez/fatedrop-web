@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 
 const closedBetaPage = fs.readFileSync(new URL("../app/closed-beta/page.tsx", import.meta.url), "utf8");
+const closedBetaHero = new URL("../public/assets/closed-beta/fatedrop-closed-beta-community.webp", import.meta.url);
 const appBetaPage = fs.readFileSync(new URL("../app/app-beta/page.tsx", import.meta.url), "utf8");
 const registerPage = fs.readFileSync(new URL("../app/account/register/page.tsx", import.meta.url), "utf8");
 const authForm = fs.readFileSync(new URL("../components/account-auth-form.tsx", import.meta.url), "utf8");
@@ -31,6 +32,14 @@ test("closed beta has one signup form while the useful FateDrop ID navigation st
   assert.match(nav, /href="\/account"/);
   assert.match(nav, /href="\/account\/register"/);
   assert.match(nav, /href="\/app-beta"/);
+});
+
+test("closed beta hero keeps the supplied high-resolution artwork", () => {
+  assert.ok(fs.statSync(closedBetaHero).size > 100_000, "closed beta hero must not regress to an over-compressed thumbnail");
+  assert.match(closedBetaPage, /width=\{1672\}/);
+  assert.match(closedBetaPage, /height=\{941\}/);
+  assert.match(closedBetaPage, /\bunoptimized\b/);
+  assert.match(closedBetaPage, /object-fit:cover/);
 });
 
 test("beta request creates real sign-in credentials and canonical Pending access", () => {
