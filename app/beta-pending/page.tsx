@@ -26,18 +26,18 @@ export default async function BetaPendingPage() {
       <section className="beta-pending-card">
         <p className="eyebrow"><span />FATEDROP CLOSED BETA</p>
         <div className="beta-state">{revoked ? "ACCESS REVOKED" : "REQUEST RECEIVED"}</div>
-        <h1>{revoked ? "Your beta access is not active." : "You’re on the beta list."}</h1>
+        <h1>{revoked ? "Your beta access is not active." : "Your request is in."}</h1>
         <p className="lead">
           {revoked
             ? "This FateDrop ID is still valid, but it is not currently approved for the closed beta."
-            : "Creating a FateDrop ID does not automatically unlock the beta. Your request is waiting for explicit approval before the Web or App can access beta features."}
+            : "This FateDrop ID is your closed-beta request. It is waiting for explicit owner approval; once approved, the same ID unlocks the FateDrop Web dashboard and App."}
         </p>
         <div className="beta-identity">
           <span><small>FATEDROP ID</small><strong>{snapshot.account.fateId}</strong></span>
           <span><small>STATUS</small><strong>{revoked ? "Revoked" : "Pending approval"}</strong></span>
-          <span><small>MEMBERSHIP</small><strong>Separate from beta approval</strong></span>
+          <span><small>ACCESS</small><strong>Web + App together</strong></span>
         </div>
-        <p className="truth">The beta gate is account-authoritative. A TestFlight link, paid membership or beta signup form does not bypass approval.</p>
+        <p className="truth">There is only one closed-beta request. A TestFlight link or paid membership does not bypass account approval.</p>
         <div className="button-row">
           <Link href="/account" className="button button-secondary">View my FateDrop ID</Link>
           <AccountSignOut />
