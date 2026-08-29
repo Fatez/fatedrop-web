@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -15,4 +15,5 @@ test("membership page uses only the approved dedicated balance artwork", async (
   assert.ok(hero.includes(`new Set(["${membershipImage}"])`));
   assert.ok(hero.includes('/\\.png(?:\\?|$)/i.test(image)'));
   assert.equal(hero.includes('/\\.(?:png|webp)'), false);
+  await access(new URL("public/assets/membership/fatedrop-balance-membership.webp", root));
 });
