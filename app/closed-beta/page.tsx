@@ -28,7 +28,7 @@ export default async function ClosedBetaPage() {
       <main className="closed-beta-page section-shell">
         <section className="closed-beta-art" aria-label="FateDrop closed beta community">
           <img
-            src="/closed-beta-community.webp"
+            src="/assets/closed-beta/fatedrop-closed-beta-community.png"
             alt="FateDrop collectors and Koru & Friends gathered around trading cards in the FateDrop world."
             width={1672}
             height={941}
