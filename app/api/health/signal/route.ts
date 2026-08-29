@@ -38,14 +38,17 @@ function signalHealthUrl() {
   return url;
 }
 
-function unavailable() {
+function unavailable(status = 503) {
   return Response.json(
     { available: false },
-    { status: 503, headers: { "cache-control": "no-store" } },
+    { status, headers: { "cache-control": "no-store" } },
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const requestUrl = new URL(request.url);
+  if (requestUrl.search) return unavailable(400);
+
   const signalToken = process.env.FATEDROP_SIGNAL_API_TOKEN;
   if (!signalToken) return unavailable();
 
