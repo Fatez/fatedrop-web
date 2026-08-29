@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StartMembershipButton } from "@/components/membership-actions";
-import { MarketStoryHero } from "@/components/market-story-hero";
+import { MembershipHero } from "@/components/membership-hero";
 import { SectionHeading, SiteShell } from "@/components/page-shell";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { hasPremiumAccess, TRIAL_DAYS } from "@/lib/membership";
@@ -38,17 +38,7 @@ export default async function SubscriptionsPage() {
 
   return (
     <SiteShell>
-      <MarketStoryHero
-        eyebrow="One FateDrop ID across the network"
-        title="Start free. Unlock the full signal when you need it."
-        description="Collectors get one simple upgrade: FateDrop Plus. The same FateDrop ID carries profile, membership and eligible access across the website, app and connected Discord — no separate app tier and no duplicate subscription identity."
-        image="/assets/membership/fatedrop-balance-membership.webp?v=20260829"
-        alt="FateDrop violet and gold crystal companions balancing collector cards"
-        proof={["One FateDrop ID", "Free discovery", "One Plus tier", "App + Web + Discord entitlement"]}
-        focal="center"
-      >
-        <div className="button-row"><Link className="button button-primary" href="#collectors">Collector membership <span>↓</span></Link><Link className="button button-secondary" href="#retailers">Retailer access</Link></div>
-      </MarketStoryHero>
+      <MembershipHero />
       <section className={`billing-warning section-shell${stripeReady ? " billing-ready" : ""}`} role="status"><span>{stripeReady ? "TRIAL READY" : "BILLING FOUNDATION"}</span><p>{stripeReady ? `${TRIAL_DAYS}-day FateDrop Plus trials are connected to Stripe on this deployment. Verified subscription events update the one entitlement consumed by website, app and Discord.` : `The ${TRIAL_DAYS}-day Plus trial, checkout, customer portal and subscription webhook flow are built. Checkout remains disabled until the Stripe account, Plus price and webhook secret are connected.`}</p></section>
       <section className="membership-flow section-shell"><div><span>01</span><b>Create FateDrop ID</b><small>Your permanent network identity.</small></div><i>→</i><div><span>02</span><b>Start Plus trial</b><small>One paid collector plan.</small></div><i>→</i><div><span>03</span><b>Access syncs</b><small>Web · App · connected Discord.</small></div></section>
       <section className="plan-section section-shell" id="collectors"><SectionHeading eyebrow="Collector membership" title="Free discovery. One paid upgrade." body="Free lets collectors understand and explore the FateDrop network. FateDrop Plus unlocks the personal automation, instant delivery and deeper intelligence that costs the network money to provide." /><CollectorPlanGrid plans={siteConfig.collectorPlans} signedIn={signedIn} membership={snapshot?.membership ?? null} /></section>
