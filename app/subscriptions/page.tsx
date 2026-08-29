@@ -42,10 +42,10 @@ export default async function SubscriptionsPage() {
         eyebrow="One FateDrop ID across the network"
         title="Start free. Unlock the full signal when you need it."
         description="Collectors get one simple upgrade: FateDrop Plus. The same FateDrop ID carries profile, membership and eligible access across the website, app and connected Discord — no separate app tier and no duplicate subscription identity."
-        image="/assets/fatedrop-header.png?v=20260822-membership"
-        alt="FateDrop signal artwork representing one connected membership across the network"
+        image="/assets/membership/fatedrop-balance-membership.webp?v=20260829"
+        alt="FateDrop violet and gold crystal companions balancing collector cards"
         proof={["One FateDrop ID", "Free discovery", "One Plus tier", "App + Web + Discord entitlement"]}
-        focal="right"
+        focal="center"
       >
         <div className="button-row"><Link className="button button-primary" href="#collectors">Collector membership <span>↓</span></Link><Link className="button button-secondary" href="#retailers">Retailer access</Link></div>
       </MarketStoryHero>
