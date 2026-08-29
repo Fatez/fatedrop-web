@@ -16,6 +16,13 @@ test("public signal health authenticates upstream server-side and fails closed",
   assert.doesNotMatch(routeSource, /NEXT_PUBLIC_FATEDROP_SIGNAL_API_TOKEN/);
 });
 
+test("successful public signal health is edge cached to protect private diagnostics", () => {
+  assert.match(routeSource, /SUCCESS_CACHE_CONTROL/);
+  assert.match(routeSource, /s-maxage=30/);
+  assert.match(routeSource, /stale-while-revalidate=120/);
+  assert.match(routeSource, /"cache-control": SUCCESS_CACHE_CONTROL/);
+});
+
 test("public signal health exposes aggregate reliability only", () => {
   assert.match(routeSource, /orphanedSignals/);
   assert.match(routeSource, /telemetryStoppedWhileSignalsContinue/);
