@@ -10,17 +10,20 @@ test("public signal health authenticates upstream server-side and fails closed",
   assert.match(routeSource, /Authorization: `Bearer \$\{signalToken\}`/);
   assert.match(routeSource, /\/api\/signal-health/);
   assert.match(routeSource, /payload\.available !== true/);
-  assert.match(routeSource, /status: 503/);
+  assert.match(routeSource, /unavailable\(\)/);
   assert.match(routeSource, /cache: "no-store"/);
   assert.match(routeSource, /"cache-control": "no-store"/);
   assert.doesNotMatch(routeSource, /NEXT_PUBLIC_FATEDROP_SIGNAL_API_TOKEN/);
 });
 
-test("successful public signal health is edge cached to protect private diagnostics", () => {
+test("successful public signal health is edge cached and query cache-busting is rejected", () => {
   assert.match(routeSource, /SUCCESS_CACHE_CONTROL/);
   assert.match(routeSource, /s-maxage=30/);
   assert.match(routeSource, /stale-while-revalidate=120/);
   assert.match(routeSource, /"cache-control": SUCCESS_CACHE_CONTROL/);
+  assert.match(routeSource, /new URL\(request\.url\)/);
+  assert.match(routeSource, /requestUrl\.search/);
+  assert.match(routeSource, /unavailable\(400\)/);
 });
 
 test("public signal health exposes aggregate reliability only", () => {
