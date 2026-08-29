@@ -1,4 +1,5 @@
 import { assertSameOrigin, getCurrentSnapshot } from "@/lib/auth";
+import { betaAccessDeniedResponse, betaAccessIsApproved } from "@/lib/beta-access";
 import { syncPremiumDiscordRole } from "@/lib/discord";
 import { hasPremiumAccess } from "@/lib/membership";
 
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const snapshot = await getCurrentSnapshot();
     if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401 });
+    if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
     if (!snapshot.discord) return Response.json({ error: "Connect Discord to this FateDrop ID first." }, { status: 400 });
     if (!hasPremiumAccess(snapshot.membership)) return Response.json({ error: "Premium membership is required before the Discord Premium role can be activated." }, { status: 409 });
     const result = await syncPremiumDiscordRole(snapshot.discord, snapshot.membership);
