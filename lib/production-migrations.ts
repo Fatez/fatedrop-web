@@ -116,6 +116,39 @@ $$`,
     ],
   },
   {
+    id: "2026-08-29-beta-access-function-ambiguity-repair.sql",
+    statements: [
+      `CREATE OR REPLACE FUNCTION fatedrop_set_beta_access(p_user_id text, p_status text, p_operator text)
+RETURNS TABLE(user_id text, status text, requested_at bigint, approved_at bigint, approved_by text, updated_at bigint)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_previous text;
+  v_now bigint := EXTRACT(EPOCH FROM NOW())::bigint;
+  v_requested bigint;
+BEGIN
+  IF p_status NOT IN ('pending', 'approved', 'revoked') THEN RAISE EXCEPTION 'invalid beta status'; END IF;
+  IF NULLIF(BTRIM(p_operator), '') IS NULL THEN RAISE EXCEPTION 'operator is required'; END IF;
+  SELECT b.status, b.requested_at INTO v_previous, v_requested FROM fatedrop_beta_access b WHERE b.user_id=p_user_id FOR UPDATE;
+  IF v_requested IS NULL THEN
+    SELECT u.created_at INTO v_requested FROM fatedrop_users u WHERE u.id=p_user_id;
+    IF v_requested IS NULL THEN RAISE EXCEPTION 'unknown FateDrop user'; END IF;
+  END IF;
+  INSERT INTO fatedrop_beta_access (user_id,status,requested_at,approved_at,approved_by,updated_at)
+  VALUES (p_user_id,p_status,v_requested,CASE WHEN p_status='approved' THEN v_now ELSE NULL END,CASE WHEN p_status='approved' THEN BTRIM(p_operator) ELSE NULL END,v_now)
+  ON CONFLICT ON CONSTRAINT fatedrop_beta_access_pkey DO UPDATE SET
+    status=EXCLUDED.status,
+    approved_at=EXCLUDED.approved_at,
+    approved_by=EXCLUDED.approved_by,
+    updated_at=EXCLUDED.updated_at;
+  INSERT INTO fatedrop_beta_access_audit (user_id,previous_status,next_status,operator,changed_at)
+  VALUES (p_user_id,v_previous,p_status,BTRIM(p_operator),v_now);
+  RETURN QUERY SELECT b.user_id,b.status,b.requested_at,b.approved_at,b.approved_by,b.updated_at FROM fatedrop_beta_access b WHERE b.user_id=p_user_id;
+END;
+$$`,
+    ],
+  },
+  {
     id: "2026-08-29-beta-owner-access.sql",
     statements: [
       `CREATE TABLE IF NOT EXISTS fatedrop_admin_roles (
@@ -143,7 +176,8 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM fatedrop_users u WHERE u.id=p_user_id) THEN RAISE EXCEPTION 'unknown FateDrop user'; END IF;
   INSERT INTO fatedrop_admin_roles (user_id,role,granted_at,granted_by)
   VALUES (p_user_id,'owner',v_now,BTRIM(p_operator))
-  ON CONFLICT (user_id) DO UPDATE SET role='owner',granted_at=EXCLUDED.granted_at,granted_by=EXCLUDED.granted_by;
+  ON CONFLICT ON CONSTRAINT fatedrop_admin_roles_pkey DO UPDATE SET
+    role='owner',granted_at=EXCLUDED.granted_at,granted_by=EXCLUDED.granted_by;
   INSERT INTO fatedrop_admin_role_audit (user_id,role,action,operator,changed_at)
   VALUES (p_user_id,'owner','grant',BTRIM(p_operator),v_now);
   PERFORM fatedrop_set_beta_access(p_user_id,'approved',BTRIM(p_operator));

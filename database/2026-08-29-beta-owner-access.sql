@@ -30,7 +30,7 @@ BEGIN
 
   INSERT INTO fatedrop_admin_roles (user_id, role, granted_at, granted_by)
   VALUES (p_user_id, 'owner', v_now, BTRIM(p_operator))
-  ON CONFLICT (user_id) DO UPDATE SET
+  ON CONFLICT ON CONSTRAINT fatedrop_admin_roles_pkey DO UPDATE SET
     role = 'owner',
     granted_at = EXCLUDED.granted_at,
     granted_by = EXCLUDED.granted_by;
