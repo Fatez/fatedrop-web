@@ -7,21 +7,21 @@ const auth = fs.readFileSync(new URL("../lib/auth.ts", import.meta.url), "utf8")
 const mobileSession = fs.readFileSync(new URL("../app/api/mobile/session/route.ts", import.meta.url), "utf8");
 const entitlement = fs.readFileSync(new URL("../app/api/account/entitlement/route.ts", import.meta.url), "utf8");
 
-test("collector beta membership grants temporary Plus without rewriting billing records", () => {
+test("approved closed-beta accounts receive temporary Plus without rewriting billing records", () => {
   assert.match(betaPremium, /FATEDROP_BETA_PREMIUM_ENABLED/);
-  assert.match(betaPremium, /FROM beta_leads/);
-  assert.match(betaPremium, /role = 'collector'/);
-  assert.match(betaPremium, /contact_consent = TRUE/);
+  assert.match(betaPremium, /betaAccessIsApproved\(betaAccess\)/);
   assert.match(betaPremium, /tier: "plus"/);
   assert.match(betaPremium, /status: "active"/);
   assert.match(betaPremium, /accessGrant: \{ type: "beta-premium", temporary: true \}/);
+  assert.doesNotMatch(betaPremium, /beta_leads|collectorIsInBeta/);
   assert.doesNotMatch(betaPremium, /updateMembership|INSERT INTO fatedrop_memberships|UPDATE fatedrop_memberships/);
 });
 
-test("beta lookup failure cannot break a valid sign-in", () => {
-  assert.match(betaPremium, /catch \{/);
-  assert.match(betaPremium, /return false;/);
-  assert.match(betaPremium, /must never make a valid FateDrop sign-in fail/);
+test("closed-beta full access still fails closed until canonical approval exists", () => {
+  const approvalCheck = betaPremium.indexOf("betaAccessIsApproved(betaAccess)");
+  const betaModeCheck = betaPremium.indexOf("betaPremiumEnabled()");
+  assert.ok(approvalCheck >= 0 && betaModeCheck > approvalCheck, "approval must be checked before temporary full access");
+  assert.match(betaPremium, /return \{ \.\.\.base, accessGrant: null \}/);
 });
 
 test("browser and bearer sessions both resolve the temporary beta grant", () => {
