@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
+import { ensureCanonicalOwnerBootstrapAccount } from "@/lib/owner-bootstrap";
 import { runProductionMigrations } from "@/lib/production-migrations";
 import { fateDropPostgres } from "@/lib/postgres";
 
@@ -40,8 +41,9 @@ export async function POST(request: Request) {
   }
 
   try {
+    const ownerBootstrap = await ensureCanonicalOwnerBootstrapAccount();
     const result = await runProductionMigrations();
-    return Response.json({ accepted: true, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
+    return Response.json({ accepted: true, ownerBootstrap, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Production migration failed.";
     const diagnostic = await ownerBootstrapDiagnostic(detail);
