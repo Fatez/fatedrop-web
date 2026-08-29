@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { BetaForm } from "@/components/beta-form";
 import { SiteShell } from "@/components/page-shell";
 
 export const metadata: Metadata = {
-  title: "Join the FateDrop Beta",
-  description: "Join FateDrop as a collector, independent TCG retailer or event organiser.",
+  title: "Join the FateDrop Network",
+  description: "Connect with FateDrop as an independent TCG retailer or event organiser.",
 };
 
 export default async function JoinPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
   const { type } = await searchParams;
-  const initialRole = type === "business" || type === "event" ? type : "collector";
+  if (type !== "business" && type !== "event") redirect("/closed-beta");
+  const initialRole = type;
   return (
     <SiteShell>
       <section className="join-layout koru-join-layout section-shell">
         <div className="join-intro">
           <p className="eyebrow"><span />Join the network</p>
-          <h1>Choose your way into FateDrop.</h1>
-          <p>Collectors join the beta to search, compare and follow the signal. Independent retailers connect the stock collectors are already looking for. Event organisers bring the real-world TCG scene into the same network.</p>
-          <div className="join-promise"><span><i>01</i>Collectors</span><span><i>02</i>Independent retailers</span><span><i>03</i>Event organisers</span></div>
+          <h1>Bring your business into FateDrop.</h1>
+          <p>Independent retailers can connect the stock collectors are already looking for. Event organisers can bring the real-world TCG scene into the same network. Collector closed-beta access is handled through the dedicated Closed Beta Hub.</p>
+          <div className="join-promise"><span><i>01</i>Independent retailers</span><span><i>02</i>Event organisers</span></div>
         </div>
         <Suspense fallback={<div className="join-panel">Preparing the form…</div>}><BetaForm initialRole={initialRole} /></Suspense>
       </section>
