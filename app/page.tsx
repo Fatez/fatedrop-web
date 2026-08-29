@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { SiteShell } from "@/components/page-shell";
 import { KoruReferenceLanding } from "@/components/koru-home-reference";
-import { HomeFateSearch } from "@/components/home-fate-search";
 import { FateDropValueSectionV2 } from "@/components/fatedrop-value-section-v2";
 import { FateNetworkHomeSection } from "@/components/fate-network-home-section";
 import {
@@ -20,7 +19,6 @@ export default function Home() {
   return (
     <SiteShell>
       <KoruReferenceLanding />
-      <HomeFateSearch />
       <FateDropValueSectionV2 />
       <KoruFriendsMerchSection />
       <FateNetworkHomeSection />
