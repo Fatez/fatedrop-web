@@ -125,11 +125,22 @@ test("market-facing pages use the same simple full-image construction as the app
   assert.equal(hero.includes("market-story-visual"), false);
   assert.equal(hero.includes("market-story-signal-field"), false);
   assert.equal(hero.includes("grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr)"), false);
-  for (const path of ["app/collectors/page.tsx", "app/businesses/page.tsx", "app/events/page.tsx", "app/trust/page.tsx", "app/about/page.tsx", "app/subscriptions/page.tsx"]) {
+  for (const path of ["app/collectors/page.tsx", "app/businesses/page.tsx", "app/events/page.tsx", "app/trust/page.tsx", "app/about/page.tsx"]) {
     const source = read(path);
     assert.ok(source.includes("MarketStoryHero"), `${path} should use the rebuilt public hero`);
     assert.equal(source.includes("<PageHero"), false, `${path} should not use the retired generic page header`);
   }
+
+  const subscriptions = read("app/subscriptions/page.tsx");
+  const membershipHero = read("components/membership-hero.tsx");
+  assert.ok(subscriptions.includes("MembershipHero"), "subscriptions should use its dedicated rebuilt hero");
+  assert.equal(subscriptions.includes("MarketStoryHero"), false, "subscriptions should not return to the shared hero resolver");
+  assert.equal(subscriptions.includes("<PageHero"), false, "subscriptions should not use the retired generic page header");
+  assert.ok(membershipHero.includes("<img"), "membership hero should render its artwork directly");
+  assert.ok(membershipHero.includes("/assets/membership/fatedrop-balance-membership.webp"));
+  assert.equal(membershipHero.includes("reliableHeroSource"), false);
+  assert.equal(membershipHero.includes("FALLBACK_HERO"), false);
+  assert.equal(membershipHero.includes("/assets/fatedrop-header.png"), false);
 });
 
 test("collector and retailer pages stay visibly grounded in the TCG market", () => {
