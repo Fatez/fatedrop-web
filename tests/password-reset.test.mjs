@@ -27,8 +27,8 @@ test("reset requests are bounded, Turnstile protected and do not disclose accoun
   assert.match(requestRoute, /assertTurnstile\(request, payload\.turnstileToken, "password_reset_request"\)/);
   assert.match(requestRoute, /assertSameOrigin\(request\)/);
   assert.match(requestRoute, /If a FateDrop ID exists for that email/);
-  assert.match(requestRoute, /queuePasswordResetEmail\(emailContext, account\.email, reset\.rawToken\)/);
-  assert.doesNotMatch(requestRoute, /queuePasswordResetEmail\(emailContext, email,/);
+  assert.match(requestRoute, /await sendPasswordResetEmail\(emailContext, account\.email, reset\.rawToken\)/);
+  assert.doesNotMatch(requestRoute, /sendPasswordResetEmail\(emailContext, email,/);
   assert.match(abuse, /password_reset_request: Object\.freeze\(\{ limit: 5, windowMs: 60 \* 60_000 \}\)/);
   assert.match(turnstile, /"password_reset_request"/);
 });
