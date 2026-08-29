@@ -174,12 +174,27 @@ jobs:
         run: |
           set -euo pipefail
           WEB="https://fatedrop.co.uk"
-          curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+          migration_status="$(curl --silent --show-error --retry 5 --retry-delay 3 \
+            --output /tmp/production-migrations.json \
+            --write-out '%{http_code}' \
             -X POST \
             -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
             -H "Accept: application/json" \
-            "$WEB/api/dashboard/production-migrations" \
-            -o /tmp/production-migrations.json
+            "$WEB/api/dashboard/production-migrations")"
+          if [ "$migration_status" != "200" ]; then
+            echo "Production migration endpoint returned HTTP $migration_status"
+            node -e '
+              const fs=require("fs");
+              const body=fs.existsSync("/tmp/production-migrations.json") ? fs.readFileSync("/tmp/production-migrations.json","utf8") : "";
+              try {
+                const result=JSON.parse(body);
+                console.error(`Production migration error: ${String(result.error || "unknown").slice(0,300)}`);
+              } catch {
+                console.error("Production migration endpoint returned a non-JSON error response.");
+              }
+            '
+            exit 22
+          fi
           node -e '
             const fs=require("fs");
             const result=JSON.parse(fs.readFileSync("/tmp/production-migrations.json","utf8"));
