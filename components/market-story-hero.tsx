@@ -2,9 +2,11 @@
 import type { ReactNode } from "react";
 
 const FALLBACK_HERO = "/assets/fatedrop-header.png?v=20260822-static-page-hero";
+const APPROVED_NON_PNG_HEROES = new Set(["/assets/membership/fatedrop-balance-membership.webp?v=20260829"]);
 
 function reliableHeroSource(image: string) {
-  return /\.png(?:\?|$)/i.test(image) ? image : FALLBACK_HERO;
+  if (/\.png(?:\?|$)/i.test(image)) return image;
+  return APPROVED_NON_PNG_HEROES.has(image) ? image : FALLBACK_HERO;
 }
 
 export function MarketStoryHero({
