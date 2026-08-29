@@ -81,6 +81,10 @@ export async function GET(request: Request) {
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
+
+    // Cloud owns canonical lifecycle and product classification truth. Fetch extra
+    // history for inbox depth, then apply only the user's notification preferences
+    // at this gateway. Do not reclassify or discard canonical alerts from title text.
     const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
     const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit: retrievalLimit });
     const [deliveries, presentations] = await Promise.all([
