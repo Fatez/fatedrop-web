@@ -28,6 +28,8 @@ test("shared Web chrome renders the supplied black and white FateDrop logo", () 
   assert.match(brandMark, /width="192"/);
   assert.match(brandMark, /height="192"/);
   assert.match(brandMark, /height: compact \? 44 : 52/);
+  assert.match(brandMark, /WORDMARK_VISIBLE_CROP = "inset\(0 0 10% 0\)"/);
+  assert.match(brandMark, /clipPath: WORDMARK_VISIBLE_CROP/);
   assert.doesNotMatch(brandMark, /brand-word|<b>Fate<\/b>/);
 
   const wordmark = readBuffer("public/assets/fatedrop-wordmark.png");
