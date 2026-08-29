@@ -9,9 +9,10 @@ test("membership page uses only the approved dedicated balance artwork", async (
   const page = await source("app/subscriptions/page.tsx");
   const hero = await source("components/market-story-hero.tsx");
 
-  assert.ok(page.includes('image="/assets/market/membership-balance.webp"'));
+  const membershipImage = "/assets/membership/fatedrop-balance-membership.webp?v=20260829";
+  assert.ok(page.includes(`image="${membershipImage}"`));
   assert.ok(page.includes('focal="center"'));
-  assert.ok(hero.includes('new Set(["/assets/market/membership-balance.webp"])'));
+  assert.ok(hero.includes(`new Set(["${membershipImage}"])`));
   assert.ok(hero.includes('/\\.png(?:\\?|$)/i.test(image)'));
   assert.equal(hero.includes('/\\.(?:png|webp)'), false);
 });
