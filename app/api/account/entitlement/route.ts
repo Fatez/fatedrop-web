@@ -1,5 +1,6 @@
 import { getSnapshotForRequest } from "@/lib/auth";
 import { AccountStorageUnavailableError } from "@/lib/account-storage";
+import { betaAccessIsApproved } from "@/lib/beta-access";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
@@ -9,12 +10,15 @@ export async function GET(request: Request) {
     const snapshot = await getSnapshotForRequest(request);
     if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401, headers: { "cache-control": "no-store" } });
 
-    const capabilities = [...capabilitiesForMembership(snapshot.membership)].sort();
+    const betaApproved = betaAccessIsApproved(snapshot.betaAccess);
+    const capabilities = betaApproved ? [...capabilitiesForMembership(snapshot.membership)].sort() : [];
     const active = membershipIsActive(snapshot.membership);
 
     return Response.json({
-      contractVersion: 1,
+      contractVersion: 2,
       authoritative: true,
+      accessAllowed: betaApproved,
+      betaAccess: snapshot.betaAccess,
       userId: snapshot.account.id,
       fateId: snapshot.account.fateId,
       membership: {
