@@ -304,7 +304,7 @@ jobs:
           check_available "/api/network-status"
 
           curl --fail --silent --show-error --retry 5 --retry-delay 3 "$WEB/closed-beta" -o /tmp/register.html
-          grep -Fq 'cf-turnstile' /tmp/register.html || { echo "Registration page is missing the Turnstile widget"; exit 1; }
+          grep -Fq 'data-turnstile-widget="register"' /tmp/register.html || { echo "Registration page is missing the explicit Turnstile widget"; exit 1; }
           if grep -Fq 'Security verification is unavailable.' /tmp/register.html; then
             echo "Registration page still reports unavailable security verification"
             exit 1
