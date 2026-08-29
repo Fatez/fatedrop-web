@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import styles from "./app-beta-form.module.css";
 
 type Status = { kind: "idle" | "loading" | "error" | "success"; message: string };
 
@@ -56,27 +57,68 @@ export function AppBetaForm() {
     }
   }
 
+  const statusClass = status.kind === "error"
+    ? styles.statusError
+    : status.kind === "success"
+      ? styles.statusSuccess
+      : styles.statusLoading;
+
   return (
-    <div className="join-panel">
-      <div className="form-heading">
+    <div className={styles.panel}>
+      <div className={styles.heading}>
         <small>Controlled mobile beta</small>
         <h2>Request App Beta access.</h2>
         <p>This registers beta interest only. It does not publish an install link or create a second FateDrop account.</p>
       </div>
-      <form onSubmit={handleSubmit} noValidate>
-        <div className="spam-field" aria-hidden="true"><label htmlFor="companyFax">Company fax</label><input id="companyFax" name="companyFax" tabIndex={-1} autoComplete="off" /></div>
-        <div className="form-grid">
-          <label><span>Name</span><input name="contactName" autoComplete="name" required /></label>
-          <label><span>Email</span><input name="email" type="email" autoComplete="email" required /></label>
-          <label><span>Postcode or region <small>(optional)</small></span><input name="region" autoComplete="postal-code" /></label>
-          <label><span>Primary TCG</span><select name="primaryTcg" defaultValue="Pokémon"><option>Pokémon</option><option>Magic: The Gathering — future expansion</option><option>Yu-Gi-Oh! — future expansion</option><option>One Piece — future expansion</option><option>Disney Lorcana — future expansion</option><option>Other / multiple — future expansion</option></select></label>
+      <form className={styles.form} onSubmit={handleSubmit} noValidate>
+        <div className={styles.spamField} aria-hidden="true">
+          <label htmlFor="companyFax">Company fax</label>
+          <input id="companyFax" name="companyFax" tabIndex={-1} autoComplete="off" />
         </div>
-        <label className="checkbox-field"><input type="checkbox" name="contactConsent" /><span>I agree that FateDrop may store these details and contact me about App Beta access.</span></label>
-        <label className="checkbox-field optional-consent"><input type="checkbox" name="marketingConsent" /><span>Optional: send me occasional FateDrop product and launch updates.</span></label>
-        <div className="form-actions">
-          <button className="button button-primary" type="submit" disabled={status.kind === "loading" || status.kind === "success"}>{status.kind === "loading" ? "Joining…" : "Join the App Beta"} <span>↗</span></button>
-          {status.message ? <p className={`form-status ${status.kind}`} role="status" aria-live="polite">{status.message}</p> : null}
-          {status.kind === "success" ? <p style={{ marginTop: 12 }}>Need a FateDrop ID? <Link href="/account/register">Create your sign-in account →</Link></p> : null}
+
+        <div className={styles.grid}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Name</span>
+            <input className={styles.input} name="contactName" autoComplete="name" placeholder="Your name" required />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Email</span>
+            <input className={styles.input} name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Postcode or region <small className={styles.optional}>(optional)</small></span>
+            <input className={styles.input} name="region" autoComplete="postal-code" placeholder="e.g. ME7 1HS" />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Primary TCG</span>
+            <select className={styles.select} name="primaryTcg" defaultValue="Pokémon">
+              <option>Pokémon</option>
+              <option>Magic: The Gathering — future expansion</option>
+              <option>Yu-Gi-Oh! — future expansion</option>
+              <option>One Piece — future expansion</option>
+              <option>Disney Lorcana — future expansion</option>
+              <option>Other / multiple — future expansion</option>
+            </select>
+          </label>
+        </div>
+
+        <div className={styles.consentGroup}>
+          <label className={styles.checkbox}>
+            <input type="checkbox" name="contactConsent" />
+            <span>I agree that FateDrop may store these details and contact me about App Beta access.</span>
+          </label>
+          <label className={`${styles.checkbox} ${styles.optionalConsent}`}>
+            <input type="checkbox" name="marketingConsent" />
+            <span>Optional: send me occasional FateDrop product and launch updates.</span>
+          </label>
+        </div>
+
+        <div className={styles.actions}>
+          <button className={`button button-primary ${styles.submit}`} type="submit" disabled={status.kind === "loading" || status.kind === "success"}>
+            {status.kind === "loading" ? "Joining…" : "Join the App Beta"} <span>↗</span>
+          </button>
+          {status.message ? <p className={`${styles.status} ${statusClass}`} role="status" aria-live="polite">{status.message}</p> : null}
+          {status.kind === "success" ? <p className={styles.accountPrompt}>Need a FateDrop ID? <Link href="/account/register">Create your sign-in account →</Link></p> : null}
         </div>
       </form>
     </div>
