@@ -79,7 +79,7 @@ test("dashboard and Discord stay closed until approval", () => {
   assert.match(discordConnect, /betaAccessIsApproved\(snapshot\.betaAccess\)/);
   assert.match(discordConnect, /\/beta-pending/);
   assert.match(discordSync, /betaAccessDeniedResponse\(snapshot\.betaAccess\)/);
-  assert.match(pendingPage, /install link or paid membership does not bypass account approval/);
+  assert.match(pendingPage, /Installing the App does not bypass approval/);
 });
 
 test("mobile session reports pending state but grants zero capabilities", () => {
