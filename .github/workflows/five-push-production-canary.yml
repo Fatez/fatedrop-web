@@ -1,0 +1,94 @@
+name: Five Push Production Canary
+
+on:
+  workflow_run:
+    workflows: ["Deploy FateDrop Web Production"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fatedrop-five-push-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout deployed commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.VERIFIED_SHA }}
+          fetch-depth: 1
+
+      - name: Require one-shot marker
+        id: marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git log -1 --pretty=%B | grep -Fq '[five-push-canary]'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No [five-push-canary] marker; skipping five-function device canary."
+          fi
+
+      - name: Use Node.js
+        if: steps.marker.outputs.run == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install locked dependencies
+        if: steps.marker.outputs.run == 'true'
+        run: npm ci
+
+      - name: Rotate canary secret
+        if: steps.marker.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 2; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "Missing CLOUDFLARE_ACCOUNT_ID"; exit 2; }
+          canary_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$canary_secret"
+          printf '%s' "$canary_secret" | npx wrangler secret put FATEDROP_PUSH_CRON_SECRET
+          printf 'FATEDROP_PUSH_CRON_SECRET=%s\n' "$canary_secret" >> "$GITHUB_ENV"
+          unset canary_secret
+
+      - name: Send five production test alerts
+        if: steps.marker.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WEB="https://fatedrop.co.uk"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -X POST \
+            -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+            -H "Accept: application/json" \
+            "$WEB/api/dashboard/push-canary" \
+            -o /tmp/push-canary.json
+          node -e '
+            const fs=require("fs");
+            const result=JSON.parse(fs.readFileSync("/tmp/push-canary.json","utf8"));
+            if (result.accepted !== true) throw new Error(`Five-push canary rejected: ${result.reason || "unknown"}`);
+            if (!Array.isArray(result.outcomes) || result.outcomes.length !== 5) throw new Error("Expected five canary outcomes");
+            const expected = new Set(["whisper","echo","manifested","vanished","local-radar"]);
+            for (const outcome of result.outcomes) {
+              if (!expected.delete(outcome.kind)) throw new Error(`Unexpected/duplicate canary kind: ${outcome.kind}`);
+              if (outcome.state !== "sent" || !outcome.providerMessageId) {
+                throw new Error(`${outcome.kind} did not reach Expo acceptance: ${outcome.state || "unknown"}`);
+              }
+              console.log(`${outcome.kind}: sent provider=${outcome.providerMessageId}`);
+            }
+            if (expected.size) throw new Error(`Missing canaries: ${Array.from(expected).join(",")}`);
+          '
