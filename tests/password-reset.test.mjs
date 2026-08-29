@@ -11,6 +11,7 @@ const confirmRoute = read("app/api/auth/password-reset/confirm/route.ts");
 const resetService = read("lib/password-reset.ts");
 const resetMigration = read("database/2026-08-29-password-reset.sql");
 const migrations = read("lib/production-migrations.ts");
+const productionMigrationRoute = read("app/api/dashboard/production-migrations/route.ts");
 const abuse = read("lib/auth-abuse.ts");
 const turnstile = read("lib/turnstile.ts");
 const wrangler = read("wrangler.jsonc");
@@ -61,4 +62,14 @@ test("password reset migration is canonical and Cloudflare Email Service is the 
   assert.match(resetService, /hello@fatedrop\.co\.uk/);
   assert.match(resetService, /to: recipient/);
   assert.match(resetService, /This link expires in 30 minutes/);
+});
+
+test("production deployment proves the Cloudflare Email binding can actually deliver", () => {
+  assert.match(productionMigrationRoute, /getCloudflareContext\(\{ async: true \}\)/);
+  assert.match(productionMigrationRoute, /EMAIL_CANARY_RECIPIENT = "fatedropuk@gmail\.com"/);
+  assert.match(productionMigrationRoute, /EMAIL_CANARY_FROM = "hello@fatedrop\.co\.uk"/);
+  assert.match(productionMigrationRoute, /await email\.send\(/);
+  assert.match(productionMigrationRoute, /const emailCanary = await verifyProductionEmailDelivery\(\)/);
+  assert.match(productionMigrationRoute, /emailCanary/);
+  assert.doesNotMatch(productionMigrationRoute, /catch\(\(\) => undefined\)/);
 });
