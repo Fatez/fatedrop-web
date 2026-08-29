@@ -1,6 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { isPushCanaryKind, runProductionPushCanarySuite } from "@/lib/push-canary";
+import {
+  isPushCanaryKind,
+  runProductionPushCanarySuite,
+  type CanaryKind,
+} from "@/lib/push-canary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,15 +35,19 @@ export async function POST(request: Request) {
   }
 
   const requestedKind = new URL(request.url).searchParams.get("kind");
-  if (requestedKind && !isPushCanaryKind(requestedKind)) {
-    return Response.json(
-      { error: "Push canary kind is not supported." },
-      { status: 400, headers: { "cache-control": "no-store" } },
-    );
+  let selectedKind: CanaryKind | undefined;
+  if (requestedKind) {
+    if (!isPushCanaryKind(requestedKind)) {
+      return Response.json(
+        { error: "Push canary kind is not supported." },
+        { status: 400, headers: { "cache-control": "no-store" } },
+      );
+    }
+    selectedKind = requestedKind;
   }
 
   try {
-    const result = await runProductionPushCanarySuite(requestedKind || undefined);
+    const result = await runProductionPushCanarySuite(selectedKind);
     if (!result.accepted) {
       return Response.json(
         { error: "Production push canary did not reach provider acceptance for every requested function.", ...result },
