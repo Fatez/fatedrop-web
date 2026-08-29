@@ -5,7 +5,7 @@ import {
   getPasswordResetEmailContext,
   issuePasswordResetToken,
   PasswordResetEmailUnavailableError,
-  queuePasswordResetEmail,
+  sendPasswordResetEmail,
 } from "@/lib/password-reset";
 import { assertTurnstile, TurnstileRejectedError, TurnstileUnavailableError } from "@/lib/turnstile";
 
@@ -42,7 +42,13 @@ export async function POST(request: Request) {
       const reset = await issuePasswordResetToken(account.id);
       // The recipient is always the canonical email stored on the FateDrop ID,
       // never an arbitrary address supplied after account lookup.
-      queuePasswordResetEmail(emailContext, account.email, reset.rawToken);
+      // Provider delivery is awaited so a failed send is observable server-side,
+      // but the public response remains generic to preserve enumeration safety.
+      try {
+        await sendPasswordResetEmail(emailContext, account.email, reset.rawToken);
+      } catch (error) {
+        if (!(error instanceof PasswordResetEmailUnavailableError)) throw error;
+      }
     }
 
     await minimumResponseDelay(startedAt);
