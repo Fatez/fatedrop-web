@@ -77,6 +77,7 @@ export async function POST(request: Request) {
     }
     try {
       const saved = await createFateMatch(match);
+      if (!saved) return Response.json({ error: "FateMatch storage did not return the saved watch." }, { status: 503 });
       const immediateEvaluation = await evaluateHostedFateFindNow(saved.id);
       const createdImmediately = Number(immediateEvaluation?.evaluation?.created || 0) > 0;
       return Response.json({
