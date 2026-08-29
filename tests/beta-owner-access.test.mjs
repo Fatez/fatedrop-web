@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 const ownerAccess = read("lib/owner-access.ts");
-const ownerMigration = read("lib/owner-production-migration.ts");
+const productionMigrations = read("lib/production-migrations.ts");
 const ownerSql = read("database/2026-08-29-beta-owner-access.sql");
 const adminApi = read("app/api/admin/beta/route.ts");
 const adminPage = read("app/admin/beta/page.tsx");
@@ -27,15 +27,17 @@ test("owner authority is canonical user-id state and fails closed", () => {
   assert.doesNotMatch(ownerAccess, /WHERE\s+lower\(email\)/i);
 });
 
-test("hello owner bootstrap is one-time production migration with exact-account verification", () => {
-  assert.match(ownerMigration, /OWNER_EMAIL = "hello@fatedrop\.co\.uk"/);
-  assert.match(ownerMigration, /ownerRows\.length !== 1/);
-  assert.match(ownerMigration, /fatedrop_grant_owner/);
-  assert.match(ownerMigration, /migration:hello-owner-bootstrap/);
-  assert.match(ownerMigration, /fatedrop_schema_migrations/);
-  assert.match(ownerMigration, /beta_status/);
+test("hello owner bootstrap is registered in the one canonical production migration runner", () => {
+  assert.match(productionMigrations, /2026-08-29-beta-owner-access\.sql/);
+  assert.match(productionMigrations, /OWNER_EMAIL = "hello@fatedrop\.co\.uk"/);
+  assert.match(productionMigrations, /ownerRows\.length !== 1/);
+  assert.match(productionMigrations, /fatedrop_grant_owner/);
+  assert.match(productionMigrations, /migration:hello-owner-bootstrap/);
+  assert.match(productionMigrations, /fatedrop_schema_migrations/);
+  assert.match(productionMigrations, /beta_status/);
   assert.match(ownerSql, /exactly one canonical hello@fatedrop\.co\.uk FateDrop account/);
-  assert.match(migrationRoute, /runOwnerProductionMigration/);
+  assert.doesNotMatch(migrationRoute, /runOwnerProductionMigration/);
+  assert.match(migrationRoute, /runProductionMigrations/);
 });
 
 test("owner-only beta console approves and revokes through audited database function", () => {
