@@ -52,6 +52,13 @@ export async function isOwnerUser(userId: string) {
   return Boolean(await getOwnerRole(userId));
 }
 
+export async function countPendingBetaRequestsForOwner(ownerUserId: string) {
+  if (!await isOwnerUser(ownerUserId)) throw new Error("OWNER_REQUIRED");
+  const sql = await fateDropPostgres();
+  const rows = await sql`SELECT COUNT(*)::int AS count FROM fatedrop_beta_access WHERE status = 'pending'`;
+  return Number(rows[0]?.count ?? 0);
+}
+
 export async function listBetaRequestsForOwner(ownerUserId: string): Promise<BetaRequestRow[]> {
   if (!await isOwnerUser(ownerUserId)) throw new Error("OWNER_REQUIRED");
   const sql = await fateDropPostgres();
