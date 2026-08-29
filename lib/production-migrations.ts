@@ -1,6 +1,7 @@
 import { fateDropPostgres } from "@/lib/postgres";
 
 const MIGRATION_CUTOFF = "2026-08-28";
+const OWNER_EMAIL = "hello@fatedrop.co.uk";
 
 export const PRODUCTION_MIGRATIONS = [
   {
@@ -97,47 +98,71 @@ DECLARE
   v_now bigint := EXTRACT(EPOCH FROM NOW())::bigint;
   v_requested bigint;
 BEGIN
-  IF p_status NOT IN ('pending', 'approved', 'revoked') THEN
-    RAISE EXCEPTION 'invalid beta status';
-  END IF;
-  IF NULLIF(BTRIM(p_operator), '') IS NULL THEN
-    RAISE EXCEPTION 'operator is required';
-  END IF;
-
-  SELECT b.status, b.requested_at INTO v_previous, v_requested
-  FROM fatedrop_beta_access b
-  WHERE b.user_id = p_user_id
-  FOR UPDATE;
-
+  IF p_status NOT IN ('pending', 'approved', 'revoked') THEN RAISE EXCEPTION 'invalid beta status'; END IF;
+  IF NULLIF(BTRIM(p_operator), '') IS NULL THEN RAISE EXCEPTION 'operator is required'; END IF;
+  SELECT b.status, b.requested_at INTO v_previous, v_requested FROM fatedrop_beta_access b WHERE b.user_id = p_user_id FOR UPDATE;
   IF v_requested IS NULL THEN
     SELECT u.created_at INTO v_requested FROM fatedrop_users u WHERE u.id = p_user_id;
-    IF v_requested IS NULL THEN
-      RAISE EXCEPTION 'unknown FateDrop user';
-    END IF;
+    IF v_requested IS NULL THEN RAISE EXCEPTION 'unknown FateDrop user'; END IF;
   END IF;
-
   INSERT INTO fatedrop_beta_access (user_id, status, requested_at, approved_at, approved_by, updated_at)
-  VALUES (
-    p_user_id,
-    p_status,
-    v_requested,
-    CASE WHEN p_status = 'approved' THEN v_now ELSE NULL END,
-    CASE WHEN p_status = 'approved' THEN BTRIM(p_operator) ELSE NULL END,
-    v_now
-  )
-  ON CONFLICT (user_id) DO UPDATE SET
-    status = EXCLUDED.status,
-    approved_at = EXCLUDED.approved_at,
-    approved_by = EXCLUDED.approved_by,
-    updated_at = EXCLUDED.updated_at;
-
+  VALUES (p_user_id,p_status,v_requested,CASE WHEN p_status='approved' THEN v_now ELSE NULL END,CASE WHEN p_status='approved' THEN BTRIM(p_operator) ELSE NULL END,v_now)
+  ON CONFLICT (user_id) DO UPDATE SET status=EXCLUDED.status, approved_at=EXCLUDED.approved_at, approved_by=EXCLUDED.approved_by, updated_at=EXCLUDED.updated_at;
   INSERT INTO fatedrop_beta_access_audit (user_id, previous_status, next_status, operator, changed_at)
   VALUES (p_user_id, v_previous, p_status, BTRIM(p_operator), v_now);
-
-  RETURN QUERY
-  SELECT b.user_id, b.status, b.requested_at, b.approved_at, b.approved_by, b.updated_at
-  FROM fatedrop_beta_access b
-  WHERE b.user_id = p_user_id;
+  RETURN QUERY SELECT b.user_id, b.status, b.requested_at, b.approved_at, b.approved_by, b.updated_at FROM fatedrop_beta_access b WHERE b.user_id=p_user_id;
+END;
+$$`,
+    ],
+  },
+  {
+    id: "2026-08-29-beta-owner-access.sql",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS fatedrop_admin_roles (
+  user_id text PRIMARY KEY REFERENCES fatedrop_users(id) ON DELETE CASCADE,
+  role text NOT NULL CHECK (role IN ('owner')),
+  granted_at bigint NOT NULL,
+  granted_by text NOT NULL
+)`,
+      `CREATE TABLE IF NOT EXISTS fatedrop_admin_role_audit (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id text NOT NULL REFERENCES fatedrop_users(id) ON DELETE CASCADE,
+  role text NOT NULL CHECK (role IN ('owner')),
+  action text NOT NULL CHECK (action IN ('grant', 'revoke')),
+  operator text NOT NULL,
+  changed_at bigint NOT NULL
+)`,
+      `CREATE OR REPLACE FUNCTION fatedrop_grant_owner(p_user_id text, p_operator text)
+RETURNS TABLE(user_id text, role text, granted_at bigint, granted_by text)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_now bigint := EXTRACT(EPOCH FROM NOW())::bigint;
+BEGIN
+  IF NULLIF(BTRIM(p_operator), '') IS NULL THEN RAISE EXCEPTION 'operator is required'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM fatedrop_users u WHERE u.id=p_user_id) THEN RAISE EXCEPTION 'unknown FateDrop user'; END IF;
+  INSERT INTO fatedrop_admin_roles (user_id,role,granted_at,granted_by)
+  VALUES (p_user_id,'owner',v_now,BTRIM(p_operator))
+  ON CONFLICT (user_id) DO UPDATE SET role='owner',granted_at=EXCLUDED.granted_at,granted_by=EXCLUDED.granted_by;
+  INSERT INTO fatedrop_admin_role_audit (user_id,role,action,operator,changed_at)
+  VALUES (p_user_id,'owner','grant',BTRIM(p_operator),v_now);
+  PERFORM fatedrop_set_beta_access(p_user_id,'approved',BTRIM(p_operator));
+  RETURN QUERY SELECT r.user_id,r.role,r.granted_at,r.granted_by FROM fatedrop_admin_roles r WHERE r.user_id=p_user_id;
+END;
+$$`,
+      `CREATE OR REPLACE FUNCTION fatedrop_revoke_owner(p_user_id text, p_operator text)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_now bigint := EXTRACT(EPOCH FROM NOW())::bigint;
+BEGIN
+  IF NULLIF(BTRIM(p_operator), '') IS NULL THEN RAISE EXCEPTION 'operator is required'; END IF;
+  IF EXISTS (SELECT 1 FROM fatedrop_admin_roles r WHERE r.user_id=p_user_id AND r.role='owner') THEN
+    DELETE FROM fatedrop_admin_roles WHERE user_id=p_user_id;
+    INSERT INTO fatedrop_admin_role_audit (user_id,role,action,operator,changed_at)
+    VALUES (p_user_id,'owner','revoke',BTRIM(p_operator),v_now);
+  END IF;
 END;
 $$`,
     ],
@@ -148,11 +173,7 @@ export const PRODUCTION_MIGRATION_CUTOFF = MIGRATION_CUTOFF;
 
 async function ensureMigrationLedger() {
   const sql = await fateDropPostgres();
-  await sql`
-    CREATE TABLE IF NOT EXISTS fatedrop_schema_migrations (
-      migration_id text PRIMARY KEY,
-      applied_at bigint NOT NULL
-    )`;
+  await sql`CREATE TABLE IF NOT EXISTS fatedrop_schema_migrations (migration_id text PRIMARY KEY, applied_at bigint NOT NULL)`;
   return sql;
 }
 
@@ -164,13 +185,17 @@ export async function runProductionMigrations() {
 
   for (const migration of PRODUCTION_MIGRATIONS) {
     if (applied.has(migration.id)) continue;
-    for (const statement of migration.statements) {
-      await sql.query(statement);
+    for (const statement of migration.statements) await sql.query(statement);
+
+    if (migration.id === "2026-08-29-beta-owner-access.sql") {
+      const ownerRows = await sql`SELECT id FROM fatedrop_users WHERE lower(email)=${OWNER_EMAIL}`;
+      if (ownerRows.length !== 1) throw new Error(`Owner bootstrap requires exactly one canonical ${OWNER_EMAIL} FateDrop account.`);
+      const ownerUserId = String(ownerRows[0].id);
+      const ownerExists = await sql`SELECT user_id FROM fatedrop_admin_roles WHERE user_id=${ownerUserId} AND role='owner' LIMIT 1`;
+      if (!ownerExists[0]) await sql`SELECT * FROM fatedrop_grant_owner(${ownerUserId}, ${"migration:hello-owner-bootstrap"})`;
     }
-    await sql`
-      INSERT INTO fatedrop_schema_migrations (migration_id, applied_at)
-      VALUES (${migration.id}, ${Math.floor(Date.now() / 1000)})
-      ON CONFLICT (migration_id) DO NOTHING`;
+
+    await sql`INSERT INTO fatedrop_schema_migrations (migration_id,applied_at) VALUES (${migration.id},${Math.floor(Date.now()/1000)}) ON CONFLICT (migration_id) DO NOTHING`;
     newlyApplied.push(migration.id);
   }
 
@@ -178,40 +203,24 @@ export async function runProductionMigrations() {
   const ledger = new Set(ledgerRows.map((row) => String(row.migration_id)));
   const pending = PRODUCTION_MIGRATIONS.filter((migration) => !ledger.has(migration.id)).map((migration) => migration.id);
 
-  const defaultRows = await sql`
-    SELECT column_default
-    FROM information_schema.columns
-    WHERE table_schema='public'
-      AND table_name='fatedrop_notification_preferences'
-      AND column_name='vanished_enabled'`;
+  const defaultRows = await sql`SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='fatedrop_notification_preferences' AND column_name='vanished_enabled'`;
   const vanishedDefault = String(defaultRows[0]?.column_default ?? "").toLowerCase();
-  const asymmetricRows = await sql`
-    SELECT COUNT(*)::int AS count
-    FROM fatedrop_notification_preferences
-    WHERE vanished_enabled=false
-      AND COALESCE(whisper_enabled,true)=true
-      AND echo_enabled=true
-      AND manifested_enabled=true`;
+  const asymmetricRows = await sql`SELECT COUNT(*)::int AS count FROM fatedrop_notification_preferences WHERE vanished_enabled=false AND COALESCE(whisper_enabled,true)=true AND echo_enabled=true AND manifested_enabled=true`;
   const historicalAsymmetryCount = Number(asymmetricRows[0]?.count ?? 0);
-  const betaMissingRows = await sql`
-    SELECT COUNT(*)::int AS count
-    FROM fatedrop_users u
-    LEFT JOIN fatedrop_beta_access b ON b.user_id = u.id
-    WHERE b.user_id IS NULL`;
+  const betaMissingRows = await sql`SELECT COUNT(*)::int AS count FROM fatedrop_users u LEFT JOIN fatedrop_beta_access b ON b.user_id=u.id WHERE b.user_id IS NULL`;
   const betaAccessMissingCount = Number(betaMissingRows[0]?.count ?? 0);
+  const ownerRows = await sql`
+    SELECT u.id, r.role, b.status AS beta_status
+    FROM fatedrop_users u
+    JOIN fatedrop_admin_roles r ON r.user_id=u.id AND r.role='owner'
+    LEFT JOIN fatedrop_beta_access b ON b.user_id=u.id
+    WHERE lower(u.email)=${OWNER_EMAIL}`;
 
-  if (!vanishedDefault.includes("true")) {
-    throw new Error("Production migration verification failed: Vanished default is not enabled.");
-  }
-  if (historicalAsymmetryCount !== 0) {
-    throw new Error(`Production migration verification failed: ${historicalAsymmetryCount} legacy asymmetric lifecycle preference row(s) remain.`);
-  }
-  if (betaAccessMissingCount !== 0) {
-    throw new Error(`Production migration verification failed: ${betaAccessMissingCount} FateDrop account(s) are missing closed-beta access state.`);
-  }
-  if (pending.length) {
-    throw new Error(`Production migration verification failed: pending migrations: ${pending.join(", ")}`);
-  }
+  if (!vanishedDefault.includes("true")) throw new Error("Production migration verification failed: Vanished default is not enabled.");
+  if (historicalAsymmetryCount !== 0) throw new Error(`Production migration verification failed: ${historicalAsymmetryCount} legacy asymmetric lifecycle preference row(s) remain.`);
+  if (betaAccessMissingCount !== 0) throw new Error(`Production migration verification failed: ${betaAccessMissingCount} FateDrop account(s) are missing closed-beta access state.`);
+  if (ownerRows.length !== 1 || String(ownerRows[0].beta_status) !== "approved") throw new Error("Production migration verification failed: canonical FateDrop Owner is missing or not beta-approved.");
+  if (pending.length) throw new Error(`Production migration verification failed: pending migrations: ${pending.join(", ")}`);
 
   return {
     known: PRODUCTION_MIGRATIONS.length,
@@ -220,5 +229,7 @@ export async function runProductionMigrations() {
     vanishedDefaultVerified: true,
     historicalAsymmetryCount,
     betaAccessMissingCount,
+    ownerVerified: true,
+    ownerUserId: String(ownerRows[0].id),
   };
 }

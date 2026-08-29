@@ -6,12 +6,21 @@ import { assertTurnstile, TurnstileRejectedError, TurnstileUnavailableError } fr
 
 export const runtime = "nodejs";
 
+const COMPANY_EMAIL_DOMAIN = "fatedrop.co.uk";
+
 function clean(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
+}
+
+function isReservedCompanyEmail(value: string) {
+  const at = value.lastIndexOf("@");
+  if (at < 0) return false;
+  const domain = value.slice(at + 1).toLowerCase();
+  return domain === COMPANY_EMAIL_DOMAIN || domain.endsWith(`.${COMPANY_EMAIL_DOMAIN}`);
 }
 
 function slugName(value: string) {
@@ -49,6 +58,7 @@ export async function POST(request: Request) {
     const fields: Record<string, string> = {};
     if (displayName.length < 2) fields.displayName = "Use at least 2 characters.";
     if (!validEmail(email)) fields.email = "Enter a valid email address.";
+    else if (isReservedCompanyEmail(email)) fields.email = "That email address is reserved for FateDrop operations.";
     if (password.length < 10) fields.password = "Use at least 10 characters.";
     if (password.length > 200) fields.password = "Password is longer than expected.";
     if (!confirmPassword) fields.confirmPassword = "Confirm your password.";
