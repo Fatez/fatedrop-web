@@ -26,13 +26,16 @@ function authorized(request: Request) {
 }
 
 export async function POST(request: Request) {
-  try {
-    assertSameOrigin(request);
-  } catch {
-    return Response.json({ error: "Email canary request rejected." }, { status: 403, headers: { "cache-control": "no-store" } });
-  }
-
+  // This endpoint is called server-to-server by the production deploy runner.
+  // A valid rotating bearer secret is sufficient for that path; browser callers
+  // without the secret must still satisfy the normal same-origin boundary before
+  // receiving the generic unauthorised response.
   if (!authorized(request)) {
+    try {
+      assertSameOrigin(request);
+    } catch {
+      return Response.json({ error: "Email canary request rejected." }, { status: 403, headers: { "cache-control": "no-store" } });
+    }
     return Response.json({ error: "Email canary is not authorised." }, { status: 401, headers: { "cache-control": "no-store" } });
   }
 
@@ -47,9 +50,13 @@ export async function POST(request: Request) {
       { status: 200, headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
+    const providerCode = error instanceof PasswordResetEmailUnavailableError ? error.providerCode : null;
     const detail = error instanceof PasswordResetEmailUnavailableError
-      ? "Cloudflare Email rejected or could not accept the password-reset transport canary."
+      ? `Cloudflare Email rejected or could not accept the password-reset transport canary${providerCode ? ` (${providerCode})` : ""}.`
       : "Password-reset transport canary failed.";
-    return Response.json({ error: detail }, { status: 503, headers: { "cache-control": "no-store" } });
+    return Response.json(
+      { error: detail, providerCode },
+      { status: 503, headers: { "cache-control": "no-store" } },
+    );
   }
 }

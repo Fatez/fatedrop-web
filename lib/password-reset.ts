@@ -22,9 +22,12 @@ type PasswordResetEmailContext = {
 };
 
 export class PasswordResetEmailUnavailableError extends Error {
-  constructor(message = "Password reset email service is unavailable.") {
+  providerCode: string | null;
+
+  constructor(message = "Password reset email service is unavailable.", providerCode: string | null = null) {
     super(message);
     this.name = "PasswordResetEmailUnavailableError";
+    this.providerCode = providerCode;
   }
 }
 
@@ -99,8 +102,9 @@ export async function sendPasswordResetEmail(
       html: `<!doctype html><html><body style="margin:0;background:#080b10;color:#e8dfd8;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;padding:40px 24px"><p style="font-size:12px;letter-spacing:.14em;color:#d2b66f">FATEDROP</p><h1 style="font-size:30px;font-weight:500">Reset your password</h1><p style="line-height:1.7;color:#a9a0a5">A password reset was requested for your FateDrop ID.</p><p style="margin:28px 0"><a href="${safeUrl}" style="display:inline-block;padding:13px 18px;border-radius:8px;background:#7c6eff;color:#fff;text-decoration:none;font-weight:700">Reset password</a></p><p style="font-size:13px;line-height:1.7;color:#898187">This link expires in 30 minutes and can only be used once. If you did not request this, you can ignore this email.</p></div></body></html>`,
     });
   } catch (error) {
-    console.error("FATEDROP_PASSWORD_RESET_EMAIL_SEND_FAILED", error);
-    throw new PasswordResetEmailUnavailableError();
+    const providerCode = cloudflareEmailProviderCode(error);
+    console.error("FATEDROP_PASSWORD_RESET_EMAIL_SEND_FAILED", providerCode, error);
+    throw new PasswordResetEmailUnavailableError("Password reset email service is unavailable.", providerCode);
   }
 }
 
@@ -119,13 +123,20 @@ export async function sendPasswordResetTransportCanary(
       html: "<!doctype html><html><body><p>FateDrop password reset email transport is working.</p></body></html>",
     });
   } catch (error) {
-    console.error("FATEDROP_PASSWORD_RESET_EMAIL_CANARY_FAILED", error);
-    throw new PasswordResetEmailUnavailableError();
+    const providerCode = cloudflareEmailProviderCode(error);
+    console.error("FATEDROP_PASSWORD_RESET_EMAIL_CANARY_FAILED", providerCode, error);
+    throw new PasswordResetEmailUnavailableError("Password reset email transport canary failed.", providerCode);
   }
 }
 
 export function validResetTokenShape(value: unknown) {
   return typeof value === "string" && /^[A-Za-z0-9_-]{40,64}$/.test(value);
+}
+
+function cloudflareEmailProviderCode(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) return null;
+  const value = String((error as { code?: unknown }).code || "").trim();
+  return /^E_[A-Z0-9_]{1,64}$/.test(value) ? value : null;
 }
 
 function passwordResetSender() {

@@ -26,3 +26,19 @@ test("secret-only production canary exercises the same Cloudflare email binding 
   assert.match(canaryRoute, /status: 401/);
   assert.match(canaryRoute, /status: 503/);
 });
+
+test("authenticated deployment canary is server-to-server while unauthenticated browser calls retain same-origin rejection", () => {
+  const authGate = canaryRoute.indexOf("if (!authorized(request))");
+  const originGate = canaryRoute.indexOf("assertSameOrigin(request)");
+  assert.ok(authGate >= 0 && originGate > authGate);
+  assert.match(canaryRoute, /Email canary request rejected\./);
+  assert.match(canaryRoute, /Email canary is not authorised\./);
+});
+
+test("secret-only canary preserves only sanitized Cloudflare provider codes", () => {
+  assert.match(reset, /\^E_\[A-Z0-9_\]\{1,64\}\$/);
+  assert.match(reset, /providerCode/);
+  assert.match(canaryRoute, /providerCode/);
+  assert.match(canaryRoute, /Cloudflare Email rejected or could not accept/);
+  assert.doesNotMatch(canaryRoute, /error\.message/);
+});
