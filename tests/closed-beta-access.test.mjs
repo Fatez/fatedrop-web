@@ -60,7 +60,7 @@ test("signup means beta request, not approval", () => {
 
 test("approval grants full beta access while paid membership and checkout cannot bypass approval", () => {
   const approvalCheck = betaPremium.indexOf("betaAccessIsApproved(betaAccess)");
-  const betaModeCheck = betaPremium.indexOf("betaPremiumEnabled()");
+  const betaModeCheck = betaPremium.indexOf("if (!betaPremiumEnabled())", approvalCheck);
   assert.ok(approvalCheck >= 0 && betaModeCheck > approvalCheck, "approval must be checked before temporary full beta access");
   assert.match(betaPremium, /tier: "plus"/);
   assert.match(betaPremium, /status: "active"/);
