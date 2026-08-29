@@ -19,6 +19,7 @@ const mobileSync = read("app/api/mobile/sync/route.ts");
 const entitlement = read("app/api/account/entitlement/route.ts");
 const discordConnect = read("app/api/discord/connect/route.ts");
 const discordSync = read("app/api/discord/sync/route.ts");
+const billingCheckout = read("app/api/billing/checkout/route.ts");
 
 test("closed beta has canonical pending approved and revoked states and fails closed", () => {
   assert.match(betaAccess, /"pending" \| "approved" \| "revoked"/);
@@ -34,6 +35,8 @@ test("production migration preserves existing testers but creates every new acco
   assert.match(migrationSql, /migration:pre-closed-beta/);
   assert.match(migrationSql, /AFTER INSERT ON fatedrop_users/);
   assert.match(migrationSql, /VALUES \(NEW\.id, 'pending'/);
+  assert.match(migrationSql, /migration:pre-closed-beta-reconcile/);
+  assert.ok(migrationSql.indexOf("migration:pre-closed-beta-reconcile") > migrationSql.indexOf("AFTER INSERT ON fatedrop_users"));
   assert.match(migrations, /betaAccessMissingCount/);
 });
 
@@ -55,12 +58,16 @@ test("signup means beta request, not approval", () => {
   assert.doesNotMatch(register, /status: "approved"/);
 });
 
-test("temporary Premium and paid membership cannot bypass beta approval", () => {
+test("temporary Premium, paid membership and checkout cannot bypass beta approval", () => {
   const approvalCheck = betaPremium.indexOf("betaAccessIsApproved(betaAccess)");
   const betaLeadLookup = betaPremium.indexOf("collectorIsInBeta(snapshot.account.email)");
   assert.ok(approvalCheck >= 0 && betaLeadLookup > approvalCheck, "approval must be checked before beta lead Premium grant");
   assert.match(betaPremium, /return \{ \.\.\.base, accessGrant: null \}/);
   assert.match(entitlement, /capabilities = betaApproved \? \[\.\.\.capabilitiesForMembership/);
+  const checkoutApproval = billingCheckout.indexOf("betaAccessIsApproved(snapshot.betaAccess)");
+  const checkoutCreation = billingCheckout.indexOf("createCheckoutSession({");
+  assert.ok(checkoutApproval >= 0 && checkoutCreation > checkoutApproval, "checkout must require beta approval before Stripe session creation");
+  assert.match(billingCheckout, /betaAccessDeniedResponse\(snapshot\.betaAccess\)/);
 });
 
 test("dashboard and Discord stay closed until approval", () => {
