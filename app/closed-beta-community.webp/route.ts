@@ -3,8 +3,11 @@ import chunk1 from "@/lib/closed-beta-art/chunk-1";
 import chunk2 from "@/lib/closed-beta-art/chunk-2";
 import chunk3 from "@/lib/closed-beta-art/chunk-3";
 import chunk4 from "@/lib/closed-beta-art/chunk-4";
+import chunk5 from "@/lib/closed-beta-art/chunk-5";
+import chunk6 from "@/lib/closed-beta-art/chunk-6";
+import chunk7 from "@/lib/closed-beta-art/chunk-7";
 
-const imageBase64 = `${chunk0}${chunk1}${chunk2}${chunk3}${chunk4}`;
+const imageBase64 = `${chunk0}${chunk1}${chunk2}${chunk3}${chunk4}${chunk5}${chunk6}${chunk7}`;
 
 function decodeBase64(value: string) {
   const binary = atob(value);
