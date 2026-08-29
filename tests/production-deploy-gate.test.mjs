@@ -60,8 +60,8 @@ test("post-deploy smoke proves canonical Cloud contracts and critical Web auth b
   assert.match(workflow, /check_available "\/api\/trader\/cards\?q=Furret&limit=1"/);
 });
 
-test("post-deploy smoke fails unless account registration has both Turnstile halves live", () => {
-  assert.match(workflow, /curl[^\n]*"\$WEB\/account\/register"/);
+test("post-deploy smoke fails unless closed-beta registration has both Turnstile halves live", () => {
+  assert.match(workflow, /curl[^\n]*"\$WEB\/closed-beta"/);
   assert.match(workflow, /grep -Fq 'cf-turnstile'/);
   assert.match(workflow, /Security verification is unavailable\./);
   assert.match(workflow, /"\$WEB\/api\/auth\/register"/);
