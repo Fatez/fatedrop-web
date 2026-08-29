@@ -23,16 +23,18 @@ test("root layout imports a site-wide visible keyboard focus safety net", () => 
   assert.ok(accessibility.includes("outline-offset: 3px"));
 });
 
-test("primary navigation keeps expandable menus semantic while beta entry stays a simple link", () => {
+test("primary navigation keeps Merch and FateDrop ID menus semantic while beta entry stays a simple link", () => {
   const nav = read("components/nav.tsx");
-  assert.ok(nav.includes('type="button"'));
-  assert.ok(nav.includes('aria-haspopup="menu"'));
-  assert.ok(nav.includes("aria-expanded={merchOpen}"));
+  assert.ok(nav.includes('className="merch-menu-trigger" type="button" aria-haspopup="menu" aria-expanded={merchOpen}'));
+  assert.ok(nav.includes('className="account-menu-trigger" type="button" aria-haspopup="menu" aria-expanded={accountOpen}'));
+  assert.ok(nav.includes('className="merch-menu-popover" role="menu"'));
+  assert.ok(nav.includes('className="account-menu-popover" role="menu"'));
   assert.ok(nav.includes('aria-label={open ? "Close menu" : "Open menu"}'));
   assert.ok(nav.includes("aria-expanded={open}"));
-  assert.ok(nav.includes('href="/account/login"'));
-  assert.ok(nav.includes('href="/closed-beta"'));
-  assert.ok(!nav.includes("aria-expanded={accountOpen}"));
+  assert.ok(nav.includes('href="/account"'));
+  assert.ok(nav.includes('href="/account/register"'));
+  assert.ok(nav.includes('href="/app-beta"'));
+  assert.ok(!/href="\/app-beta"[^>]*aria-expanded/.test(nav), "Join App Beta must remain a normal navigation link");
 });
 
 test("companion state controls remain keyboard buttons with reduced-motion support", () => {
