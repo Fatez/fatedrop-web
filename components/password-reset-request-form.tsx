@@ -1,14 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Script from "next/script";
 import { FormEvent, useState } from "react";
-
-declare global {
-  interface Window {
-    turnstile?: { reset: () => void };
-  }
-}
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 export function PasswordResetRequestForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
   const [busy, setBusy] = useState(false);
@@ -59,12 +53,11 @@ export function PasswordResetRequestForm({ turnstileSiteKey }: { turnstileSiteKe
   }
 
   return <form className="identity-auth-form" onSubmit={submit} noValidate>
-    {turnstileSiteKey ? <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" /> : null}
     <label>
       <span>Email</span>
       <input name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
     </label>
-    {turnstileSiteKey ? <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="password_reset_request" data-theme="dark" /> : null}
+    <TurnstileWidget siteKey={turnstileSiteKey} action="password_reset_request" />
     {!turnstileReady ? <p className="identity-form-status error" role="alert">Security verification is unavailable.</p> : null}
     {error ? <p className="identity-form-status error" role="alert">{error}</p> : null}
     <button className="button button-primary" type="submit" disabled={busy || !turnstileReady}>
