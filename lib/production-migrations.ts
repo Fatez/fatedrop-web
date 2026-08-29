@@ -71,6 +71,10 @@ $$`,
       `CREATE TRIGGER fatedrop_users_closed_beta_pending
 AFTER INSERT ON fatedrop_users
 FOR EACH ROW EXECUTE FUNCTION fatedrop_create_pending_beta_access()`,
+      `INSERT INTO fatedrop_beta_access (user_id, status, requested_at, approved_at, approved_by, updated_at)
+SELECT id, 'approved', created_at, EXTRACT(EPOCH FROM NOW())::bigint, 'migration:pre-closed-beta-reconcile', EXTRACT(EPOCH FROM NOW())::bigint
+FROM fatedrop_users
+ON CONFLICT (user_id) DO NOTHING`,
       `CREATE OR REPLACE FUNCTION fatedrop_set_beta_access(p_user_id text, p_status text, p_operator text)
 RETURNS TABLE(user_id text, status text, requested_at bigint, approved_at bigint, approved_by text, updated_at bigint)
 LANGUAGE plpgsql
