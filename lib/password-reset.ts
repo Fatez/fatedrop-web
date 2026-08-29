@@ -19,7 +19,6 @@ type EmailBinding = {
 
 type PasswordResetEmailContext = {
   email: EmailBinding;
-  waitUntil: (promise: Promise<unknown>) => void;
 };
 
 export class PasswordResetEmailUnavailableError extends Error {
@@ -40,10 +39,7 @@ export async function getPasswordResetEmailContext(): Promise<PasswordResetEmail
   const env = context.env as unknown as { EMAIL?: EmailBinding };
   const email = env.EMAIL;
   if (!email || typeof email.send !== "function") throw new PasswordResetEmailUnavailableError();
-  return {
-    email,
-    waitUntil: (promise) => context.ctx.waitUntil(promise),
-  };
+  return { email };
 }
 
 export async function issuePasswordResetToken(userId: string) {
@@ -78,35 +74,62 @@ export async function completePasswordReset(rawToken: string, passwordHash: stri
   return rows[0]?.user_id ? String(rows[0].user_id) : null;
 }
 
-export function queuePasswordResetEmail(
+export async function sendPasswordResetEmail(
   emailContext: PasswordResetEmailContext,
   recipient: string,
   rawToken: string,
 ) {
   const resetUrl = passwordResetUrl(rawToken);
-  const from = String(process.env.FATEDROP_PASSWORD_RESET_FROM || RESET_FROM).trim() || RESET_FROM;
+  const from = passwordResetSender();
   const safeUrl = escapeHtml(resetUrl);
-  const sendPromise = emailContext.email.send({
-    from,
-    to: recipient,
-    replyTo: RESET_FROM,
-    subject: "Reset your FateDrop password",
-    text: [
-      "A password reset was requested for your FateDrop ID.",
-      "",
-      `Reset your password: ${resetUrl}`,
-      "",
-      "This link expires in 30 minutes and can only be used once.",
-      "If you did not request this, you can ignore this email.",
-    ].join("\n"),
-    html: `<!doctype html><html><body style="margin:0;background:#080b10;color:#e8dfd8;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;padding:40px 24px"><p style="font-size:12px;letter-spacing:.14em;color:#d2b66f">FATEDROP</p><h1 style="font-size:30px;font-weight:500">Reset your password</h1><p style="line-height:1.7;color:#a9a0a5">A password reset was requested for your FateDrop ID.</p><p style="margin:28px 0"><a href="${safeUrl}" style="display:inline-block;padding:13px 18px;border-radius:8px;background:#7c6eff;color:#fff;text-decoration:none;font-weight:700">Reset password</a></p><p style="font-size:13px;line-height:1.7;color:#898187">This link expires in 30 minutes and can only be used once. If you did not request this, you can ignore this email.</p></div></body></html>`,
-  }).then(() => undefined).catch(() => undefined);
+  try {
+    return await emailContext.email.send({
+      from,
+      to: recipient,
+      replyTo: RESET_FROM,
+      subject: "Reset your FateDrop password",
+      text: [
+        "A password reset was requested for your FateDrop ID.",
+        "",
+        `Reset your password: ${resetUrl}`,
+        "",
+        "This link expires in 30 minutes and can only be used once.",
+        "If you did not request this, you can ignore this email.",
+      ].join("\n"),
+      html: `<!doctype html><html><body style="margin:0;background:#080b10;color:#e8dfd8;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;padding:40px 24px"><p style="font-size:12px;letter-spacing:.14em;color:#d2b66f">FATEDROP</p><h1 style="font-size:30px;font-weight:500">Reset your password</h1><p style="line-height:1.7;color:#a9a0a5">A password reset was requested for your FateDrop ID.</p><p style="margin:28px 0"><a href="${safeUrl}" style="display:inline-block;padding:13px 18px;border-radius:8px;background:#7c6eff;color:#fff;text-decoration:none;font-weight:700">Reset password</a></p><p style="font-size:13px;line-height:1.7;color:#898187">This link expires in 30 minutes and can only be used once. If you did not request this, you can ignore this email.</p></div></body></html>`,
+    });
+  } catch (error) {
+    console.error("FATEDROP_PASSWORD_RESET_EMAIL_SEND_FAILED", error);
+    throw new PasswordResetEmailUnavailableError();
+  }
+}
 
-  emailContext.waitUntil(sendPromise);
+export async function sendPasswordResetTransportCanary(
+  emailContext: PasswordResetEmailContext,
+  recipient: string,
+) {
+  const from = passwordResetSender();
+  try {
+    return await emailContext.email.send({
+      from,
+      to: recipient,
+      replyTo: RESET_FROM,
+      subject: "FateDrop email transport check",
+      text: "FateDrop password reset email transport is working.",
+      html: "<!doctype html><html><body><p>FateDrop password reset email transport is working.</p></body></html>",
+    });
+  } catch (error) {
+    console.error("FATEDROP_PASSWORD_RESET_EMAIL_CANARY_FAILED", error);
+    throw new PasswordResetEmailUnavailableError();
+  }
 }
 
 export function validResetTokenShape(value: unknown) {
   return typeof value === "string" && /^[A-Za-z0-9_-]{40,64}$/.test(value);
+}
+
+function passwordResetSender() {
+  return String(process.env.FATEDROP_PASSWORD_RESET_FROM || RESET_FROM).trim() || RESET_FROM;
 }
 
 function hashResetToken(token: string) {
