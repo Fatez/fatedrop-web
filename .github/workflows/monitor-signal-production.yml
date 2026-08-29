@@ -22,20 +22,51 @@ jobs:
         run: |
           set -euo pipefail
 
-          response="$(curl --silent --show-error --fail-with-body --retry 3 --retry-delay 5 --max-time 20 https://fatedrop.co.uk/api/health/signal)"
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
 
-          HEALTH_RESPONSE="$response" node <<'NODE'
+          set +e
+          status="$(curl --silent --show-error --retry 3 --retry-delay 5 --max-time 20 --output "$response_file" --write-out "%{http_code}" https://fatedrop.co.uk/api/health/signal)"
+          curl_exit=$?
+          set -e
+
+          if [ "$curl_exit" -ne 0 ]; then
+            echo "FateDrop production signal health request failed before a usable HTTP response: curl_exit=$curl_exit"
+            exit "$curl_exit"
+          fi
+
+          response="$(cat "$response_file")"
+
+          HEALTH_STATUS="$status" HEALTH_RESPONSE="$response" node <<'NODE'
           const raw = process.env.HEALTH_RESPONSE || "";
+          const httpStatus = Number(process.env.HEALTH_STATUS || 0);
+          const allowedReasons = new Set([
+            "invalid_request",
+            "missing_web_token",
+            "upstream_unauthorized",
+            "upstream_error",
+            "upstream_invalid_response",
+            "upstream_unavailable",
+            "upstream_timeout",
+            "upstream_request_failed",
+          ]);
+
           let health;
           try {
             health = JSON.parse(raw);
           } catch {
-            console.error("FateDrop production signal health returned invalid JSON.");
+            console.error(`FateDrop production signal health returned invalid JSON: http=${httpStatus || "unknown"}`);
             process.exit(1);
           }
 
           if (health.available !== true) {
-            console.error("FateDrop production signal health is unavailable.");
+            const reason = allowedReasons.has(health.reason) ? health.reason : "unknown";
+            console.error(`FateDrop production signal health is unavailable: http=${httpStatus || "unknown"} reason=${reason}`);
+            process.exit(1);
+          }
+
+          if (httpStatus !== 200) {
+            console.error(`FateDrop production signal health returned an unexpected HTTP status: http=${httpStatus || "unknown"}`);
             process.exit(1);
           }
 

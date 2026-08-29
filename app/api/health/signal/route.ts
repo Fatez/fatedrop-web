@@ -5,6 +5,15 @@ const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.
 const SUCCESS_CACHE_CONTROL = "public, max-age=0, s-maxage=30, stale-while-revalidate=120";
 
 type JsonRecord = Record<string, unknown>;
+type FailureReason =
+  | "invalid_request"
+  | "missing_web_token"
+  | "upstream_unauthorized"
+  | "upstream_error"
+  | "upstream_invalid_response"
+  | "upstream_unavailable"
+  | "upstream_timeout"
+  | "upstream_request_failed";
 
 function record(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
@@ -38,19 +47,26 @@ function signalHealthUrl() {
   return url;
 }
 
-function unavailable(status = 503) {
+function unavailable(reason: FailureReason, status = 503) {
   return Response.json(
-    { available: false },
+    { available: false, reason },
     { status, headers: { "cache-control": "no-store" } },
   );
 }
 
+function requestFailureReason(error: unknown): FailureReason {
+  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
+    return "upstream_timeout";
+  }
+  return "upstream_request_failed";
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  if (requestUrl.search) return unavailable(400);
+  if (requestUrl.search) return unavailable("invalid_request", 400);
 
   const signalToken = process.env.FATEDROP_SIGNAL_API_TOKEN;
-  if (!signalToken) return unavailable();
+  if (!signalToken) return unavailable("missing_web_token");
 
   try {
     const response = await fetch(signalHealthUrl(), {
@@ -61,10 +77,19 @@ export async function GET(request: Request) {
       },
       signal: AbortSignal.timeout(8_000),
     });
-    if (!response.ok) return unavailable();
 
-    const payload = record(await response.json());
-    if (payload.available !== true) return unavailable();
+    if (response.status === 401 || response.status === 403) {
+      return unavailable("upstream_unauthorized");
+    }
+    if (!response.ok) return unavailable("upstream_error");
+
+    let payload: JsonRecord;
+    try {
+      payload = record(await response.json());
+    } catch {
+      return unavailable("upstream_invalid_response");
+    }
+    if (payload.available !== true) return unavailable("upstream_unavailable");
 
     const diagnostics = record(payload.diagnostics);
     const reliability = record(diagnostics.reliability);
@@ -114,7 +139,7 @@ export async function GET(request: Request) {
       },
       { status: 200, headers: { "cache-control": SUCCESS_CACHE_CONTROL } },
     );
-  } catch {
-    return unavailable();
+  } catch (error) {
+    return unavailable(requestFailureReason(error));
   }
 }
