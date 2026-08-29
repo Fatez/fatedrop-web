@@ -1,9 +1,12 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { runProductionMigrations } from "@/lib/production-migrations";
+import { fateDropPostgres } from "@/lib/postgres";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const OWNER_BOOTSTRAP_ERROR = "Owner bootstrap requires exactly one canonical hello@fatedrop.co.uk FateDrop account.";
 
 function matchesSecret(provided: string, expected: string | undefined) {
   if (!expected) return false;
@@ -19,6 +22,18 @@ function authorized(request: Request) {
   return matchesSecret(provided, process.env.FATEDROP_PUSH_CRON_SECRET);
 }
 
+async function ownerBootstrapDiagnostic(detail: string) {
+  if (detail !== OWNER_BOOTSTRAP_ERROR) return detail;
+  try {
+    const sql = await fateDropPostgres();
+    const rows = await sql`SELECT COUNT(*)::int AS count FROM fatedrop_users WHERE lower(email)='hello@fatedrop.co.uk'`;
+    const count = Number(rows[0]?.count ?? -1);
+    return `${detail} Match count: ${Number.isFinite(count) ? count : "unknown"}.`;
+  } catch {
+    return `${detail} Match count unavailable.`;
+  }
+}
+
 export async function POST(request: Request) {
   if (!authorized(request)) {
     return Response.json({ error: "Production migration is not authorised." }, { status: 401, headers: { "cache-control": "no-store" } });
@@ -29,6 +44,7 @@ export async function POST(request: Request) {
     return Response.json({ accepted: true, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Production migration failed.";
-    return Response.json({ error: detail.slice(0, 300) }, { status: 503, headers: { "cache-control": "no-store" } });
+    const diagnostic = await ownerBootstrapDiagnostic(detail);
+    return Response.json({ error: diagnostic.slice(0, 300) }, { status: 503, headers: { "cache-control": "no-store" } });
   }
 }
