@@ -9,7 +9,6 @@ const distribution = read("lib/beta-distribution.ts");
 const ownerAccess = read("lib/owner-access.ts");
 const envExample = read(".env.example");
 const closedBetaPage = read("app/closed-beta/page.tsx");
-const closedBetaArtworkRoute = read("app/closed-beta-community.webp/route.ts");
 
 test("approved FateDrop ID owns the Web and App handoff", () => {
   assert.match(account, /betaAccessIsApproved\(snapshot\.betaAccess\)/);
@@ -46,9 +45,10 @@ test("pending account does not get an active dashboard shortcut", () => {
 
 test("closed beta landing uses the supplied FateDrop community artwork and keeps the canonical request path", () => {
   assert.match(closedBetaPage, /<img/);
-  assert.match(closedBetaPage, /src="\/closed-beta-community\.webp"/);
-  assert.match(closedBetaArtworkRoute, /Content-Type": "image\/webp"/);
-  assert.match(closedBetaArtworkRoute, /Cache-Control": "public, max-age=31536000, immutable"/);
+  assert.match(closedBetaPage, /src="\/assets\/closed-beta\/fatedrop-closed-beta-community\.png"/);
+  assert.doesNotMatch(closedBetaPage, /closed-beta-community\.webp/);
+  assert.match(closedBetaPage, /width=\{1672\}/);
+  assert.match(closedBetaPage, /height=\{941\}/);
   assert.match(closedBetaPage, /AccountAuthForm mode="register"/);
   assert.match(closedBetaPage, /Web \+ App unlock together/);
 });
