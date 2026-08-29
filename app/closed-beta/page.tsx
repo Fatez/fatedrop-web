@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AccountAuthForm } from "@/components/account-auth-form";
@@ -28,14 +27,13 @@ export default async function ClosedBetaPage() {
     <SiteShell>
       <main className="closed-beta-page section-shell">
         <section className="closed-beta-art" aria-label="FateDrop closed beta community">
-          <Image
-            src="/assets/closed-beta/fatedrop-closed-beta-community.webp"
+          <img
+            src="/closed-beta-community.webp"
             alt="FateDrop collectors and Koru & Friends gathered around trading cards in the FateDrop world."
             width={1672}
             height={941}
-            priority
-            unoptimized
-            sizes="(max-width: 760px) 100vw, 1200px"
+            loading="eager"
+            decoding="async"
           />
           <div className="closed-beta-art-shade" aria-hidden="true" />
           <div className="closed-beta-art-copy">
