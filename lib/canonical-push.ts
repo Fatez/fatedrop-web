@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { betaPremiumEnabled } from "@/lib/beta-premium";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { fateDropPostgres } from "@/lib/postgres";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
@@ -137,6 +138,7 @@ function retryAt(now: number, attempts: number) {
 
 async function eligibleRecipients() {
   const sql = await fateDropPostgres();
+  const temporaryBetaPremium = betaPremiumEnabled();
   const rows = await sql`
     SELECT
       pe.id AS endpoint_id,
@@ -158,10 +160,13 @@ async function eligibleRecipients() {
       COALESCE(np.timezone,'Europe/London') AS timezone
     FROM fatedrop_push_endpoints pe
     JOIN fatedrop_memberships m ON m.user_id=pe.user_id
+    JOIN fatedrop_beta_access ba ON ba.user_id=pe.user_id AND ba.status='approved'
     LEFT JOIN fatedrop_notification_preferences np ON np.user_id=pe.user_id
     WHERE pe.enabled=true
-      AND m.status IN ('active','trialing')
-      AND m.tier IN ('plus','pro')
+      AND (
+        ${temporaryBetaPremium}=true
+        OR (m.status IN ('active','trialing') AND m.tier IN ('plus','pro'))
+      )
     ORDER BY pe.updated_at DESC
     LIMIT 2000`;
   return rows as RecipientRow[];

@@ -1,4 +1,3 @@
-import type { NeonQueryFunction } from "@neondatabase/serverless";
 import type { AccountSnapshot, MembershipRecord } from "./account-storage";
 import { betaAccessIsApproved, getBetaAccess, type BetaAccessSnapshot } from "./beta-access";
 
@@ -22,8 +21,9 @@ export async function applyTemporaryBetaPremium(snapshot: AccountSnapshot | null
   const betaAccess = await getBetaAccess(snapshot.account.id);
   const base = { ...snapshot, betaAccess };
 
-  // Membership, beta-lead status and payment can never bypass the closed-beta
-  // approval gate. Pending/revoked accounts remain authenticated but unentitled.
+  // Closed beta is approval-only: Pending/Revoked accounts remain authenticated
+  // only for approval status, while Approved accounts receive the complete beta
+  // feature set regardless of their future paid membership tier.
   if (!betaAccessIsApproved(betaAccess)) {
     return { ...base, accessGrant: null };
   }
@@ -36,8 +36,8 @@ export async function applyTemporaryBetaPremium(snapshot: AccountSnapshot | null
     (snapshot.membership.tier === "plus" || snapshot.membership.tier === "pro") &&
     (snapshot.membership.status === "active" || snapshot.membership.status === "trialing");
 
-  if (membershipAlreadyPremium || !(await collectorIsInBeta(snapshot.account.email))) {
-    return { ...base, accessGrant: null };
+  if (membershipAlreadyPremium) {
+    return { ...base, accessGrant: { type: "beta-premium", temporary: true } };
   }
 
   const membership: MembershipRecord = {
@@ -51,29 +51,4 @@ export async function applyTemporaryBetaPremium(snapshot: AccountSnapshot | null
     membership,
     accessGrant: { type: "beta-premium", temporary: true },
   };
-}
-
-async function collectorIsInBeta(email: string) {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) return false;
-
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail) return false;
-
-  try {
-    const { neon } = await import("@neondatabase/serverless");
-    const sql: NeonQueryFunction<false, false> = neon(connectionString);
-    const rows = await sql`
-      SELECT 1
-      FROM beta_leads
-      WHERE lower(email) = ${normalizedEmail}
-        AND role = 'collector'
-        AND contact_consent = TRUE
-      LIMIT 1
-    `;
-    return Boolean(rows[0]);
-  } catch {
-    // Premium beta eligibility must never make a valid FateDrop sign-in fail.
-    return false;
-  }
 }

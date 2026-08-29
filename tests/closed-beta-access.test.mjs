@@ -58,16 +58,19 @@ test("signup means beta request, not approval", () => {
   assert.doesNotMatch(register, /status: "approved"/);
 });
 
-test("temporary Premium, paid membership and checkout cannot bypass beta approval", () => {
+test("approval grants full beta access while paid membership and checkout cannot bypass approval", () => {
   const approvalCheck = betaPremium.indexOf("betaAccessIsApproved(betaAccess)");
-  const betaLeadLookup = betaPremium.indexOf("collectorIsInBeta(snapshot.account.email)");
-  assert.ok(approvalCheck >= 0 && betaLeadLookup > approvalCheck, "approval must be checked before beta lead Premium grant");
-  assert.match(betaPremium, /return \{ \.\.\.base, accessGrant: null \}/);
+  const betaModeCheck = betaPremium.indexOf("if (!betaPremiumEnabled())", approvalCheck);
+  assert.ok(approvalCheck >= 0 && betaModeCheck > approvalCheck, "approval must be checked before temporary full beta access");
+  assert.match(betaPremium, /tier: "plus"/);
+  assert.match(betaPremium, /status: "active"/);
+  assert.doesNotMatch(betaPremium, /beta_leads|collectorIsInBeta/);
   assert.match(entitlement, /capabilities = betaApproved \? \[\.\.\.capabilitiesForMembership/);
   const checkoutApproval = billingCheckout.indexOf("betaAccessIsApproved(snapshot.betaAccess)");
+  const betaCheckoutBlock = billingCheckout.indexOf("betaPremiumEnabled()");
   const checkoutCreation = billingCheckout.indexOf("createCheckoutSession({");
-  assert.ok(checkoutApproval >= 0 && checkoutCreation > checkoutApproval, "checkout must require beta approval before Stripe session creation");
-  assert.match(billingCheckout, /betaAccessDeniedResponse\(snapshot\.betaAccess\)/);
+  assert.ok(checkoutApproval >= 0 && betaCheckoutBlock > checkoutApproval && checkoutCreation > betaCheckoutBlock, "checkout must require approval and remain disabled during full-access beta mode");
+  assert.match(billingCheckout, /Subscriptions are not required during the FateDrop closed beta/);
 });
 
 test("dashboard and Discord stay closed until approval", () => {
