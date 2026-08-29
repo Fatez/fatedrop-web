@@ -14,6 +14,8 @@ const migrationRoute = read("app/api/dashboard/production-migrations/route.ts");
 test("FateDrop company email namespace is reserved from public registration", () => {
   assert.match(register, /COMPANY_EMAIL_DOMAIN = "fatedrop\.co\.uk"/);
   assert.match(register, /isReservedCompanyEmail\(email\)/);
+  assert.match(register, /domain === COMPANY_EMAIL_DOMAIN/);
+  assert.match(register, /domain\.endsWith\(`\.\$\{COMPANY_EMAIL_DOMAIN\}`\)/);
   assert.match(register, /reserved for FateDrop operations/);
 });
 
