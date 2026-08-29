@@ -19,8 +19,8 @@ export function ClosedBetaAccessHub({ approved, status, links, isOwner, pendingC
         <p className="eyebrow"><span />FATEDROP CLOSED BETA</p>
         <h2>{approved ? "Web + App access is ready." : status === "revoked" ? "Closed-beta access is not active." : "Your Web + App request is pending."}</h2>
         <p>{approved
-          ? "One approved FateDrop ID unlocks the Website Dashboard and FateDrop App. Install links distribute the software only — this account approval remains the authority."
-          : "Your FateDrop ID exists, but product access stays closed until the Owner approves this same account. You do not need a second App Beta signup."}</p>
+          ? "One approved account unlocks the Website Dashboard and FateDrop App. Install links distribute the software only — account approval remains the authority."
+          : "Your sign-in already exists, but product access stays closed until the Owner approves this account. You do not need another signup for the App."}</p>
       </div>
       <span className="fd-beta-state">{stateLabel}</span>
     </div>
@@ -35,7 +35,7 @@ export function ClosedBetaAccessHub({ approved, status, links, isOwner, pendingC
       <article>
         <small>WEB</small>
         <h3>FateDrop Dashboard</h3>
-        <p>Use FateDrop immediately in your browser with the same approved FateDrop ID.</p>
+        <p>Use FateDrop immediately in your browser with the same approved account.</p>
         <Link className="button button-primary" href="/dashboard">Open Web Dashboard <span>↗</span></Link>
       </article>
       <article>
