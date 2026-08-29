@@ -6,7 +6,7 @@ const OWNER_ACCOUNT = {
   id: "69635bf9-eace-4d2a-b821-16cf46087671",
   fateId: "FD-C144772E",
   email: OWNER_EMAIL,
-  passwordHash: "scrypt$6iVtrr3A7jl0EXtbe75bzA$4FYnXa3C6dxHFtR9HQFiAWrwSOYOXccwcCf6ZlePHAFkxQPwhgLiMpvRaSJwuyxifRncdtJXkBw38zxmdMrUwg",
+  passwordHash: "scrypt$e6xr0pZkjz2xZDYxCnjHKA$NQXqkrYS8KSRt6Tx6WMn0EMF03EUQPh4mvmh2MUXGtbgdNWdZ3-e78Tsl8AwU8YqXyNkL6mCz8GCLKnNNzO0zA",
   displayName: "FateDrop Owner",
   username: "fatedrop-owner-866666",
   primaryTcg: "Pokémon TCG",
