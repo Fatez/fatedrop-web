@@ -1,5 +1,6 @@
 import { getSnapshotForRequest } from "@/lib/auth";
 import { notificationPreferencesAllowAlert } from "@/lib/alert-preference-filter";
+import { betaAccessDeniedResponse, betaAccessIsApproved } from "@/lib/beta-access";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { listCanonicalAlertDeliveries, type CanonicalAlertDelivery } from "@/lib/canonical-alert-delivery";
 import { listCanonicalAlertPresentations, type CanonicalAlertPresentation } from "@/lib/canonical-alert-presentation";
@@ -88,6 +89,7 @@ export async function GET(request: Request) {
       { status: 401, headers: { "cache-control": "private, no-store" } },
     );
   }
+  if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
 
   try {
     const url = new URL(request.url);
