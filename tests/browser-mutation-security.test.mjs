@@ -22,6 +22,7 @@ const serverToServer = new Set([
   "app/api/billing/webhook/route.ts",
   "app/api/dashboard/network-snapshot/route.ts",
   "app/api/dashboard/local-radar-operator-alert/route.ts",
+  "app/api/dashboard/local-radar-push-canary/route.ts",
   "app/api/dashboard/push-dispatch/route.ts",
   "app/api/dashboard/production-migrations/route.ts",
   "app/api/dashboard/push-canary/route.ts",
@@ -70,6 +71,13 @@ test("explicit server-to-server mutation exemptions retain their stronger authen
   assert.ok(localRadarOperator.includes("FATEDROP_METRICS_INGEST_SECRET"));
   assert.ok(localRadarOperator.includes('authorization.startsWith("Bearer ")'));
   assert.ok(localRadarOperator.includes("dispatchLocalRadarOperatorPush"));
+
+  const localRadarCanary = fs.readFileSync(path.join(root, "app/api/dashboard/local-radar-push-canary/route.ts"), "utf8");
+  assert.ok(localRadarCanary.includes("timingSafeEqual"));
+  assert.ok(localRadarCanary.includes("FATEDROP_PUSH_CRON_SECRET"));
+  assert.ok(localRadarCanary.includes('authorization.startsWith("Bearer ")'));
+  assert.ok(localRadarCanary.includes("FATEDROP_LOCAL_RADAR_CANARY_KEY"));
+  assert.ok(localRadarCanary.includes("runLocalRadarProductionCanary"));
 
   const pushDispatch = fs.readFileSync(path.join(root, "app/api/dashboard/push-dispatch/route.ts"), "utf8");
   assert.ok(pushDispatch.includes("timingSafeEqual"));
