@@ -1,7 +1,7 @@
 const DEFAULT_MAX_KEYS = 5_000;
 const MAX_AUTH_BODY_BYTES = 16_384;
 
-type AuthAction = "login" | "register" | "mobile_login";
+type AuthAction = "login" | "register" | "mobile_login" | "password_reset_request" | "password_reset_complete";
 
 type Policy = Readonly<{ limit: number; windowMs: number }>;
 
@@ -9,6 +9,8 @@ const POLICIES: Readonly<Record<AuthAction, Policy>> = Object.freeze({
   login: Object.freeze({ limit: 10, windowMs: 10 * 60_000 }),
   register: Object.freeze({ limit: 5, windowMs: 60 * 60_000 }),
   mobile_login: Object.freeze({ limit: 10, windowMs: 10 * 60_000 }),
+  password_reset_request: Object.freeze({ limit: 5, windowMs: 60 * 60_000 }),
+  password_reset_complete: Object.freeze({ limit: 10, windowMs: 15 * 60_000 }),
 });
 
 type Bucket = { count: number; resetAt: number };
