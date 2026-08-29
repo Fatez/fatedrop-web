@@ -14,7 +14,9 @@ test("Email Sending onboarding uses the existing Cloudflare deployment credentia
   assert.match(workflow, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
   assert.match(workflow, /Authorization: Bearer \$CLOUDFLARE_API_TOKEN/);
-  assert.doesNotMatch(workflow, /echo .*CLOUDFLARE_API_TOKEN/);
+  assert.match(workflow, /echo "Missing CLOUDFLARE_API_TOKEN"/);
+  assert.doesNotMatch(workflow, /echo\s+["']?\$CLOUDFLARE_API_TOKEN(?:\b|["'])/);
+  assert.doesNotMatch(workflow, /echo\s+["']?\$\{CLOUDFLARE_API_TOKEN\}(?:\b|["'])/);
 });
 
 test("Email Sending onboarding targets only the canonical FateDrop domain and is idempotent", () => {
