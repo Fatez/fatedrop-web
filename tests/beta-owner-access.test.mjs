@@ -6,6 +6,8 @@ const read = (path) => fs.readFileSync(path, "utf8");
 const ownerAccess = read("lib/owner-access.ts");
 const productionMigrations = read("lib/production-migrations.ts");
 const ownerSql = read("database/2026-08-29-beta-owner-access.sql");
+const repairSql = read("database/2026-08-29-beta-access-function-ambiguity-repair.sql");
+const closedBetaSql = read("database/2026-08-29-closed-beta-access.sql");
 const adminApi = read("app/api/admin/beta/route.ts");
 const adminPage = read("app/admin/beta/page.tsx");
 const register = read("app/api/auth/register/route.ts");
@@ -38,6 +40,19 @@ test("hello owner bootstrap is registered in the one canonical production migrat
   assert.match(ownerSql, /exactly one canonical hello@fatedrop\.co\.uk FateDrop account/);
   assert.doesNotMatch(migrationRoute, /runOwnerProductionMigration/);
   assert.match(migrationRoute, /runProductionMigrations/);
+});
+
+test("beta access runtime ambiguity is repaired forward before owner bootstrap", () => {
+  const repairId = "2026-08-29-beta-access-function-ambiguity-repair.sql";
+  const ownerId = "2026-08-29-beta-owner-access.sql";
+  assert.ok(productionMigrations.indexOf(repairId) > productionMigrations.indexOf("2026-08-29-closed-beta-access.sql"));
+  assert.ok(productionMigrations.indexOf(repairId) < productionMigrations.indexOf(ownerId));
+  assert.match(repairSql, /CREATE OR REPLACE FUNCTION fatedrop_set_beta_access/);
+  assert.match(repairSql, /ON CONFLICT ON CONSTRAINT fatedrop_beta_access_pkey/);
+  assert.match(productionMigrations, /ON CONFLICT ON CONSTRAINT fatedrop_beta_access_pkey/);
+  assert.match(ownerSql, /ON CONFLICT ON CONSTRAINT fatedrop_admin_roles_pkey/);
+  assert.match(productionMigrations, /ON CONFLICT ON CONSTRAINT fatedrop_admin_roles_pkey/);
+  assert.match(closedBetaSql, /ON CONFLICT \(user_id\) DO UPDATE/);
 });
 
 test("owner-only beta console approves and revokes through audited database function", () => {
