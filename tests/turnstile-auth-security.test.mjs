@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const turnstileSource = await readFile(new URL("../lib/turnstile.ts", import.meta.url), "utf8");
+const widgetSource = await readFile(new URL("../components/turnstile-widget.tsx", import.meta.url), "utf8");
 const formSource = await readFile(new URL("../components/account-auth-form.tsx", import.meta.url), "utf8");
+const resetRequestFormSource = await readFile(new URL("../components/password-reset-request-form.tsx", import.meta.url), "utf8");
 const loginPageSource = await readFile(new URL("../app/account/login/page.tsx", import.meta.url), "utf8");
 const closedBetaPageSource = await readFile(new URL("../app/closed-beta/page.tsx", import.meta.url), "utf8");
 const legacyRegisterPageSource = await readFile(new URL("../app/account/register/page.tsx", import.meta.url), "utf8");
@@ -65,11 +67,19 @@ test("Turnstile validates challenge context and fails closed in production", () 
   assert.match(turnstileSource, /MAX_TOKEN_LENGTH = 2048/);
 });
 
-test("auth form sends and resets the Turnstile token and CSP allows only the official challenge origin", () => {
+test("browser auth explicitly renders Turnstile after client navigation and keeps the official CSP boundary", () => {
   assert.match(formSource, /cf-turnstile-response/);
   assert.match(formSource, /turnstileToken/);
   assert.match(formSource, /window\.turnstile\?\.reset\(\)/);
-  assert.match(formSource, /https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/);
+  assert.match(formSource, /TurnstileWidget siteKey=\{turnstileSiteKey\} action=\{mode\}/);
+  assert.match(resetRequestFormSource, /TurnstileWidget siteKey=\{turnstileSiteKey\} action="password_reset_request"/);
+  assert.match(widgetSource, /turnstile\/v0\/api\.js\?render=explicit/);
+  assert.match(widgetSource, /onReady=\{renderWidget\}/);
+  assert.match(widgetSource, /window\.turnstile\.render\(/);
+  assert.match(widgetSource, /useEffect\(\(\) => \{[\s\S]*renderWidget\(\)/);
+  assert.match(widgetSource, /window\.turnstile\?\.remove\?\.\(widgetId\)/);
+  assert.doesNotMatch(formSource, /className="cf-turnstile"/);
+  assert.doesNotMatch(resetRequestFormSource, /className="cf-turnstile"/);
   assert.match(configSource, /script-src[^\n]*https:\/\/challenges\.cloudflare\.com/);
   assert.match(configSource, /frame-src https:\/\/challenges\.cloudflare\.com/);
 });
