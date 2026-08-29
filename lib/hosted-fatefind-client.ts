@@ -1,3 +1,5 @@
+import { mintFateFindEvaluationCapability } from "@/lib/fatefind-evaluation-capability";
+
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 
 export type HostedFateFindImmediateEvaluation = {
@@ -16,11 +18,11 @@ function signalEngineBaseUrl() {
 
 export async function evaluateHostedFateFindNow(fateFindId: string, timeoutMs = 4_000): Promise<HostedFateFindImmediateEvaluation | null> {
   const cleanId = fateFindId.trim();
-  const token = process.env.FATEDROP_SIGNAL_API_TOKEN?.trim();
-  if (!cleanId || !token) return null;
+  if (!cleanId) return null;
 
   const url = new URL("/internal/fatefind/evaluate", `${signalEngineBaseUrl()}/`);
   try {
+    const token = await mintFateFindEvaluationCapability(cleanId);
     const response = await fetch(url, {
       method: "POST",
       cache: "no-store",
