@@ -4,6 +4,7 @@ import {
   isPushCanaryKind,
   runProductionPushCanarySuite,
   runSingleProductionPushCanary,
+  type CanaryKind,
 } from "@/lib/push-canary";
 
 export const runtime = "nodejs";
@@ -22,6 +23,13 @@ function authorized(request: Request) {
   return matchesSecret(authorization.slice(7), process.env.FATEDROP_PUSH_CRON_SECRET);
 }
 
+function invalidSelection() {
+  return Response.json(
+    { error: "Invalid push canary kind." },
+    { status: 400, headers: { "cache-control": "no-store" } },
+  );
+}
+
 export async function POST(request: Request) {
   if (!authorized(request)) {
     return Response.json(
@@ -30,15 +38,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = await request.json().catch(() => null);
-  const requestedKind = payload && typeof payload === "object" && !Array.isArray(payload)
-    ? (payload as Record<string, unknown>).kind
-    : undefined;
-  if (requestedKind !== undefined && !isPushCanaryKind(requestedKind)) {
-    return Response.json(
-      { error: "Invalid push canary kind." },
-      { status: 400, headers: { "cache-control": "no-store" } },
-    );
+  const rawBody = await request.text();
+  let requestedKind: CanaryKind | undefined;
+  if (rawBody.trim()) {
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return invalidSelection();
+    }
+    const candidate = payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>).kind
+      : undefined;
+    if (!isPushCanaryKind(candidate)) return invalidSelection();
+    requestedKind = candidate;
   }
 
   try {
