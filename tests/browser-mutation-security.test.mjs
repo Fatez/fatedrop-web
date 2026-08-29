@@ -76,8 +76,12 @@ test("explicit server-to-server mutation exemptions retain their stronger authen
   assert.ok(localRadarCanary.includes("timingSafeEqual"));
   assert.ok(localRadarCanary.includes("FATEDROP_PUSH_CRON_SECRET"));
   assert.ok(localRadarCanary.includes('authorization.startsWith("Bearer ")'));
-  assert.ok(localRadarCanary.includes("FATEDROP_LOCAL_RADAR_CANARY_KEY"));
   assert.ok(localRadarCanary.includes("runLocalRadarProductionCanary"));
+
+  const worker = fs.readFileSync(path.join(root, "custom-worker.mjs"), "utf8");
+  assert.ok(worker.includes("FATEDROP_LOCAL_RADAR_CANARY_KEY"));
+  assert.ok(worker.includes("LOCAL_RADAR_CANARY_URL"));
+  assert.ok(worker.includes("invokeProtectedPost(LOCAL_RADAR_CANARY_URL"));
 
   const pushDispatch = fs.readFileSync(path.join(root, "app/api/dashboard/push-dispatch/route.ts"), "utf8");
   assert.ok(pushDispatch.includes("timingSafeEqual"));
