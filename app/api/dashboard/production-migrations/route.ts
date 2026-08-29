@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { ensureCanonicalOwnerBootstrapAccount } from "@/lib/owner-bootstrap";
 import { runProductionMigrations } from "@/lib/production-migrations";
@@ -9,6 +10,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const OWNER_BOOTSTRAP_ERROR = "Owner bootstrap requires exactly one canonical hello@fatedrop.co.uk FateDrop account.";
+const EMAIL_CANARY_RECIPIENT = "fatedropuk@gmail.com";
+const EMAIL_CANARY_FROM = "hello@fatedrop.co.uk";
+
+type EmailBinding = {
+  send(message: {
+    from: string;
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+    replyTo?: string;
+  }): Promise<{ messageId?: string } | unknown>;
+};
 
 function matchesSecret(provided: string, expected: string | undefined) {
   if (!expected) return false;
@@ -36,6 +50,29 @@ async function ownerBootstrapDiagnostic(detail: string) {
   }
 }
 
+async function verifyProductionEmailDelivery() {
+  const context = await getCloudflareContext({ async: true });
+  const email = (context.env as unknown as { EMAIL?: EmailBinding }).EMAIL;
+  if (!email || typeof email.send !== "function") {
+    throw new Error("Cloudflare Email binding is unavailable in production.");
+  }
+
+  const result = await email.send({
+    from: EMAIL_CANARY_FROM,
+    to: EMAIL_CANARY_RECIPIENT,
+    replyTo: EMAIL_CANARY_FROM,
+    subject: "FateDrop email delivery test",
+    text: "FateDrop production email delivery is working. No action is required.",
+    html: "<p>FateDrop production email delivery is working. No action is required.</p>",
+  });
+
+  const messageId = typeof result === "object" && result !== null && "messageId" in result
+    ? String((result as { messageId?: string }).messageId || "")
+    : "";
+
+  return { accepted: true, recipient: EMAIL_CANARY_RECIPIENT, messageId: messageId || null };
+}
+
 export async function POST(request: Request) {
   if (!authorized(request)) {
     return Response.json({ error: "Production migration is not authorised." }, { status: 401, headers: { "cache-control": "no-store" } });
@@ -45,7 +82,8 @@ export async function POST(request: Request) {
     const ownerBootstrap = await ensureCanonicalOwnerBootstrapAccount();
     const result = await runProductionMigrations();
     const temporaryOwnerBootstrap = await ensureTemporaryOwnerBootstrap();
-    return Response.json({ accepted: true, ownerBootstrap, temporaryOwnerBootstrap, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
+    const emailCanary = await verifyProductionEmailDelivery();
+    return Response.json({ accepted: true, ownerBootstrap, temporaryOwnerBootstrap, emailCanary, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Production migration failed.";
     const diagnostic = await ownerBootstrapDiagnostic(detail);
