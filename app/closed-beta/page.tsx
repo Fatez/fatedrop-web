@@ -31,8 +31,8 @@ export default async function ClosedBetaPage() {
           <Image
             src="/assets/closed-beta/fatedrop-closed-beta-community.webp"
             alt="FateDrop collectors and Koru & Friends gathered around trading cards in the FateDrop world."
-            width={480}
-            height={270}
+            width={1672}
+            height={941}
             priority
             sizes="(max-width: 760px) 100vw, 1200px"
           />
