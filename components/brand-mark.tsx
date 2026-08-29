@@ -2,6 +2,7 @@
 import Link from "next/link";
 
 const FATEDROP_WORDMARK = "/assets/fatedrop-wordmark.png";
+const WORDMARK_VISIBLE_CROP = "inset(0 0 10% 0)";
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -18,6 +19,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
           width: "auto",
           height: compact ? 44 : 52,
           objectFit: "contain",
+          clipPath: WORDMARK_VISIBLE_CROP,
         }}
       />
     </Link>
