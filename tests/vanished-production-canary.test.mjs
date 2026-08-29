@@ -7,6 +7,7 @@ const root = process.cwd();
 const canary = fs.readFileSync(path.join(root, "lib/push-canary.ts"), "utf8");
 const route = fs.readFileSync(path.join(root, "app/api/dashboard/push-canary/route.ts"), "utf8");
 const workflow = fs.readFileSync(path.join(root, ".github/workflows/five-push-production-canary.yml"), "utf8");
+const manualWorkflow = fs.readFileSync(path.join(root, ".github/workflows/manual-push-production-canary.yml"), "utf8");
 
 test("production canary covers all four lifecycle pushes plus Local Radar", () => {
   for (const kind of ["whisper", "echo", "manifested", "vanished", "local-radar"]) {
@@ -34,7 +35,7 @@ test("production canary uses approved beta entitlement and fails closed on ambig
   }
 });
 
-test("canary endpoint stays server-authenticated and one-shot workflow runs only after production deploy", () => {
+test("canary endpoint stays server-authenticated and deploy canary still verifies all five", () => {
   assert.ok(route.includes("FATEDROP_PUSH_CRON_SECRET"));
   assert.ok(route.includes("timingSafeEqual"));
   assert.ok(route.includes("runProductionPushCanarySuite"));
@@ -44,4 +45,30 @@ test("canary endpoint stays server-authenticated and one-shot workflow runs only
   assert.ok(workflow.includes("/api/dashboard/push-canary"));
   assert.ok(workflow.includes("outcomes.length !== 5"));
   assert.ok(workflow.includes("providerMessageId"));
+});
+
+test("manual push QA can request exactly one allowed canary without changing canonical stock truth", () => {
+  assert.ok(canary.includes("runProductionPushCanarySuite(selectedKind?: CanaryKind)"));
+  assert.ok(canary.includes("selectedKind ? allSpecs.filter"));
+  assert.ok(canary.includes("selectedKind: selectedKind ?? null"));
+  assert.ok(canary.includes("test: true"));
+  assert.ok(canary.includes("canary: true"));
+  assert.ok(canary.includes("No physical stock claim occurred"));
+  assert.ok(route.includes("isPushCanaryKind"));
+  assert.ok(route.includes('searchParams.get("kind")'));
+  assert.ok(route.includes("FATEDROP_PUSH_TEST_SECRET"));
+});
+
+test("manual production trigger is owner-gated, exact-kind limited and uses an isolated test secret", () => {
+  assert.ok(manualWorkflow.includes("issues:"));
+  assert.ok(manualWorkflow.includes("github.actor == 'Fatez'"));
+  assert.ok(manualWorkflow.includes("[FATEDROP PUSH TEST]"));
+  for (const kind of ["local-radar", "whisper", "echo", "manifested", "vanished"]) {
+    assert.ok(manualWorkflow.includes(kind), `manual workflow missing ${kind}`);
+  }
+  assert.ok(manualWorkflow.includes("FATEDROP_PUSH_TEST_SECRET"));
+  assert.equal(manualWorkflow.includes("wrangler secret put FATEDROP_PUSH_CRON_SECRET"), false, "manual QA must not rotate the production cron secret");
+  assert.ok(manualWorkflow.includes("outcomes.length !== 1"));
+  assert.ok(manualWorkflow.includes("providerMessageId"));
+  assert.ok(manualWorkflow.includes("/api/dashboard/push-canary?kind=$CANARY_KIND"));
 });
