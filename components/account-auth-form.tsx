@@ -26,7 +26,7 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
   const requestedNext = search.get("next");
-  const defaultNext = mode === "register" ? "/account?welcome=1" : "/account";
+  const defaultNext = mode === "register" ? "/beta-pending" : "/account";
   const safeNext = safeNextPath(requestedNext, defaultNext);
   const nextQuery = requestedNext ? `?next=${encodeURIComponent(safeNext)}` : "";
   const turnstileReady = process.env.NODE_ENV !== "production" || Boolean(turnstileSiteKey);
@@ -60,14 +60,23 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const result = await response.json() as { error?: string; fields?: Record<string, string> };
+      const result = await response.json() as {
+        error?: string;
+        fields?: Record<string, string>;
+        accessAllowed?: boolean;
+        betaAccess?: { status?: string; approved?: boolean };
+      };
       if (!response.ok) {
         window.turnstile?.reset();
         setError(result.error || "That did not work. Please try again.");
         setFields(result.fields || {});
         return;
       }
-      router.push(safeNext);
+      if (mode === "register" && result.betaAccess?.status === "pending" && result.accessAllowed === false) {
+        router.push("/beta-pending");
+      } else {
+        router.push(safeNext);
+      }
       router.refresh();
     } catch {
       window.turnstile?.reset();
@@ -115,7 +124,7 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
       {!turnstileReady ? <p className="identity-form-status error" role="alert">Security verification is unavailable.</p> : null}
       {error ? <p className="identity-form-status error" role="alert">{error}</p> : null}
       <button className="button button-primary" type="submit" disabled={busy || !turnstileReady}>
-        {busy ? "Connecting…" : mode === "register" ? "Create my FateDrop ID" : "Enter the network"} <span>↗</span>
+        {busy ? "Connecting…" : mode === "register" ? "Request beta access" : "Enter the network"} <span>↗</span>
       </button>
       <p className="identity-auth-switch">
         {mode === "register" ? <>Already have a FateDrop ID? <Link href={`/account/login${nextQuery}`}>Sign in</Link>.</> : <>New to FateDrop? <Link href={`/account/register${nextQuery}`}>Create your ID</Link>.</>}
