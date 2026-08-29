@@ -123,12 +123,14 @@ test("FateMatch monitoring API uses same-origin writes while keeping legacy clie
 });
 
 test("trust, roadmap and launch membership copy do not sell unimplemented tiers or trust advantages", async () => {
-  const [trust, about, siteData, subscriptions] = await Promise.all([
+  const [trust, about, siteData, subscriptions, membershipHero] = await Promise.all([
     source("app/trust/page.tsx"),
     source("app/about/page.tsx"),
     source("lib/site-data.ts"),
     source("app/subscriptions/page.tsx"),
+    source("components/membership-hero.tsx"),
   ]);
+  const membershipLaunchCopy = `${subscriptions}\n${membershipHero}`;
   assert.equal(trust.includes("FateScore · validated beta model"), false);
   assert.ok(trust.includes("FateScore is a planned evidence-led retailer trust model"));
   assert.ok(about.includes("<FutureExpansion"));
@@ -141,8 +143,8 @@ test("trust, roadmap and launch membership copy do not sell unimplemented tiers 
   assert.ok(siteData.includes("future pricing not yet set"));
   assert.equal(siteData.includes('name: "FateDrop Indie"'), false);
   assert.equal(siteData.includes('name: "Indie Pro"'), false);
-  assert.ok(subscriptions.includes("one simple upgrade: FateDrop Plus"));
-  assert.ok(subscriptions.includes("cannot buy a false RRP verdict, alert priority or better organic ranking"));
+  assert.ok(membershipLaunchCopy.includes("one simple upgrade: FateDrop Plus"));
+  assert.ok(membershipLaunchCopy.includes("cannot buy a false RRP verdict, alert priority or better organic ranking"));
 });
 
 test("privacy notice covers Koru & Friends and on-demand Local Radar handling", async () => {
