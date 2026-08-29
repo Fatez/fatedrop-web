@@ -65,3 +65,26 @@ BEGIN
   END IF;
 END;
 $$;
+
+DO $$
+DECLARE
+  v_owner_id text;
+  v_count integer;
+BEGIN
+  SELECT COUNT(*)::int, MIN(id)
+  INTO v_count, v_owner_id
+  FROM fatedrop_users
+  WHERE lower(email) = 'hello@fatedrop.co.uk';
+
+  IF v_count <> 1 OR v_owner_id IS NULL THEN
+    RAISE EXCEPTION 'Owner bootstrap requires exactly one canonical hello@fatedrop.co.uk FateDrop account';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM fatedrop_admin_roles
+    WHERE user_id = v_owner_id AND role = 'owner'
+  ) THEN
+    PERFORM fatedrop_grant_owner(v_owner_id, 'migration:hello-owner-bootstrap');
+  END IF;
+END;
+$$;
