@@ -1,14 +1,18 @@
 import { AccountStorageUnavailableError, findAccountByEmail } from "@/lib/account-storage";
 import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, readBoundedJson } from "@/lib/auth-abuse";
 import { bearerTokenFromRequest, endApiSession, getSnapshotForRequest, startApiSession, verifyLoginPassword } from "@/lib/auth";
+import { betaAccessIsApproved } from "@/lib/beta-access";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnapshotForRequest>>>) {
+  const betaApproved = betaAccessIsApproved(snapshot.betaAccess);
   return {
-    contractVersion: 1,
+    contractVersion: 2,
+    accessAllowed: betaApproved,
+    betaAccess: snapshot.betaAccess,
     user: {
       id: snapshot.account.id,
       fateId: snapshot.account.fateId,
@@ -22,7 +26,7 @@ function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnaps
       effectiveTier: effectiveTier(snapshot.membership),
       status: snapshot.membership.status,
       active: membershipIsActive(snapshot.membership),
-      capabilities: [...capabilitiesForMembership(snapshot.membership)].sort(),
+      capabilities: betaApproved ? [...capabilitiesForMembership(snapshot.membership)].sort() : [],
       trialEndsAt: snapshot.membership.trialEndsAt,
       currentPeriodEnd: snapshot.membership.currentPeriodEnd,
       cancelAtPeriodEnd: snapshot.membership.cancelAtPeriodEnd,
@@ -44,7 +48,10 @@ export async function POST(request: Request) {
     const valid = await verifyLoginPassword(password, account?.passwordHash);
     if (!account || !valid) return Response.json({ error: "Email or password is incorrect." }, { status: 401, headers: { "cache-control": "no-store" } });
     const session = await startApiSession(account.id);
-    const snapshot = await getSnapshotForRequest(new Request(request.url, { headers: { authorization: `Bearer ${session.token}` } }));
+    const snapshot = await getSnapshotForRequest(
+      new Request(request.url, { headers: { authorization: `Bearer ${session.token}` } }),
+      { allowPending: true },
+    );
     if (!snapshot) throw new Error("SESSION_NOT_FOUND");
     return Response.json({ sessionToken: session.token, expiresAt: session.expiresAt, ...sessionPayload(snapshot) }, { headers: { "cache-control": "private, no-store, max-age=0" } });
   } catch (error) {
@@ -57,7 +64,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const snapshot = await getSnapshotForRequest(request);
+    const snapshot = await getSnapshotForRequest(request, { allowPending: true });
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
     return Response.json(sessionPayload(snapshot), { headers: { "cache-control": "private, no-store, max-age=0" } });
   } catch (error) {

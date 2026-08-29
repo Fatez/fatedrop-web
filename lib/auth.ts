@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createHash, randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { createSession, deleteSession, findSessionUser, getAccountSnapshot } from "./account-storage";
+import { betaAccessIsApproved } from "./beta-access";
 import { applyTemporaryBetaPremium } from "./beta-premium";
 
 const scrypt = promisify(nodeScrypt);
@@ -78,6 +79,8 @@ export async function getCurrentUser() {
   return findSessionUser(hashSessionToken(token));
 }
 
+// Browser identity/account surfaces may need to show Pending/Revoked state, so
+// the normal browser snapshot deliberately includes non-approved accounts.
 export async function getCurrentSnapshot() {
   const account = await getCurrentUser();
   if (!account) return null;
@@ -85,16 +88,20 @@ export async function getCurrentSnapshot() {
   return applyTemporaryBetaPremium(snapshot);
 }
 
-export async function getSnapshotForRequest(request: Request) {
+export async function getSnapshotForRequest(request: Request, options: { allowPending?: boolean } = {}) {
   const authorization = request.headers.get("authorization") || "";
   const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
+  let snapshot;
   if (match?.[1]) {
     const account = await findSessionUser(hashSessionToken(match[1]));
     if (!account) return null;
-    const snapshot = await getAccountSnapshot(account.id);
-    return applyTemporaryBetaPremium(snapshot);
+    snapshot = await applyTemporaryBetaPremium(await getAccountSnapshot(account.id));
+  } else {
+    snapshot = await getCurrentSnapshot();
   }
-  return getCurrentSnapshot();
+  if (!snapshot) return null;
+  if (!options.allowPending && !betaAccessIsApproved(snapshot.betaAccess)) return null;
+  return snapshot;
 }
 
 export function bearerTokenFromRequest(request: Request) {

@@ -76,9 +76,17 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
+    // The production DB trigger creates a canonical pending beta-access row in
+    // the same database transaction as the user insert. Signup itself is never
+    // approval and never grants product access.
     await createAccount(account);
     await startSession(account.id);
-    return Response.json({ created: true, fateId: account.fateId }, { status: 201 });
+    return Response.json({
+      created: true,
+      fateId: account.fateId,
+      accessAllowed: false,
+      betaAccess: { status: "pending", approved: false },
+    }, { status: 201 });
   } catch (error) {
     if (isRequestTooLargeError(error)) return Response.json({ error: "Request is too large." }, { status: 413 });
     if (error instanceof TurnstileRejectedError) return Response.json({ error: "Security verification failed. Please try again." }, { status: 403 });
