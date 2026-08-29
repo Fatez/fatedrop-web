@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 const FALLBACK_HERO = "/assets/fatedrop-header.png?v=20260822-static-page-hero";
 
 function reliableHeroSource(image: string) {
-  return /\.png(?:\?|$)/i.test(image) ? image : FALLBACK_HERO;
+  return /\.(?:png|webp)(?:\?|$)/i.test(image) ? image : FALLBACK_HERO;
 }
 
 export function MarketStoryHero({
