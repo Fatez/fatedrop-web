@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const snapshot = await getSnapshotForRequest(request);
+    const snapshot = await getSnapshotForRequest(request, { allowPending: true });
     if (!snapshot) return Response.json({ error: "Sign in required." }, { status: 401, headers: { "cache-control": "no-store" } });
 
     const betaApproved = betaAccessIsApproved(snapshot.betaAccess);
