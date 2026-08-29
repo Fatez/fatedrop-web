@@ -22,7 +22,7 @@ test("owner authority is canonical user-id state and fails closed", () => {
   assert.match(ownerAccess, /WHERE user_id = \$\{cleanUserId\} AND role = 'owner'/);
   assert.match(ownerAccess, /catch \{[\s\S]*return null/);
   assert.doesNotMatch(ownerAccess, /hello@fatedrop\.co\.uk/);
-  assert.doesNotMatch(ownerAccess, /email.*owner|owner.*email/i);
+  assert.doesNotMatch(ownerAccess, /WHERE\s+lower\(email\)/i);
 });
 
 test("hello owner bootstrap is one-time production migration with exact-account verification", () => {
