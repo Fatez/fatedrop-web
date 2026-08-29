@@ -1,0 +1,83 @@
+:root {
+  --fd-signal-whisper: #D2B66F;
+  --fd-signal-echo: #D9CDBB;
+  --fd-signal-manifested: #7C6EFF;
+  --fd-signal-vanished: #EF4D5A;
+}
+
+/*
+ * Canonical FateDrop lifecycle companion palette.
+ * Oru = Whisper, Fenn = Echo, Koru = Manifested, Nyxen = Vanished.
+ * Keep dashboard presentation tied to these variables rather than page-local
+ * colours so lifecycle identity cannot drift between dashboard surfaces.
+ */
+
+/* Dashboard overview */
+.fd-lifecycle-card.whisper { color: var(--fd-signal-whisper) !important; }
+.fd-lifecycle-card.echo { color: var(--fd-signal-echo) !important; }
+.fd-lifecycle-card.manifested { color: var(--fd-signal-manifested) !important; }
+.fd-lifecycle-card.vanished { color: var(--fd-signal-vanished) !important; }
+
+.fd-mini-thumb.whisper {
+  color: var(--fd-signal-whisper) !important;
+  border-color: rgba(210, 182, 111, .22) !important;
+}
+.fd-mini-thumb.echo {
+  color: var(--fd-signal-echo) !important;
+  border-color: rgba(217, 205, 187, .22) !important;
+}
+.fd-mini-thumb.manifested {
+  color: var(--fd-signal-manifested) !important;
+  border-color: rgba(124, 110, 255, .22) !important;
+}
+.fd-mini-thumb.vanished {
+  color: var(--fd-signal-vanished) !important;
+  border-color: rgba(239, 77, 90, .22) !important;
+}
+
+.fd-signal-row aside b.whisper {
+  color: var(--fd-signal-whisper) !important;
+  background: rgba(210, 182, 111, .08) !important;
+}
+.fd-signal-row aside b.echo {
+  color: var(--fd-signal-echo) !important;
+  background: rgba(217, 205, 187, .08) !important;
+}
+.fd-signal-row aside b.manifested {
+  color: var(--fd-signal-manifested) !important;
+  background: rgba(124, 110, 255, .08) !important;
+}
+.fd-signal-row aside b.vanished {
+  color: var(--fd-signal-vanished) !important;
+  background: rgba(239, 77, 90, .08) !important;
+}
+
+/* Alerts dashboard lifecycle summary */
+.fd-ledger-stages .whisper span { color: var(--fd-signal-whisper) !important; }
+.fd-ledger-stages .echo span { color: var(--fd-signal-echo) !important; }
+.fd-ledger-stages .manifested span { color: var(--fd-signal-manifested) !important; }
+.fd-ledger-stages .vanished span { color: var(--fd-signal-vanished) !important; }
+
+/* Seven-day companion signal pulse */
+.fd-stage-trend.whisper { color: var(--fd-signal-whisper) !important; }
+.fd-stage-trend.echo { color: var(--fd-signal-echo) !important; }
+.fd-stage-trend.manifested { color: var(--fd-signal-manifested) !important; }
+.fd-stage-trend.vanished { color: var(--fd-signal-vanished) !important; }
+
+/* Signal ledger state markers */
+.fd-ledger-row.whisper .fd-ledger-state i {
+  background: var(--fd-signal-whisper) !important;
+  box-shadow: 0 0 12px rgba(210, 182, 111, .42) !important;
+}
+.fd-ledger-row.echo .fd-ledger-state i {
+  background: var(--fd-signal-echo) !important;
+  box-shadow: 0 0 12px rgba(217, 205, 187, .35) !important;
+}
+.fd-ledger-row.manifested .fd-ledger-state i {
+  background: var(--fd-signal-manifested) !important;
+  box-shadow: 0 0 12px rgba(124, 110, 255, .42) !important;
+}
+.fd-ledger-row.vanished .fd-ledger-state i {
+  background: var(--fd-signal-vanished) !important;
+  box-shadow: 0 0 12px rgba(239, 77, 90, .42) !important;
+}
