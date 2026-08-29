@@ -24,7 +24,9 @@ type CanaryOutcomeRow = {
   delivery_result: string | null;
 };
 
-type CanaryKind = "whisper" | "echo" | "manifested" | "vanished" | "local-radar";
+export type CanaryKind = "whisper" | "echo" | "manifested" | "vanished" | "local-radar";
+
+const CANARY_KINDS: readonly CanaryKind[] = ["whisper", "echo", "manifested", "vanished", "local-radar"];
 
 type CanarySpec = {
   kind: CanaryKind;
@@ -33,6 +35,10 @@ type CanarySpec = {
   body: string;
   payload: Record<string, unknown>;
 };
+
+export function isPushCanaryKind(value: unknown): value is CanaryKind {
+  return typeof value === "string" && CANARY_KINDS.includes(value as CanaryKind);
+}
 
 function canarySpecs(runId: string): CanarySpec[] {
   return [
@@ -67,37 +73,35 @@ function canarySpecs(runId: string): CanarySpec[] {
     {
       kind: "local-radar",
       eventType: "local_radar_operator",
-      title: "TEST · LOCAL RADAR",
-      body: "FateDrop production push test — Local Radar transport only. No physical stock claim occurred.",
+      title: "TEST ALERT · LOCAL RADAR · PHYSICAL STOCK",
+      body: "TEST ONLY — manual physical-stock presentation/routing. No real branch stock claim occurred.",
       payload: {
-        route: "local-radar",
-        localIntelId: `canary:local-radar:${runId}`,
-        stage: "ECHO",
+        route: "local-radar-stock",
+        stage: "MANIFESTED",
+        fateStage: "MANIFESTED",
+        presentation: "manual-physical-stock",
+        provenance: "manual-operator-canary",
         retailerId: "test-retailer",
         retailerName: "FateDrop Test Retailer",
         productTitle: "TEST · Local Radar product",
-        expectedFrom: null,
-        expectedTo: null,
-        expectedLabel: "TEST ONLY",
-        branchCount: 1,
-        operatorIssue: 0,
         test: true,
         canary: true,
+        canaryRunId: runId,
       },
     },
   ];
 }
 
-function disabledPreference(recipient: CanaryRecipient) {
+function disabledPreference(kind: CanaryKind | null, recipient: CanaryRecipient) {
   if (!recipient.push_enabled) return "push_disabled";
-  if (!recipient.whisper_enabled) return "whisper_disabled";
-  if (!recipient.echo_enabled) return "echo_disabled";
-  if (!recipient.manifested_enabled) return "manifested_disabled";
-  if (!recipient.vanished_enabled) return "vanished_disabled";
+  if ((kind === null || kind === "whisper") && !recipient.whisper_enabled) return "whisper_disabled";
+  if ((kind === null || kind === "echo") && !recipient.echo_enabled) return "echo_disabled";
+  if ((kind === null || kind === "manifested" || kind === "local-radar") && !recipient.manifested_enabled) return "manifested_disabled";
+  if ((kind === null || kind === "vanished") && !recipient.vanished_enabled) return "vanished_disabled";
   return null;
 }
 
-export async function runProductionPushCanarySuite() {
+async function runProductionPushCanary(kind: CanaryKind | null) {
   const sql = await fateDropPostgres();
   const temporaryBetaPremium = betaPremiumEnabled();
   const recipients = await sql`
@@ -132,20 +136,22 @@ export async function runProductionPushCanarySuite() {
   }
 
   const recipient = recipients[0];
-  const preferenceFailure = disabledPreference(recipient);
+  const preferenceFailure = disabledPreference(kind, recipient);
   if (preferenceFailure) {
     return { accepted: false, reason: preferenceFailure, eligibleUsers: 1, eligibleEndpoints: recipients.length };
   }
 
   const now = Math.floor(Date.now() / 1000);
   const runId = randomUUID();
-  const specs = canarySpecs(runId);
+  const allSpecs = canarySpecs(runId);
+  const specs = kind ? allSpecs.filter((spec) => spec.kind === kind) : allSpecs;
+  const scope = kind ? "single" : "suite";
   const queueRows = specs.map((spec) => {
     const outboxId = randomUUID();
-    const eventId = `canary:suite:${runId}:${spec.kind}`;
+    const eventId = `canary:${scope}:${runId}:${spec.kind}`;
     return {
       id: outboxId,
-      dedupe_key: `push-canary-suite:${runId}:${spec.kind}:${recipient.endpoint_id}`,
+      dedupe_key: `push-canary-${scope}:${runId}:${spec.kind}:${recipient.endpoint_id}`,
       user_id: recipient.user_id,
       event_type: spec.eventType,
       event_id: eventId,
@@ -194,7 +200,7 @@ export async function runProductionPushCanarySuite() {
   }
 
   const dispatch = await dispatchCanonicalPushAlerts({ measuredAt: now });
-  const eventPrefix = `canary:suite:${runId}:%`;
+  const eventPrefix = `canary:${scope}:${runId}:%`;
   const rows = await sql`
     SELECT
       o.event_id,
@@ -215,7 +221,7 @@ export async function runProductionPushCanarySuite() {
     ORDER BY o.event_id ASC` as CanaryOutcomeRow[];
 
   const outcomes = specs.map((spec) => {
-    const eventId = `canary:suite:${runId}:${spec.kind}`;
+    const eventId = `canary:${scope}:${runId}:${spec.kind}`;
     const outcome = rows.find((row) => row.event_id === eventId) ?? null;
     return {
       kind: spec.kind,
@@ -232,10 +238,11 @@ export async function runProductionPushCanarySuite() {
   const accepted = outcomes.every((outcome) => outcome.state === "sent" && Boolean(outcome.providerMessageId));
   return {
     accepted,
-    reason: accepted ? null : "one_or_more_canaries_not_sent",
+    reason: accepted ? null : kind ? "canary_not_sent" : "one_or_more_canaries_not_sent",
     eligibleUsers: 1,
     eligibleEndpoints: recipients.length,
     runId,
+    kind,
     queued: inserted.length,
     expected: specs.length,
     outcomes,
@@ -243,8 +250,16 @@ export async function runProductionPushCanarySuite() {
   };
 }
 
+export async function runProductionPushCanarySuite() {
+  return runProductionPushCanary(null);
+}
+
+export async function runSingleProductionPushCanary(kind: CanaryKind) {
+  return runProductionPushCanary(kind);
+}
+
 // Kept as a compatibility wrapper for any internal caller that still names the
-// original Vanished canary. The production route now runs the complete suite.
+// original Vanished canary. The production route now runs the complete suite by default.
 export async function runVanishedProductionCanary() {
   return runProductionPushCanarySuite();
 }

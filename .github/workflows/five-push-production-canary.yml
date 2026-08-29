@@ -5,6 +5,20 @@ on:
     workflows: ["Deploy FateDrop Web Production"]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      canary:
+        description: "Production push canary to send"
+        required: true
+        default: "local-radar"
+        type: choice
+        options:
+          - local-radar
+          - whisper
+          - echo
+          - manifested
+          - vanished
+          - suite
 
 permissions:
   contents: read
@@ -15,13 +29,13 @@ concurrency:
 
 jobs:
   canary:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+      VERIFIED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
       - name: Checkout deployed commit
         uses: actions/checkout@v7
@@ -29,15 +43,25 @@ jobs:
           ref: ${{ env.VERIFIED_SHA }}
           fetch-depth: 1
 
-      - name: Require one-shot marker
+      - name: Resolve canary mode
         id: marker
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_CANARY: ${{ inputs.canary }}
         run: |
           set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "kind=$REQUESTED_CANARY" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if git log -1 --pretty=%B | grep -Fq '[five-push-canary]'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "kind=suite" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "kind=suite" >> "$GITHUB_OUTPUT"
             echo "No [five-push-canary] marker; skipping five-function device canary."
           fi
 
@@ -65,30 +89,49 @@ jobs:
           printf 'FATEDROP_PUSH_CRON_SECRET=%s\n' "$canary_secret" >> "$GITHUB_ENV"
           unset canary_secret
 
-      - name: Send five production test alerts
+      - name: Send production test alert selection
         if: steps.marker.outputs.run == 'true'
         shell: bash
+        env:
+          CANARY_KIND: ${{ steps.marker.outputs.kind }}
         run: |
           set -euo pipefail
           WEB="https://fatedrop.co.uk"
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-            -X POST \
-            -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
-            -H "Accept: application/json" \
-            "$WEB/api/dashboard/push-canary" \
-            -o /tmp/push-canary.json
+          if [ "$CANARY_KIND" = "suite" ]; then
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+              -X POST \
+              -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+              -H "Accept: application/json" \
+              "$WEB/api/dashboard/push-canary" \
+              -o /tmp/push-canary.json
+          else
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+              -X POST \
+              -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+              -H "Accept: application/json" \
+              -H "Content-Type: application/json" \
+              --data "{\"kind\":\"$CANARY_KIND\"}" \
+              "$WEB/api/dashboard/push-canary" \
+              -o /tmp/push-canary.json
+          fi
           node -e '
             const fs=require("fs");
             const result=JSON.parse(fs.readFileSync("/tmp/push-canary.json","utf8"));
-            if (result.accepted !== true) throw new Error(`Five-push canary rejected: ${result.reason || "unknown"}`);
-            if (!Array.isArray(result.outcomes) || result.outcomes.length !== 5) throw new Error("Expected five canary outcomes");
-            const expected = new Set(["whisper","echo","manifested","vanished","local-radar"]);
+            const kind=process.env.CANARY_KIND;
+            const suite=kind === "suite";
+            const expectedKinds=suite
+              ? new Set(["whisper","echo","manifested","vanished","local-radar"])
+              : new Set([kind]);
+            if (result.accepted !== true) throw new Error(`Push canary rejected: ${result.reason || "unknown"}`);
+            if (!Array.isArray(result.outcomes) || result.outcomes.length !== expectedKinds.size) {
+              throw new Error(`Expected ${expectedKinds.size} canary outcome(s)`);
+            }
             for (const outcome of result.outcomes) {
-              if (!expected.delete(outcome.kind)) throw new Error(`Unexpected/duplicate canary kind: ${outcome.kind}`);
+              if (!expectedKinds.delete(outcome.kind)) throw new Error(`Unexpected/duplicate canary kind: ${outcome.kind}`);
               if (outcome.state !== "sent" || !outcome.providerMessageId) {
                 throw new Error(`${outcome.kind} did not reach Expo acceptance: ${outcome.state || "unknown"}`);
               }
               console.log(`${outcome.kind}: sent provider=${outcome.providerMessageId}`);
             }
-            if (expected.size) throw new Error(`Missing canaries: ${Array.from(expected).join(",")}`);
+            if (expectedKinds.size) throw new Error(`Missing canaries: ${Array.from(expectedKinds).join(",")}`);
           '
