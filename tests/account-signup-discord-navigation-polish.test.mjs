@@ -32,7 +32,7 @@ test("Discord is only persisted after confirmed guild membership", () => {
   assert.match(callback, /if \(!guild\.joined\) return Response\.redirect\(new URL\("\/account\?discord=join-error"/);
 });
 
-test("legacy collector interest/signup surfaces are retired during closed beta", () => {
+test("duplicate collector signup surfaces are retired while familiar navigation entry points remain", () => {
   const appBeta = read("app/app-beta/page.tsx");
   const registerPage = read("app/account/register/page.tsx");
   const joinPage = read("app/join/page.tsx");
@@ -42,7 +42,12 @@ test("legacy collector interest/signup surfaces are retired during closed beta",
   assert.match(registerPage, /redirect\("\/closed-beta"\)/);
   assert.match(joinPage, /redirect\("\/closed-beta"\)/);
   assert.match(joinPage, /role-tabs button:first-child/);
-  assert.doesNotMatch(nav, /Create FateDrop ID|Join App Beta/);
+  assert.doesNotMatch(appBeta, /AppBetaForm|\/api\/leads|AccountAuthForm/);
+  assert.doesNotMatch(registerPage, /AppBetaForm|\/api\/leads|AccountAuthForm/);
+  assert.match(nav, /Create FateDrop ID/);
+  assert.match(nav, /Join App Beta/);
+  assert.match(nav, /href="\/account\/register"/);
+  assert.match(nav, /href="\/app-beta"/);
 });
 
 test("Events lives in dashboard navigation rather than the public top navigation", () => {

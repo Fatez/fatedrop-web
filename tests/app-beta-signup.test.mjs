@@ -11,15 +11,26 @@ const pendingPage = fs.readFileSync(new URL("../app/beta-pending/page.tsx", impo
 const home = fs.readFileSync(new URL("../components/koru-home-reference.tsx", import.meta.url), "utf8");
 const nav = fs.readFileSync(new URL("../components/nav.tsx", import.meta.url), "utf8");
 
-test("closed beta hub is the one public collector entry", () => {
+test("closed beta has one signup form while the useful FateDrop ID navigation stays", () => {
   assert.match(closedBetaPage, /FATEDROP CLOSED BETA/);
   assert.match(closedBetaPage, /AccountAuthForm mode="register"/);
   assert.match(closedBetaPage, /Web \+ App unlock together/);
   assert.match(appBetaPage, /redirect\("\/closed-beta"\)/);
   assert.match(registerPage, /redirect\("\/closed-beta"\)/);
+  assert.doesNotMatch(appBetaPage, /AppBetaForm|\/api\/leads|AccountAuthForm/);
+  assert.doesNotMatch(registerPage, /AppBetaForm|\/api\/leads|AccountAuthForm/);
   assert.match(home, /href="\/closed-beta"/);
-  assert.match(nav, /href="\/closed-beta"/);
-  assert.doesNotMatch(nav, /Create FateDrop ID|Join App Beta/);
+
+  assert.match(nav, /FateDrop ID/);
+  assert.match(nav, /My FateDrop ID/);
+  assert.match(nav, /Create FateDrop ID/);
+  assert.match(nav, /Dashboard/);
+  assert.match(nav, /Koru &amp; Friends/);
+  assert.match(nav, /Membership/);
+  assert.match(nav, /Join App Beta/);
+  assert.match(nav, /href="\/account"/);
+  assert.match(nav, /href="\/account\/register"/);
+  assert.match(nav, /href="\/app-beta"/);
 });
 
 test("beta request creates real sign-in credentials and canonical Pending access", () => {
