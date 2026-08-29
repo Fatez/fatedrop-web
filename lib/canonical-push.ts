@@ -159,23 +159,13 @@ async function eligibleRecipients() {
       np.quiet_hours_end,
       COALESCE(np.timezone,'Europe/London') AS timezone
     FROM fatedrop_push_endpoints pe
-    JOIN fatedrop_users u ON u.id=pe.user_id
     JOIN fatedrop_memberships m ON m.user_id=pe.user_id
     JOIN fatedrop_beta_access ba ON ba.user_id=pe.user_id AND ba.status='approved'
     LEFT JOIN fatedrop_notification_preferences np ON np.user_id=pe.user_id
     WHERE pe.enabled=true
       AND (
-        (m.status IN ('active','trialing') AND m.tier IN ('plus','pro'))
-        OR (
-          ${temporaryBetaPremium}=true
-          AND EXISTS (
-            SELECT 1
-            FROM beta_leads bl
-            WHERE lower(bl.email)=lower(u.email)
-              AND bl.role='collector'
-              AND bl.contact_consent=TRUE
-          )
-        )
+        ${temporaryBetaPremium}=true
+        OR (m.status IN ('active','trialing') AND m.tier IN ('plus','pro'))
       )
     ORDER BY pe.updated_at DESC
     LIMIT 2000`;
