@@ -4,6 +4,7 @@ import test from "node:test";
 
 const routeSource = await readFile(new URL("../app/api/fate-matches/route.ts", import.meta.url), "utf8");
 const clientSource = await readFile(new URL("../lib/hosted-fatefind-client.ts", import.meta.url), "utf8");
+const healthSource = await readFile(new URL("../app/api/health/fatefind-instant/route.ts", import.meta.url), "utf8");
 const deploySource = await readFile(new URL("../.github/workflows/deploy-production.yml", import.meta.url), "utf8");
 
 test("new FateFind is persisted before the immediate Cloud evaluation is attempted", () => {
@@ -30,11 +31,14 @@ test("Web sends only the saved FateFind id and never performs local stock or mat
   assert.doesNotMatch(routeSource, /evaluateFateFind|fatedrop_retail_offers/);
 });
 
-test("production deploy fails closed without the shared signal token and proves the private Cloud contract", () => {
-  assert.match(deploySource, /FATEDROP_SIGNAL_API_TOKEN: \$\{\{ secrets\.FATEDROP_SIGNAL_API_TOKEN \}\}/);
-  assert.match(deploySource, /Missing FATEDROP_SIGNAL_API_TOKEN/);
-  assert.match(deploySource, /wrangler secret put FATEDROP_SIGNAL_API_TOKEN/);
-  assert.match(deploySource, /\/internal\/fatefind\/evaluate/);
-  assert.match(deploySource, /production-probe-nonexistent/);
-  assert.match(deploySource, /Instant FateFind production contract is unavailable/);
+test("production keeps the shared signal token inside runtimes and proves the Worker-to-Cloud path", () => {
+  assert.doesNotMatch(deploySource, /secrets\.FATEDROP_SIGNAL_API_TOKEN/);
+  assert.doesNotMatch(deploySource, /wrangler secret put FATEDROP_SIGNAL_API_TOKEN/);
+  assert.match(deploySource, /workers\/scripts\/fatedrop-web\/settings/);
+  assert.match(deploySource, /Production Worker is missing the FATEDROP_SIGNAL_API_TOKEN secret binding/);
+  assert.match(deploySource, /check_status "\/api\/health\/fatefind-instant" "204"/);
+  assert.match(healthSource, /evaluateHostedFateFindNow/);
+  assert.match(healthSource, /production-probe-nonexistent/);
+  assert.match(healthSource, /outcome\.enabled === true/);
+  assert.match(healthSource, /evaluation\?\.created \|\| 0/);
 });
