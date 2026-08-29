@@ -11,7 +11,7 @@ function validExpoToken(value: unknown) {
 }
 
 export async function POST(request: Request) {
-  const snapshot = await getSnapshotForRequest(request);
+  const snapshot = await getSnapshotForRequest(request, { allowPending: true });
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
   if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
   const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
@@ -34,9 +34,7 @@ export async function POST(request: Request) {
       WHERE fatedrop_push_endpoints.user_id=EXCLUDED.user_id
       RETURNING user_id
     `;
-    if (!rows[0]) {
-      return Response.json({ error: "This push endpoint is already registered to another FateDrop ID." }, { status: 409, headers: { "cache-control": "no-store" } });
-    }
+    if (!rows[0]) return Response.json({ error: "This push endpoint is already registered to another FateDrop ID." }, { status: 409, headers: { "cache-control": "no-store" } });
     return Response.json({ registered: true }, { status: 201, headers: { "cache-control": "private, no-store" } });
   } catch {
     return Response.json({ error: "Push endpoint storage is not ready. Apply the hosted notification migration first." }, { status: 503 });
@@ -44,7 +42,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const snapshot = await getSnapshotForRequest(request);
+  const snapshot = await getSnapshotForRequest(request, { allowPending: true });
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
   if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
   const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
