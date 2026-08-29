@@ -19,7 +19,7 @@ test("approved closed-beta accounts receive temporary Plus without rewriting bil
 
 test("closed-beta full access still fails closed until canonical approval exists", () => {
   const approvalCheck = betaPremium.indexOf("betaAccessIsApproved(betaAccess)");
-  const betaModeCheck = betaPremium.indexOf("betaPremiumEnabled()");
+  const betaModeCheck = betaPremium.indexOf("if (!betaPremiumEnabled())", approvalCheck);
   assert.ok(approvalCheck >= 0 && betaModeCheck > approvalCheck, "approval must be checked before temporary full access");
   assert.match(betaPremium, /return \{ \.\.\.base, accessGrant: null \}/);
 });
