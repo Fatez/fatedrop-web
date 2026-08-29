@@ -19,7 +19,8 @@ function validEmail(value: string) {
 function isReservedCompanyEmail(value: string) {
   const at = value.lastIndexOf("@");
   if (at < 0) return false;
-  return value.slice(at + 1).toLowerCase() === COMPANY_EMAIL_DOMAIN;
+  const domain = value.slice(at + 1).toLowerCase();
+  return domain === COMPANY_EMAIL_DOMAIN || domain.endsWith(`.${COMPANY_EMAIL_DOMAIN}`);
 }
 
 function slugName(value: string) {
