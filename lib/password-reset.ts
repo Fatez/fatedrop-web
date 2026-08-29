@@ -30,14 +30,15 @@ export class PasswordResetEmailUnavailableError extends Error {
 }
 
 export async function getPasswordResetEmailContext(): Promise<PasswordResetEmailContext> {
-  let context: Awaited<ReturnType<typeof getCloudflareContext<{ EMAIL?: EmailBinding }>>>;
+  let context;
   try {
     context = await getCloudflareContext({ async: true });
   } catch {
     throw new PasswordResetEmailUnavailableError();
   }
 
-  const email = context.env.EMAIL;
+  const env = context.env as unknown as { EMAIL?: EmailBinding };
+  const email = env.EMAIL;
   if (!email || typeof email.send !== "function") throw new PasswordResetEmailUnavailableError();
   return {
     email,
