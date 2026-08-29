@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getSnapshotForRequest } from "@/lib/auth";
+import { betaAccessDeniedResponse, betaAccessIsApproved } from "@/lib/beta-access";
 import { fateDropPostgres } from "@/lib/postgres";
 
 export const runtime = "nodejs";
@@ -12,6 +13,7 @@ function validExpoToken(value: unknown) {
 export async function POST(request: Request) {
   const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
+  if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
   const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
   const token = validExpoToken(payload?.token);
   if (!token) return Response.json({ error: "A valid Expo push token is required." }, { status: 400 });
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401 });
+  if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
   const payload = await request.json().catch(() => null) as Record<string, unknown> | null;
   const token = validExpoToken(payload?.token);
   if (!token) return Response.json({ error: "A valid Expo push token is required." }, { status: 400 });
