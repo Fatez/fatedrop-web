@@ -54,9 +54,9 @@ test("operator dispatch inherits stale-sending lease recovery before claiming wo
   assert.match(push, /const SENDING_LEASE_SECONDS = 5 \* 60/);
 });
 
-test("Web validates descriptive Local Radar copy rather than accepting arbitrary push text", () => {
+test("Web validates descriptive Local Radar copy while allowing unresolved chain scope", () => {
   assert.match(route, /FateDrop · Local Radar · Incoming stock/);
   assert.match(route, /Check Local Radar to see if a participating store is near you\./);
   assert.match(route, /eventId !== `local-radar-operator:\$\{operatorIssue\}`/);
-  assert.match(route, /branchCount < 1 \|\| branchCount > 100/);
+  assert.match(route, /branchCount < 0 \|\| branchCount > 100/);
 });
