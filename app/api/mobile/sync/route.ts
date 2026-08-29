@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const snapshot = await getSnapshotForRequest(request);
+  const snapshot = await getSnapshotForRequest(request, { allowPending: true });
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
   if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
 
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     },
     wishlist: wishlistResult.status === "fulfilled" ? wishlistResult.value : [],
     fateMatchWatches: fateFindResult.status === "fulfilled" ? fateFindResult.value : [],
-    fateFinds: fateFindResult.status === "fulfilled" ? fateFindResult.value : [], // legacy response alias
+    fateFinds: fateFindResult.status === "fulfilled" ? fateFindResult.value : [],
     fateMatches: fateMatchResult.status === "fulfilled" ? fateMatchResult.value : [],
     notificationPreferences: preferenceResult.status === "fulfilled" ? preferenceResult.value : DEFAULT_NOTIFICATION_PREFERENCES,
     pendingMigrations,
