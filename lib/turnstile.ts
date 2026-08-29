@@ -21,13 +21,15 @@ type TurnstileResponse = {
   action?: string;
 };
 
+type TurnstileAction = "login" | "register" | "password_reset_request" | "password_reset_complete";
+
 function expectedHostname(request: Request) {
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
   const host = forwardedHost || new URL(request.url).hostname;
   return host.split(":")[0].toLowerCase();
 }
 
-export async function assertTurnstile(request: Request, token: unknown, expectedAction: "login" | "register") {
+export async function assertTurnstile(request: Request, token: unknown, expectedAction: TurnstileAction) {
   const secret = String(process.env.TURNSTILE_SECRET_KEY || "").trim();
   if (!secret) {
     if (process.env.NODE_ENV !== "production") return;
