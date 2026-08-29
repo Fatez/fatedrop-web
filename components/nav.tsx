@@ -9,13 +9,11 @@ import { BrandMark } from "./brand-mark";
 
 export function Nav() {
   const [open, setOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
   const [merchOpen, setMerchOpen] = useState(false);
   const pathname = usePathname();
 
   const closeMenus = () => {
     setOpen(false);
-    setAccountOpen(false);
     setMerchOpen(false);
   };
 
@@ -26,7 +24,7 @@ export function Nav() {
         <nav className={open ? "nav-links is-open" : "nav-links"} aria-label="Main navigation">
           {siteConfig.nav.filter((item) => item.href !== "/events").map((item) => item.label === "Merch" ? (
             <div className={`merch-menu${pathname.startsWith("/merch") ? " active" : ""}${merchOpen ? " is-open" : ""}`} key={item.href}>
-              <button className="merch-menu-trigger" type="button" aria-haspopup="menu" aria-expanded={merchOpen} onClick={() => { setMerchOpen((current) => !current); setAccountOpen(false); }}>
+              <button className="merch-menu-trigger" type="button" aria-haspopup="menu" aria-expanded={merchOpen} onClick={() => setMerchOpen((current) => !current)}>
                 Merch <span aria-hidden="true">⌄</span>
               </button>
               <div className="merch-menu-popover" role="menu">
@@ -38,23 +36,12 @@ export function Nav() {
           ) : (
             <Link className={pathname === item.href ? "active" : ""} href={item.href} key={item.href} onClick={() => setOpen(false)}>{item.label}</Link>
           ))}
-          <div className={`account-menu${pathname.startsWith("/dashboard") || pathname.startsWith("/account") ? " active" : ""}${accountOpen ? " is-open" : ""}`}>
-            <button className="account-menu-trigger" type="button" aria-haspopup="menu" aria-expanded={accountOpen} onClick={() => { setAccountOpen((current) => !current); setMerchOpen(false); }}>
-              <span className="account-menu-signal" aria-hidden="true" /> FateDrop ID <span className="account-menu-chevron" aria-hidden="true">⌄</span>
-            </button>
-            <div className="account-menu-popover" role="menu">
-              <Link href="/account" role="menuitem" onClick={closeMenus}><span><b>My FateDrop ID</b><small>Profile, member since & identity</small></span><i>◎</i></Link>
-              <Link href="/account/register" role="menuitem" onClick={closeMenus}><span><b>Create FateDrop ID</b><small>Register a new Website + App sign-in</small></span><i>＋</i></Link>
-              <Link href="/dashboard" role="menuitem" onClick={closeMenus}><span><b>Dashboard</b><small>Search, FateFind, FateMatch & signals</small></span><i>▦</i></Link>
-              <Link href="/dashboard/avatar" role="menuitem" onClick={closeMenus}><span><b>Koru &amp; Friends</b><small>Choose your FateDrop companion</small></span><i>◇</i></Link>
-              <Link href="/subscriptions#collectors" role="menuitem" onClick={closeMenus}><span><b>Membership</b><small>Free, FateDrop Plus & billing</small></span><i>♛</i></Link>
-            </div>
-          </div>
-          <Link className="button button-small button-primary nav-cta" href="/app-beta" onClick={() => { trackEvent("cta_click", { location: "navigation", target: "app_beta" }); closeMenus(); }}>
-            Join App Beta <span aria-hidden="true">↗</span>
+          <Link href="/account/login" onClick={closeMenus}>Sign in</Link>
+          <Link className="button button-small button-primary nav-cta" href="/closed-beta" onClick={() => { trackEvent("cta_click", { location: "navigation", target: "closed_beta" }); closeMenus(); }}>
+            Closed Beta Access <span aria-hidden="true">↗</span>
           </Link>
         </nav>
-        <button className="menu-button" type="button" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => { setOpen((current) => !current); setAccountOpen(false); setMerchOpen(false); }}><span /><span /></button>
+        <button className="menu-button" type="button" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => { setOpen((current) => !current); setMerchOpen(false); }}><span /><span /></button>
       </div>
 
       <style jsx>{`

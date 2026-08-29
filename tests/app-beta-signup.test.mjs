@@ -2,39 +2,41 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const page = fs.readFileSync(new URL("../app/app-beta/page.tsx", import.meta.url), "utf8");
-const form = fs.readFileSync(new URL("../components/app-beta-form.tsx", import.meta.url), "utf8");
-const formStyles = fs.readFileSync(new URL("../components/app-beta-form.module.css", import.meta.url), "utf8");
-const pageStyles = fs.readFileSync(new URL("../app/app-beta/app-beta-page.module.css", import.meta.url), "utf8");
+const closedBetaPage = fs.readFileSync(new URL("../app/closed-beta/page.tsx", import.meta.url), "utf8");
+const appBetaPage = fs.readFileSync(new URL("../app/app-beta/page.tsx", import.meta.url), "utf8");
+const registerPage = fs.readFileSync(new URL("../app/account/register/page.tsx", import.meta.url), "utf8");
+const authForm = fs.readFileSync(new URL("../components/account-auth-form.tsx", import.meta.url), "utf8");
+const registerRoute = fs.readFileSync(new URL("../app/api/auth/register/route.ts", import.meta.url), "utf8");
+const pendingPage = fs.readFileSync(new URL("../app/beta-pending/page.tsx", import.meta.url), "utf8");
+const home = fs.readFileSync(new URL("../components/koru-home-reference.tsx", import.meta.url), "utf8");
+const nav = fs.readFileSync(new URL("../components/nav.tsx", import.meta.url), "utf8");
 
-test("App Beta is a controlled signup journey, not a public install page", () => {
-  assert.match(page, /controlled beta/i);
-  assert.match(page, /There is no public download link yet/);
-  assert.match(page, /same identity/);
-  assert.doesNotMatch(page, /expo\.dev|eas\.build|TestFlight.*https?:\/\//i);
+test("closed beta hub is the one public collector entry", () => {
+  assert.match(closedBetaPage, /FATEDROP CLOSED BETA/);
+  assert.match(closedBetaPage, /AccountAuthForm mode="register"/);
+  assert.match(closedBetaPage, /Web \+ App unlock together/);
+  assert.match(appBetaPage, /redirect\("\/closed-beta"\)/);
+  assert.match(registerPage, /redirect\("\/closed-beta"\)/);
+  assert.match(home, /href="\/closed-beta"/);
+  assert.match(nav, /href="\/closed-beta"/);
+  assert.doesNotMatch(nav, /Create FateDrop ID|Join App Beta/);
 });
 
-test("App Beta reuses the collector lead and one FateDrop ID", () => {
-  assert.match(form, /fetch\("\/api\/leads"/);
-  assert.match(form, /role: "collector"/);
-  assert.match(form, /wantedFeature: "FateDrop App Beta"/);
-  assert.match(form, /response\.status === 409/);
-  assert.match(form, /already on the FateDrop beta list/);
-  assert.match(form, /\/account\/register/);
+test("beta request creates real sign-in credentials and canonical Pending access", () => {
+  assert.match(authForm, /name="email"/);
+  assert.match(authForm, /name="password"/);
+  assert.match(authForm, /name="confirmPassword"/);
+  assert.match(authForm, /Request closed beta access/);
+  assert.doesNotMatch(authForm, /name="displayName"/);
+  assert.match(registerRoute, /hashPassword\(password\)/);
+  assert.match(registerRoute, /startSession\(account\.id\)/);
+  assert.match(registerRoute, /betaAccess: \{ status: "pending", approved: false \}/);
+  assert.match(registerRoute, /accessAllowed: false/);
 });
 
-test("App Beta owns visible, responsive form controls instead of relying on global form styles", () => {
-  assert.match(form, /app-beta-form\.module\.css/);
-  assert.match(form, /className=\{styles\.input\}/);
-  assert.match(form, /className=\{styles\.select\}/);
-  assert.match(form, /className=\{styles\.checkbox\}/);
-  assert.match(formStyles, /\.input,\s*\n\.select\s*\{/);
-  assert.match(formStyles, /height:\s*54px/);
-  assert.match(formStyles, /border:\s*1px solid/);
-  assert.match(formStyles, /background:\s*rgba\(/);
-  assert.match(formStyles, /\.input:focus,\s*\n\.select:focus/);
-  assert.match(formStyles, /@media \(max-width: 760px\)/);
-  assert.match(page, /app-beta-page\.module\.css/);
-  assert.match(pageStyles, /@media \(max-width: 980px\)/);
-  assert.match(pageStyles, /grid-template-columns:\s*1fr/);
+test("pending state makes clear the same account will unlock Web and App", () => {
+  assert.match(pendingPage, /account and sign-in are ready/i);
+  assert.match(pendingPage, /same account unlocks the FateDrop Web dashboard and mobile App/i);
+  assert.match(pendingPage, /You do not need to sign up again/i);
+  assert.doesNotMatch(pendingPage, /View my FateDrop ID/);
 });
