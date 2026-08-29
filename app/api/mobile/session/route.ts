@@ -1,14 +1,18 @@
 import { AccountStorageUnavailableError, findAccountByEmail } from "@/lib/account-storage";
 import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, readBoundedJson } from "@/lib/auth-abuse";
 import { bearerTokenFromRequest, endApiSession, getSnapshotForRequest, startApiSession, verifyLoginPassword } from "@/lib/auth";
+import { betaAccessIsApproved } from "@/lib/beta-access";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnapshotForRequest>>>) {
+  const betaApproved = betaAccessIsApproved(snapshot.betaAccess);
   return {
-    contractVersion: 1,
+    contractVersion: 2,
+    accessAllowed: betaApproved,
+    betaAccess: snapshot.betaAccess,
     user: {
       id: snapshot.account.id,
       fateId: snapshot.account.fateId,
@@ -22,7 +26,7 @@ function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnaps
       effectiveTier: effectiveTier(snapshot.membership),
       status: snapshot.membership.status,
       active: membershipIsActive(snapshot.membership),
-      capabilities: [...capabilitiesForMembership(snapshot.membership)].sort(),
+      capabilities: betaApproved ? [...capabilitiesForMembership(snapshot.membership)].sort() : [],
       trialEndsAt: snapshot.membership.trialEndsAt,
       currentPeriodEnd: snapshot.membership.currentPeriodEnd,
       cancelAtPeriodEnd: snapshot.membership.cancelAtPeriodEnd,
