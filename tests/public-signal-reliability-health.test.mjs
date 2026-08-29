@@ -4,16 +4,57 @@ import test from "node:test";
 
 const routeSource = await readFile(new URL("../app/api/health/signal/route.ts", import.meta.url), "utf8");
 const envSource = await readFile(new URL("../.env.example", import.meta.url), "utf8");
+const watchdogSource = await readFile(new URL("../.github/workflows/monitor-signal-production.yml", import.meta.url), "utf8");
 
 test("public signal health authenticates upstream server-side and fails closed", () => {
   assert.match(routeSource, /FATEDROP_SIGNAL_API_TOKEN/);
   assert.match(routeSource, /Authorization: `Bearer \$\{signalToken\}`/);
   assert.match(routeSource, /\/api\/signal-health/);
   assert.match(routeSource, /payload\.available !== true/);
-  assert.match(routeSource, /unavailable\(\)/);
   assert.match(routeSource, /cache: "no-store"/);
   assert.match(routeSource, /"cache-control": "no-store"/);
   assert.doesNotMatch(routeSource, /NEXT_PUBLIC_FATEDROP_SIGNAL_API_TOKEN/);
+});
+
+test("public signal health exposes bounded redacted failure reasons", () => {
+  for (const reason of [
+    "invalid_request",
+    "missing_web_token",
+    "upstream_unauthorized",
+    "upstream_error",
+    "upstream_invalid_response",
+    "upstream_unavailable",
+    "upstream_timeout",
+    "upstream_request_failed",
+  ]) {
+    assert.match(routeSource, new RegExp(reason));
+    assert.match(watchdogSource, new RegExp(reason));
+  }
+
+  assert.match(routeSource, /response\.status === 401 \|\| response\.status === 403/);
+  assert.match(routeSource, /return unavailable\("upstream_unauthorized"\)/);
+  assert.match(routeSource, /return unavailable\("upstream_invalid_response"\)/);
+  assert.match(routeSource, /requestFailureReason\(error\)/);
+  assert.match(routeSource, /\{ available: false, reason \}/);
+
+  for (const forbidden of [
+    "signalToken }",
+    "process.env.FATEDROP_SIGNAL_API_TOKEN }",
+    "response.statusText",
+    "error.message",
+    "upstreamBody",
+  ]) {
+    assert.doesNotMatch(routeSource, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});
+
+test("production signal watchdog preserves failure bodies and logs only allowlisted reason codes", () => {
+  assert.match(watchdogSource, /--output "\$response_file"/);
+  assert.match(watchdogSource, /--write-out "%\{http_code\}"/);
+  assert.doesNotMatch(watchdogSource, /--fail-with-body/);
+  assert.match(watchdogSource, /allowedReasons = new Set/);
+  assert.match(watchdogSource, /allowedReasons\.has\(health\.reason\) \? health\.reason : "unknown"/);
+  assert.match(watchdogSource, /http=\$\{httpStatus \|\| "unknown"\} reason=\$\{reason\}/);
 });
 
 test("successful public signal health is edge cached and query cache-busting is rejected", () => {
@@ -23,7 +64,7 @@ test("successful public signal health is edge cached and query cache-busting is 
   assert.match(routeSource, /"cache-control": SUCCESS_CACHE_CONTROL/);
   assert.match(routeSource, /new URL\(request\.url\)/);
   assert.match(routeSource, /requestUrl\.search/);
-  assert.match(routeSource, /unavailable\(400\)/);
+  assert.match(routeSource, /unavailable\("invalid_request", 400\)/);
 });
 
 test("public signal health exposes aggregate reliability only", () => {
