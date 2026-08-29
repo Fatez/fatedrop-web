@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 
 const FALLBACK_HERO = "/assets/fatedrop-header.png?v=20260822-static-page-hero";
-const APPROVED_NON_PNG_HEROES = new Set(["/assets/market/membership-balance.webp"]);
+const APPROVED_NON_PNG_HEROES = new Set(["/assets/membership/fatedrop-balance-membership.webp?v=20260829"]);
 
 function reliableHeroSource(image: string) {
   if (/\.png(?:\?|$)/i.test(image)) return image;
