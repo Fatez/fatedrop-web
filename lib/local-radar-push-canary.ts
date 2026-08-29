@@ -20,8 +20,31 @@ type CanaryOutcomeRow = {
   delivery_result: string | null;
 };
 
+const CANARY_KEY = "2026-08-29-smyths-monday";
 const EXPECTED_FROM = "2026-08-30T23:00:00.000Z";
 const EXPECTED_TO = "2026-08-31T22:59:59.000Z";
+
+async function readOutcome(sql: Awaited<ReturnType<typeof fateDropPostgres>>, dedupeKey: string) {
+  const rows = await sql`
+    SELECT
+      o.id,
+      o.state,
+      o.sent_at,
+      o.last_error,
+      attempt.provider_message_id,
+      attempt.result AS delivery_result
+    FROM fatedrop_notification_outbox o
+    LEFT JOIN LATERAL (
+      SELECT provider_message_id,result
+      FROM fatedrop_notification_delivery_attempts
+      WHERE outbox_id=o.id
+      ORDER BY attempted_at DESC
+      LIMIT 1
+    ) attempt ON true
+    WHERE o.dedupe_key=${dedupeKey}
+    LIMIT 1` as CanaryOutcomeRow[];
+  return rows[0] ?? null;
+}
 
 export async function runLocalRadarProductionCanary() {
   const sql = await fateDropPostgres();
@@ -60,65 +83,68 @@ export async function runLocalRadarProductionCanary() {
 
   const now = Math.floor(Date.now() / 1000);
   const outboxId = randomUUID();
-  const eventId = `canary:local-radar:${outboxId}`;
-  const dedupeKey = `local-radar-canary:${outboxId}:${recipient.endpoint_id}`;
+  const eventId = `canary:local-radar:${CANARY_KEY}`;
+  const dedupeKey = `local-radar-canary:${CANARY_KEY}:${recipient.endpoint_id}`;
 
-  await sql`
-    INSERT INTO fatedrop_notification_outbox (
-      id,dedupe_key,user_id,event_type,event_id,channel,title,body,url,payload_json,state,attempts,next_attempt_at,created_at,updated_at
-    ) VALUES (
-      ${outboxId},${dedupeKey},${recipient.user_id},'local_radar_test',${eventId},'push',
-      'TEST · FateDrop · Local Radar',
-      'Smyths incoming stock test: Temporal Forces ETB and Destined Rivals expected Monday 31 August. Tap to inspect Local Radar.',
-      NULL,
-      ${JSON.stringify({
-        route: "local-radar",
-        localIntelId: eventId,
-        stage: "ECHO",
-        retailerId: "smyths-uk",
-        retailerName: "Smyths",
-        productTitle: "[TEST] Temporal Forces ETB + Destined Rivals",
-        expectedFrom: EXPECTED_FROM,
-        expectedTo: EXPECTED_TO,
-        expectedLabel: "TEST · Expected Monday 31 August",
-        branchCount: 0,
-        operatorIssue: 0,
-        test: true,
-        canary: true,
-        endpointId: recipient.endpoint_id,
-        expoPushToken: recipient.expo_push_token,
-      })}::jsonb,
-      'pending',0,${now},${now},${now}
-    )`;
+  const existing = await readOutcome(sql, dedupeKey);
+  if (existing?.state === "sent" && existing.provider_message_id) {
+    return {
+      accepted: true,
+      alreadySent: true,
+      eligibleUsers: 1,
+      eligibleEndpoints: recipients.length,
+      eventType: "local_radar_test",
+      outboxId: existing.id,
+      state: existing.state,
+      sentAt: existing.sent_at,
+      providerMessageId: existing.provider_message_id,
+      deliveryResult: existing.delivery_result,
+      lastError: existing.last_error,
+      dispatch: null,
+    };
+  }
+
+  if (!existing) {
+    await sql`
+      INSERT INTO fatedrop_notification_outbox (
+        id,dedupe_key,user_id,event_type,event_id,channel,title,body,url,payload_json,state,attempts,next_attempt_at,created_at,updated_at
+      ) VALUES (
+        ${outboxId},${dedupeKey},${recipient.user_id},'local_radar_test',${eventId},'push',
+        'TEST · FateDrop · Local Radar',
+        'Smyths incoming stock test: Temporal Forces ETB and Destined Rivals expected Monday 31 August. Tap to inspect Local Radar.',
+        NULL,
+        ${JSON.stringify({
+          route: "local-radar",
+          localIntelId: eventId,
+          stage: "ECHO",
+          retailerId: "smyths-uk",
+          retailerName: "Smyths",
+          productTitle: "[TEST] Temporal Forces ETB + Destined Rivals",
+          expectedFrom: EXPECTED_FROM,
+          expectedTo: EXPECTED_TO,
+          expectedLabel: "TEST · Expected Monday 31 August",
+          branchCount: 0,
+          operatorIssue: 0,
+          test: true,
+          canary: true,
+          endpointId: recipient.endpoint_id,
+          expoPushToken: recipient.expo_push_token,
+        })}::jsonb,
+        'pending',0,${now},${now},${now}
+      )
+      ON CONFLICT (dedupe_key) DO NOTHING`;
+  }
 
   const dispatch = await dispatchCanonicalPushAlerts({ measuredAt: now });
+  const outcome = await readOutcome(sql, dedupeKey);
 
-  const rows = await sql`
-    SELECT
-      o.id,
-      o.state,
-      o.sent_at,
-      o.last_error,
-      attempt.provider_message_id,
-      attempt.result AS delivery_result
-    FROM fatedrop_notification_outbox o
-    LEFT JOIN LATERAL (
-      SELECT provider_message_id,result
-      FROM fatedrop_notification_delivery_attempts
-      WHERE outbox_id=o.id
-      ORDER BY attempted_at DESC
-      LIMIT 1
-    ) attempt ON true
-    WHERE o.id=${outboxId}
-    LIMIT 1` as CanaryOutcomeRow[];
-
-  const outcome = rows[0] ?? null;
   return {
     accepted: outcome?.state === "sent" && Boolean(outcome.provider_message_id),
+    alreadySent: false,
     eligibleUsers: 1,
     eligibleEndpoints: recipients.length,
     eventType: "local_radar_test",
-    outboxId,
+    outboxId: outcome?.id ?? outboxId,
     state: outcome?.state ?? "missing",
     sentAt: outcome?.sent_at ?? null,
     providerMessageId: outcome?.provider_message_id ?? null,
