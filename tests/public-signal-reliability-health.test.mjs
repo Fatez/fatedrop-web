@@ -22,8 +22,10 @@ test("public signal health exposes aggregate reliability only", () => {
   assert.match(routeSource, /fresh: count\(monitors\.freshRetailers\)/);
   assert.match(routeSource, /stale: count\(monitors\.staleRetailers\)/);
   assert.match(routeSource, /blocked: count\(monitors\.blockedRetailers\)/);
+  assert.match(routeSource, /available: discovery\.available === true/);
   assert.match(routeSource, /pending: count\(discovery\.pending\)/);
   assert.match(routeSource, /processed: count\(discovery\.processed\)/);
+  assert.match(routeSource, /oldestActiveAt: timestamp\(discovery\.oldestActiveAt\)/);
 
   for (const forbidden of [
     "orphanedSignalIds",
