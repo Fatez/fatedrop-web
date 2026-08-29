@@ -48,7 +48,10 @@ export async function POST(request: Request) {
     const valid = await verifyLoginPassword(password, account?.passwordHash);
     if (!account || !valid) return Response.json({ error: "Email or password is incorrect." }, { status: 401, headers: { "cache-control": "no-store" } });
     const session = await startApiSession(account.id);
-    const snapshot = await getSnapshotForRequest(new Request(request.url, { headers: { authorization: `Bearer ${session.token}` } }));
+    const snapshot = await getSnapshotForRequest(
+      new Request(request.url, { headers: { authorization: `Bearer ${session.token}` } }),
+      { allowPending: true },
+    );
     if (!snapshot) throw new Error("SESSION_NOT_FOUND");
     return Response.json({ sessionToken: session.token, expiresAt: session.expiresAt, ...sessionPayload(snapshot) }, { headers: { "cache-control": "private, no-store, max-age=0" } });
   } catch (error) {
@@ -61,7 +64,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const snapshot = await getSnapshotForRequest(request);
+    const snapshot = await getSnapshotForRequest(request, { allowPending: true });
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
     return Response.json(sessionPayload(snapshot), { headers: { "cache-control": "private, no-store, max-age=0" } });
   } catch (error) {
