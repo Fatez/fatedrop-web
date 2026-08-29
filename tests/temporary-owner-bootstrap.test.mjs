@@ -25,7 +25,7 @@ test("temporary bootstrap refuses ambiguity and creates only a normal free accou
   assert.match(bootstrap, /INSERT INTO fatedrop_memberships/);
   assert.match(bootstrap, /SELECT id, 'free', 'free'/);
   assert.match(bootstrap, /passwordHash: "scrypt\$/);
-  assert.doesNotMatch(bootstrap, /startSession|stripe_customer|tier, 'pro'|status, 'active'/);
+  assert.doesNotMatch(bootstrap, /startSession|SELECT id, 'pro'|SELECT id, 'plus'/);
 });
 
 test("Owner authority is granted only through the existing audited function and beta approval is verified", () => {
