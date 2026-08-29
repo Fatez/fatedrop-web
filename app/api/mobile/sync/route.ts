@@ -1,4 +1,5 @@
 import { getSnapshotForRequest } from "@/lib/auth";
+import { betaAccessDeniedResponse, betaAccessIsApproved } from "@/lib/beta-access";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
 import { listWishlist } from "@/lib/wishlist-storage";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const snapshot = await getSnapshotForRequest(request);
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
+  if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
 
   const [wishlistResult, fateFindResult, fateMatchResult, preferenceResult] = await Promise.allSettled([
     listWishlist(snapshot.account.id),
@@ -26,7 +28,9 @@ export async function GET(request: Request) {
   if (preferenceResult.status === "rejected") pendingMigrations.push("notification-preferences");
 
   return Response.json({
-    contractVersion: 1,
+    contractVersion: 2,
+    accessAllowed: true,
+    betaAccess: snapshot.betaAccess,
     syncedAt: Math.floor(Date.now() / 1000),
     user: {
       id: snapshot.account.id,
