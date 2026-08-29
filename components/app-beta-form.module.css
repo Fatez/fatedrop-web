@@ -1,0 +1,263 @@
+.panel {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: clamp(28px, 3vw, 44px);
+  border: 1px solid rgba(198, 185, 224, 0.22);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(124, 110, 255, 0.08), transparent 34%),
+    linear-gradient(145deg, rgba(20, 19, 24, 0.98), rgba(12, 13, 17, 0.98));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255, 255, 255, 0.025) inset;
+}
+
+.heading {
+  margin-bottom: 30px;
+}
+
+.heading small {
+  display: block;
+  margin-bottom: 14px;
+  color: #75e9ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.heading h2 {
+  margin: 0;
+  color: #f5f2f1;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.heading p {
+  max-width: 620px;
+  margin: 14px 0 0;
+  color: rgba(238, 234, 239, 0.58);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.form {
+  display: grid;
+  gap: 22px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 20px;
+}
+
+.field {
+  display: grid;
+  min-width: 0;
+  gap: 9px;
+  color: #eee9e7;
+  font-size: 0.96rem;
+  font-weight: 650;
+}
+
+.fieldLabel {
+  display: block;
+  min-height: 1.45em;
+}
+
+.optional {
+  color: rgba(238, 234, 239, 0.52);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-width: 0;
+  height: 54px;
+  margin: 0;
+  padding: 0 16px;
+  border: 1px solid rgba(221, 214, 231, 0.28);
+  border-radius: 12px;
+  outline: none;
+  background: rgba(7, 8, 12, 0.74);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  color: #f7f4f3;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 520;
+  line-height: 1;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.input::placeholder {
+  color: rgba(238, 234, 239, 0.34);
+}
+
+.input:hover,
+.select:hover {
+  border-color: rgba(221, 214, 231, 0.42);
+  background: rgba(12, 13, 18, 0.92);
+}
+
+.input:focus,
+.select:focus {
+  border-color: rgba(124, 110, 255, 0.86);
+  background: rgba(13, 14, 20, 0.98);
+  box-shadow: 0 0 0 3px rgba(124, 110, 255, 0.16), 0 0 28px rgba(124, 110, 255, 0.08);
+}
+
+.select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.consentGroup {
+  display: grid;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.checkbox {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  margin: 0;
+  color: rgba(244, 240, 239, 0.78);
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.checkbox input {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  border: 1px solid rgba(226, 219, 234, 0.38);
+  border-radius: 5px;
+  background: rgba(7, 8, 12, 0.82);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.checkbox input::before {
+  content: "";
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid #171219;
+  border-bottom: 2px solid #171219;
+  transform: rotate(-45deg) scale(0);
+  transform-origin: center;
+  transition: transform 120ms ease;
+}
+
+.checkbox input:checked {
+  border-color: #d9c7f4;
+  background: linear-gradient(135deg, #f0e6d8, #c9b1e7);
+  box-shadow: 0 0 18px rgba(124, 110, 255, 0.18);
+}
+
+.checkbox input:checked::before {
+  transform: rotate(-45deg) scale(1);
+}
+
+.checkbox input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 110, 255, 0.2);
+}
+
+.optionalConsent {
+  color: rgba(244, 240, 239, 0.56);
+}
+
+.actions {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.submit {
+  min-height: 54px;
+  padding-inline: 22px;
+}
+
+.status {
+  max-width: 620px;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.statusError {
+  color: #ff9c9c;
+}
+
+.statusSuccess {
+  color: #92ecc1;
+}
+
+.statusLoading {
+  color: rgba(238, 234, 239, 0.72);
+}
+
+.accountPrompt {
+  margin: 0;
+  color: rgba(238, 234, 239, 0.68);
+  font-size: 0.88rem;
+}
+
+.accountPrompt a {
+  color: #eee7ff;
+  text-decoration: none;
+}
+
+.accountPrompt a:hover {
+  text-decoration: underline;
+}
+
+.spamField {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 760px) {
+  .panel {
+    padding: 26px 20px;
+    border-radius: 24px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .heading {
+    margin-bottom: 24px;
+  }
+
+  .heading h2 {
+    font-size: clamp(1.8rem, 9vw, 2.35rem);
+  }
+
+  .input,
+  .select {
+    height: 52px;
+  }
+
+  .submit {
+    width: 100%;
+  }
+}
