@@ -1,17 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Script from "next/script";
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 type Mode = "register" | "login";
-
-declare global {
-  interface Window {
-    turnstile?: { reset: () => void };
-  }
-}
 
 function safeNextPath(value: string | null, fallback: string) {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return fallback;
@@ -87,7 +81,6 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
 
   return (
     <form className="identity-auth-form" onSubmit={submit} noValidate>
-      {turnstileSiteKey ? <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" /> : null}
       <label>
         <span>Email</span>
         <input name="email" type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(fields.email)} />
@@ -112,7 +105,7 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
           </label>
         </>
       ) : null}
-      {turnstileSiteKey ? <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-action={mode} data-theme="dark" /> : null}
+      <TurnstileWidget siteKey={turnstileSiteKey} action={mode} />
       {!turnstileReady ? <p className="identity-form-status error" role="alert">Security verification is unavailable.</p> : null}
       {error ? <p className="identity-form-status error" role="alert">{error}</p> : null}
       <button className="button button-primary" type="submit" disabled={busy || !turnstileReady}>
