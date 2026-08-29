@@ -8,6 +8,8 @@ const hub = read("components/closed-beta-access-hub.tsx");
 const distribution = read("lib/beta-distribution.ts");
 const ownerAccess = read("lib/owner-access.ts");
 const envExample = read(".env.example");
+const closedBetaPage = read("app/closed-beta/page.tsx");
+const artworkPath = "public/assets/closed-beta/fatedrop-closed-beta-community.webp";
 
 test("approved FateDrop ID owns the Web and App handoff", () => {
   assert.match(account, /betaAccessIsApproved\(snapshot\.betaAccess\)/);
@@ -40,4 +42,11 @@ test("Owner gets a canonical pending-request badge and admin link", () => {
 test("pending account does not get an active dashboard shortcut", () => {
   assert.match(account, /betaApproved \? <Link className="button button-primary" href="\/dashboard"/);
   assert.match(account, /href="\/beta-pending">View beta status/);
+});
+
+test("closed beta landing uses the supplied FateDrop community artwork and keeps the canonical request path", () => {
+  assert.equal(fs.existsSync(artworkPath), true);
+  assert.match(closedBetaPage, /\/assets\/closed-beta\/fatedrop-closed-beta-community\.webp/);
+  assert.match(closedBetaPage, /AccountAuthForm mode="register"/);
+  assert.match(closedBetaPage, /Web \+ App unlock together/);
 });
