@@ -45,7 +45,6 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
     }
     const body = mode === "register"
       ? {
-          displayName: data.get("displayName"),
           email: data.get("email"),
           password: data.get("password"),
           confirmPassword: data.get("confirmPassword"),
@@ -89,13 +88,6 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
   return (
     <form className="identity-auth-form" onSubmit={submit} noValidate>
       {turnstileSiteKey ? <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" /> : null}
-      {mode === "register" ? (
-        <label>
-          <span>Display name</span>
-          <input name="displayName" autoComplete="name" placeholder="How you appear in FateDrop" aria-invalid={Boolean(fields.displayName)} />
-          {fields.displayName ? <small className="field-error">{fields.displayName}</small> : null}
-        </label>
-      ) : null}
       <label>
         <span>Email</span>
         <input name="email" type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={Boolean(fields.email)} />
@@ -124,10 +116,12 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
       {!turnstileReady ? <p className="identity-form-status error" role="alert">Security verification is unavailable.</p> : null}
       {error ? <p className="identity-form-status error" role="alert">{error}</p> : null}
       <button className="button button-primary" type="submit" disabled={busy || !turnstileReady}>
-        {busy ? "Connecting…" : mode === "register" ? "Request beta access" : "Enter the network"} <span>↗</span>
+        {busy ? mode === "register" ? "Sending request…" : "Signing in…" : mode === "register" ? "Request closed beta access" : "Sign in"} <span>↗</span>
       </button>
       <p className="identity-auth-switch">
-        {mode === "register" ? <>Already have a FateDrop ID? <Link href={`/account/login${nextQuery}`}>Sign in</Link>.</> : <>New to FateDrop? <Link href={`/account/register${nextQuery}`}>Create your ID</Link>.</>}
+        {mode === "register"
+          ? <>Already requested access? <Link href={`/account/login${nextQuery}`}>Sign in</Link>.</>
+          : <>Need closed beta access? <Link href={`/closed-beta${nextQuery}`}>Request access</Link>.</>}
       </p>
       <style>{`
         .identity-consent-field{display:grid!important;grid-template-columns:20px 1fr!important;gap:2px 10px!important;align-items:start!important}.identity-consent-field>input{width:17px!important;height:17px!important;margin-top:2px!important}.identity-consent-field>span{font-size:11px!important;line-height:1.55!important}.identity-consent-field .field-error{grid-column:2}.identity-consent-field a{text-decoration:underline;text-underline-offset:2px}

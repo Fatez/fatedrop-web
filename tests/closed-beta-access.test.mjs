@@ -50,10 +50,10 @@ test("operator approval and revoke are database-side and audited", () => {
   assert.doesNotMatch(migrationSql, /email\s*=|lower\(email\)/i);
 });
 
-test("signup means beta request, not approval", () => {
+test("signup means one closed beta request, not approval", () => {
   assert.match(register, /accessAllowed: false/);
   assert.match(register, /status: "pending"/);
-  assert.match(authForm, /Request beta access/);
+  assert.match(authForm, /Request closed beta access/);
   assert.match(authForm, /router\.push\("\/beta-pending"\)/);
   assert.doesNotMatch(register, /status: "approved"/);
 });
@@ -79,7 +79,7 @@ test("dashboard and Discord stay closed until approval", () => {
   assert.match(discordConnect, /betaAccessIsApproved\(snapshot\.betaAccess\)/);
   assert.match(discordConnect, /\/beta-pending/);
   assert.match(discordSync, /betaAccessDeniedResponse\(snapshot\.betaAccess\)/);
-  assert.match(pendingPage, /TestFlight link, paid membership or beta signup form does not bypass approval/);
+  assert.match(pendingPage, /Installing the App does not bypass approval/);
 });
 
 test("mobile session reports pending state but grants zero capabilities", () => {

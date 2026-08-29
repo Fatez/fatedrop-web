@@ -2,13 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AccountSignOut } from "@/components/account-signout";
+import { ClosedBetaAccessHub } from "@/components/closed-beta-access-hub";
 import { FateSignalField } from "@/components/fate-signal-field";
 import { DiscordSyncButton } from "@/components/discord-sync-button";
 import { DiscordUnlinkButton } from "@/components/discord-unlink-button";
 import { SiteShell } from "@/components/page-shell";
 import { ProfileEditor } from "@/components/profile-editor";
 import { getCurrentSnapshot } from "@/lib/auth";
+import { betaAccessIsApproved } from "@/lib/beta-access";
+import { getBetaDistributionLinks } from "@/lib/beta-distribution";
 import { DISCORD_COMMUNITY_OPEN, DISCORD_INVITE_URL, formatMemberSince, hasPremiumAccess, membershipLabel, networkAge } from "@/lib/membership";
+import { countPendingBetaRequestsForOwner, getOwnerRole } from "@/lib/owner-access";
 import { serverNowSeconds } from "@/lib/server-time";
 
 export const metadata: Metadata = { title: "My FateDrop ID", description: "Your FateDrop profile, membership and connected network access.", robots: { index: false, follow: false } };
@@ -27,6 +31,18 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   if (!loadedSnapshot) redirect("/account/login?next=/account");
   const snapshot = loadedSnapshot;
   const params = await searchParams;
+  const betaApproved = betaAccessIsApproved(snapshot.betaAccess);
+  const ownerRole = await getOwnerRole(snapshot.account.id);
+  let ownerPendingCount = 0;
+  if (ownerRole) {
+    try {
+      ownerPendingCount = await countPendingBetaRequestsForOwner(snapshot.account.id);
+    } catch {
+      ownerPendingCount = 0;
+    }
+  }
+  const betaLinks = betaApproved ? getBetaDistributionLinks() : { ios: null, android: null };
+  const betaAccessLabel = betaApproved ? "Closed Beta Approved" : snapshot.betaAccess.status === "revoked" ? "Beta Revoked" : "Beta Pending";
   const premium = hasPremiumAccess(snapshot.membership);
   const membership = membershipLabel(snapshot.membership);
   const memberSince = formatMemberSince(snapshot.account.createdAt);
@@ -47,15 +63,15 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <h1>Your account.<br/><em>One network identity.</em></h1>
             <p>Manage the identity that follows you across FateDrop Web, the App and connected Discord. Membership and access stay tied to this FateDrop ID rather than being recreated on each surface.</p>
             <div className="fd-account-status-rail">
-              <span><small>ACCESS</small><b>{premium ? "FateDrop Plus" : "Free"}</b></span>
+              <span><small>ACCESS</small><b>{betaAccessLabel}</b></span>
               <span><small>DISCORD</small><b>{snapshot.discord ? discordRoleSynced ? "Premium synced" : "Linked" : "Not linked"}</b></span>
               <span><small>NETWORK AGE</small><b>{age}</b></span>
             </div>
-            <div className="button-row"><Link className="button button-primary" href="/dashboard">Open dashboard <span>↗</span></Link><AccountSignOut /></div>
+            <div className="button-row">{betaApproved ? <Link className="button button-primary" href="/dashboard">Open dashboard <span>↗</span></Link> : <Link className="button button-secondary" href="/beta-pending">View beta status <span>↗</span></Link>}<AccountSignOut /></div>
           </div>
 
           <article className="fate-id-card fd-account-id-card">
-            <div className="fate-id-top"><span>FATEDROP / NETWORK ID</span><i className={premium ? "live" : ""}>{premium ? "PLUS ACTIVE" : "FREE NETWORK"}</i></div>
+            <div className="fate-id-top"><span>FATEDROP / NETWORK ID</span><i className={betaApproved ? "live" : ""}>{betaApproved ? "BETA APPROVED" : snapshot.betaAccess.status === "revoked" ? "BETA REVOKED" : "BETA PENDING"}</i></div>
             <div className="fate-id-person">
               <div className="fate-avatar">{snapshot.account.avatarUrl ? <span className="fate-avatar-image" style={{ backgroundImage: `url("${snapshot.account.avatarUrl}")` }} /> : <strong>{initials(snapshot.account.displayName)}</strong>}<span /><a className="fate-avatar-edit" href="#profile" aria-label="Edit profile">✎</a></div>
               <div><small>@{snapshot.account.username}</small><h2>{snapshot.account.displayName}</h2><p>{snapshot.account.fateId}</p></div>
@@ -66,7 +82,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </section>
 
         {(params.welcome === "1" || params.billing === "success" || params.discord) ? <section className="fd-account-notices" role="status">
-          {params.welcome === "1" ? <p><b>Your FateDrop ID is ready.</b> You can stay on the free network, review Plus, connect the free Discord community or complete your profile below.</p> : null}
+          {params.welcome === "1" ? <p><b>Your FateDrop ID is ready.</b> Closed-beta product access stays Pending until Owner approval; you only need this one FateDrop ID for Web and App.</p> : null}
           {params.billing === "success" ? <p><b>Stripe hand-off complete.</b> Membership becomes active only when the verified webhook updates this FateDrop ID.</p> : null}
           {params.discord === "linked" ? <p><b>Discord connected.</b> Server membership and the Premium role are synced.</p> : null}
           {params.discord === "linked-free" ? <p><b>Discord connected.</b> You are in the free FateDrop community and the Premium role is kept off until this FateDrop ID is eligible.</p> : null}
@@ -76,6 +92,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           {params.discord === "setup" ? <p><b>Discord linking is not fully configured.</b> FateDrop will not claim server access until the guild join path is available.</p> : null}
           {params.discord && !["linked", "linked-free", "linked-free-role-error", "join", "join-error", "setup"].includes(params.discord) ? <p><b>Discord link needs another attempt.</b> Your FateDrop account itself is unchanged.</p> : null}
         </section> : null}
+
+        <ClosedBetaAccessHub approved={betaApproved} status={snapshot.betaAccess.status} links={betaLinks} isOwner={Boolean(ownerRole)} pendingCount={ownerPendingCount} />
 
         <section className="fd-account-grid">
           <article className="fd-account-panel fd-membership-panel">
