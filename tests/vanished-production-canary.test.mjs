@@ -6,30 +6,42 @@ import test from "node:test";
 const root = process.cwd();
 const canary = fs.readFileSync(path.join(root, "lib/push-canary.ts"), "utf8");
 const route = fs.readFileSync(path.join(root, "app/api/dashboard/push-canary/route.ts"), "utf8");
-const deploy = fs.readFileSync(path.join(root, ".github/workflows/deploy-production.yml"), "utf8");
+const workflow = fs.readFileSync(path.join(root, ".github/workflows/five-push-production-canary.yml"), "utf8");
 
-test("Vanished production canary reuses the canonical outbox and dispatcher", () => {
+test("production canary covers all four lifecycle pushes plus Local Radar", () => {
+  for (const kind of ["whisper", "echo", "manifested", "vanished", "local-radar"]) {
+    assert.ok(canary.includes(`kind: \"${kind}\"`), `missing ${kind} canary`);
+  }
+  for (const stage of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) {
+    assert.ok(canary.includes(`stage: \"${stage}\"`), `missing ${stage} stage`);
+  }
+  assert.ok(canary.includes('route: "alerts"'));
+  assert.ok(canary.includes('route: "local-radar"'));
   assert.ok(canary.includes("fatedrop_notification_outbox"));
   assert.ok(canary.includes("fatedrop_notification_delivery_attempts"));
   assert.ok(canary.includes("dispatchCanonicalPushAlerts"));
-  assert.ok(canary.includes("event_type"));
-  assert.ok(canary.includes("'vanished'"));
-  assert.ok(canary.includes('route: "alerts"'));
-  assert.ok(canary.includes('stage: "VANISHED"'));
-  assert.equal(canary.includes("exp.host"), false, "canary must not create a second Expo transport");
+  assert.equal(canary.includes("exp.host"), false, "canary must reuse canonical Expo transport");
 });
 
-test("Vanished production canary fails closed instead of choosing between users", () => {
+test("production canary uses approved beta entitlement and fails closed on ambiguity/preferences", () => {
+  assert.ok(canary.includes("fatedrop_beta_access"));
+  assert.ok(canary.includes("ba.status='approved'"));
+  assert.ok(canary.includes("betaPremiumEnabled"));
   assert.ok(canary.includes("eligibleUsers.size !== 1"));
   assert.ok(canary.includes("ambiguous_eligible_push_users"));
-  assert.ok(canary.includes("vanished_enabled"));
-  assert.ok(canary.includes("push_enabled"));
+  for (const preference of ["push_enabled", "whisper_enabled", "echo_enabled", "manifested_enabled", "vanished_enabled"]) {
+    assert.ok(canary.includes(preference), `missing preference gate ${preference}`);
+  }
 });
 
-test("canary endpoint stays server-authenticated and deployment trigger is one-shot", () => {
+test("canary endpoint stays server-authenticated and one-shot workflow runs only after production deploy", () => {
   assert.ok(route.includes("FATEDROP_PUSH_CRON_SECRET"));
   assert.ok(route.includes("timingSafeEqual"));
-  assert.ok(deploy.includes("[vanished-canary]"));
-  assert.ok(deploy.includes("/api/dashboard/push-canary"));
-  assert.ok(deploy.includes("providerMessageId"));
+  assert.ok(route.includes("runProductionPushCanarySuite"));
+  assert.ok(workflow.includes('workflows: ["Deploy FateDrop Web Production"]'));
+  assert.ok(workflow.includes("[five-push-canary]"));
+  assert.ok(workflow.includes("FATEDROP_PUSH_CRON_SECRET"));
+  assert.ok(workflow.includes("/api/dashboard/push-canary"));
+  assert.ok(workflow.includes("outcomes.length !== 5"));
+  assert.ok(workflow.includes("providerMessageId"));
 });

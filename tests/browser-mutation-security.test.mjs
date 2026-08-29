@@ -87,5 +87,5 @@ test("explicit server-to-server mutation exemptions retain their stronger authen
   assert.ok(pushCanary.includes("timingSafeEqual"));
   assert.ok(pushCanary.includes("FATEDROP_PUSH_CRON_SECRET"));
   assert.ok(pushCanary.includes('authorization.startsWith("Bearer ")'));
-  assert.ok(pushCanary.includes("runVanishedProductionCanary"));
+  assert.ok(pushCanary.includes("runProductionPushCanarySuite"));
 });
