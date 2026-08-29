@@ -47,9 +47,13 @@ export async function POST(request: Request) {
       { status: 200, headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
+    const providerCode = error instanceof PasswordResetEmailUnavailableError ? error.providerCode : null;
     const detail = error instanceof PasswordResetEmailUnavailableError
-      ? "Cloudflare Email rejected or could not accept the password-reset transport canary."
+      ? `Cloudflare Email rejected or could not accept the password-reset transport canary${providerCode ? ` (${providerCode})` : ""}.`
       : "Password-reset transport canary failed.";
-    return Response.json({ error: detail }, { status: 503, headers: { "cache-control": "no-store" } });
+    return Response.json(
+      { error: detail, providerCode },
+      { status: 503, headers: { "cache-control": "no-store" } },
+    );
   }
 }

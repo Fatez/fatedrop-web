@@ -203,6 +203,42 @@ jobs:
             if (result.vanishedDefaultVerified !== true || Number(result.historicalAsymmetryCount) !== 0) throw new Error("Lifecycle preference migration verification failed");
           '
 
+      - name: Prove password reset email transport
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WEB="https://fatedrop.co.uk"
+          email_status="$(curl --silent --show-error --retry 2 --retry-delay 2 \
+            --output /tmp/password-reset-email-canary.json \
+            --write-out '%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+            -H "Accept: application/json" \
+            "$WEB/api/dashboard/password-reset-email-canary")"
+          if [ "$email_status" != "200" ]; then
+            echo "Password reset email transport canary returned HTTP $email_status"
+            node -e '
+              const fs=require("fs");
+              const body=fs.existsSync("/tmp/password-reset-email-canary.json") ? fs.readFileSync("/tmp/password-reset-email-canary.json","utf8") : "";
+              try {
+                const result=JSON.parse(body);
+                console.error(`Password reset email canary error: ${String(result.error || "unknown").slice(0,300)}`);
+              } catch {
+                console.error("Password reset email canary returned a non-JSON error response.");
+              }
+            '
+            exit 23
+          fi
+          node -e '
+            const fs=require("fs");
+            const result=JSON.parse(fs.readFileSync("/tmp/password-reset-email-canary.json","utf8"));
+            if (result.accepted !== true || result.recipient !== "fatedropuk@gmail.com") {
+              throw new Error("Password reset email transport canary was not accepted for the temporary Owner mailbox");
+            }
+            console.log("Password reset email transport accepted for temporary Owner mailbox.");
+          '
+
       - name: Exercise canonical production push dispatcher
         if: steps.latest.outputs.deploy == 'true'
         shell: bash
