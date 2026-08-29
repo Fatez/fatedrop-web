@@ -5,6 +5,7 @@ import "./accessibility.css";
 import "./koru-theme.css";
 import "./koru-product-theme.css";
 import "./companion-presentation.css";
+import "./lifecycle-palette.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalSiteUrl()),
