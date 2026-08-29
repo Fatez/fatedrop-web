@@ -33,6 +33,8 @@ test("hello owner bootstrap is registered in the one canonical production migrat
   assert.match(productionMigrations, /2026-08-29-beta-owner-access\.sql/);
   assert.match(productionMigrations, /OWNER_EMAIL = "hello@fatedrop\.co\.uk"/);
   assert.match(productionMigrations, /ownerRows\.length !== 1/);
+  assert.match(productionMigrations, /found \$\{ownerRows\.length\}/);
+  assert.doesNotMatch(productionMigrations, /ownerRows\[0\][\s\S]*ownerRows\.length !== 1/);
   assert.match(productionMigrations, /fatedrop_grant_owner/);
   assert.match(productionMigrations, /migration:hello-owner-bootstrap/);
   assert.match(productionMigrations, /fatedrop_schema_migrations/);
