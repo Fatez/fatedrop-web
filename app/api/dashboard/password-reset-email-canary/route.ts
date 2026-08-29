@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
+import { assertSameOrigin } from "@/lib/auth";
 import {
   getPasswordResetEmailContext,
   PasswordResetEmailUnavailableError,
@@ -25,6 +26,12 @@ function authorized(request: Request) {
 }
 
 export async function POST(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch {
+    return Response.json({ error: "Email canary request rejected." }, { status: 403, headers: { "cache-control": "no-store" } });
+  }
+
   if (!authorized(request)) {
     return Response.json({ error: "Email canary is not authorised." }, { status: 401, headers: { "cache-control": "no-store" } });
   }
