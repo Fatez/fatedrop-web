@@ -1,5 +1,6 @@
 import type { NeonQueryFunction } from "@neondatabase/serverless";
 import type { AccountSnapshot, MembershipRecord } from "./account-storage";
+import { betaAccessIsApproved, getBetaAccess, type BetaAccessSnapshot } from "./beta-access";
 
 export type BetaPremiumAccessGrant = {
   type: "beta-premium";
@@ -7,6 +8,7 @@ export type BetaPremiumAccessGrant = {
 };
 
 export type AccessSnapshot = AccountSnapshot & {
+  betaAccess: BetaAccessSnapshot;
   accessGrant: BetaPremiumAccessGrant | null;
 };
 
@@ -17,8 +19,17 @@ export function betaPremiumEnabled() {
 export async function applyTemporaryBetaPremium(snapshot: AccountSnapshot | null): Promise<AccessSnapshot | null> {
   if (!snapshot) return null;
 
+  const betaAccess = await getBetaAccess(snapshot.account.id);
+  const base = { ...snapshot, betaAccess };
+
+  // Membership, beta-lead status and payment can never bypass the closed-beta
+  // approval gate. Pending/revoked accounts remain authenticated but unentitled.
+  if (!betaAccessIsApproved(betaAccess)) {
+    return { ...base, accessGrant: null };
+  }
+
   if (!betaPremiumEnabled()) {
-    return { ...snapshot, accessGrant: null };
+    return { ...base, accessGrant: null };
   }
 
   const membershipAlreadyPremium =
@@ -26,7 +37,7 @@ export async function applyTemporaryBetaPremium(snapshot: AccountSnapshot | null
     (snapshot.membership.status === "active" || snapshot.membership.status === "trialing");
 
   if (membershipAlreadyPremium || !(await collectorIsInBeta(snapshot.account.email))) {
-    return { ...snapshot, accessGrant: null };
+    return { ...base, accessGrant: null };
   }
 
   const membership: MembershipRecord = {
@@ -36,7 +47,7 @@ export async function applyTemporaryBetaPremium(snapshot: AccountSnapshot | null
   };
 
   return {
-    ...snapshot,
+    ...base,
     membership,
     accessGrant: { type: "beta-premium", temporary: true },
   };
