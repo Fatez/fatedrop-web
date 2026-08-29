@@ -47,3 +47,11 @@ test("Fate Network homepage panel explains the actual FateDrop intelligence jour
   assert.match(fateNetworkSource, /CHECKOUT STAYS WITH THE STORE/);
   assert.doesNotMatch(fateNetworkSource, /journey-thumb|Search the connected market/);
 });
+
+test("Fate Network signal lifecycle uses the locked FateDrop palette", () => {
+  assert.match(fateNetworkSource, /WHISPER[\s\S]*#D2B66F/);
+  assert.match(fateNetworkSource, /ECHO[\s\S]*#D9CDBB/);
+  assert.match(fateNetworkSource, /MANIFESTED[\s\S]*#7C6EFF/);
+  assert.match(fateNetworkSource, /VANISHED[\s\S]*#EF4D5A/);
+  assert.doesNotMatch(fateNetworkSource, /span:nth-of-type\(3\)\{color:#91a995/);
+});
