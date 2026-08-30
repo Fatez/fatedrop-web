@@ -28,6 +28,7 @@ export function pushNotificationBranding(input: { platform?: unknown; stage?: un
   return { companion: "fatedrop", androidIcon: null };
 }
 
-export function expoAndroidIcon(platform: unknown, branding: PushNotificationBranding) {
+export function expoAndroidIcon(platform: unknown, branding: PushNotificationBranding, enabled = process.env.FATEDROP_ANDROID_STAGE_NOTIFICATION_ICONS === "true") {
+  if (!enabled) return null;
   return typeof platform === "string" && platform.trim().toLowerCase() === "android" ? branding.androidIcon : null;
 }
