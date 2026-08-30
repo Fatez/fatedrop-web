@@ -122,6 +122,7 @@ export function publicStage(state: string): CanonicalSignalStage {
 }
 
 const canonicalStages = new Set<CanonicalSignalStage>(["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]);
+const canonicalLifecycleStates: readonly CloudLifecycleState[] = ["whisper", "echo", "manifested", "vanished"];
 const priceVerdicts = new Set<FatePriceVerdict>(["LOWEST_KNOWN", "BETTER_OFFER_FOUND", "NO_FAIR_COMPARISON"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -159,6 +160,30 @@ function isCanonicalAlert(value: unknown): value is CanonicalAlert {
   return true;
 }
 
+function sortNewestFirst(alerts: CanonicalAlert[]) {
+  return alerts.sort((left, right) => {
+    const rightAt = Date.parse(right.detectedAt);
+    const leftAt = Date.parse(left.detectedAt);
+    return (Number.isFinite(rightAt) ? rightAt : 0) - (Number.isFinite(leftAt) ? leftAt : 0);
+  });
+}
+
+async function readCanonicalAlertWindow({
+  id,
+  state,
+  limit,
+}: {
+  id?: string | null;
+  state?: CloudLifecycleState | null;
+  limit: number;
+}) {
+  const response = await getLiveCloudAlerts({ id, state, limit });
+  if (!response?.success || response.available !== true || response.source !== "FATEDROP_CLOUD" || !Array.isArray(response.alerts)) {
+    throw new Error("Canonical Cloud alert feed unavailable");
+  }
+  return response.alerts.filter(isCanonicalAlert).slice(0, limit);
+}
+
 export async function listCanonicalAlerts({
   id,
   state,
@@ -169,9 +194,20 @@ export async function listCanonicalAlerts({
   limit?: number;
 } = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
-  const response = await getLiveCloudAlerts({ id, state, limit: safeLimit });
-  if (!response?.success || response.available !== true || response.source !== "FATEDROP_CLOUD" || !Array.isArray(response.alerts)) {
-    throw new Error("Canonical Cloud alert feed unavailable");
+
+  // A specific alert or lifecycle always uses one Cloud-owned stage window.
+  if (id || state) return readCanonicalAlertWindow({ id, state, limit: safeLimit });
+
+  // Unscoped lifecycle consumers must never read one mixed newest-N window and
+  // bucket it afterwards. Read the same four canonical stage windows used by
+  // Mobile, then compose them for "All" views. This makes Web and App share the
+  // same lifecycle source semantics while keeping Cloud as the only authority.
+  const windows = await Promise.all(
+    canonicalLifecycleStates.map((lifecycleState) => readCanonicalAlertWindow({ state: lifecycleState, limit: safeLimit })),
+  );
+  const byId = new Map<string, CanonicalAlert>();
+  for (const window of windows) {
+    for (const alert of window) byId.set(alert.id, alert);
   }
-  return response.alerts.filter(isCanonicalAlert).slice(0, safeLimit);
+  return sortNewestFirst([...byId.values()]);
 }
