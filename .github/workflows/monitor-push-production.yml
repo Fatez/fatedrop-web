@@ -26,3 +26,24 @@ jobs:
             echo "FateDrop production push health check failed with HTTP $code"
             exit 1
           }
+
+      - name: Report redacted Local Radar TEST ONLY delivery evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --retry 3 --retry-delay 5 \
+            --output /tmp/local-radar-test-delivery.json \
+            --write-out '%{http_code}' \
+            'https://fatedrop.co.uk/api/health/local-radar-test-delivery?issue=304')"
+          test "$code" = "200" || {
+            echo "Local Radar TEST ONLY delivery diagnostic failed with HTTP $code"
+            exit 1
+          }
+          node <<'NODE'
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/local-radar-test-delivery.json', 'utf8'));
+          if (result?.ok !== true || result?.eventId !== 'local-radar-operator-test:304') {
+            throw new Error('Local Radar TEST ONLY delivery diagnostic contract mismatch');
+          }
+          console.log(JSON.stringify(result));
+          NODE
