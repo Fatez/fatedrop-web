@@ -5,6 +5,7 @@ import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts
 import { listCanonicalAlertDeliveries, type CanonicalAlertDelivery } from "@/lib/canonical-alert-delivery";
 import { listCanonicalAlertPresentations, type CanonicalAlertPresentation } from "@/lib/canonical-alert-presentation";
 import { hasCapability } from "@/lib/entitlements";
+import type { CloudLifecycleState } from "@/lib/live-signals";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
 
 export const runtime = "nodejs";
@@ -20,6 +21,8 @@ type CanonicalAlertForMobile = CanonicalAlert & {
   };
   presentation: CanonicalAlertPresentation | null;
 };
+
+const lifecycleStates = new Set<CloudLifecycleState>(["whisper", "echo", "manifested", "vanished"]);
 
 function freeAlert(alert: CanonicalAlertForMobile): CanonicalAlertForMobile {
   return {
@@ -78,15 +81,20 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const requestedId = url.searchParams.get("id")?.trim() || null;
+    const requestedStateRaw = url.searchParams.get("state")?.trim().toLowerCase() || null;
+    if (requestedStateRaw && !lifecycleStates.has(requestedStateRaw as CloudLifecycleState)) {
+      return Response.json({ error: "Invalid lifecycle state." }, { status: 400, headers: { "cache-control": "private, no-store" } });
+    }
+    const requestedState = requestedStateRaw as CloudLifecycleState | null;
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
 
-    // Cloud owns canonical lifecycle and product classification truth. Fetch extra
-    // history for inbox depth, then apply only the user's notification preferences
-    // at this gateway. Do not reclassify or discard canonical alerts from title text.
+    // Cloud owns canonical lifecycle and product classification truth. Stage filtering
+    // is passed to Cloud before LIMIT so one lifecycle burst cannot starve another.
+    // User notification preferences remain a downstream visibility filter only.
     const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
-    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, limit: retrievalLimit });
+    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, state: requestedState, limit: retrievalLimit });
     const [deliveries, presentations] = await Promise.all([
       listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(retrievalLimit, canonicalAlerts.length) }),
       listCanonicalAlertPresentations({ id: requestedId, limit: retrievalLimit }),
@@ -97,7 +105,7 @@ export async function GET(request: Request) {
       .slice(0, limit);
     const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);
 
-    return Response.json({ success: true, premium, count: alerts.length, alerts }, { headers: { "cache-control": "private, no-store" } });
+    return Response.json({ success: true, premium, state: requestedState, count: alerts.length, alerts }, { headers: { "cache-control": "private, no-store" } });
   } catch {
     return Response.json({ error: "Canonical alert history is temporarily unavailable." }, { status: 503, headers: { "cache-control": "private, no-store" } });
   }

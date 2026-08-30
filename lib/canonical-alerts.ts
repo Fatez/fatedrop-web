@@ -1,4 +1,4 @@
-import { getLiveCloudAlerts } from "@/lib/live-signals";
+import { getLiveCloudAlerts, type CloudLifecycleState } from "@/lib/live-signals";
 import type { ProductAlertClassification } from "@/lib/product-alert-intelligence";
 
 export type FatePriceVerdict = "LOWEST_KNOWN" | "BETTER_OFFER_FOUND" | "NO_FAIR_COMPARISON";
@@ -159,9 +159,17 @@ function isCanonicalAlert(value: unknown): value is CanonicalAlert {
   return true;
 }
 
-export async function listCanonicalAlerts({ id, limit = 50 }: { id?: string | null; limit?: number } = {}) {
+export async function listCanonicalAlerts({
+  id,
+  state,
+  limit = 50,
+}: {
+  id?: string | null;
+  state?: CloudLifecycleState | null;
+  limit?: number;
+} = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
-  const response = await getLiveCloudAlerts({ id, limit: safeLimit });
+  const response = await getLiveCloudAlerts({ id, state, limit: safeLimit });
   if (!response?.success || response.available !== true || response.source !== "FATEDROP_CLOUD" || !Array.isArray(response.alerts)) {
     throw new Error("Canonical Cloud alert feed unavailable");
   }

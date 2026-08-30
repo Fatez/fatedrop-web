@@ -134,10 +134,21 @@ export async function getLiveCloudSignalsByState({
   return validCloudContract(result) ? result : null;
 }
 
-export async function getLiveCloudAlerts({ id, limit = 50, timeoutMs = 8_000 }: { id?: string | null; limit?: number; timeoutMs?: number } = {}) {
+export async function getLiveCloudAlerts({
+  id,
+  state,
+  limit = 50,
+  timeoutMs = 8_000,
+}: {
+  id?: string | null;
+  state?: CloudLifecycleState | null;
+  limit?: number;
+  timeoutMs?: number;
+} = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
   const params = new URLSearchParams({ detail: "alerts", limit: String(safeLimit) });
   if (id) params.set("id", id);
+  if (state) params.set("state", state);
   const result = await liveFetch<CloudAlertResponse>("/api/signals", params, timeoutMs);
   return validCloudContract(result) ? result : null;
 }
