@@ -1,0 +1,100 @@
+name: Audit FateDrop RRP Production
+
+on:
+  workflow_run:
+    workflows: ["Deploy FateDrop Web Production"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fatedrop-rrp-production-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout current production source
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Require production deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 2; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "Missing CLOUDFLARE_ACCOUNT_ID"; exit 2; }
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Rotate isolated RRP audit secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          audit_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$audit_secret"
+          printf '%s' "$audit_secret" | npx wrangler secret put FATEDROP_RRP_AUDIT_SECRET
+          printf 'FATEDROP_RRP_AUDIT_SECRET=%s\n' "$audit_secret" >> "$GITHUB_ENV"
+          unset audit_secret
+
+      - name: Read production RRP audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          WEB="https://fatedrop.co.uk"
+
+          public_status="$(curl --silent --show-error --retry 5 --retry-delay 3 \
+            --output /tmp/rrp-audit-public.json \
+            --write-out '%{http_code}' \
+            "$WEB/api/health/rrp-audit")"
+          test "$public_status" = "200" || {
+            echo "Public RRP aggregate audit returned HTTP $public_status"
+            exit 21
+          }
+
+          detail_status="$(curl --silent --show-error --retry 5 --retry-delay 3 \
+            --output /tmp/rrp-audit-detail.json \
+            --write-out '%{http_code}' \
+            -H "Authorization: Bearer $FATEDROP_RRP_AUDIT_SECRET" \
+            -H "Accept: application/json" \
+            "$WEB/api/health/rrp-audit?detail=1")"
+          test "$detail_status" = "200" || {
+            echo "Protected RRP detail audit returned HTTP $detail_status"
+            exit 22
+          }
+
+          node <<'NODE'
+          const fs = require('fs');
+          const publicAudit = JSON.parse(fs.readFileSync('/tmp/rrp-audit-public.json', 'utf8'));
+          const detailAudit = JSON.parse(fs.readFileSync('/tmp/rrp-audit-detail.json', 'utf8'));
+          if (publicAudit?.ok !== true || detailAudit?.ok !== true) throw new Error('RRP production audit contract mismatch');
+          if (JSON.stringify(publicAudit.totals) !== JSON.stringify(detailAudit.totals)) throw new Error('RRP public/detail aggregate mismatch');
+          if (!Array.isArray(detailAudit.candidates)) throw new Error('Protected RRP candidate list missing');
+          const report = {
+            auditedAt: detailAudit.auditedAt,
+            totals: detailAudit.totals,
+            byTcg: detailAudit.byTcg,
+            byProductType: detailAudit.byProductType,
+            verifiedSources: detailAudit.verifiedSources,
+            candidates: detailAudit.candidates,
+          };
+          console.log(JSON.stringify(report));
+          NODE
