@@ -6,7 +6,8 @@ const route = fs.readFileSync(new URL("../app/api/health/rrp-audit/route.ts", im
 
 test("RRP production audit is read-only and keeps detailed candidates protected", () => {
   assert.match(route, /export async function GET\(request: Request\)/);
-  assert.match(route, /FATEDROP_PUSH_CRON_SECRET/);
+  assert.match(route, /FATEDROP_RRP_AUDIT_SECRET/);
+  assert.doesNotMatch(route, /FATEDROP_PUSH_CRON_SECRET/);
   assert.match(route, /Detailed RRP audit is not authorised/);
   assert.match(route, /status: 401/);
   assert.match(route, /FROM fatedrop_product_identities/);
