@@ -7,8 +7,11 @@ import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const MAX_ATTEMPTS = 3;
 const SENDING_LEASE_SECONDS = 5 * 60;
-const WHISPER_BURST_WINDOW_SECONDS = 60;
-const WHISPER_BURST_MIN_SIZE = 5;
+const BURST_WINDOW_SECONDS = 60;
+const BURST_GRACE_SECONDS = 5;
+const BURST_MIN_SIZE = 5;
+
+type BurstControlledStage = "WHISPER" | "ECHO" | "VANISHED";
 
 type RecipientRow = {
   endpoint_id: string;
@@ -70,6 +73,20 @@ function dispatchEnabled() {
 function epoch(iso: string) {
   const value = Math.floor(new Date(iso).getTime() / 1000);
   return Number.isFinite(value) ? value : 0;
+}
+
+function burstControlledStage(stage: CanonicalAlert["fateStage"]): stage is BurstControlledStage {
+  return stage === "WHISPER" || stage === "ECHO" || stage === "VANISHED";
+}
+
+function stageLabel(stage: BurstControlledStage) {
+  if (stage === "WHISPER") return "Whisper";
+  if (stage === "ECHO") return "Echo";
+  return "Vanished";
+}
+
+function burstBucketClosed(bucket: number, measuredAt: number) {
+  return measuredAt >= ((bucket + 1) * BURST_WINDOW_SECONDS) + BURST_GRACE_SECONDS;
 }
 
 function stageEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
@@ -162,26 +179,33 @@ function individualPushRow(alert: CanonicalAlert, recipient: RecipientRow, now: 
   };
 }
 
-function whisperBurstPushRow(alerts: CanonicalAlert[], recipient: RecipientRow, bucket: number, now: number) {
+function burstSummaryPushRow(
+  stage: BurstControlledStage,
+  alerts: CanonicalAlert[],
+  recipient: RecipientRow,
+  bucket: number,
+  now: number,
+) {
   const ordered = [...alerts].sort((left, right) => epoch(left.detectedAt) - epoch(right.detectedAt) || left.id.localeCompare(right.id));
   const first = ordered[0];
   const last = ordered[ordered.length - 1];
+  const label = stageLabel(stage);
   return {
     id: randomUUID(),
-    dedupe_key: `push:whisper-burst:${bucket}:${recipient.endpoint_id}`,
+    dedupe_key: `push:${stage.toLowerCase()}-burst:${bucket}:${recipient.endpoint_id}`,
     user_id: recipient.user_id,
-    event_type: "whisper",
-    event_id: `sig_burst_${bucket}`,
+    event_type: stage.toLowerCase(),
+    event_id: `sig_summary_${stage.toLowerCase()}_${bucket}`,
     channel: "push",
-    title: "Whisper burst detected",
-    body: `${ordered.length} new Whisper signals detected. Open FateDrop to review.`,
+    title: `${label} activity`,
+    body: `${ordered.length} new ${label} signals detected. Open FateDrop to review.`,
     url: null,
     payload_json: {
       route: "alerts",
-      stage: "WHISPER",
-      alertId: first.id,
+      stage,
       summary: true,
       summaryCount: ordered.length,
+      summaryFirstAlertId: first.id,
       summaryWindowStart: first.detectedAt,
       summaryWindowEnd: last.detectedAt,
       endpointId: recipient.endpoint_id,
@@ -248,23 +272,28 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
 
   for (const recipient of recipients) {
     if (inQuietHours(recipient, nowDate)) continue;
-    const whisperBuckets = new Map<number, CanonicalAlert[]>();
+    const controlledBuckets = new Map<string, { stage: BurstControlledStage; bucket: number; alerts: CanonicalAlert[] }>();
 
     for (const alert of recent) {
       if (!stageEnabled(alert, recipient) || !productEnabled(alert, recipient)) continue;
-      if (alert.fateStage !== "WHISPER") {
+
+      if (alert.fateStage === "MANIFESTED") {
         queueRows.push(individualPushRow(alert, recipient, now));
         continue;
       }
-      const bucket = Math.floor(epoch(alert.detectedAt) / WHISPER_BURST_WINDOW_SECONDS);
-      const bucketAlerts = whisperBuckets.get(bucket) ?? [];
-      bucketAlerts.push(alert);
-      whisperBuckets.set(bucket, bucketAlerts);
+
+      if (!burstControlledStage(alert.fateStage)) continue;
+      const bucket = Math.floor(epoch(alert.detectedAt) / BURST_WINDOW_SECONDS);
+      if (!burstBucketClosed(bucket, measuredAt)) continue;
+      const key = `${alert.fateStage}:${bucket}`;
+      const existing = controlledBuckets.get(key) ?? { stage: alert.fateStage, bucket, alerts: [] };
+      existing.alerts.push(alert);
+      controlledBuckets.set(key, existing);
     }
 
-    for (const [bucket, bucketAlerts] of whisperBuckets) {
-      if (bucketAlerts.length >= WHISPER_BURST_MIN_SIZE) {
-        queueRows.push(whisperBurstPushRow(bucketAlerts, recipient, bucket, now));
+    for (const { stage, bucket, alerts: bucketAlerts } of controlledBuckets.values()) {
+      if (bucketAlerts.length >= BURST_MIN_SIZE) {
+        queueRows.push(burstSummaryPushRow(stage, bucketAlerts, recipient, bucket, now));
         continue;
       }
       for (const alert of bucketAlerts) queueRows.push(individualPushRow(alert, recipient, now));
