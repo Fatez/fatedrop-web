@@ -50,3 +50,29 @@ jobs:
           }
           console.log(JSON.stringify(result));
           NODE
+
+      - name: Report redacted burst-policy production evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --retry 3 --retry-delay 5 \
+            --output /tmp/push-burst.json \
+            --write-out '%{http_code}' \
+            'https://fatedrop.co.uk/api/health/push-burst')"
+          test "$code" = "200" || {
+            echo "Burst-policy production diagnostic failed with HTTP $code"
+            exit 1
+          }
+          node <<'NODE'
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/push-burst.json', 'utf8'));
+          if (result?.ok !== true) throw new Error('Burst-policy production diagnostic contract mismatch');
+          if (result.manifestedSummary !== 0) throw new Error('Manifested alerts must never be summarized');
+          if (result.invalidSummaryCount !== 0) throw new Error('Invalid burst summary detected');
+          if (result.summaryFailed !== 0) throw new Error('Failed burst summary detected');
+          if (result.summaryReceiptError !== 0) throw new Error('Burst summary receipt error detected');
+          if (result.summaryTotal > 0 && (!Number.isInteger(result.minSummaryCount) || result.minSummaryCount < 5)) {
+            throw new Error('Burst summary below minimum size detected');
+          }
+          console.log(JSON.stringify(result));
+          NODE
