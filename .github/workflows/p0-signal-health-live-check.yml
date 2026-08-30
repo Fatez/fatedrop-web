@@ -13,10 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect live push heartbeat and Signal health
+      - name: Inspect live push heartbeat and Signal health after fallback deploy
         shell: bash
         run: |
           set -euo pipefail
+          echo "post_web_fallback_deploy=true"
 
           push_code="$(curl --silent --show-error --output /tmp/push.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/push?detail=1' || true)"
           echo "push health HTTP $push_code"
@@ -45,6 +46,10 @@ jobs:
           console.log('signalHealth', {
             available: body.available === true,
             reason: body.reason ?? null,
+            lifecycleAbsentStages: Array.isArray(body?.lifecycle?.absentStages) ? body.lifecycle.absentStages : null,
+            deliveryIssues: body?.delivery?.issues ?? null,
+            retailerTotal: body?.retailers?.total ?? null,
+            discoveryAvailable: body?.discovery?.available ?? null,
           });
           NODE
 
