@@ -7,6 +7,8 @@ import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const MAX_ATTEMPTS = 3;
 const SENDING_LEASE_SECONDS = 5 * 60;
+const WHISPER_BURST_WINDOW_SECONDS = 60;
+const WHISPER_BURST_MIN_SIZE = 5;
 
 type RecipientRow = {
   endpoint_id: string;
@@ -136,6 +138,63 @@ function retryAt(now: number, attempts: number) {
   return now + Math.min(900, 30 * (2 ** Math.max(0, attempts - 1)));
 }
 
+function individualPushRow(alert: CanonicalAlert, recipient: RecipientRow, now: number) {
+  return {
+    id: randomUUID(),
+    dedupe_key: `push:${alert.id}:${recipient.endpoint_id}`,
+    user_id: recipient.user_id,
+    event_type: alert.fateStage.toLowerCase(),
+    event_id: alert.id,
+    channel: "push",
+    title: alert.notification.title,
+    body: alert.notification.body,
+    url: alert.productUrl,
+    payload_json: {
+      ...alert.notification.data,
+      endpointId: recipient.endpoint_id,
+      expoPushToken: recipient.expo_push_token,
+    },
+    state: "pending",
+    attempts: 0,
+    next_attempt_at: now,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function whisperBurstPushRow(alerts: CanonicalAlert[], recipient: RecipientRow, bucket: number, now: number) {
+  const ordered = [...alerts].sort((left, right) => epoch(left.detectedAt) - epoch(right.detectedAt) || left.id.localeCompare(right.id));
+  const first = ordered[0];
+  const last = ordered[ordered.length - 1];
+  return {
+    id: randomUUID(),
+    dedupe_key: `push:whisper-burst:${bucket}:${recipient.endpoint_id}`,
+    user_id: recipient.user_id,
+    event_type: "whisper",
+    event_id: `sig_burst_${bucket}`,
+    channel: "push",
+    title: "Whisper burst detected",
+    body: `${ordered.length} new Whisper signals detected. Open FateDrop to review.`,
+    url: null,
+    payload_json: {
+      route: "alerts",
+      stage: "WHISPER",
+      alertId: first.id,
+      summary: true,
+      summaryCount: ordered.length,
+      summaryWindowStart: first.detectedAt,
+      summaryWindowEnd: last.detectedAt,
+      endpointId: recipient.endpoint_id,
+      expoPushToken: recipient.expo_push_token,
+    },
+    state: "pending",
+    attempts: 0,
+    next_attempt_at: now,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
 async function eligibleRecipients() {
   const sql = await fateDropPostgres();
   const temporaryBetaPremium = betaPremiumEnabled();
@@ -187,30 +246,28 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
   const now = Math.floor(nowDate.getTime() / 1000);
   const queueRows: Array<Record<string, unknown>> = [];
 
-  for (const alert of recent) {
-    for (const recipient of recipients) {
-      if (!stageEnabled(alert, recipient) || !productEnabled(alert, recipient) || inQuietHours(recipient, nowDate)) continue;
-      queueRows.push({
-        id: randomUUID(),
-        dedupe_key: `push:${alert.id}:${recipient.endpoint_id}`,
-        user_id: recipient.user_id,
-        event_type: alert.fateStage.toLowerCase(),
-        event_id: alert.id,
-        channel: "push",
-        title: alert.notification.title,
-        body: alert.notification.body,
-        url: alert.productUrl,
-        payload_json: {
-          ...alert.notification.data,
-          endpointId: recipient.endpoint_id,
-          expoPushToken: recipient.expo_push_token,
-        },
-        state: "pending",
-        attempts: 0,
-        next_attempt_at: now,
-        created_at: now,
-        updated_at: now,
-      });
+  for (const recipient of recipients) {
+    if (inQuietHours(recipient, nowDate)) continue;
+    const whisperBuckets = new Map<number, CanonicalAlert[]>();
+
+    for (const alert of recent) {
+      if (!stageEnabled(alert, recipient) || !productEnabled(alert, recipient)) continue;
+      if (alert.fateStage !== "WHISPER") {
+        queueRows.push(individualPushRow(alert, recipient, now));
+        continue;
+      }
+      const bucket = Math.floor(epoch(alert.detectedAt) / WHISPER_BURST_WINDOW_SECONDS);
+      const bucketAlerts = whisperBuckets.get(bucket) ?? [];
+      bucketAlerts.push(alert);
+      whisperBuckets.set(bucket, bucketAlerts);
+    }
+
+    for (const [bucket, bucketAlerts] of whisperBuckets) {
+      if (bucketAlerts.length >= WHISPER_BURST_MIN_SIZE) {
+        queueRows.push(whisperBurstPushRow(bucketAlerts, recipient, bucket, now));
+        continue;
+      }
+      for (const alert of bucketAlerts) queueRows.push(individualPushRow(alert, recipient, now));
     }
   }
 
