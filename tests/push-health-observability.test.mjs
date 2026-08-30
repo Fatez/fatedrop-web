@@ -30,6 +30,12 @@ test("push health exposes safe aggregate dispatcher counters only when detail=1"
   assert.match(health, /outbox24hWhisper/);
   assert.match(health, /outbox24hWhisperSent/);
   assert.match(health, /outbox24hWhisperFailed/);
+  assert.match(health, /naturalOutbox24h/);
+  assert.match(health, /canaryOutbox24h/);
+  assert.match(health, /naturalWhisperOutbox3h/);
+  assert.match(health, /naturalWhisperSent3h/);
+  assert.match(health, /naturalWhisperFailed3h/);
+  assert.match(health, /latestNaturalSentAgeSeconds/);
   assert.doesNotMatch(route, /expo_push_token/i);
   assert.doesNotMatch(route, /user_id/i);
 });
