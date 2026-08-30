@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect live canonical alert validator shape
+      - name: Inspect live canonical alert identity reuse
         shell: bash
         run: |
           set -euo pipefail
@@ -26,44 +26,35 @@ jobs:
           const fs = require('fs');
           const payload = JSON.parse(fs.readFileSync('/tmp/alerts.json', 'utf8'));
           const alerts = Array.isArray(payload.alerts) ? payload.alerts : [];
-          const reasons = {};
-          const reject = (reason) => { reasons[reason] = (reasons[reason] || 0) + 1; };
-          const verdicts = new Set(['LOWEST_KNOWN','BETTER_OFFER_FOUND','NO_FAIR_COMPARISON']);
-          const stages = new Set(['WHISPER','ECHO','MANIFESTED','VANISHED']);
-          let accepted = 0;
+          const byId = new Map();
           for (const a of alerts) {
-            if (!a || typeof a !== 'object' || Array.isArray(a)) { reject('not_object'); continue; }
-            if (typeof a.id !== 'string' || !a.id) { reject('id'); continue; }
-            if (typeof a.title !== 'string' || !a.title) { reject('title'); continue; }
-            if (typeof a.detectedAt !== 'string' || !a.detectedAt) { reject('detectedAt'); continue; }
-            if (typeof a.fateStage !== 'string' || !stages.has(a.fateStage)) { reject('fateStage'); continue; }
-            if (!a.product || typeof a.product !== 'object' || Array.isArray(a.product)) { reject('product'); continue; }
-            if (!a.priceIntelligence || typeof a.priceIntelligence !== 'object' || Array.isArray(a.priceIntelligence)) { reject('priceIntelligence'); continue; }
-            if (!a.preparedLinks || typeof a.preparedLinks !== 'object' || Array.isArray(a.preparedLinks)) { reject('preparedLinks'); continue; }
-            if (!a.notification || typeof a.notification !== 'object' || Array.isArray(a.notification)) { reject('notification'); continue; }
-            if (typeof a.priceIntelligence.verdict !== 'string' || !verdicts.has(a.priceIntelligence.verdict)) { reject('priceVerdict'); continue; }
-            if (!Array.isArray(a.signalThread)) { reject('signalThread'); continue; }
-            accepted += 1;
+            const id = String(a?.id || '');
+            const t = String(a?.detectedAt || '');
+            if (!id) continue;
+            const row = byId.get(id) || { count: 0, times: new Set(), stages: new Set(), products: new Set() };
+            row.count += 1;
+            row.times.add(t);
+            row.stages.add(String(a?.fateStage || ''));
+            row.products.add(String(a?.productId || ''));
+            byId.set(id, row);
           }
-          console.log('shape', {
-            success: payload.success,
-            available: payload.available,
-            source: payload.source,
-            returned: alerts.length,
-            validatorAccepted: accepted,
-            validatorRejected: alerts.length - accepted,
-            rejectionReasons: reasons,
+          const reused = [...byId.entries()].filter(([, row]) => row.count > 1 || row.times.size > 1);
+          const now = Date.now();
+          const recent = alerts.filter((a) => {
+            const t = Date.parse(String(a?.detectedAt || ''));
+            return Number.isFinite(t) && t <= now + 60_000 && now - t <= 24 * 60 * 60_000;
           });
-          console.log('shapeSample', alerts.slice(0, 12).map((a) => ({
-            stage: a?.fateStage,
-            hasProduct: !!a?.product,
-            hasPriceIntelligence: !!a?.priceIntelligence,
-            priceVerdict: a?.priceIntelligence?.verdict ?? null,
-            hasPreparedLinks: !!a?.preparedLinks,
-            hasNotification: !!a?.notification,
-            hasSignalThread: Array.isArray(a?.signalThread),
-            category: a?.productIntelligence?.category ?? null,
-          })));
+          console.log('identity', {
+            returned: alerts.length,
+            uniqueIds: byId.size,
+            reusedIds: reused.length,
+            uniqueIdTimestampPairs: new Set(alerts.map((a) => `${a?.id || ''}|${a?.detectedAt || ''}`)).size,
+            recent24h: recent.length,
+            oldestAgeMinutes: alerts.length ? Math.round(Math.max(...alerts.map((a) => now - Date.parse(String(a?.detectedAt || ''))).filter(Number.isFinite)) / 60000) : null,
+            newestAgeSeconds: alerts.length ? Math.round(Math.min(...alerts.map((a) => now - Date.parse(String(a?.detectedAt || ''))).filter(Number.isFinite)) / 1000) : null,
+          });
+          console.log('reusedSample', reused.slice(0, 20).map(([id,row]) => ({ id, count: row.count, timestamps: row.times.size, stages: [...row.stages], products: row.products.size })));
+          console.log('recentSample', recent.slice(0, 20).map((a) => ({ id: a?.id, detectedAt: a?.detectedAt, stage: a?.fateStage, productId: a?.productId })));
           NODE
 
       - name: Inspect production push aggregates
