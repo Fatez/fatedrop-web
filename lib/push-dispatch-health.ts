@@ -5,6 +5,7 @@ const HEALTH_ID = "canonical";
 const STALE_AFTER_SECONDS = 180;
 const DIAGNOSTIC_LOOKBACK_SECONDS = 15 * 60;
 const DIAGNOSTIC_HISTORY_SECONDS = 24 * 60 * 60;
+const DIAGNOSTIC_OUTAGE_WINDOW_SECONDS = 3 * 60 * 60;
 
 export type PushDispatchHeartbeat = {
   startedAt: number;
@@ -42,7 +43,8 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
   const temporaryBetaPremium = betaPremiumEnabled();
   const recentSince = Math.max(0, now - DIAGNOSTIC_LOOKBACK_SECONDS);
   const historySince = Math.max(0, now - DIAGNOSTIC_HISTORY_SECONDS);
-  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows, historyOutboxRows] = await Promise.all([
+  const outageSince = Math.max(0, now - DIAGNOSTIC_OUTAGE_WINDOW_SECONDS);
+  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows, historyOutboxRows, provenanceRows] = await Promise.all([
     sql`
       SELECT last_completed_at,last_status,last_queued,last_claimed,last_sent,last_failed,last_error
       FROM fatedrop_push_dispatch_health
@@ -105,12 +107,28 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
       FROM fatedrop_notification_outbox
       WHERE channel='push'
         AND created_at >= ${historySince}`,
+    sql`
+      SELECT
+        COUNT(*) FILTER (WHERE event_id LIKE 'sig_%' AND created_at >= ${historySince})::int AS natural_24h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'canary:%' AND created_at >= ${historySince})::int AS canary_24h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'sig_%' AND event_type='whisper' AND created_at >= ${historySince})::int AS natural_whisper_24h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'canary:%' AND event_type='whisper' AND created_at >= ${historySince})::int AS canary_whisper_24h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'sig_%' AND created_at >= ${outageSince})::int AS natural_3h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'sig_%' AND event_type='whisper' AND created_at >= ${outageSince})::int AS natural_whisper_3h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'sig_%' AND event_type='whisper' AND state='sent' AND created_at >= ${outageSince})::int AS natural_whisper_sent_3h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'sig_%' AND event_type='whisper' AND state='failed' AND created_at >= ${outageSince})::int AS natural_whisper_failed_3h,
+        COUNT(*) FILTER (WHERE event_id LIKE 'canary:%' AND created_at >= ${outageSince})::int AS canary_3h,
+        MAX(created_at) FILTER (WHERE event_id LIKE 'sig_%') AS latest_natural_created_at,
+        MAX(sent_at) FILTER (WHERE event_id LIKE 'sig_%' AND state='sent') AS latest_natural_sent_at
+      FROM fatedrop_notification_outbox
+      WHERE channel='push'`,
   ]);
 
   const heartbeat = heartbeatRows[0] as Record<string, unknown> | undefined;
   const recipient = recipientRows[0] as Record<string, unknown> | undefined;
   const recentOutbox = recentOutboxRows[0] as Record<string, unknown> | undefined;
   const historyOutbox = historyOutboxRows[0] as Record<string, unknown> | undefined;
+  const provenance = provenanceRows[0] as Record<string, unknown> | undefined;
   const completedAt = Number(heartbeat?.last_completed_at ?? 0);
   const status = String(heartbeat?.last_status ?? "missing");
   const ageSeconds = completedAt > 0 ? Math.max(0, now - completedAt) : null;
@@ -118,6 +136,8 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
   const historicalAsymmetryCount = Number(asymmetricRows[0]?.count ?? 0);
   const enabledEndpointCount = Number(endpointRows[0]?.count ?? 0);
   const dispatchEnabled = process.env.FATEDROP_PUSH_DISPATCH_ENABLED === "true";
+  const latestNaturalCreatedAt = Number(provenance?.latest_natural_created_at ?? 0);
+  const latestNaturalSentAt = Number(provenance?.latest_natural_sent_at ?? 0);
 
   const ok = dispatchEnabled
     && status === "ok"
@@ -156,6 +176,17 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
     outbox24hFailed: Number(historyOutbox?.failed ?? 0),
     outbox24hWhisperSent: Number(historyOutbox?.whisper_sent ?? 0),
     outbox24hWhisperFailed: Number(historyOutbox?.whisper_failed ?? 0),
+    naturalOutbox24h: Number(provenance?.natural_24h ?? 0),
+    canaryOutbox24h: Number(provenance?.canary_24h ?? 0),
+    naturalWhisperOutbox24h: Number(provenance?.natural_whisper_24h ?? 0),
+    canaryWhisperOutbox24h: Number(provenance?.canary_whisper_24h ?? 0),
+    naturalOutbox3h: Number(provenance?.natural_3h ?? 0),
+    naturalWhisperOutbox3h: Number(provenance?.natural_whisper_3h ?? 0),
+    naturalWhisperSent3h: Number(provenance?.natural_whisper_sent_3h ?? 0),
+    naturalWhisperFailed3h: Number(provenance?.natural_whisper_failed_3h ?? 0),
+    canaryOutbox3h: Number(provenance?.canary_3h ?? 0),
+    latestNaturalCreatedAgeSeconds: latestNaturalCreatedAt > 0 ? Math.max(0, now - latestNaturalCreatedAt) : null,
+    latestNaturalSentAgeSeconds: latestNaturalSentAt > 0 ? Math.max(0, now - latestNaturalSentAt) : null,
     vanishedDefaultVerified: vanishedDefault.includes("true"),
     historicalAsymmetryCount,
     lastQueued: Number(heartbeat?.last_queued ?? 0),
