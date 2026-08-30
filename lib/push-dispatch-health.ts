@@ -1,7 +1,9 @@
+import { betaPremiumEnabled } from "@/lib/beta-premium";
 import { fateDropPostgres } from "@/lib/postgres";
 
 const HEALTH_ID = "canonical";
 const STALE_AFTER_SECONDS = 180;
+const DIAGNOSTIC_LOOKBACK_SECONDS = 15 * 60;
 
 export type PushDispatchHeartbeat = {
   startedAt: number;
@@ -36,7 +38,9 @@ export async function recordPushDispatchHeartbeat(heartbeat: PushDispatchHeartbe
 
 export async function readPushProductionHealth(now = Math.floor(Date.now() / 1000)) {
   const sql = await fateDropPostgres();
-  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows] = await Promise.all([
+  const temporaryBetaPremium = betaPremiumEnabled();
+  const recentSince = Math.max(0, now - DIAGNOSTIC_LOOKBACK_SECONDS);
+  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows] = await Promise.all([
     sql`
       SELECT last_completed_at,last_status,last_queued,last_claimed,last_sent,last_failed,last_error
       FROM fatedrop_push_dispatch_health
@@ -55,9 +59,38 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
         AND echo_enabled=true
         AND manifested_enabled=true`,
     sql`SELECT COUNT(*)::int AS count FROM fatedrop_push_endpoints WHERE enabled=true`,
+    sql`
+      SELECT
+        COUNT(*)::int AS eligible_count,
+        COUNT(*) FILTER (WHERE COALESCE(np.push_enabled,true)=true)::int AS push_enabled_count,
+        COUNT(*) FILTER (WHERE COALESCE(np.whisper_enabled,true)=true)::int AS whisper_enabled_count,
+        COUNT(*) FILTER (WHERE COALESCE(np.sealed_tcg_enabled,true)=true)::int AS sealed_tcg_enabled_count,
+        COUNT(*) FILTER (WHERE COALESCE(np.quiet_hours_enabled,false)=true)::int AS quiet_hours_enabled_count
+      FROM fatedrop_push_endpoints pe
+      JOIN fatedrop_memberships m ON m.user_id=pe.user_id
+      JOIN fatedrop_beta_access ba ON ba.user_id=pe.user_id AND ba.status='approved'
+      LEFT JOIN fatedrop_notification_preferences np ON np.user_id=pe.user_id
+      WHERE pe.enabled=true
+        AND (
+          ${temporaryBetaPremium}=true
+          OR (m.status IN ('active','trialing') AND m.tier IN ('plus','pro'))
+        )`,
+    sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE event_type='whisper')::int AS whisper,
+        COUNT(*) FILTER (WHERE state='pending')::int AS pending,
+        COUNT(*) FILTER (WHERE state='sending')::int AS sending,
+        COUNT(*) FILTER (WHERE state='sent')::int AS sent,
+        COUNT(*) FILTER (WHERE state='failed')::int AS failed
+      FROM fatedrop_notification_outbox
+      WHERE channel='push'
+        AND created_at >= ${recentSince}`,
   ]);
 
   const heartbeat = heartbeatRows[0] as Record<string, unknown> | undefined;
+  const recipient = recipientRows[0] as Record<string, unknown> | undefined;
+  const recentOutbox = recentOutboxRows[0] as Record<string, unknown> | undefined;
   const completedAt = Number(heartbeat?.last_completed_at ?? 0);
   const status = String(heartbeat?.last_status ?? "missing");
   const ageSeconds = completedAt > 0 ? Math.max(0, now - completedAt) : null;
@@ -80,6 +113,17 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
     status,
     ageSeconds,
     enabledEndpointCount,
+    eligibleRecipientCount: Number(recipient?.eligible_count ?? 0),
+    pushEnabledRecipientCount: Number(recipient?.push_enabled_count ?? 0),
+    whisperEnabledRecipientCount: Number(recipient?.whisper_enabled_count ?? 0),
+    sealedTcgEnabledRecipientCount: Number(recipient?.sealed_tcg_enabled_count ?? 0),
+    quietHoursEnabledRecipientCount: Number(recipient?.quiet_hours_enabled_count ?? 0),
+    recentOutboxTotal: Number(recentOutbox?.total ?? 0),
+    recentWhisperOutboxCount: Number(recentOutbox?.whisper ?? 0),
+    recentOutboxPending: Number(recentOutbox?.pending ?? 0),
+    recentOutboxSending: Number(recentOutbox?.sending ?? 0),
+    recentOutboxSent: Number(recentOutbox?.sent ?? 0),
+    recentOutboxFailed: Number(recentOutbox?.failed ?? 0),
     vanishedDefaultVerified: vanishedDefault.includes("true"),
     historicalAsymmetryCount,
     lastQueued: Number(heartbeat?.last_queued ?? 0),
