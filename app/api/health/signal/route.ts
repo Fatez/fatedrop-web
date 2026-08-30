@@ -1,8 +1,11 @@
+import { createHmac } from "node:crypto";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 const SUCCESS_CACHE_CONTROL = "public, max-age=0, s-maxage=30, stale-while-revalidate=120";
+const PRIVATE_DIAGNOSTIC_AUTH_CONTEXT = "fatedrop:private-diagnostics:v1";
 
 type JsonRecord = Record<string, unknown>;
 type FailureReason =
@@ -47,6 +50,14 @@ function signalHealthUrl() {
   return url;
 }
 
+function signalHealthToken() {
+  const dedicated = String(process.env.FATEDROP_SIGNAL_API_TOKEN || "").trim();
+  if (dedicated) return dedicated;
+  const shared = String(process.env.FATEDROP_METRICS_INGEST_SECRET || "").trim();
+  if (!shared) return "";
+  return createHmac("sha256", shared).update(PRIVATE_DIAGNOSTIC_AUTH_CONTEXT).digest("hex");
+}
+
 function unavailable(reason: FailureReason, status = 503) {
   return Response.json(
     { available: false, reason },
@@ -65,7 +76,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   if (requestUrl.search) return unavailable("invalid_request", 400);
 
-  const signalToken = process.env.FATEDROP_SIGNAL_API_TOKEN;
+  const signalToken = signalHealthToken();
   if (!signalToken) return unavailable("missing_web_token");
 
   try {
