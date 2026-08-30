@@ -27,7 +27,9 @@ test("Local Radar remains visually separate from signal lifecycle companions", (
   assert.match(brandingSource, /return \{ companion: "radar", androidIcon: "fatedrop_radar" \}/);
 });
 
-test("iOS never receives an Android drawable icon while Android may receive the mapped icon", () => {
+test("stage-specific Android icons are rollout-gated and off by default", () => {
+  assert.match(brandingSource, /FATEDROP_ANDROID_STAGE_NOTIFICATION_ICONS === "true"/);
+  assert.match(brandingSource, /if \(!enabled\) return null/);
   assert.match(brandingSource, /trim\(\)\.toLowerCase\(\) === "android" \? branding\.androidIcon : null/);
 });
 
