@@ -1,5 +1,5 @@
 import type { CanonicalAlert } from "@/lib/canonical-alerts";
-import type { NotificationPreferences } from "@/lib/notification-preferences";
+import type { LifecycleMarketGroup, NotificationPreferences } from "@/lib/notification-preferences";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 
 function stageEnabled(alert: CanonicalAlert, preferences: NotificationPreferences) {
@@ -20,6 +20,15 @@ function languageEnabled(alert: CanonicalAlert, preferences: NotificationPrefere
   return preferences.unknownLanguage;
 }
 
+function lifecycleMarketEnabled(alert: CanonicalAlert, preferences: NotificationPreferences) {
+  const stage = alert.fateStage.toLowerCase() as keyof NotificationPreferences["lifecycleMarkets"];
+  const selection = preferences.lifecycleMarkets[stage];
+  if (selection === "all") return true;
+  const group = alert.facets.languageGroup;
+  if (!(["english", "japanese", "korean", "simplified_chinese", "traditional_chinese"] as string[]).includes(group)) return false;
+  return selection.includes(group as LifecycleMarketGroup);
+}
+
 function setEnabled(alert: CanonicalAlert, preferences: NotificationPreferences) {
   if (preferences.allSets) return true;
   if (!alert.facets.setKey) return preferences.unknownSets;
@@ -33,5 +42,6 @@ export function notificationPreferencesAllowAlert(
   return stageEnabled(alert, preferences)
     && productAlertEnabled(alert.productIntelligence, preferences)
     && languageEnabled(alert, preferences)
+    && lifecycleMarketEnabled(alert, preferences)
     && setEnabled(alert, preferences);
 }
