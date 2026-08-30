@@ -13,28 +13,42 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify deployed Cloud public Signal summary
+      - name: Inspect live Signal and push health
         shell: bash
         run: |
           set -euo pipefail
-          code="$(curl --silent --show-error --retry 5 --retry-delay 2 --output /tmp/summary.json --write-out '%{http_code}' 'https://fatedrop-cloud-production.up.railway.app/api/signal-summary')"
-          echo "Cloud public Signal summary HTTP $code"
+
+          signal_code="$(curl --silent --show-error --retry 5 --retry-delay 2 --output /tmp/signal.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/signal')"
+          push_code="$(curl --silent --show-error --retry 5 --retry-delay 2 --output /tmp/push.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/push?detail=1')"
+
+          echo "Signal health HTTP $signal_code"
+          echo "Push health HTTP $push_code"
+
           node <<'NODE'
           const fs = require('fs');
-          const body = JSON.parse(fs.readFileSync('/tmp/summary.json','utf8'));
-          const d = body?.diagnostics || {};
-          console.log('publicSummary', {
-            available: body.available === true,
-            source: body.source ?? null,
-            generatedAt: body.generatedAt ?? null,
-            lifecycleAbsentStages: Array.isArray(d.absentLifecycleStages) ? d.absentLifecycleStages : null,
-            deliveryIssues: d.discordDeliveryIssues ?? null,
-            retailerTotal: d?.monitors?.totalRetailers ?? null,
-            discoveryAvailable: d?.discovery?.available ?? null,
-            recentSignals: d?.reliability?.recentSignals ?? null,
+          const signal = JSON.parse(fs.readFileSync('/tmp/signal.json','utf8'));
+          const push = JSON.parse(fs.readFileSync('/tmp/push.json','utf8'));
+          console.log('signalHealth', {
+            available: signal.available === true,
+            recentSignals: signal?.discord?.recentSignals ?? null,
+            recentDiscordAttempts: signal?.discord?.recentDiscordAttempts ?? null,
+            retailerTotal: signal?.retailers?.total ?? null,
+            retailerFresh: signal?.retailers?.fresh ?? null,
           });
-          if (body.available !== true) process.exit(2);
-          if (!d || typeof d !== 'object') process.exit(3);
-          if (typeof d?.monitors?.totalRetailers !== 'number') process.exit(4);
+          console.log('pushHealth', {
+            ok: push.ok === true,
+            status: push.status ?? null,
+            ageSeconds: push.ageSeconds ?? null,
+            lastQueued: push.lastQueued ?? null,
+            lastClaimed: push.lastClaimed ?? null,
+            lastSent: push.lastSent ?? null,
+            lastFailed: push.lastFailed ?? null,
+            lastError: push.lastError ?? null,
+            enabledEndpoints: push.enabledEndpoints ?? null,
+          });
+          if (signal.available !== true) process.exit(2);
+          if (push.ok !== true) process.exit(3);
           NODE
-          test "$code" = "200"
+
+          test "$signal_code" = "200"
+          test "$push_code" = "200"
