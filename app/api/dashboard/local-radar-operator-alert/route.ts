@@ -29,6 +29,9 @@ function authorized(request: Request) {
 function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const value = payload as Record<string, unknown>;
+  if (value.testOnly !== undefined && typeof value.testOnly !== "boolean") return null;
+
+  const testOnly = value.testOnly === true;
   const operatorIssue = Number(value.operatorIssue);
   const branchCount = Number(value.branchCount);
   const eventId = text(value.eventId, 180);
@@ -44,10 +47,19 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
 
   if (!Number.isInteger(operatorIssue) || operatorIssue <= 0) return null;
   if (!Number.isInteger(branchCount) || branchCount < 1 || branchCount > 100) return null;
-  if (eventId !== `local-radar-operator:${operatorIssue}`) return null;
   if (!stage || !title || !body || !retailerId || !retailerName || !productTitle) return null;
-  if (title !== "FateDrop · Local Radar · Incoming stock") return null;
-  if (!body.endsWith("Check Local Radar to see if a participating store is near you.")) return null;
+
+  if (testOnly) {
+    if (eventId !== `local-radar-operator-test:${operatorIssue}`) return null;
+    if (title !== "FateDrop · Local Radar · TEST ONLY") return null;
+    if (!body.startsWith("TEST ONLY · Operator transport verification matched ")) return null;
+    if (!body.endsWith("No stock or Local Radar history has been created.")) return null;
+  } else {
+    if (eventId !== `local-radar-operator:${operatorIssue}`) return null;
+    if (title !== "FateDrop · Local Radar · Incoming stock") return null;
+    if (!body.endsWith("Check Local Radar to see if a participating store is near you.")) return null;
+  }
+
   if (expectedFrom === undefined || expectedTo === undefined) return null;
   if (expectedFrom && expectedTo && Date.parse(expectedTo) < Date.parse(expectedFrom)) return null;
   if (expectedLabel === null && !expectedFrom && !expectedTo) return null;
