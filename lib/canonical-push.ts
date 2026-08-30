@@ -7,6 +7,11 @@ import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const MAX_ATTEMPTS = 3;
 const SENDING_LEASE_SECONDS = 5 * 60;
+const BURST_WINDOW_SECONDS = 60;
+const BURST_GRACE_SECONDS = 5;
+const BURST_MIN_SIZE = 5;
+
+type BurstControlledStage = "WHISPER" | "ECHO" | "VANISHED";
 
 type RecipientRow = {
   endpoint_id: string;
@@ -68,6 +73,20 @@ function dispatchEnabled() {
 function epoch(iso: string) {
   const value = Math.floor(new Date(iso).getTime() / 1000);
   return Number.isFinite(value) ? value : 0;
+}
+
+function burstControlledStage(stage: CanonicalAlert["fateStage"]): stage is BurstControlledStage {
+  return stage === "WHISPER" || stage === "ECHO" || stage === "VANISHED";
+}
+
+function stageLabel(stage: BurstControlledStage) {
+  if (stage === "WHISPER") return "Whisper";
+  if (stage === "ECHO") return "Echo";
+  return "Vanished";
+}
+
+function burstBucketClosed(bucket: number, measuredAt: number) {
+  return measuredAt >= ((bucket + 1) * BURST_WINDOW_SECONDS) + BURST_GRACE_SECONDS;
 }
 
 function stageEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
@@ -136,6 +155,70 @@ function retryAt(now: number, attempts: number) {
   return now + Math.min(900, 30 * (2 ** Math.max(0, attempts - 1)));
 }
 
+function individualPushRow(alert: CanonicalAlert, recipient: RecipientRow, now: number) {
+  return {
+    id: randomUUID(),
+    dedupe_key: `push:${alert.id}:${recipient.endpoint_id}`,
+    user_id: recipient.user_id,
+    event_type: alert.fateStage.toLowerCase(),
+    event_id: alert.id,
+    channel: "push",
+    title: alert.notification.title,
+    body: alert.notification.body,
+    url: alert.productUrl,
+    payload_json: {
+      ...alert.notification.data,
+      endpointId: recipient.endpoint_id,
+      expoPushToken: recipient.expo_push_token,
+    },
+    state: "pending",
+    attempts: 0,
+    next_attempt_at: now,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function burstSummaryPushRow(
+  stage: BurstControlledStage,
+  alerts: CanonicalAlert[],
+  recipient: RecipientRow,
+  bucket: number,
+  now: number,
+) {
+  const ordered = [...alerts].sort((left, right) => epoch(left.detectedAt) - epoch(right.detectedAt) || left.id.localeCompare(right.id));
+  const first = ordered[0];
+  const last = ordered[ordered.length - 1];
+  const label = stageLabel(stage);
+  return {
+    id: randomUUID(),
+    dedupe_key: `push:${stage.toLowerCase()}-burst:${bucket}:${recipient.endpoint_id}`,
+    user_id: recipient.user_id,
+    event_type: stage.toLowerCase(),
+    event_id: `sig_summary_${stage.toLowerCase()}_${bucket}`,
+    channel: "push",
+    title: `${label} activity`,
+    body: `${ordered.length} new ${label} signals detected. Open FateDrop to review.`,
+    url: null,
+    payload_json: {
+      route: "alerts",
+      stage,
+      summary: true,
+      summaryCount: ordered.length,
+      summaryFirstAlertId: first.id,
+      summaryWindowStart: first.detectedAt,
+      summaryWindowEnd: last.detectedAt,
+      endpointId: recipient.endpoint_id,
+      expoPushToken: recipient.expo_push_token,
+    },
+    state: "pending",
+    attempts: 0,
+    next_attempt_at: now,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
 async function eligibleRecipients() {
   const sql = await fateDropPostgres();
   const temporaryBetaPremium = betaPremiumEnabled();
@@ -187,30 +270,33 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
   const now = Math.floor(nowDate.getTime() / 1000);
   const queueRows: Array<Record<string, unknown>> = [];
 
-  for (const alert of recent) {
-    for (const recipient of recipients) {
-      if (!stageEnabled(alert, recipient) || !productEnabled(alert, recipient) || inQuietHours(recipient, nowDate)) continue;
-      queueRows.push({
-        id: randomUUID(),
-        dedupe_key: `push:${alert.id}:${recipient.endpoint_id}`,
-        user_id: recipient.user_id,
-        event_type: alert.fateStage.toLowerCase(),
-        event_id: alert.id,
-        channel: "push",
-        title: alert.notification.title,
-        body: alert.notification.body,
-        url: alert.productUrl,
-        payload_json: {
-          ...alert.notification.data,
-          endpointId: recipient.endpoint_id,
-          expoPushToken: recipient.expo_push_token,
-        },
-        state: "pending",
-        attempts: 0,
-        next_attempt_at: now,
-        created_at: now,
-        updated_at: now,
-      });
+  for (const recipient of recipients) {
+    if (inQuietHours(recipient, nowDate)) continue;
+    const controlledBuckets = new Map<string, { stage: BurstControlledStage; bucket: number; alerts: CanonicalAlert[] }>();
+
+    for (const alert of recent) {
+      if (!stageEnabled(alert, recipient) || !productEnabled(alert, recipient)) continue;
+
+      if (alert.fateStage === "MANIFESTED") {
+        queueRows.push(individualPushRow(alert, recipient, now));
+        continue;
+      }
+
+      if (!burstControlledStage(alert.fateStage)) continue;
+      const bucket = Math.floor(epoch(alert.detectedAt) / BURST_WINDOW_SECONDS);
+      if (!burstBucketClosed(bucket, measuredAt)) continue;
+      const key = `${alert.fateStage}:${bucket}`;
+      const existing = controlledBuckets.get(key) ?? { stage: alert.fateStage, bucket, alerts: [] };
+      existing.alerts.push(alert);
+      controlledBuckets.set(key, existing);
+    }
+
+    for (const { stage, bucket, alerts: bucketAlerts } of controlledBuckets.values()) {
+      if (bucketAlerts.length >= BURST_MIN_SIZE) {
+        queueRows.push(burstSummaryPushRow(stage, bucketAlerts, recipient, bucket, now));
+        continue;
+      }
+      for (const alert of bucketAlerts) queueRows.push(individualPushRow(alert, recipient, now));
     }
   }
 
