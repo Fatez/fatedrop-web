@@ -27,14 +27,14 @@ jobs:
             exit 1
           }
 
-      - name: Report redacted Local Radar TEST ONLY delivery evidence
+      - name: Report redacted latest Local Radar TEST ONLY delivery evidence
         shell: bash
         run: |
           set -euo pipefail
           code="$(curl --silent --show-error --retry 3 --retry-delay 5 \
             --output /tmp/local-radar-test-delivery.json \
             --write-out '%{http_code}' \
-            'https://fatedrop.co.uk/api/health/local-radar-test-delivery?issue=304')"
+            'https://fatedrop.co.uk/api/health/local-radar-test-delivery')"
           test "$code" = "200" || {
             echo "Local Radar TEST ONLY delivery diagnostic failed with HTTP $code"
             exit 1
@@ -42,8 +42,11 @@ jobs:
           node <<'NODE'
           const fs = require('fs');
           const result = JSON.parse(fs.readFileSync('/tmp/local-radar-test-delivery.json', 'utf8'));
-          if (result?.ok !== true || result?.eventId !== 'local-radar-operator-test:304') {
+          if (result?.ok !== true) {
             throw new Error('Local Radar TEST ONLY delivery diagnostic contract mismatch');
+          }
+          if (result.eventId !== null && !/^local-radar-operator-test:[1-9][0-9]*$/.test(result.eventId)) {
+            throw new Error('Latest Local Radar TEST ONLY event id is invalid');
           }
           console.log(JSON.stringify(result));
           NODE
