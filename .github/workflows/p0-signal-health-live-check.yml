@@ -1,0 +1,40 @@
+name: P0 Signal Health Live Check
+
+on:
+  push:
+    branches:
+      - diagnostic/p0-signal-health-live-2026-08-30
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify live Signal health bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --retry 5 --retry-delay 2 \
+            --output /tmp/signal-health.json \
+            --write-out '%{http_code}' \
+            'https://fatedrop.co.uk/api/health/signal')"
+          echo "Signal health HTTP $code"
+          node <<'NODE'
+          const fs = require('fs');
+          const raw = fs.readFileSync('/tmp/signal-health.json', 'utf8');
+          let body;
+          try { body = JSON.parse(raw); } catch { throw new Error('Signal health returned non-JSON'); }
+          console.log('signalHealth', {
+            available: body.available === true,
+            lifecycleAbsentStages: Array.isArray(body?.lifecycle?.absentStages) ? body.lifecycle.absentStages : null,
+            deliveryIssues: body?.delivery?.issues ?? null,
+            retailerTotal: body?.retailers?.total ?? null,
+            discoveryAvailable: body?.discovery?.available ?? null,
+            reason: typeof body.reason === 'string' ? body.reason : null,
+          });
+          if (body.available !== true) process.exitCode = 2;
+          NODE
+          test "$code" = "200"
