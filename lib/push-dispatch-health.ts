@@ -6,6 +6,7 @@ const STALE_AFTER_SECONDS = 180;
 const DIAGNOSTIC_LOOKBACK_SECONDS = 15 * 60;
 const DIAGNOSTIC_HISTORY_SECONDS = 24 * 60 * 60;
 const DIAGNOSTIC_OUTAGE_WINDOW_SECONDS = 3 * 60 * 60;
+const RECEIPT_MIN_AGE_SECONDS = 15 * 60;
 
 export type PushDispatchHeartbeat = {
   startedAt: number;
@@ -38,13 +39,59 @@ export async function recordPushDispatchHeartbeat(heartbeat: PushDispatchHeartbe
       updated_at=EXCLUDED.updated_at`;
 }
 
+function receiptSchemaUnavailable(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  return code === "42703" || code === "42P01";
+}
+
+async function readReceiptDiagnostics(
+  sql: Awaited<ReturnType<typeof fateDropPostgres>>,
+  { historySince, eligibleBefore }: { historySince: number; eligibleBefore: number },
+) {
+  try {
+    const rows = await sql`
+      WITH latest_sent_attempt AS (
+        SELECT DISTINCT ON (attempt.outbox_id)
+          attempt.outbox_id,
+          attempt.receipt_status,
+          attempt.receipt_checked_at,
+          attempt.attempted_at,
+          outbox.event_type
+        FROM fatedrop_notification_delivery_attempts attempt
+        JOIN fatedrop_notification_outbox outbox ON outbox.id=attempt.outbox_id
+        WHERE outbox.channel='push'
+          AND outbox.event_id LIKE 'sig_%'
+          AND attempt.result='sent'
+          AND attempt.attempted_at >= ${historySince}
+        ORDER BY attempt.outbox_id,attempt.attempted_at DESC
+      )
+      SELECT
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore})::int AS eligible_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND receipt_status='ok')::int AS ok_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND receipt_status='error')::int AS error_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND receipt_checked_at IS NULL)::int AS pending_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper')::int AS whisper_eligible_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper' AND receipt_status='ok')::int AS whisper_ok_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper' AND receipt_status='error')::int AS whisper_error_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper' AND receipt_checked_at IS NULL)::int AS whisper_pending_24h,
+        MAX(receipt_checked_at) FILTER (WHERE attempted_at <= ${eligibleBefore}) AS latest_checked_at
+      FROM latest_sent_attempt`;
+    return { schemaReady: true, ...(rows[0] as Record<string, unknown> | undefined) };
+  } catch (error) {
+    if (receiptSchemaUnavailable(error)) return { schemaReady: false };
+    throw error;
+  }
+}
+
 export async function readPushProductionHealth(now = Math.floor(Date.now() / 1000)) {
   const sql = await fateDropPostgres();
   const temporaryBetaPremium = betaPremiumEnabled();
   const recentSince = Math.max(0, now - DIAGNOSTIC_LOOKBACK_SECONDS);
   const historySince = Math.max(0, now - DIAGNOSTIC_HISTORY_SECONDS);
   const outageSince = Math.max(0, now - DIAGNOSTIC_OUTAGE_WINDOW_SECONDS);
-  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows, historyOutboxRows, provenanceRows] = await Promise.all([
+  const receiptEligibleBefore = Math.max(0, now - RECEIPT_MIN_AGE_SECONDS);
+  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows, historyOutboxRows, provenanceRows, receiptDiagnostics] = await Promise.all([
     sql`
       SELECT last_completed_at,last_status,last_queued,last_claimed,last_sent,last_failed,last_error
       FROM fatedrop_push_dispatch_health
@@ -122,6 +169,7 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
         MAX(sent_at) FILTER (WHERE event_id LIKE 'sig_%' AND state='sent') AS latest_natural_sent_at
       FROM fatedrop_notification_outbox
       WHERE channel='push'`,
+    readReceiptDiagnostics(sql, { historySince, eligibleBefore: receiptEligibleBefore }),
   ]);
 
   const heartbeat = heartbeatRows[0] as Record<string, unknown> | undefined;
@@ -129,6 +177,7 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
   const recentOutbox = recentOutboxRows[0] as Record<string, unknown> | undefined;
   const historyOutbox = historyOutboxRows[0] as Record<string, unknown> | undefined;
   const provenance = provenanceRows[0] as Record<string, unknown> | undefined;
+  const receipt = receiptDiagnostics as Record<string, unknown>;
   const completedAt = Number(heartbeat?.last_completed_at ?? 0);
   const status = String(heartbeat?.last_status ?? "missing");
   const ageSeconds = completedAt > 0 ? Math.max(0, now - completedAt) : null;
@@ -138,6 +187,7 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
   const dispatchEnabled = process.env.FATEDROP_PUSH_DISPATCH_ENABLED === "true";
   const latestNaturalCreatedAt = Number(provenance?.latest_natural_created_at ?? 0);
   const latestNaturalSentAt = Number(provenance?.latest_natural_sent_at ?? 0);
+  const latestReceiptCheckedAt = Number(receipt?.latest_checked_at ?? 0);
 
   const ok = dispatchEnabled
     && status === "ok"
@@ -187,6 +237,16 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
     canaryOutbox3h: Number(provenance?.canary_3h ?? 0),
     latestNaturalCreatedAgeSeconds: latestNaturalCreatedAt > 0 ? Math.max(0, now - latestNaturalCreatedAt) : null,
     latestNaturalSentAgeSeconds: latestNaturalSentAt > 0 ? Math.max(0, now - latestNaturalSentAt) : null,
+    receiptSchemaReady: receipt?.schemaReady === true,
+    naturalReceiptEligible24h: Number(receipt?.eligible_24h ?? 0),
+    naturalReceiptOk24h: Number(receipt?.ok_24h ?? 0),
+    naturalReceiptError24h: Number(receipt?.error_24h ?? 0),
+    naturalReceiptPending24h: Number(receipt?.pending_24h ?? 0),
+    naturalWhisperReceiptEligible24h: Number(receipt?.whisper_eligible_24h ?? 0),
+    naturalWhisperReceiptOk24h: Number(receipt?.whisper_ok_24h ?? 0),
+    naturalWhisperReceiptError24h: Number(receipt?.whisper_error_24h ?? 0),
+    naturalWhisperReceiptPending24h: Number(receipt?.whisper_pending_24h ?? 0),
+    latestNaturalReceiptCheckedAgeSeconds: latestReceiptCheckedAt > 0 ? Math.max(0, now - latestReceiptCheckedAt) : null,
     vanishedDefaultVerified: vanishedDefault.includes("true"),
     historicalAsymmetryCount,
     lastQueued: Number(heartbeat?.last_queued ?? 0),
