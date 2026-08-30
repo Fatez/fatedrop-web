@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { dispatchCanonicalPushAlerts } from "@/lib/canonical-push";
+import { reconcileExpoPushReceipts } from "@/lib/expo-push-receipts";
 import { recordPushDispatchHeartbeat } from "@/lib/push-dispatch-health";
 
 export const runtime = "nodejs";
@@ -32,15 +33,19 @@ export async function POST(request: Request) {
   const startedAt = Math.floor(Date.now() / 1000);
 
   try {
+    const receipts = await reconcileExpoPushReceipts();
     const result = await dispatchCanonicalPushAlerts();
     const completedAt = Math.floor(Date.now() / 1000);
     const totalProviderFailure = result.enabled && result.claimed > 0 && result.sent === 0 && result.failed > 0;
-    const status = !result.enabled ? "disabled" : totalProviderFailure ? "error" : "ok";
+    const receiptUnavailable = !receipts.schemaReady || receipts.error !== null;
+    const status = !result.enabled ? "disabled" : totalProviderFailure || receiptUnavailable ? "error" : "ok";
     const heartbeatError = !result.enabled
       ? "Push dispatch is not enabled."
       : totalProviderFailure
         ? "Every claimed push delivery failed in the provider batch."
-        : null;
+        : receiptUnavailable
+          ? `Expo receipt verification unavailable: ${receipts.error || "receipt schema unavailable"}`
+          : null;
 
     await recordPushDispatchHeartbeat({
       startedAt,
@@ -49,24 +54,24 @@ export async function POST(request: Request) {
       queued: result.queued,
       claimed: result.claimed,
       sent: result.sent,
-      failed: result.failed,
+      failed: result.failed + receipts.failed,
       error: heartbeatError,
     }).catch(() => undefined);
 
     if (!result.enabled) {
       return Response.json(
-        { error: "Push dispatch is not enabled.", result },
+        { error: "Push dispatch is not enabled.", result, receipts },
         { status: 503, headers: { "cache-control": "no-store" } },
       );
     }
     if (totalProviderFailure) {
       return Response.json(
-        { error: "Every claimed push delivery failed.", result },
+        { error: "Every claimed push delivery failed.", result, receipts },
         { status: 503, headers: { "cache-control": "no-store" } },
       );
     }
     return Response.json(
-      { accepted: true, ...result },
+      { accepted: true, ...result, receipts },
       { status: 200, headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
