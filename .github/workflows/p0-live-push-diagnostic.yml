@@ -27,9 +27,28 @@ jobs:
           const payload = JSON.parse(fs.readFileSync('/tmp/alerts.json', 'utf8'));
           const alerts = Array.isArray(payload.alerts) ? payload.alerts : [];
           const now = Date.now();
+          const reasons = {};
+          const reject = (reason) => { reasons[reason] = (reasons[reason] || 0) + 1; };
+          const verdicts = new Set(['LOWEST_KNOWN','BETTER_OFFER_FOUND','NO_FAIR_COMPARISON']);
+          const stages = new Set(['WHISPER','ECHO','MANIFESTED','VANISHED']);
+          let accepted = 0;
+          for (const a of alerts) {
+            if (!a || typeof a !== 'object' || Array.isArray(a)) { reject('not_object'); continue; }
+            if (typeof a.id !== 'string' || !a.id) { reject('id'); continue; }
+            if (typeof a.title !== 'string' || !a.title) { reject('title'); continue; }
+            if (typeof a.detectedAt !== 'string' || !a.detectedAt) { reject('detectedAt'); continue; }
+            if (typeof a.fateStage !== 'string' || !stages.has(a.fateStage)) { reject('fateStage'); continue; }
+            if (!a.product || typeof a.product !== 'object' || Array.isArray(a.product)) { reject('product'); continue; }
+            if (!a.priceIntelligence || typeof a.priceIntelligence !== 'object' || Array.isArray(a.priceIntelligence)) { reject('priceIntelligence'); continue; }
+            if (!a.preparedLinks || typeof a.preparedLinks !== 'object' || Array.isArray(a.preparedLinks)) { reject('preparedLinks'); continue; }
+            if (!a.notification || typeof a.notification !== 'object' || Array.isArray(a.notification)) { reject('notification'); continue; }
+            if (typeof a.priceIntelligence.verdict !== 'string' || !verdicts.has(a.priceIntelligence.verdict)) { reject('priceVerdict'); continue; }
+            if (!Array.isArray(a.signalThread)) { reject('signalThread'); continue; }
+            accepted += 1;
+          }
           const recent = alerts.filter((a) => {
             const t = Date.parse(String(a?.detectedAt || ''));
-            return Number.isFinite(t) && t <= now + 60_000 && now - t <= 15 * 60_000;
+            return Number.isFinite(t) && t <= now + 60_000 && now - t <= 60 * 60_000;
           });
           const countBy = (rows, key) => rows.reduce((out, row) => {
             const value = String(key(row) || 'UNKNOWN');
@@ -41,10 +60,24 @@ jobs:
             available: payload.available,
             source: payload.source,
             returned: alerts.length,
-            recent15m: recent.length,
+            validatorAccepted: accepted,
+            validatorRejected: alerts.length - accepted,
+            rejectionReasons: reasons,
+            recent60m: recent.length,
             recentStages: countBy(recent, (a) => a.fateStage),
             recentCategories: countBy(recent, (a) => a?.productIntelligence?.category),
           });
+          const sample = alerts.slice(0, 10).map((a) => ({
+            stage: a?.fateStage,
+            hasProduct: !!a?.product,
+            hasPriceIntelligence: !!a?.priceIntelligence,
+            priceVerdict: a?.priceIntelligence?.verdict ?? null,
+            hasPreparedLinks: !!a?.preparedLinks,
+            hasNotification: !!a?.notification,
+            hasSignalThread: Array.isArray(a?.signalThread),
+            category: a?.productIntelligence?.category ?? null,
+          }));
+          console.log('shapeSample', sample);
           NODE
 
       - name: Inspect safe production push counters
@@ -59,5 +92,3 @@ jobs:
           cat /tmp/push-health.json
           echo
           test "$code" = "200" || exit 1
-
-# Rerun after production queue observability deployment.
