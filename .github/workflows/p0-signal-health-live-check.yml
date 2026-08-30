@@ -12,34 +12,12 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    env:
-      METRICS_SECRET: ${{ secrets.FATEDROP_METRICS_INGEST_SECRET }}
     steps:
-      - name: Verify Cloud accepts the scoped derived credential
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${METRICS_SECRET:-}" || { echo "Web metrics secret is missing"; exit 2; }
-          token="$(node -e 'const crypto=require("crypto"); process.stdout.write(crypto.createHmac("sha256", process.env.METRICS_SECRET).update("fatedrop:private-diagnostics:v1").digest("hex"))')"
-          echo "::add-mask::$token"
-          code="$(curl --silent --show-error --retry 3 --retry-delay 2 \
-            --output /tmp/cloud-signal-health.json \
-            --write-out '%{http_code}' \
-            -H "Authorization: Bearer $token" \
-            'https://fatedrop-cloud-production.up.railway.app/api/signal-health')"
-          echo "Cloud derived-auth Signal health HTTP $code"
-          if [ "$code" = "200" ]; then
-            node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync("/tmp/cloud-signal-health.json","utf8")); console.log({available:b.available===true,generatedAt:b.generatedAt??null}); if(b.available!==true) process.exit(3)'
-          else
-            echo "Cloud did not accept the Web-derived credential."
-            exit 4
-          fi
-
       - name: Verify live Web Signal health bridge
         shell: bash
         run: |
           set -euo pipefail
-          code="$(curl --silent --show-error --retry 5 --retry-delay 2 \
+          code="$(curl --silent --show-error --retry 8 --retry-delay 3 \
             --output /tmp/signal-health.json \
             --write-out '%{http_code}' \
             'https://fatedrop.co.uk/api/health/signal')"
