@@ -1,0 +1,60 @@
+name: Provision FateDrop Signal API Token
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/provision-signal-api-token.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fatedrop-web-signal-token
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FATEDROP_SIGNAL_API_TOKEN: ${{ secrets.FATEDROP_SIGNAL_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Require production signal bridge credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 2; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 2; }
+          test -n "${FATEDROP_SIGNAL_API_TOKEN:-}" || { echo "::error::FATEDROP_SIGNAL_API_TOKEN is not configured in GitHub Actions secrets"; exit 2; }
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Provision Cloudflare Worker signal token
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$FATEDROP_SIGNAL_API_TOKEN"
+          printf '%s' "$FATEDROP_SIGNAL_API_TOKEN" | npx wrangler secret put FATEDROP_SIGNAL_API_TOKEN
+
+      - name: Verify public Web signal health bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --retry 8 --retry-delay 4 --output /tmp/signal-health.json --write-out '%{http_code}' https://fatedrop.co.uk/api/health/signal)"
+          if [ "$code" != "200" ] && [ "$code" != "204" ]; then
+            echo "::error::Web signal health bridge returned HTTP $code"
+            cat /tmp/signal-health.json
+            exit 1
+          fi
