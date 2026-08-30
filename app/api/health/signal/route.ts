@@ -50,12 +50,13 @@ function signalHealthUrl() {
   return url;
 }
 
-function signalHealthToken() {
+function signalHealthTokens() {
   const dedicated = String(process.env.FATEDROP_SIGNAL_API_TOKEN || "").trim();
-  if (dedicated) return dedicated;
   const shared = String(process.env.FATEDROP_METRICS_INGEST_SECRET || "").trim();
-  if (!shared) return "";
-  return createHmac("sha256", shared).update(PRIVATE_DIAGNOSTIC_AUTH_CONTEXT).digest("hex");
+  const derived = shared
+    ? createHmac("sha256", shared).update(PRIVATE_DIAGNOSTIC_AUTH_CONTEXT).digest("hex")
+    : "";
+  return [...new Set([dedicated, derived].filter(Boolean))];
 }
 
 function unavailable(reason: FailureReason, status = 503) {
@@ -72,26 +73,37 @@ function requestFailureReason(error: unknown): FailureReason {
   return "upstream_request_failed";
 }
 
+async function fetchSignalHealth(signalToken: string) {
+  return fetch(signalHealthUrl(), {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${signalToken}`,
+    },
+    signal: AbortSignal.timeout(8_000),
+  });
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   if (requestUrl.search) return unavailable("invalid_request", 400);
 
-  const signalToken = signalHealthToken();
-  if (!signalToken) return unavailable("missing_web_token");
+  const signalTokens = signalHealthTokens();
+  if (signalTokens.length === 0) return unavailable("missing_web_token");
 
   try {
-    const response = await fetch(signalHealthUrl(), {
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${signalToken}`,
-      },
-      signal: AbortSignal.timeout(8_000),
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      return unavailable("upstream_unauthorized");
+    let response: Response | null = null;
+    for (let index = 0; index < signalTokens.length; index += 1) {
+      const candidateResponse = await fetchSignalHealth(signalTokens[index]);
+      if (candidateResponse.status === 401 || candidateResponse.status === 403) {
+        if (index < signalTokens.length - 1) continue;
+        return unavailable("upstream_unauthorized");
+      }
+      response = candidateResponse;
+      break;
     }
+
+    if (!response) return unavailable("upstream_unauthorized");
     if (!response.ok) return unavailable("upstream_error");
 
     let payload: JsonRecord;

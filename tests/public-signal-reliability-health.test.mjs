@@ -31,7 +31,7 @@ test("public signal health exposes bounded redacted failure reasons", () => {
     assert.match(watchdogSource, new RegExp(reason));
   }
 
-  assert.match(routeSource, /response\.status === 401 \|\| response\.status === 403/);
+  assert.match(routeSource, /candidateResponse\.status === 401 \|\| candidateResponse\.status === 403/);
   assert.match(routeSource, /return unavailable\("upstream_unauthorized"\)/);
   assert.match(routeSource, /return unavailable\("upstream_invalid_response"\)/);
   assert.match(routeSource, /requestFailureReason\(error\)/);
