@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { betaPremiumEnabled } from "@/lib/beta-premium";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
+import { getLiveCloudSignalsByState, type CloudLifecycleState } from "@/lib/live-signals";
 import { fateDropPostgres } from "@/lib/postgres";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 import { expoAndroidIcon, pushNotificationBranding } from "@/lib/push-notification-branding";
@@ -11,6 +12,7 @@ const SENDING_LEASE_SECONDS = 5 * 60;
 const BURST_WINDOW_SECONDS = 60;
 const BURST_GRACE_SECONDS = 5;
 const BURST_MIN_SIZE = 5;
+const STARVATION_PROTECTED_STATES = ["echo", "manifested", "vanished"] as const satisfies readonly CloudLifecycleState[];
 
 type BurstControlledStage = "WHISPER" | "ECHO" | "VANISHED";
 
@@ -261,14 +263,43 @@ async function eligibleRecipients() {
   return rows as RecipientRow[];
 }
 
+async function starvationProtectedAlerts(since: number) {
+  const feeds = await Promise.all(
+    STARVATION_PROTECTED_STATES.map((state) => getLiveCloudSignalsByState({ state, since, limit: 100 })),
+  );
+  if (feeds.some((feed) => feed?.success !== true || !Array.isArray(feed.signals))) {
+    throw new Error("Protected lifecycle signal feed unavailable; refusing to risk dropping priority pushes.");
+  }
+
+  const ids = [...new Set(
+    feeds.flatMap((feed) => (feed?.signals ?? []).map((signal) => signal.id).filter(Boolean)),
+  )];
+  if (!ids.length) return [] as CanonicalAlert[];
+
+  const hydrated: CanonicalAlert[] = [];
+  for (let offset = 0; offset < ids.length; offset += 10) {
+    const chunk = ids.slice(offset, offset + 10);
+    const rows = await Promise.all(chunk.map(async (id) => {
+      const matches = await listCanonicalAlerts({ id, limit: 1 });
+      return matches[0] ?? null;
+    }));
+    hydrated.push(...rows.filter((row): row is CanonicalAlert => row !== null));
+  }
+  return hydrated;
+}
+
 async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { measuredAt: number; lookbackSeconds?: number }) {
-  const [alerts, recipients] = await Promise.all([
+  const since = Math.max(0, measuredAt - lookbackSeconds);
+  const [baseAlerts, protectedAlerts, recipients] = await Promise.all([
     listCanonicalAlerts({ limit: 100 }),
+    starvationProtectedAlerts(since),
     eligibleRecipients(),
   ]);
+  const alertById = new Map<string, CanonicalAlert>();
+  for (const alert of [...baseAlerts, ...protectedAlerts]) alertById.set(alert.id, alert);
+  const alerts = [...alertById.values()];
   if (!alerts.length || !recipients.length) return { alerts: 0, recipients: recipients.length, queued: 0 };
 
-  const since = Math.max(0, measuredAt - lookbackSeconds);
   const recent = alerts.filter((alert) => epoch(alert.detectedAt) >= since && epoch(alert.detectedAt) <= measuredAt + 60);
   if (!recent.length) return { alerts: 0, recipients: recipients.length, queued: 0 };
 

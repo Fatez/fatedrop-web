@@ -113,6 +113,27 @@ export async function getLiveCloudSignals(limit = 100, timeoutMs = 8_000) {
   return validCloudContract(result) ? result : null;
 }
 
+export async function getLiveCloudSignalsByState({
+  state,
+  since = 0,
+  limit = 100,
+  timeoutMs = 8_000,
+}: {
+  state: CloudLifecycleState;
+  since?: number;
+  limit?: number;
+  timeoutMs?: number;
+}) {
+  const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
+  const safeSince = Math.max(0, Math.trunc(since));
+  const result = await liveFetch<CloudSignalResponse>(
+    "/api/signals",
+    new URLSearchParams({ state, since: String(safeSince), limit: String(safeLimit) }),
+    timeoutMs,
+  );
+  return validCloudContract(result) ? result : null;
+}
+
 export async function getLiveCloudAlerts({ id, limit = 50, timeoutMs = 8_000 }: { id?: string | null; limit?: number; timeoutMs?: number } = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
   const params = new URLSearchParams({ detail: "alerts", limit: String(safeLimit) });
