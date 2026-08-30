@@ -45,17 +45,12 @@ export async function GET(request: Request) {
 
   try {
     const sql = await fateDropPostgres();
-    const verifiedPredicate = sql`official_rrp_pence IS NOT NULL
-      AND official_rrp_pence > 0
-      AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NOT NULL
-      AND rrp_verified_at IS NOT NULL`;
-
     const [totalsRows, tcgRows, typeRows, sourceRows] = await Promise.all([
       sql`SELECT
         COUNT(*)::int AS total,
         (COUNT(*) FILTER (WHERE official_rrp_pence IS NULL))::int AS missing_rrp,
-        (COUNT(*) FILTER (WHERE ${verifiedPredicate}))::int AS verified,
-        (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND NOT (${verifiedPredicate})))::int AS unverified,
+        (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND official_rrp_pence > 0 AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NOT NULL AND rrp_verified_at IS NOT NULL))::int AS verified,
+        (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND NOT (official_rrp_pence > 0 AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NOT NULL AND rrp_verified_at IS NOT NULL)))::int AS unverified,
         (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND official_rrp_pence <= 0))::int AS invalid_rrp,
         (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND official_rrp_pence > 0 AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NULL))::int AS missing_source,
         (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND official_rrp_pence > 0 AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NOT NULL AND rrp_verified_at IS NULL))::int AS missing_verified_at
@@ -63,7 +58,7 @@ export async function GET(request: Request) {
       sql`SELECT
         COALESCE(NULLIF(BTRIM(tcg),''),'unknown') AS label,
         COUNT(*)::int AS total,
-        (COUNT(*) FILTER (WHERE ${verifiedPredicate}))::int AS verified,
+        (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND official_rrp_pence > 0 AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NOT NULL AND rrp_verified_at IS NOT NULL))::int AS verified,
         (COUNT(*) FILTER (WHERE official_rrp_pence IS NULL))::int AS missing_rrp
       FROM fatedrop_product_identities
       GROUP BY 1
@@ -71,7 +66,7 @@ export async function GET(request: Request) {
       sql`SELECT
         COALESCE(NULLIF(BTRIM(product_type),''),'unknown') AS label,
         COUNT(*)::int AS total,
-        (COUNT(*) FILTER (WHERE ${verifiedPredicate}))::int AS verified,
+        (COUNT(*) FILTER (WHERE official_rrp_pence IS NOT NULL AND official_rrp_pence > 0 AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NOT NULL AND rrp_verified_at IS NOT NULL))::int AS verified,
         (COUNT(*) FILTER (WHERE official_rrp_pence IS NULL))::int AS missing_rrp
       FROM fatedrop_product_identities
       GROUP BY 1
@@ -79,7 +74,10 @@ export async function GET(request: Request) {
       LIMIT 100`,
       sql`SELECT rrp_source AS source, COUNT(*)::int AS count
       FROM fatedrop_product_identities
-      WHERE ${verifiedPredicate}
+      WHERE official_rrp_pence IS NOT NULL
+        AND official_rrp_pence > 0
+        AND NULLIF(BTRIM(COALESCE(rrp_source,'')), '') IS NOT NULL
+        AND rrp_verified_at IS NOT NULL
       GROUP BY rrp_source
       ORDER BY count DESC, rrp_source ASC
       LIMIT 100`,
