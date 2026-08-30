@@ -28,8 +28,22 @@ test('Local Radar TEST ONLY delivery health exposes redacted queue ticket and re
   assert.match(route, /receiptPending/);
   assert.match(route, /"cache-control": "no-store"/);
   assert.doesNotMatch(route, /expoPushToken/);
-  assert.doesNotMatch(route, /user_id/);
-  assert.doesNotMatch(route, /endpoint_id/);
+});
+
+test('Local Radar TEST ONLY delivery health exposes only redacted endpoint freshness evidence', () => {
+  assert.match(route, /targetEndpointExists/);
+  assert.match(route, /targetEndpointEnabled/);
+  assert.match(route, /targetPlatform/);
+  assert.match(route, /targetEndpointCreatedAgeSeconds/);
+  assert.match(route, /targetEndpointUpdatedAgeSeconds/);
+  assert.match(route, /enabledEndpointCount/);
+  assert.match(route, /newerEnabledEndpointCount/);
+  assert.match(route, /enabledEndpointUpdatedWithin24hCount/);
+  assert.match(route, /targetIsNewestEnabledEndpoint/);
+  assert.match(route, /targetHasFailureReason/);
+  assert.doesNotMatch(route, /\buserId\b/);
+  assert.doesNotMatch(route, /\bendpointId\b\s*:/);
+  assert.doesNotMatch(route, /expo_push_token/);
 });
 
 test('explicit issue lookup only accepts positive integer TEST ONLY issue ids', () => {
