@@ -1,5 +1,5 @@
 import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
-import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, isValidIanaTimezone, normalizeSelectedSetKeys, saveNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
+import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, isValidIanaTimezone, normalizeLifecycleMarkets, normalizeSelectedSetKeys, saveNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,10 +31,16 @@ export async function PATCH(request: Request) {
     if (payload.selectedSetKeys !== undefined && !Array.isArray(payload.selectedSetKeys)) {
       return Response.json({ error: "Selected sets must be an array." }, { status: 400 });
     }
+    if (payload.lifecycleMarkets !== undefined && (!payload.lifecycleMarkets || typeof payload.lifecycleMarkets !== "object" || Array.isArray(payload.lifecycleMarkets))) {
+      return Response.json({ error: "Lifecycle market preferences must be an object." }, { status: 400 });
+    }
     const selectedSetKeys = payload.selectedSetKeys === undefined ? current.selectedSetKeys : normalizeSelectedSetKeys(payload.selectedSetKeys);
     if (Array.isArray(payload.selectedSetKeys) && selectedSetKeys.length !== new Set(payload.selectedSetKeys).size) {
       return Response.json({ error: "One or more selected set keys are invalid." }, { status: 400 });
     }
+    const lifecycleMarkets = payload.lifecycleMarkets === undefined
+      ? current.lifecycleMarkets
+      : normalizeLifecycleMarkets(payload.lifecycleMarkets, current.lifecycleMarkets);
     const next: NotificationPreferences = {
       whisper: boolean(payload.whisper, current.whisper), echo: boolean(payload.echo, current.echo), manifested: boolean(payload.manifested, current.manifested), vanished: boolean(payload.vanished, current.vanished),
       priceChange: boolean(payload.priceChange, current.priceChange), fateMatch: boolean(payload.fateMatch, current.fateMatch),
@@ -44,6 +50,7 @@ export async function PATCH(request: Request) {
       english: boolean(payload.english, current.english), japanese: boolean(payload.japanese, current.japanese), korean: boolean(payload.korean, current.korean),
       simplifiedChinese: boolean(payload.simplifiedChinese, current.simplifiedChinese), traditionalChinese: boolean(payload.traditionalChinese, current.traditionalChinese),
       otherLanguages: boolean(payload.otherLanguages, current.otherLanguages), unknownLanguage: boolean(payload.unknownLanguage, current.unknownLanguage),
+      lifecycleMarkets,
       allSets: boolean(payload.allSets, current.allSets), selectedSetKeys, unknownSets: boolean(payload.unknownSets, current.unknownSets),
       web: boolean(payload.web, current.web), push: boolean(payload.push, current.push), discord: boolean(payload.discord, current.discord),
       quietHours: boolean(payload.quietHours, current.quietHours), quietStart: time(payload.quietStart), quietEnd: time(payload.quietEnd), timezone,
