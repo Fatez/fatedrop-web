@@ -32,6 +32,19 @@ const marketOptions: ReadonlyArray<{ key: "all" | MarketGroup; label: string }> 
 
 let preferenceRequest: Promise<PreferencePayload> | null = null;
 
+function getPreferenceRequest(): Promise<PreferencePayload> {
+  if (!preferenceRequest) {
+    preferenceRequest = fetch("/api/notification-preferences", { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as PreferencePayload : {})
+      .catch(() => ({}));
+  }
+  return preferenceRequest;
+}
+
+function invalidatePreferenceRequest() {
+  preferenceRequest = null;
+}
+
 function stageKey(stage: AlertStageTrendProps["stage"]): StageKey {
   return stage.toLowerCase() as StageKey;
 }
@@ -76,10 +89,8 @@ export function AlertStageTrend({
 
   useEffect(() => {
     let active = true;
-    preferenceRequest ||= fetch("/api/notification-preferences", { cache: "no-store" })
-      .then(async (response) => response.ok ? await response.json() as PreferencePayload : {})
-      .catch(() => ({}));
-    void preferenceRequest.then((payload) => {
+    const request = getPreferenceRequest();
+    void request.then((payload) => {
       if (!active) return;
       setSelection(validSelection(payload.preferences?.lifecycleMarkets?.[key]));
     });
@@ -108,7 +119,7 @@ export function AlertStageTrend({
         body: JSON.stringify({ lifecycleMarkets: { [key]: next } }),
       });
       if (!response.ok) throw new Error("Preference update failed");
-      preferenceRequest = null;
+      invalidatePreferenceRequest();
     } catch {
       setSelection(previous);
       setSaveError(true);
