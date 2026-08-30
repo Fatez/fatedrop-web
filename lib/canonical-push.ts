@@ -3,6 +3,7 @@ import { betaPremiumEnabled } from "@/lib/beta-premium";
 import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { fateDropPostgres } from "@/lib/postgres";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
+import { expoAndroidIcon, pushNotificationBranding } from "@/lib/push-notification-branding";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const MAX_ATTEMPTS = 3;
@@ -17,6 +18,7 @@ type RecipientRow = {
   endpoint_id: string;
   user_id: string;
   expo_push_token: string;
+  platform: string | null;
   whisper_enabled: boolean;
   echo_enabled: boolean;
   manifested_enabled: boolean;
@@ -168,8 +170,10 @@ function individualPushRow(alert: CanonicalAlert, recipient: RecipientRow, now: 
     url: alert.productUrl,
     payload_json: {
       ...alert.notification.data,
+      stage: alert.fateStage,
       endpointId: recipient.endpoint_id,
       expoPushToken: recipient.expo_push_token,
+      pushPlatform: recipient.platform,
     },
     state: "pending",
     attempts: 0,
@@ -210,6 +214,7 @@ function burstSummaryPushRow(
       summaryWindowEnd: last.detectedAt,
       endpointId: recipient.endpoint_id,
       expoPushToken: recipient.expo_push_token,
+      pushPlatform: recipient.platform,
     },
     state: "pending",
     attempts: 0,
@@ -227,6 +232,7 @@ async function eligibleRecipients() {
       pe.id AS endpoint_id,
       pe.user_id,
       pe.expo_push_token,
+      pe.platform,
       COALESCE(np.whisper_enabled,true) AS whisper_enabled,
       COALESCE(np.echo_enabled,true) AS echo_enabled,
       COALESCE(np.manifested_enabled,true) AS manifested_enabled,
@@ -352,6 +358,7 @@ async function enqueueLocalRadarOperatorPush(event: LocalRadarOperatorPush) {
         operatorIssue: event.operatorIssue,
         endpointId: recipient.endpoint_id,
         expoPushToken: recipient.expo_push_token,
+        pushPlatform: recipient.platform,
       },
       state: "pending",
       attempts: 0,
@@ -469,12 +476,21 @@ async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
 
   const messages = rows.map((row) => {
     const data = payload(row.payload_json);
+    const branding = pushNotificationBranding({ platform: data.pushPlatform, stage: data.stage, route: data.route });
+    const icon = expoAndroidIcon(data.pushPlatform, branding);
+    const publicData = Object.fromEntries(
+      Object.entries(data).filter(([key]) => !["expoPushToken", "endpointId", "pushPlatform"].includes(key)),
+    );
     return {
       to: data.expoPushToken,
       sound: "default",
       title: row.title,
       body: row.body,
-      data: Object.fromEntries(Object.entries(data).filter(([key]) => !["expoPushToken","endpointId"].includes(key))),
+      ...(icon ? { icon } : {}),
+      data: {
+        ...publicData,
+        notificationCompanion: branding.companion,
+      },
     };
   });
 
