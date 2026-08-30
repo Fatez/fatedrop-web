@@ -42,7 +42,7 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
   const expectedLabel = value.expectedLabel === null || value.expectedLabel === undefined ? null : text(value.expectedLabel, 140);
 
   if (!Number.isInteger(operatorIssue) || operatorIssue <= 0) return null;
-  if (!Number.isInteger(branchCount) || branchCount < 1 || branchCount > 100) return null;
+  if (!Number.isInteger(branchCount) || branchCount < 0 || branchCount > 100) return null;
   if (eventId !== `local-radar-operator:${operatorIssue}`) return null;
   if (!stage || !title || !body || !retailerId || !retailerName || !productTitle) return null;
   if (title !== "FateDrop · Local Radar · Incoming stock") return null;
