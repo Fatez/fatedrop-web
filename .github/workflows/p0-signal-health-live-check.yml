@@ -13,44 +13,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect live push heartbeat and Signal health after fallback deploy
+      - name: Verify deployed Cloud public Signal summary
         shell: bash
         run: |
           set -euo pipefail
-          echo "post_web_fallback_deploy=true"
-
-          push_code="$(curl --silent --show-error --output /tmp/push.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/push?detail=1' || true)"
-          echo "push health HTTP $push_code"
+          code="$(curl --silent --show-error --retry 5 --retry-delay 2 --output /tmp/summary.json --write-out '%{http_code}' 'https://fatedrop-cloud-production.up.railway.app/api/signal-summary')"
+          echo "Cloud public Signal summary HTTP $code"
           node <<'NODE'
           const fs = require('fs');
-          let body = {};
-          try { body = JSON.parse(fs.readFileSync('/tmp/push.json','utf8')); } catch {}
-          console.log('pushHeartbeat', {
-            ok: body.ok === true,
-            status: body.status ?? null,
-            ageSeconds: body.ageSeconds ?? null,
-            lastQueued: body.lastQueued ?? null,
-            lastClaimed: body.lastClaimed ?? null,
-            lastSent: body.lastSent ?? null,
-            lastFailed: body.lastFailed ?? null,
-            lastError: body.lastError ?? null,
-          });
-          NODE
-
-          signal_code="$(curl --silent --show-error --output /tmp/signal.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/signal' || true)"
-          echo "signal health HTTP $signal_code"
-          node <<'NODE'
-          const fs = require('fs');
-          let body = {};
-          try { body = JSON.parse(fs.readFileSync('/tmp/signal.json','utf8')); } catch {}
-          console.log('signalHealth', {
+          const body = JSON.parse(fs.readFileSync('/tmp/summary.json','utf8'));
+          const d = body?.diagnostics || {};
+          console.log('publicSummary', {
             available: body.available === true,
-            reason: body.reason ?? null,
-            lifecycleAbsentStages: Array.isArray(body?.lifecycle?.absentStages) ? body.lifecycle.absentStages : null,
-            deliveryIssues: body?.delivery?.issues ?? null,
-            retailerTotal: body?.retailers?.total ?? null,
-            discoveryAvailable: body?.discovery?.available ?? null,
+            source: body.source ?? null,
+            generatedAt: body.generatedAt ?? null,
+            lifecycleAbsentStages: Array.isArray(d.absentLifecycleStages) ? d.absentLifecycleStages : null,
+            deliveryIssues: d.discordDeliveryIssues ?? null,
+            retailerTotal: d?.monitors?.totalRetailers ?? null,
+            discoveryAvailable: d?.discovery?.available ?? null,
+            recentSignals: d?.reliability?.recentSignals ?? null,
           });
+          if (body.available !== true) process.exit(2);
+          if (!d || typeof d !== 'object') process.exit(3);
+          if (typeof d?.monitors?.totalRetailers !== 'number') process.exit(4);
           NODE
-
-          test "$push_code" = "200"
+          test "$code" = "200"
