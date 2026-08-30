@@ -1,0 +1,75 @@
+name: P0 Canonical Shape Diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/p0-canonical-shape-2026-08-30
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect live canonical alert validator shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLOUD="https://fatedrop-cloud-production.up.railway.app"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            "$CLOUD/api/signals?detail=alerts&limit=100" \
+            -o /tmp/alerts.json
+          node <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/alerts.json', 'utf8'));
+          const alerts = Array.isArray(payload.alerts) ? payload.alerts : [];
+          const reasons = {};
+          const reject = (reason) => { reasons[reason] = (reasons[reason] || 0) + 1; };
+          const verdicts = new Set(['LOWEST_KNOWN','BETTER_OFFER_FOUND','NO_FAIR_COMPARISON']);
+          const stages = new Set(['WHISPER','ECHO','MANIFESTED','VANISHED']);
+          let accepted = 0;
+          for (const a of alerts) {
+            if (!a || typeof a !== 'object' || Array.isArray(a)) { reject('not_object'); continue; }
+            if (typeof a.id !== 'string' || !a.id) { reject('id'); continue; }
+            if (typeof a.title !== 'string' || !a.title) { reject('title'); continue; }
+            if (typeof a.detectedAt !== 'string' || !a.detectedAt) { reject('detectedAt'); continue; }
+            if (typeof a.fateStage !== 'string' || !stages.has(a.fateStage)) { reject('fateStage'); continue; }
+            if (!a.product || typeof a.product !== 'object' || Array.isArray(a.product)) { reject('product'); continue; }
+            if (!a.priceIntelligence || typeof a.priceIntelligence !== 'object' || Array.isArray(a.priceIntelligence)) { reject('priceIntelligence'); continue; }
+            if (!a.preparedLinks || typeof a.preparedLinks !== 'object' || Array.isArray(a.preparedLinks)) { reject('preparedLinks'); continue; }
+            if (!a.notification || typeof a.notification !== 'object' || Array.isArray(a.notification)) { reject('notification'); continue; }
+            if (typeof a.priceIntelligence.verdict !== 'string' || !verdicts.has(a.priceIntelligence.verdict)) { reject('priceVerdict'); continue; }
+            if (!Array.isArray(a.signalThread)) { reject('signalThread'); continue; }
+            accepted += 1;
+          }
+          console.log('shape', {
+            success: payload.success,
+            available: payload.available,
+            source: payload.source,
+            returned: alerts.length,
+            validatorAccepted: accepted,
+            validatorRejected: alerts.length - accepted,
+            rejectionReasons: reasons,
+          });
+          console.log('shapeSample', alerts.slice(0, 12).map((a) => ({
+            stage: a?.fateStage,
+            hasProduct: !!a?.product,
+            hasPriceIntelligence: !!a?.priceIntelligence,
+            priceVerdict: a?.priceIntelligence?.verdict ?? null,
+            hasPreparedLinks: !!a?.preparedLinks,
+            hasNotification: !!a?.notification,
+            hasSignalThread: Array.isArray(a?.signalThread),
+            category: a?.productIntelligence?.category ?? null,
+          })));
+          NODE
+
+      - name: Inspect production push aggregates
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            'https://fatedrop.co.uk/api/health/push?detail=1'
+          echo
