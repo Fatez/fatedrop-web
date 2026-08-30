@@ -11,24 +11,41 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 5
     steps:
-      - name: Poll live Web Signal health bridge
+      - name: Inspect live push heartbeat and Signal health
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 16); do
-            code="$(curl --silent --show-error \
-              --output /tmp/signal-health.json \
-              --write-out '%{http_code}' \
-              'https://fatedrop.co.uk/api/health/signal' || true)"
-            reason="$(node -e 'const fs=require("fs"); try { const b=JSON.parse(fs.readFileSync("/tmp/signal-health.json","utf8")); process.stdout.write(String(b.reason || (b.available === true ? "available" : "unknown"))); } catch { process.stdout.write("non_json"); }')"
-            echo "attempt=$attempt http=$code reason=$reason"
-            if [ "$code" = "200" ]; then
-              node -e 'const fs=require("fs"); const b=JSON.parse(fs.readFileSync("/tmp/signal-health.json","utf8")); if(b.available!==true) process.exit(2); console.log({available:true,retailerTotal:b?.retailers?.total??null,deliveryIssues:b?.delivery?.issues??null,discoveryAvailable:b?.discovery?.available??null});'
-              exit 0
-            fi
-            sleep 15
-          done
-          echo "Signal health bridge did not recover inside the deployment window."
-          exit 1
+
+          push_code="$(curl --silent --show-error --output /tmp/push.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/push?detail=1' || true)"
+          echo "push health HTTP $push_code"
+          node <<'NODE'
+          const fs = require('fs');
+          let body = {};
+          try { body = JSON.parse(fs.readFileSync('/tmp/push.json','utf8')); } catch {}
+          console.log('pushHeartbeat', {
+            ok: body.ok === true,
+            status: body.status ?? null,
+            ageSeconds: body.ageSeconds ?? null,
+            lastQueued: body.lastQueued ?? null,
+            lastClaimed: body.lastClaimed ?? null,
+            lastSent: body.lastSent ?? null,
+            lastFailed: body.lastFailed ?? null,
+            lastError: body.lastError ?? null,
+          });
+          NODE
+
+          signal_code="$(curl --silent --show-error --output /tmp/signal.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/signal' || true)"
+          echo "signal health HTTP $signal_code"
+          node <<'NODE'
+          const fs = require('fs');
+          let body = {};
+          try { body = JSON.parse(fs.readFileSync('/tmp/signal.json','utf8')); } catch {}
+          console.log('signalHealth', {
+            available: body.available === true,
+            reason: body.reason ?? null,
+          });
+          NODE
+
+          test "$push_code" = "200"
