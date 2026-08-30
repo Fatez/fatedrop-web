@@ -59,3 +59,5 @@ jobs:
           cat /tmp/push-health.json
           echo
           test "$code" = "200" || exit 1
+
+# Rerun after production queue observability deployment.
