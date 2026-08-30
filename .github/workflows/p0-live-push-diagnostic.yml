@@ -1,0 +1,69 @@
+name: P0 Live Push Diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/p0-live-push-2026-08-30
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect live canonical alert feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLOUD="https://fatedrop-cloud-production.up.railway.app"
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            "$CLOUD/api/signals?detail=alerts&limit=100" \
+            -o /tmp/alerts.json
+          node <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/alerts.json', 'utf8'));
+          const alerts = Array.isArray(payload.alerts) ? payload.alerts : [];
+          const now = Date.now();
+          const recent = alerts.filter((a) => {
+            const t = Date.parse(String(a?.detectedAt || ''));
+            return Number.isFinite(t) && t <= now + 60_000 && now - t <= 15 * 60_000;
+          });
+          const countBy = (rows, key) => rows.reduce((out, row) => {
+            const value = String(key(row) || 'UNKNOWN');
+            out[value] = (out[value] || 0) + 1;
+            return out;
+          }, {});
+          console.log('contract', {
+            success: payload.success,
+            available: payload.available,
+            source: payload.source,
+            contractVersion: payload.contractVersion,
+            returned: alerts.length,
+            recent15m: recent.length,
+          });
+          console.log('allStages', countBy(alerts, (a) => a.fateStage));
+          console.log('recentStages', countBy(recent, (a) => a.fateStage));
+          console.log('recentCategories', countBy(recent, (a) => a?.productIntelligence?.category));
+          console.log('recentSample', recent.slice(0, 20).map((a) => ({
+            id: a.id,
+            stage: a.fateStage,
+            category: a?.productIntelligence?.category,
+            ageSeconds: Math.max(0, Math.round((now - Date.parse(a.detectedAt)) / 1000)),
+            title: String(a.title || '').slice(0, 120),
+          })));
+          NODE
+
+      - name: Inspect public health gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in push signal; do
+            code="$(curl --silent --show-error --retry 3 --retry-delay 2 --output /tmp/health-$path --write-out '%{http_code}' "https://fatedrop.co.uk/api/health/$path" || true)"
+            echo "$path health HTTP $code"
+            if [ -s "/tmp/health-$path" ]; then
+              head -c 1000 "/tmp/health-$path"; echo
+            fi
+          done
