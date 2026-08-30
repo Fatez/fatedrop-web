@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect live Signal and natural push provenance
+      - name: Inspect live Signal and natural Expo receipt outcomes
         shell: bash
         run: |
           set -euo pipefail
@@ -34,44 +34,33 @@ jobs:
             recentSignals24h: signal?.discord?.recentSignals ?? null,
             recentDiscordAttempts24h: signal?.discord?.recentDiscordAttempts ?? null,
           });
-          console.log('pushRecipients', {
+          console.log('pushNatural24h', {
+            total: push.naturalOutbox24h ?? null,
+            whisper: push.naturalWhisperOutbox24h ?? null,
+            sent: push.outbox24hSent ?? null,
+            failed: push.outbox24hFailed ?? null,
+          });
+          console.log('naturalReceipts24h', {
+            schemaReady: push.receiptSchemaReady ?? null,
+            eligible: push.naturalReceiptEligible24h ?? null,
+            ok: push.naturalReceiptOk24h ?? null,
+            error: push.naturalReceiptError24h ?? null,
+            pending: push.naturalReceiptPending24h ?? null,
+            latestCheckedAgeSeconds: push.latestNaturalReceiptCheckedAgeSeconds ?? null,
+          });
+          console.log('naturalWhisperReceipts24h', {
+            eligible: push.naturalWhisperReceiptEligible24h ?? null,
+            ok: push.naturalWhisperReceiptOk24h ?? null,
+            error: push.naturalWhisperReceiptError24h ?? null,
+            pending: push.naturalWhisperReceiptPending24h ?? null,
+          });
+          console.log('recipientGate', {
             enabledEndpointCount: push.enabledEndpointCount ?? null,
             eligibleRecipientCount: push.eligibleRecipientCount ?? null,
             pushEnabledRecipientCount: push.pushEnabledRecipientCount ?? null,
             whisperEnabledRecipientCount: push.whisperEnabledRecipientCount ?? null,
             sealedTcgEnabledRecipientCount: push.sealedTcgEnabledRecipientCount ?? null,
             quietHoursEnabledRecipientCount: push.quietHoursEnabledRecipientCount ?? null,
-          });
-          console.log('pushRecent15m', {
-            total: push.recentOutboxTotal ?? null,
-            whisper: push.recentWhisperOutboxCount ?? null,
-            pending: push.recentOutboxPending ?? null,
-            sending: push.recentOutboxSending ?? null,
-            sent: push.recentOutboxSent ?? null,
-            failed: push.recentOutboxFailed ?? null,
-          });
-          console.log('push24h', {
-            total: push.outbox24hTotal ?? null,
-            whisper: push.outbox24hWhisper ?? null,
-            echo: push.outbox24hEcho ?? null,
-            manifested: push.outbox24hManifested ?? null,
-            vanished: push.outbox24hVanished ?? null,
-            localRadar: push.outbox24hLocalRadar ?? null,
-            sent: push.outbox24hSent ?? null,
-            failed: push.outbox24hFailed ?? null,
-            natural: push.naturalOutbox24h ?? null,
-            canary: push.canaryOutbox24h ?? null,
-            naturalWhisper: push.naturalWhisperOutbox24h ?? null,
-            canaryWhisper: push.canaryWhisperOutbox24h ?? null,
-          });
-          console.log('pushNatural3h', {
-            natural: push.naturalOutbox3h ?? null,
-            naturalWhisper: push.naturalWhisperOutbox3h ?? null,
-            naturalWhisperSent: push.naturalWhisperSent3h ?? null,
-            naturalWhisperFailed: push.naturalWhisperFailed3h ?? null,
-            canary: push.canaryOutbox3h ?? null,
-            latestNaturalCreatedAgeSeconds: push.latestNaturalCreatedAgeSeconds ?? null,
-            latestNaturalSentAgeSeconds: push.latestNaturalSentAgeSeconds ?? null,
           });
           console.log('pushHeartbeat', {
             ok: push.ok === true,
@@ -84,6 +73,7 @@ jobs:
           });
           if (signal.available !== true) process.exit(2);
           if (push.ok !== true) process.exit(3);
+          if (push.receiptSchemaReady !== true) process.exit(4);
           NODE
 
           test "$signal_code" = "200"
