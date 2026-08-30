@@ -1,17 +1,12 @@
-import { createHmac } from "node:crypto";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 const SUCCESS_CACHE_CONTROL = "public, max-age=0, s-maxage=30, stale-while-revalidate=120";
-const PRIVATE_DIAGNOSTIC_AUTH_CONTEXT = "fatedrop:private-diagnostics:v1";
 
 type JsonRecord = Record<string, unknown>;
 type FailureReason =
   | "invalid_request"
-  | "missing_web_token"
-  | "upstream_unauthorized"
   | "upstream_error"
   | "upstream_invalid_response"
   | "upstream_unavailable"
@@ -29,8 +24,13 @@ function count(value: unknown) {
 
 function timestamp(value: unknown) {
   if (value == null) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+  }
+  return null;
 }
 
 function nullableNumber(value: unknown) {
@@ -43,20 +43,11 @@ function stringList(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
-function signalHealthUrl() {
+function signalSummaryUrl() {
   const base = (process.env.FATEDROP_SIGNAL_ENGINE_URL || DEFAULT_SIGNAL_ENGINE_URL).replace(/\/+$/, "");
-  const url = new URL("/api/signal-health", `${base}/`);
-  if (url.protocol !== "https:") throw new Error("Signal Engine diagnostics require HTTPS.");
+  const url = new URL("/api/signal-summary", `${base}/`);
+  if (url.protocol !== "https:") throw new Error("Signal Engine health summary requires HTTPS.");
   return url;
-}
-
-function signalHealthTokens() {
-  const dedicated = String(process.env.FATEDROP_SIGNAL_API_TOKEN || "").trim();
-  const shared = String(process.env.FATEDROP_METRICS_INGEST_SECRET || "").trim();
-  const derived = shared
-    ? createHmac("sha256", shared).update(PRIVATE_DIAGNOSTIC_AUTH_CONTEXT).digest("hex")
-    : "";
-  return [...new Set([dedicated, derived].filter(Boolean))];
 }
 
 function unavailable(reason: FailureReason, status = 503) {
@@ -73,13 +64,10 @@ function requestFailureReason(error: unknown): FailureReason {
   return "upstream_request_failed";
 }
 
-async function fetchSignalHealth(signalToken: string) {
-  return fetch(signalHealthUrl(), {
+async function fetchSignalSummary() {
+  return fetch(signalSummaryUrl(), {
     cache: "no-store",
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${signalToken}`,
-    },
+    headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(8_000),
   });
 }
@@ -88,22 +76,8 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   if (requestUrl.search) return unavailable("invalid_request", 400);
 
-  const signalTokens = signalHealthTokens();
-  if (signalTokens.length === 0) return unavailable("missing_web_token");
-
   try {
-    let response: Response | null = null;
-    for (let index = 0; index < signalTokens.length; index += 1) {
-      const candidateResponse = await fetchSignalHealth(signalTokens[index]);
-      if (candidateResponse.status === 401 || candidateResponse.status === 403) {
-        if (index < signalTokens.length - 1) continue;
-        return unavailable("upstream_unauthorized");
-      }
-      response = candidateResponse;
-      break;
-    }
-
-    if (!response) return unavailable("upstream_unauthorized");
+    const response = await fetchSignalSummary();
     if (!response.ok) return unavailable("upstream_error");
 
     let payload: JsonRecord;

@@ -6,21 +6,19 @@ const routeSource = await readFile(new URL("../app/api/health/signal/route.ts", 
 const envSource = await readFile(new URL("../.env.example", import.meta.url), "utf8");
 const watchdogSource = await readFile(new URL("../.github/workflows/monitor-signal-production.yml", import.meta.url), "utf8");
 
-test("public signal health authenticates upstream server-side and fails closed", () => {
-  assert.match(routeSource, /FATEDROP_SIGNAL_API_TOKEN/);
-  assert.match(routeSource, /Authorization: `Bearer \$\{signalToken\}`/);
-  assert.match(routeSource, /\/api\/signal-health/);
+test("public signal health consumes the redacted Cloud summary without diagnostic auth", () => {
+  assert.match(routeSource, /\/api\/signal-summary/);
   assert.match(routeSource, /payload\.available !== true/);
   assert.match(routeSource, /cache: "no-store"/);
   assert.match(routeSource, /"cache-control": "no-store"/);
-  assert.doesNotMatch(routeSource, /NEXT_PUBLIC_FATEDROP_SIGNAL_API_TOKEN/);
+  assert.doesNotMatch(routeSource, /FATEDROP_SIGNAL_API_TOKEN/);
+  assert.doesNotMatch(routeSource, /FATEDROP_METRICS_INGEST_SECRET/);
+  assert.doesNotMatch(routeSource, /Authorization:/);
 });
 
 test("public signal health exposes bounded redacted failure reasons", () => {
   for (const reason of [
     "invalid_request",
-    "missing_web_token",
-    "upstream_unauthorized",
     "upstream_error",
     "upstream_invalid_response",
     "upstream_unavailable",
@@ -31,18 +29,15 @@ test("public signal health exposes bounded redacted failure reasons", () => {
     assert.match(watchdogSource, new RegExp(reason));
   }
 
-  assert.match(routeSource, /candidateResponse\.status === 401 \|\| candidateResponse\.status === 403/);
-  assert.match(routeSource, /return unavailable\("upstream_unauthorized"\)/);
   assert.match(routeSource, /return unavailable\("upstream_invalid_response"\)/);
   assert.match(routeSource, /requestFailureReason\(error\)/);
   assert.match(routeSource, /\{ available: false, reason \}/);
 
   for (const forbidden of [
-    "signalToken }",
-    "process.env.FATEDROP_SIGNAL_API_TOKEN }",
     "response.statusText",
     "error.message",
     "upstreamBody",
+    "Authorization:",
   ]) {
     assert.doesNotMatch(routeSource, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
@@ -93,7 +88,7 @@ test("public signal health exposes aggregate reliability only", () => {
   }
 });
 
-test("signal diagnostic token remains explicitly server-only", () => {
+test("private Signal diagnostic token remains documented for private Cloud endpoints", () => {
   assert.match(envSource, /Server-only bearer token for private Signal Engine diagnostics/);
   assert.match(envSource, /Never expose it as NEXT_PUBLIC_\*/);
   assert.match(envSource, /FATEDROP_SIGNAL_API_TOKEN/);
