@@ -13,68 +13,54 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect live Signal and natural Expo receipt outcomes
+      - name: Measure live Whisper burst density and receipt outcome
         shell: bash
         run: |
           set -euo pipefail
 
-          signal_code="$(curl --silent --show-error --retry 5 --retry-delay 2 --output /tmp/signal.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/signal')"
           push_code="$(curl --silent --show-error --retry 5 --retry-delay 2 --output /tmp/push.json --write-out '%{http_code}' 'https://fatedrop.co.uk/api/health/push?detail=1')"
+          whispers_code="$(curl --silent --show-error --retry 5 --retry-delay 2 --output /tmp/whispers.json --write-out '%{http_code}' 'https://fatedrop-cloud-production.up.railway.app/api/signals?state=whisper&limit=100')"
 
-          echo "Signal health HTTP $signal_code"
           echo "Push health HTTP $push_code"
+          echo "Cloud Whisper feed HTTP $whispers_code"
 
           node <<'NODE'
           const fs = require('fs');
-          const signal = JSON.parse(fs.readFileSync('/tmp/signal.json','utf8'));
           const push = JSON.parse(fs.readFileSync('/tmp/push.json','utf8'));
-          console.log('signalHealth', {
-            available: signal.available === true,
-            latestSignalAt: signal?.discord?.latestSignalAt ?? null,
-            recentSignals24h: signal?.discord?.recentSignals ?? null,
-            recentDiscordAttempts24h: signal?.discord?.recentDiscordAttempts ?? null,
+          const feed = JSON.parse(fs.readFileSync('/tmp/whispers.json','utf8'));
+          const signals = Array.isArray(feed.signals) ? feed.signals : [];
+          const perMinute = new Map();
+          const perSecond = new Map();
+          for (const signal of signals) {
+            const ms = Date.parse(signal.detectedAt || '');
+            if (!Number.isFinite(ms)) continue;
+            const iso = new Date(ms).toISOString();
+            const minute = iso.slice(0, 16);
+            const second = iso.slice(0, 19);
+            perMinute.set(minute, (perMinute.get(minute) || 0) + 1);
+            perSecond.set(second, (perSecond.get(second) || 0) + 1);
+          }
+          const minuteBuckets = [...perMinute.entries()].sort((a,b) => b[1]-a[1]);
+          const secondBuckets = [...perSecond.entries()].sort((a,b) => b[1]-a[1]);
+          console.log('whisperFeed', {
+            count: signals.length,
+            newestDetectedAt: signals[0]?.detectedAt ?? null,
+            oldestDetectedAt: signals.at(-1)?.detectedAt ?? null,
+            peakMinute: minuteBuckets[0] ?? null,
+            peakSecond: secondBuckets[0] ?? null,
+            topMinutes: minuteBuckets.slice(0,5),
           });
-          console.log('pushNatural24h', {
-            total: push.naturalOutbox24h ?? null,
-            whisper: push.naturalWhisperOutbox24h ?? null,
-            sent: push.outbox24hSent ?? null,
-            failed: push.outbox24hFailed ?? null,
-          });
-          console.log('naturalReceipts24h', {
-            schemaReady: push.receiptSchemaReady ?? null,
-            eligible: push.naturalReceiptEligible24h ?? null,
-            ok: push.naturalReceiptOk24h ?? null,
-            error: push.naturalReceiptError24h ?? null,
-            pending: push.naturalReceiptPending24h ?? null,
-            latestCheckedAgeSeconds: push.latestNaturalReceiptCheckedAgeSeconds ?? null,
-          });
-          console.log('naturalWhisperReceipts24h', {
+          console.log('naturalPushReceipts24h', {
+            naturalOutbox: push.naturalOutbox24h ?? null,
+            naturalWhisperOutbox: push.naturalWhisperOutbox24h ?? null,
             eligible: push.naturalWhisperReceiptEligible24h ?? null,
             ok: push.naturalWhisperReceiptOk24h ?? null,
             error: push.naturalWhisperReceiptError24h ?? null,
             pending: push.naturalWhisperReceiptPending24h ?? null,
           });
-          console.log('recipientGate', {
-            enabledEndpointCount: push.enabledEndpointCount ?? null,
-            eligibleRecipientCount: push.eligibleRecipientCount ?? null,
-            pushEnabledRecipientCount: push.pushEnabledRecipientCount ?? null,
-            whisperEnabledRecipientCount: push.whisperEnabledRecipientCount ?? null,
-            sealedTcgEnabledRecipientCount: push.sealedTcgEnabledRecipientCount ?? null,
-            quietHoursEnabledRecipientCount: push.quietHoursEnabledRecipientCount ?? null,
-          });
-          console.log('pushHeartbeat', {
-            ok: push.ok === true,
-            ageSeconds: push.ageSeconds ?? null,
-            lastQueued: push.lastQueued ?? null,
-            lastClaimed: push.lastClaimed ?? null,
-            lastSent: push.lastSent ?? null,
-            lastFailed: push.lastFailed ?? null,
-            lastError: push.lastError ?? null,
-          });
-          if (signal.available !== true) process.exit(2);
-          if (push.ok !== true) process.exit(3);
-          if (push.receiptSchemaReady !== true) process.exit(4);
+          if (push.ok !== true) process.exit(2);
+          if (feed.available !== true && feed.success !== true) process.exit(3);
           NODE
 
-          test "$signal_code" = "200"
           test "$push_code" = "200"
+          test "$whispers_code" = "200"
