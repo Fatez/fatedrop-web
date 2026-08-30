@@ -38,6 +38,31 @@ function offerPrice(offer: CanonicalOfferLink) {
   return "Price unavailable";
 }
 
+function liveWindowTime(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function liveWindowDuration(seconds: number | null) {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return null;
+  const whole = Math.floor(seconds);
+  if (whole < 60) return `${whole}s`;
+  const minutes = Math.floor(whole / 60);
+  const secondsRemainder = whole % 60;
+  if (minutes < 60) return secondsRemainder ? `${minutes}m ${secondsRemainder}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const minuteRemainder = minutes % 60;
+  return minuteRemainder ? `${hours}h ${minuteRemainder}m` : `${hours}h`;
+}
+
 function threadColor(entry: CanonicalSignalThreadEntry) {
   if (entry.fateStage === "WHISPER") return "#73e9fb";
   if (entry.fateStage === "ECHO") return "#b397ff";
@@ -71,11 +96,27 @@ export function CanonicalAlertSignalPack({ alert, now, presentation = null }: { 
   const primaryEarly = alert.fateStage === "WHISPER" || alert.fateStage === "ECHO";
   const reference = alert.priceIntelligence.rrpPence == null ? "Not yet verified" : `${referenceLabel(presentation)} · ${moneyFromPence(alert.priceIntelligence.rrpPence)}`;
   const truePrice = alert.product.deliveredPricePence == null ? "Awaiting delivery data" : moneyFromPence(alert.product.deliveredPricePence);
+  const liveWindow = alert.fateStage === "VANISHED" ? alert.liveWindow ?? null : null;
+  const manifestedAt = liveWindow ? liveWindowTime(liveWindow.manifestedAt) : null;
+  const lastConfirmedLiveAt = liveWindow ? liveWindowTime(liveWindow.lastConfirmedLiveAt) : null;
+  const vanishedAt = liveWindow ? liveWindowTime(liveWindow.vanishedAt) : null;
+  const duration = liveWindow ? liveWindowDuration(liveWindow.observedDurationSeconds) : null;
 
   return <details style={panel}>
     <summary style={{ cursor: "pointer", color: "#9beeff", fontSize: 8, fontWeight: 900, letterSpacing: ".08em", listStylePosition: "inside" }}>{packSummary(alert)}</summary>
     <div style={{ display: "grid", gap: 12, paddingTop: 12 }}>
       <p style={{ margin: 0, color: "#837c89", fontSize: 9, lineHeight: 1.55 }}>{explainer(alert)}</p>
+
+      {liveWindow ? <section style={{ display: "grid", gap: 7, padding: 11, border: "1px solid rgba(255,117,130,.16)", borderRadius: 11, background: "rgba(255,117,130,.025)" }}>
+        <b style={{ color: "#ff8994", fontSize: 7, letterSpacing: ".1em" }}>OBSERVED LIVE WINDOW</b>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 6 }}>
+          <span style={{ color: "#817985", fontSize: 7 }}>MANIFESTED<strong style={{ display: "block", marginTop: 2, color: "#ded8e2", fontSize: 9 }}>{manifestedAt ?? "Start not recorded"}</strong></span>
+          <span style={{ color: "#817985", fontSize: 7 }}>LAST CONFIRMED LIVE<strong style={{ display: "block", marginTop: 2, color: "#ded8e2", fontSize: 9 }}>{lastConfirmedLiveAt ?? "Unavailable"}</strong></span>
+          <span style={{ color: "#817985", fontSize: 7 }}>VANISHED<strong style={{ display: "block", marginTop: 2, color: "#ded8e2", fontSize: 9 }}>{vanishedAt ?? "Unavailable"}</strong></span>
+          <span style={{ color: "#817985", fontSize: 7 }}>OBSERVED LIVE<strong style={{ display: "block", marginTop: 2, color: "#ded8e2", fontSize: 9 }}>{duration ?? "Duration unavailable"}</strong></span>
+        </div>
+        {!liveWindow.historyComplete ? <small style={{ color: "#8c7f87", fontSize: 7, lineHeight: 1.45 }}>Lifecycle history is incomplete. FateDrop will not guess a missing start time or duration.</small> : null}
+      </section> : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 6 }}>
         <span style={{ padding: 9, border: "1px solid rgba(255,255,255,.06)", borderRadius: 9 }}><b style={{ display: "block", color: "#716a77", fontSize: 6, letterSpacing: ".08em" }}>AVAILABILITY</b><strong style={{ display: "block", marginTop: 3, color: "#ded8e2", fontSize: 8 }}>{humanStockStatus(pack.primary.stockStatus)}</strong></span>
