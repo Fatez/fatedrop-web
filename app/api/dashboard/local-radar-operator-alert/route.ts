@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { dispatchLocalRadarOperatorPush, type LocalRadarOperatorPush } from "@/lib/canonical-push";
+import { readPushProductionHealth } from "@/lib/push-dispatch-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,6 +66,22 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
     branchCount,
     operatorIssue,
   };
+}
+
+export async function GET(request: Request) {
+  if (!authorized(request)) {
+    return new Response(null, { status: 401, headers: { "cache-control": "no-store" } });
+  }
+
+  try {
+    const health = await readPushProductionHealth();
+    return new Response(null, {
+      status: health.ok ? 204 : 503,
+      headers: { "cache-control": "no-store" },
+    });
+  } catch {
+    return new Response(null, { status: 503, headers: { "cache-control": "no-store" } });
+  }
 }
 
 export async function POST(request: Request) {
