@@ -39,3 +39,24 @@ test("push health exposes safe aggregate dispatcher counters only when detail=1"
   assert.doesNotMatch(route, /expo_push_token/i);
   assert.doesNotMatch(route, /user_id/i);
 });
+
+test("push health exposes receipt outcomes for natural pushes without exposing recipient data", () => {
+  assert.match(health, /readReceiptDiagnostics/);
+  assert.match(health, /receipt_status='ok'/);
+  assert.match(health, /receipt_status='error'/);
+  assert.match(health, /receipt_checked_at IS NULL/);
+  assert.match(health, /outbox\.event_id LIKE 'sig_%'/);
+  assert.match(health, /naturalReceiptEligible24h/);
+  assert.match(health, /naturalReceiptOk24h/);
+  assert.match(health, /naturalReceiptError24h/);
+  assert.match(health, /naturalReceiptPending24h/);
+  assert.match(health, /naturalWhisperReceiptEligible24h/);
+  assert.match(health, /naturalWhisperReceiptOk24h/);
+  assert.match(health, /naturalWhisperReceiptError24h/);
+  assert.match(health, /naturalWhisperReceiptPending24h/);
+  assert.match(health, /latestNaturalReceiptCheckedAgeSeconds/);
+  assert.match(health, /receiptSchemaUnavailable/);
+  assert.doesNotMatch(route, /provider_message_id/i);
+  assert.doesNotMatch(route, /endpoint_id/i);
+  assert.doesNotMatch(route, /receipt_detail/i);
+});
