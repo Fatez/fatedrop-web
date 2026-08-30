@@ -1,34 +1,39 @@
-import type { NetworkSignal, SignalLifecycle } from "@/lib/dashboard-storage";
-import { getLiveCloudSignals } from "@/lib/live-signals";
+import { listCanonicalAlertWindow } from "@/lib/canonical-alerts";
+import type { NetworkSignal, SignalKind, SignalLifecycle } from "@/lib/dashboard-storage";
 
 const lifecycleStates = new Set<SignalLifecycle>(["whisper", "echo", "manifested", "vanished"]);
+const signalKinds = new Set<SignalKind>([
+  "whisper", "echo", "manifested", "vanished", "catalogue_new", "catalogue_state_change", "catalogue_price_change",
+  "inventory_quantity_change", "product_evidence_change", "stock_watch_refresh", "price_change", "launch_date_change",
+  "queue", "security", "access_blocked", "new_listing_live", "availability_live", "restock", "sold_out",
+  "lifecycle_unspecified", "drop_pulse",
+]);
+
+function knownSignalKind(value: string | null): SignalKind | undefined {
+  return value && signalKinds.has(value as SignalKind) ? value as SignalKind : undefined;
+}
 
 export async function getCanonicalRecentSignals(limit = 100): Promise<NetworkSignal[]> {
   const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
-  const response = await getLiveCloudSignals(safeLimit);
-  if (!response?.success || !Array.isArray(response.signals)) return [];
+  const alerts = await listCanonicalAlertWindow({ limitPerStage: safeLimit });
 
-  return response.signals.flatMap((row): NetworkSignal[] => {
-    const state = String(row.state || "") as SignalLifecycle;
-    const title = String(row.title || "").trim();
-    const occurredAtMs = Date.parse(String(row.detectedAt || ""));
+  return alerts.flatMap((row): NetworkSignal[] => {
+    const state = row.fateStage.toLowerCase() as SignalLifecycle;
+    const title = row.title.trim();
+    const occurredAtMs = Date.parse(row.detectedAt);
     const occurredAt = Number.isFinite(occurredAtMs) ? Math.floor(occurredAtMs / 1000) : NaN;
     if (!lifecycleStates.has(state) || !title || !Number.isFinite(occurredAt) || occurredAt <= 0) return [];
 
-    const deliveredGbp = row.deliveredPriceGbp === null || row.deliveredPriceGbp === undefined
-      ? null
-      : Number(row.deliveredPriceGbp);
-    const confidence = row.confidence === null || row.confidence === undefined ? null : Number(row.confidence);
-
     return [{
-      id: String(row.id),
+      id: row.id,
       state,
+      kind: knownSignalKind(row.signalKind),
       title,
-      retailer: row.retailerName ? String(row.retailerName) : null,
-      detail: row.reason ? String(row.reason) : null,
-      deliveredPricePence: deliveredGbp !== null && Number.isFinite(deliveredGbp) ? Math.round(deliveredGbp * 100) : null,
-      confidence: confidence !== null && Number.isFinite(confidence) ? confidence : null,
+      retailer: row.retailer || null,
+      detail: row.message || null,
+      deliveredPricePence: row.product.deliveredPricePence,
+      confidence: Number.isFinite(row.confidence) ? row.confidence : null,
       occurredAt,
     }];
-  });
+  }).sort((left, right) => right.occurredAt - left.occurredAt || left.id.localeCompare(right.id)).slice(0, safeLimit);
 }

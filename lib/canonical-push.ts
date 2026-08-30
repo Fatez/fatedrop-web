@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { betaPremiumEnabled } from "@/lib/beta-premium";
-import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
-import { getLiveCloudSignalsByState, type CloudLifecycleState } from "@/lib/live-signals";
+import { listCanonicalAlertWindow, type CanonicalAlert, type CanonicalAlertFacets } from "@/lib/canonical-alerts";
 import { fateDropPostgres } from "@/lib/postgres";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 import { expoAndroidIcon, pushNotificationBranding } from "@/lib/push-notification-branding";
@@ -12,7 +11,6 @@ const SENDING_LEASE_SECONDS = 5 * 60;
 const BURST_WINDOW_SECONDS = 60;
 const BURST_GRACE_SECONDS = 5;
 const BURST_MIN_SIZE = 5;
-const STARVATION_PROTECTED_STATES = ["echo", "manifested", "vanished"] as const satisfies readonly CloudLifecycleState[];
 
 type BurstControlledStage = "WHISPER" | "ECHO" | "VANISHED";
 
@@ -30,6 +28,16 @@ type RecipientRow = {
   accessories_enabled: boolean;
   merchandise_enabled: boolean;
   unknown_products_enabled: boolean;
+  english_enabled: boolean;
+  japanese_enabled: boolean;
+  korean_enabled: boolean;
+  simplified_chinese_enabled: boolean;
+  traditional_chinese_enabled: boolean;
+  other_languages_enabled: boolean;
+  unknown_language_enabled: boolean;
+  all_sets_enabled: boolean;
+  selected_set_keys: unknown;
+  unknown_sets_enabled: boolean;
   push_enabled: boolean;
   quiet_hours_enabled: boolean;
   quiet_hours_start: string | null;
@@ -68,6 +76,8 @@ export type LocalRadarOperatorPush = {
   expectedLabel: string | null;
   branchCount: number;
   operatorIssue: number;
+  languageGroup?: CanonicalAlertFacets["languageGroup"];
+  setKey?: string | null;
 };
 
 function dispatchEnabled() {
@@ -117,6 +127,32 @@ function productEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
     merchandise: recipient.merchandise_enabled,
     unknownProducts: recipient.unknown_products_enabled,
   });
+}
+
+function selectedSetKeys(value: unknown) {
+  let parsed = value;
+  if (typeof parsed === "string") {
+    try { parsed = JSON.parse(parsed); } catch { return new Set<string>(); }
+  }
+  if (!Array.isArray(parsed)) return new Set<string>();
+  return new Set(parsed.filter((item): item is string => typeof item === "string"));
+}
+
+function languageGroupEnabled(languageGroup: CanonicalAlertFacets["languageGroup"], recipient: RecipientRow) {
+  if (languageGroup === "english") return recipient.english_enabled;
+  if (languageGroup === "japanese") return recipient.japanese_enabled;
+  if (languageGroup === "korean") return recipient.korean_enabled;
+  if (languageGroup === "simplified_chinese") return recipient.simplified_chinese_enabled;
+  if (languageGroup === "traditional_chinese") return recipient.traditional_chinese_enabled;
+  if (languageGroup === "other") return recipient.other_languages_enabled;
+  return recipient.unknown_language_enabled;
+}
+
+function facetEnabled(facets: Pick<CanonicalAlertFacets, "languageGroup" | "setKey">, recipient: RecipientRow) {
+  if (!languageGroupEnabled(facets.languageGroup, recipient)) return false;
+  if (recipient.all_sets_enabled) return true;
+  if (!facets.setKey) return recipient.unknown_sets_enabled;
+  return selectedSetKeys(recipient.selected_set_keys).has(facets.setKey);
 }
 
 function minutesInTimezone(now: Date, timezone: string) {
@@ -244,6 +280,16 @@ async function eligibleRecipients() {
       COALESCE(np.accessories_enabled,false) AS accessories_enabled,
       COALESCE(np.merchandise_enabled,false) AS merchandise_enabled,
       COALESCE(np.unknown_products_enabled,true) AS unknown_products_enabled,
+      COALESCE(np.english_enabled,true) AS english_enabled,
+      COALESCE(np.japanese_enabled,true) AS japanese_enabled,
+      COALESCE(np.korean_enabled,true) AS korean_enabled,
+      COALESCE(np.simplified_chinese_enabled,true) AS simplified_chinese_enabled,
+      COALESCE(np.traditional_chinese_enabled,true) AS traditional_chinese_enabled,
+      COALESCE(np.other_languages_enabled,true) AS other_languages_enabled,
+      COALESCE(np.unknown_language_enabled,true) AS unknown_language_enabled,
+      COALESCE(np.all_sets_enabled,true) AS all_sets_enabled,
+      COALESCE(np.selected_set_keys,'[]'::jsonb) AS selected_set_keys,
+      COALESCE(np.unknown_sets_enabled,true) AS unknown_sets_enabled,
       COALESCE(np.push_enabled,true) AS push_enabled,
       COALESCE(np.quiet_hours_enabled,false) AS quiet_hours_enabled,
       np.quiet_hours_start,
@@ -263,41 +309,12 @@ async function eligibleRecipients() {
   return rows as RecipientRow[];
 }
 
-async function starvationProtectedAlerts(since: number) {
-  const feeds = await Promise.all(
-    STARVATION_PROTECTED_STATES.map((state) => getLiveCloudSignalsByState({ state, since, limit: 100 })),
-  );
-  if (feeds.some((feed) => feed?.success !== true || !Array.isArray(feed.signals))) {
-    throw new Error("Protected lifecycle signal feed unavailable; refusing to risk dropping priority pushes.");
-  }
-
-  const ids = [...new Set(
-    feeds.flatMap((feed) => (feed?.signals ?? []).map((signal) => signal.id).filter(Boolean)),
-  )];
-  if (!ids.length) return [] as CanonicalAlert[];
-
-  const hydrated: CanonicalAlert[] = [];
-  for (let offset = 0; offset < ids.length; offset += 10) {
-    const chunk = ids.slice(offset, offset + 10);
-    const rows = await Promise.all(chunk.map(async (id) => {
-      const matches = await listCanonicalAlerts({ id, limit: 1 });
-      return matches[0] ?? null;
-    }));
-    hydrated.push(...rows.filter((row): row is CanonicalAlert => row !== null));
-  }
-  return hydrated;
-}
-
 async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { measuredAt: number; lookbackSeconds?: number }) {
   const since = Math.max(0, measuredAt - lookbackSeconds);
-  const [baseAlerts, protectedAlerts, recipients] = await Promise.all([
-    listCanonicalAlerts({ limit: 100 }),
-    starvationProtectedAlerts(since),
+  const [alerts, recipients] = await Promise.all([
+    listCanonicalAlertWindow({ limitPerStage: 100 }),
     eligibleRecipients(),
   ]);
-  const alertById = new Map<string, CanonicalAlert>();
-  for (const alert of [...baseAlerts, ...protectedAlerts]) alertById.set(alert.id, alert);
-  const alerts = [...alertById.values()];
   if (!alerts.length || !recipients.length) return { alerts: 0, recipients: recipients.length, queued: 0 };
 
   const recent = alerts.filter((alert) => epoch(alert.detectedAt) >= since && epoch(alert.detectedAt) <= measuredAt + 60);
@@ -312,7 +329,7 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
     const controlledBuckets = new Map<string, { stage: BurstControlledStage; bucket: number; alerts: CanonicalAlert[] }>();
 
     for (const alert of recent) {
-      if (!stageEnabled(alert, recipient) || !productEnabled(alert, recipient)) continue;
+      if (!alert.interruptEligible || !stageEnabled(alert, recipient) || !productEnabled(alert, recipient) || !facetEnabled(alert.facets, recipient)) continue;
 
       if (alert.fateStage === "MANIFESTED") {
         queueRows.push(individualPushRow(alert, recipient, now));
@@ -364,7 +381,8 @@ async function enqueueLocalRadarOperatorPush(event: LocalRadarOperatorPush) {
   const queueRows: Array<Record<string, unknown>> = [];
 
   for (const recipient of recipients) {
-    if (!operatorStageEnabled(event, recipient) || inQuietHours(recipient, nowDate)) continue;
+    const operatorFacets = { languageGroup: event.languageGroup ?? "unknown", setKey: event.setKey ?? null };
+    if (!operatorStageEnabled(event, recipient) || !facetEnabled(operatorFacets, recipient) || inQuietHours(recipient, nowDate)) continue;
     queueRows.push({
       id: randomUUID(),
       dedupe_key: `local-radar:${event.eventId}:${recipient.endpoint_id}`,
@@ -387,6 +405,8 @@ async function enqueueLocalRadarOperatorPush(event: LocalRadarOperatorPush) {
         expectedLabel: event.expectedLabel,
         branchCount: event.branchCount,
         operatorIssue: event.operatorIssue,
+        languageGroup: operatorFacets.languageGroup,
+        setKey: operatorFacets.setKey,
         endpointId: recipient.endpoint_id,
         expoPushToken: recipient.expo_push_token,
         pushPlatform: recipient.platform,

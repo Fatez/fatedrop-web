@@ -10,9 +10,28 @@ function stageEnabled(alert: CanonicalAlert, preferences: NotificationPreference
   return false;
 }
 
+function languageEnabled(alert: CanonicalAlert, preferences: NotificationPreferences) {
+  if (alert.facets.languageGroup === "english") return preferences.english;
+  if (alert.facets.languageGroup === "japanese") return preferences.japanese;
+  if (alert.facets.languageGroup === "korean") return preferences.korean;
+  if (alert.facets.languageGroup === "simplified_chinese") return preferences.simplifiedChinese;
+  if (alert.facets.languageGroup === "traditional_chinese") return preferences.traditionalChinese;
+  if (alert.facets.languageGroup === "other") return preferences.otherLanguages;
+  return preferences.unknownLanguage;
+}
+
+function setEnabled(alert: CanonicalAlert, preferences: NotificationPreferences) {
+  if (preferences.allSets) return true;
+  if (!alert.facets.setKey) return preferences.unknownSets;
+  return preferences.selectedSetKeys.includes(alert.facets.setKey);
+}
+
 export function notificationPreferencesAllowAlert(
   alert: CanonicalAlert,
   preferences: NotificationPreferences,
 ) {
-  return stageEnabled(alert, preferences) && productAlertEnabled(alert.productIntelligence, preferences);
+  return stageEnabled(alert, preferences)
+    && productAlertEnabled(alert.productIntelligence, preferences)
+    && languageEnabled(alert, preferences)
+    && setEnabled(alert, preferences);
 }

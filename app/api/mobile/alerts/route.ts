@@ -1,9 +1,7 @@
 import { getSnapshotForRequest } from "@/lib/auth";
 import { notificationPreferencesAllowAlert } from "@/lib/alert-preference-filter";
 import { betaAccessDeniedResponse, betaAccessIsApproved } from "@/lib/beta-access";
-import { listCanonicalAlerts, type CanonicalAlert } from "@/lib/canonical-alerts";
-import { listCanonicalAlertDeliveries, type CanonicalAlertDelivery } from "@/lib/canonical-alert-delivery";
-import { listCanonicalAlertPresentations, type CanonicalAlertPresentation } from "@/lib/canonical-alert-presentation";
+import { listCanonicalAlertWindow, type CanonicalAlert } from "@/lib/canonical-alerts";
 import { hasCapability } from "@/lib/entitlements";
 import type { CloudLifecycleState } from "@/lib/live-signals";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
@@ -11,15 +9,8 @@ import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CanonicalAlertForMobile = CanonicalAlert & {
-  delivery: {
-    discord: {
-      status: CanonicalAlertDelivery["result"];
-      attemptedAt: string;
-      issue: string | null;
-    } | null;
-  };
-  presentation: CanonicalAlertPresentation | null;
+type CanonicalAlertForMobile = Omit<CanonicalAlert, "presentation"> & {
+  presentation: CanonicalAlert["presentation"] | null;
 };
 
 const lifecycleStates = new Set<CloudLifecycleState>(["whisper", "echo", "manifested", "vanished"]);
@@ -55,24 +46,6 @@ function freeAlert(alert: CanonicalAlertForMobile): CanonicalAlertForMobile {
   };
 }
 
-function attachDiscordDelivery(alerts: CanonicalAlert[], deliveries: CanonicalAlertDelivery[], presentations: Map<string, CanonicalAlertPresentation>): CanonicalAlertForMobile[] {
-  const bySignalId = new Map(deliveries.map((delivery) => [delivery.signalId, delivery]));
-  return alerts.map((alert) => {
-    const delivery = bySignalId.get(alert.id) ?? null;
-    return {
-      ...alert,
-      presentation: presentations.get(alert.id) ?? null,
-      delivery: {
-        discord: delivery ? {
-          status: delivery.result,
-          attemptedAt: new Date(delivery.attemptedAt * 1000).toISOString(),
-          issue: delivery.result === "sent" ? null : delivery.detail,
-        } : null,
-      },
-    };
-  });
-}
-
 export async function GET(request: Request) {
   const snapshot = await getSnapshotForRequest(request, { allowPending: true });
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "private, no-store" } });
@@ -94,13 +67,9 @@ export async function GET(request: Request) {
     // is passed to Cloud before LIMIT so one lifecycle burst cannot starve another.
     // User notification preferences remain a downstream visibility filter only.
     const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
-    const canonicalAlerts = await listCanonicalAlerts({ id: requestedId, state: requestedState, limit: retrievalLimit });
-    const [deliveries, presentations] = await Promise.all([
-      listCanonicalAlertDeliveries({ id: requestedId, limit: Math.max(retrievalLimit, canonicalAlerts.length) }),
-      listCanonicalAlertPresentations({ id: requestedId, limit: retrievalLimit }),
-    ]);
+    const canonicalAlerts = await listCanonicalAlertWindow({ id: requestedId, state: requestedState, limitPerStage: retrievalLimit });
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
-    const alertsWithDelivery = attachDiscordDelivery(canonicalAlerts, deliveries, presentations)
+    const alertsWithDelivery = canonicalAlerts
       .filter((alert) => notificationPreferencesAllowAlert(alert, preferences))
       .slice(0, limit);
     const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);

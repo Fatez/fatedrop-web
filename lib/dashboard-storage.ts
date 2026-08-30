@@ -14,6 +14,10 @@ export type SignalLifecycle = "whisper" | "manifested" | "vanished" | "echo";
 export type SignalKind = SignalLifecycle
   | "catalogue_new"
   | "catalogue_state_change"
+  | "catalogue_price_change"
+  | "inventory_quantity_change"
+  | "product_evidence_change"
+  | "stock_watch_refresh"
   | "price_change"
   | "launch_date_change"
   | "queue"

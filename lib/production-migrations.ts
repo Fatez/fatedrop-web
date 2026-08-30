@@ -1,6 +1,6 @@
 import { fateDropPostgres } from "@/lib/postgres";
 
-const MIGRATION_CUTOFF = "2026-08-28";
+const MIGRATION_CUTOFF = "2026-08-30";
 const OWNER_EMAIL = "hello@fatedrop.co.uk";
 
 export const PRODUCTION_MIGRATIONS = [
@@ -15,6 +15,22 @@ WHERE vanished_enabled = false
   AND COALESCE(whisper_enabled, true) = true
   AND echo_enabled = true
   AND manifested_enabled = true`,
+    ],
+  },
+  {
+    id: "2026-08-30-alert-market-set-preferences.sql",
+    statements: [
+      `ALTER TABLE fatedrop_notification_preferences
+  ADD COLUMN IF NOT EXISTS english_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS japanese_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS korean_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS simplified_chinese_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS traditional_chinese_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS other_languages_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS unknown_language_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS all_sets_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS selected_set_keys jsonb NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS unknown_sets_enabled boolean NOT NULL DEFAULT true`,
     ],
   },
   {
@@ -275,6 +291,16 @@ export async function runProductionMigrations() {
   const pending = PRODUCTION_MIGRATIONS.filter((migration) => !ledger.has(migration.id)).map((migration) => migration.id);
 
   const defaultRows = await sql`SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='fatedrop_notification_preferences' AND column_name='vanished_enabled'`;
+  const facetColumnRows = await sql`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='public'
+      AND table_name='fatedrop_notification_preferences'
+      AND column_name IN (
+        'english_enabled','japanese_enabled','korean_enabled','simplified_chinese_enabled','traditional_chinese_enabled',
+        'other_languages_enabled','unknown_language_enabled','all_sets_enabled','selected_set_keys','unknown_sets_enabled'
+      )`;
+  const facetColumns = new Set(facetColumnRows.map((row) => String(row.column_name)));
   const vanishedDefault = String(defaultRows[0]?.column_default ?? "").toLowerCase();
   const asymmetricRows = await sql`SELECT COUNT(*)::int AS count FROM fatedrop_notification_preferences WHERE vanished_enabled=false AND COALESCE(whisper_enabled,true)=true AND echo_enabled=true AND manifested_enabled=true`;
   const historicalAsymmetryCount = Number(asymmetricRows[0]?.count ?? 0);
@@ -288,6 +314,7 @@ export async function runProductionMigrations() {
     WHERE lower(u.email)=${OWNER_EMAIL}`;
 
   if (!vanishedDefault.includes("true")) throw new Error("Production migration verification failed: Vanished default is not enabled.");
+  if (facetColumns.size !== 10) throw new Error(`Production migration verification failed: expected 10 alert market/set preference columns, found ${facetColumns.size}.`);
   if (historicalAsymmetryCount !== 0) throw new Error(`Production migration verification failed: ${historicalAsymmetryCount} legacy asymmetric lifecycle preference row(s) remain.`);
   if (betaAccessMissingCount !== 0) throw new Error(`Production migration verification failed: ${betaAccessMissingCount} FateDrop account(s) are missing closed-beta access state.`);
   if (ownerRows.length !== 1 || String(ownerRows[0].beta_status) !== "approved") throw new Error("Production migration verification failed: canonical FateDrop Owner is missing or not beta-approved.");
@@ -299,6 +326,7 @@ export async function runProductionMigrations() {
     pending,
     vanishedDefaultVerified: true,
     historicalAsymmetryCount,
+    facetPreferenceColumnsVerified: true,
     betaAccessMissingCount,
     ownerVerified: true,
     ownerUserId: String(ownerRows[0].id),

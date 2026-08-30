@@ -3,24 +3,23 @@ import fs from "node:fs";
 import test from "node:test";
 
 const push = fs.readFileSync(new URL("../lib/canonical-push.ts", import.meta.url), "utf8");
-const live = fs.readFileSync(new URL("../lib/live-signals.ts", import.meta.url), "utf8");
+const canonical = fs.readFileSync(new URL("../lib/canonical-alerts.ts", import.meta.url), "utf8");
 
-test("priority lifecycle signals have stage-scoped retrieval independent of the global latest-100 feed", () => {
-  assert.match(live, /getLiveCloudSignalsByState/);
-  assert.match(live, /new URLSearchParams\(\{ state, since: String\(safeSince\), limit: String\(safeLimit\) \}\)/);
-  assert.match(push, /STARVATION_PROTECTED_STATES = \["echo", "manifested", "vanished"\]/);
-  assert.match(push, /getLiveCloudSignalsByState\(\{ state, since, limit: 100 \}\)/);
+test("all lifecycle signals have rich stage-scoped retrieval independent of a global latest-100 feed", () => {
+  assert.match(canonical, /balancedLifecycleStates = \["whisper", "echo", "manifested", "vanished"\]/);
+  assert.match(canonical, /balancedLifecycleStates\.map\(\(lifecycleState\) => listCanonicalAlerts\(\{ state: lifecycleState, limit: safeLimit \}\)\)/);
+  assert.match(push, /listCanonicalAlertWindow\(\{ limitPerStage: 100 \}\)/);
 });
 
-test("protected lifecycle ids are hydrated to the canonical alert contract and merged without duplicates", () => {
-  assert.match(push, /listCanonicalAlerts\(\{ id, limit: 1 \}\)/);
-  assert.match(push, /new Map<string, CanonicalAlert>\(\)/);
-  assert.match(push, /for \(const alert of \[\.\.\.baseAlerts, \.\.\.protectedAlerts\]\) alertById\.set\(alert\.id, alert\)/);
+test("balanced lifecycle rows are merged without duplicate canonical alert ids", () => {
+  assert.match(canonical, /new Map<string, CanonicalAlert>\(\)/);
+  assert.match(canonical, /for \(const alert of windows\.flat\(\)\) byId\.set\(alert\.id, alert\)/);
 });
 
-test("dispatcher fails closed if priority lifecycle retrieval is unavailable", () => {
-  assert.match(push, /Protected lifecycle signal feed unavailable; refusing to risk dropping priority pushes\./);
-  assert.match(push, /feed\?\.success !== true \|\| !Array\.isArray\(feed\.signals\)/);
+test("dispatcher consumes only the validated rich canonical alert contract", () => {
+  assert.match(canonical, /Canonical Cloud alert feed unavailable/);
+  assert.match(canonical, /const windows = await Promise\.all/);
+  assert.doesNotMatch(push, /getLiveCloudSignals|getLiveCloudSignalsByState/);
 });
 
 test("Manifested remains immediate and is never placed into burst summaries", () => {

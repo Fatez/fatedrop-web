@@ -70,11 +70,12 @@ test('web Alerts exposes lifecycle-aware signal packs for Whisper and Echo separ
   assert.match(webPackSource, /Queue, traffic, security or access readiness has changed/);
 });
 
-test('mobile API consumes signal-backed shared alerts, attaches optional Discord truth and redacts premium intelligence for free accounts', () => {
-  assert.match(routeSource, /listCanonicalAlerts/);
-  assert.match(routeSource, /listCanonicalAlertDeliveries/);
+test('mobile API consumes the complete shared Cloud alert envelope and redacts premium intelligence for free accounts', () => {
+  assert.match(routeSource, /listCanonicalAlertWindow/);
+  assert.match(moduleSource, /presentation: CanonicalAlertPresentation/);
+  assert.match(moduleSource, /delivery: \{/);
   assert.match(deliverySource, /fatedrop_signal_delivery_attempts/);
-  assert.match(routeSource, /attachDiscordDelivery/);
+  assert.doesNotMatch(routeSource, /listCanonicalAlertDeliveries|listCanonicalAlertPresentations|attachDiscordDelivery/);
   assert.doesNotMatch(routeSource, /listDeliveryBackedCanonicalAlerts/);
   assert.doesNotMatch(routeSource, /fatedrop_retail_offers/);
   assert.match(routeSource, /function freeAlert/);

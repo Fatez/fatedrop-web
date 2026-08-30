@@ -30,7 +30,7 @@ test("Vanished detail renders Cloud timestamps and refuses to invent incomplete 
 });
 
 test("mobile API remains a pass-through for canonical live-window truth", () => {
-  assert.match(mobileAlerts, /type CanonicalAlertForMobile = CanonicalAlert &/);
+  assert.match(mobileAlerts, /type CanonicalAlertForMobile = Omit<CanonicalAlert, "presentation"> &/);
   assert.match(mobileAlerts, /\.\.\.alert/);
   assert.doesNotMatch(mobileAlerts, /liveSinceAt|everAvailableAt|firstAvailableAt/);
 });

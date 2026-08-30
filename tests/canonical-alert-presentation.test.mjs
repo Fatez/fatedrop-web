@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const presentation = fs.readFileSync(path.join(root, "lib/canonical-alert-presentation.ts"), "utf8");
 const signalPack = fs.readFileSync(path.join(root, "components/canonical-alert-signal-pack.tsx"), "utf8");
 const mobileRoute = fs.readFileSync(path.join(root, "app/api/mobile/alerts/route.ts"), "utf8");
+const canonicalAlerts = fs.readFileSync(path.join(root, "lib/canonical-alerts.ts"), "utf8");
 
 test("source-market presentation preserves native authority without calling it UK RRP", () => {
   assert.match(presentation, /source_market_msrp/);
@@ -34,7 +35,9 @@ test("derived references remain explicitly labelled as references", () => {
 });
 
 test("mobile API carries presentation metadata while preserving free-tier redaction", () => {
-  assert.match(mobileRoute, /presentation: presentations\.get\(alert\.id\) \?\? null/);
+  assert.match(canonicalAlerts, /presentation: CanonicalAlertPresentation/);
+  assert.match(canonicalAlerts, /isCanonicalPresentation\(value\.presentation\)/);
+  assert.doesNotMatch(mobileRoute, /listCanonicalAlertPresentations/);
   assert.match(mobileRoute, /presentation: null/);
   assert.match(mobileRoute, /alertsWithDelivery\.map\(freeAlert\)/);
 });

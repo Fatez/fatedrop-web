@@ -1,10 +1,13 @@
 import type { AccountSnapshot } from "./account-storage";
-import { getCanonicalAlertDeliverySummary } from "./canonical-alert-delivery";
 import { getCanonicalRecentSignals } from "./canonical-signals";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal, type NetworkMetricSnapshot } from "./dashboard-storage";
 import { getSignalDeliverySummary, getSignalLifecycleSummary } from "./signal-trends";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
+
+export function currentEpochSeconds() {
+  return Math.floor(Date.now() / 1000);
+}
 
 function startOfUtcDay(timestamp: number) {
   const date = new Date(timestamp * 1000);
@@ -29,11 +32,14 @@ export function publicSignalLabel(signal: NetworkSignal) {
   return "Signal";
 }
 
-export function signalCauseLabel(signal: NetworkSignal) {
-  const kind = String(signal.kind ?? "");
+export function signalCauseLabelFromKind(value: string | null | undefined) {
+  const kind = String(value ?? "");
   if (kind === "catalogue_new") return "Catalogue new";
   if (kind === "catalogue_state_change") return "Catalogue change";
-  if (kind === "price_change") return "Price change";
+  if (kind === "catalogue_price_change" || kind === "price_change") return "Price change";
+  if (kind === "inventory_quantity_change") return "Inventory metadata change";
+  if (kind === "product_evidence_change") return "Product evidence change";
+  if (kind === "stock_watch_refresh") return "Stock watch refresh";
   if (kind === "launch_date_change") return "Launch change";
   if (kind === "queue") return "Queue";
   if (kind === "security") return "Security";
@@ -43,6 +49,10 @@ export function signalCauseLabel(signal: NetworkSignal) {
   if (kind === "restock") return "Restock";
   if (kind === "sold_out") return "Sold out";
   return null;
+}
+
+export function signalCauseLabel(signal: NetworkSignal) {
+  return signalCauseLabelFromKind(signal.kind);
 }
 
 function signalBackedNetwork(network: NetworkMetricSnapshot | null, recentSignals: NetworkSignal[], now: number): NetworkMetricSnapshot | null {
@@ -71,13 +81,12 @@ function signalBackedNetwork(network: NetworkMetricSnapshot | null, recentSignal
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
-  const [activity, storedNetwork, history, signalSummary, signalDeliverySummary, canonicalAlerts, recentSignals] = await Promise.all([
+  const [activity, storedNetwork, history, signalSummary, signalDeliverySummary, recentSignals] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
     getLatestNetworkMetricSnapshot(),
     listNetworkMetricSnapshots(30),
     getSignalLifecycleSummary(7),
     getSignalDeliverySummary(7),
-    getCanonicalAlertDeliverySummary(7).catch(() => null),
     getCanonicalRecentSignals(100).catch(() => []),
   ]);
 
@@ -125,7 +134,6 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
     networkHistory: history,
     signalSummary,
     signalDeliverySummary,
-    canonicalAlerts,
     publishedBaseline,
     publicSignalMetrics: {
       whisper: signalSummary?.whisper.total ?? null,
@@ -182,12 +190,6 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         source: signalDeliverySummary ? "FateDrop signal delivery ledger" : "Awaiting signal delivery telemetry",
         updatedAt: signalDeliverySummary ? now : null,
         note: signalDeliverySummary ? "Sent alerts, intentional policy suppression and delivery/configuration issues are aggregated separately from detections so the dashboard never confuses engine activity with successful alert delivery." : "Delivery health remains unavailable rather than being inferred from signal detections.",
-      },
-      {
-        label: "Canonical alert totals",
-        source: canonicalAlerts ? "FateDrop delivery ledger" : "Delivery ledger unavailable",
-        updatedAt: canonicalAlerts?.daily.at(-1)?.day ? Math.floor(new Date(`${canonicalAlerts.daily.at(-1)!.day}T23:59:59Z`).getTime() / 1000) : null,
-        note: canonicalAlerts ? "Counts only delivery-backed alert decisions: Discord sent, provider failures and real routing/configuration issues. Policy-disabled and duplicate-batch suppressions are excluded." : "Canonical alert totals remain unavailable rather than being inferred from raw detections.",
       },
     ],
   };

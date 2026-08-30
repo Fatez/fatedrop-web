@@ -1,8 +1,18 @@
-import { getLiveCloudAlerts, type CloudLifecycleState } from "@/lib/live-signals";
+import { getLiveCloudAlerts, type CloudAlertFacets, type CloudLifecycleState } from "@/lib/live-signals";
 import type { ProductAlertClassification } from "@/lib/product-alert-intelligence";
 
 export type FatePriceVerdict = "LOWEST_KNOWN" | "BETTER_OFFER_FOUND" | "NO_FAIR_COMPARISON";
 export type CanonicalSignalStage = "WHISPER" | "ECHO" | "MANIFESTED" | "VANISHED" | "NETWORK";
+export type CanonicalAlertDeliveryPolicy = "interrupt" | "inbox_only" | "history_only" | "anomaly_quarantine";
+export type CanonicalAlertFacets = CloudAlertFacets;
+
+export type CanonicalAlertPresentation = {
+  referenceKind: string | null;
+  referenceBasis: string | null;
+  sourceMarket: string | null;
+  sourceCurrency: string | null;
+  sourceMsrp: string | null;
+};
 
 export type CanonicalOfferLink = {
   offerId: string;
@@ -56,6 +66,10 @@ export type CanonicalAlert = {
   retailerId: string;
   title: string;
   message: string;
+  signalKind: string | null;
+  deliveryPolicy: CanonicalAlertDeliveryPolicy;
+  interruptEligible: boolean;
+  facets: CanonicalAlertFacets;
   retailer: string;
   detectedAt: string;
   observedDurationSeconds: number | null;
@@ -72,6 +86,16 @@ export type CanonicalAlert = {
     pricePence: number | null;
     rrpPence: number | null;
     deliveredPricePence: number | null;
+    stockStatus: string | null;
+  };
+  presentation: CanonicalAlertPresentation;
+  delivery: {
+    discord: {
+      status: string;
+      attemptedAt: string | null;
+      issue: string | null;
+      providerMessageId: string | null;
+    } | null;
   };
   priceIntelligence: {
     rrpPence: number | null;
@@ -106,6 +130,9 @@ export type CanonicalAlert = {
       lowestKnownUrl: string | null;
       compareQuery: string;
       productCategory: ProductAlertClassification["category"];
+      signalKind: string | null;
+      languageGroup: CanonicalAlertFacets["languageGroup"] | null;
+      setKey: string | null;
       observedDurationSeconds: number | null;
       linksPrepared: true;
     };
@@ -123,6 +150,8 @@ export function publicStage(state: string): CanonicalSignalStage {
 
 const canonicalStages = new Set<CanonicalSignalStage>(["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]);
 const priceVerdicts = new Set<FatePriceVerdict>(["LOWEST_KNOWN", "BETTER_OFFER_FOUND", "NO_FAIR_COMPARISON"]);
+const deliveryPolicies = new Set<CanonicalAlertDeliveryPolicy>(["interrupt", "inbox_only", "history_only", "anomaly_quarantine"]);
+const languageGroups = new Set(["english", "japanese", "korean", "simplified_chinese", "traditional_chinese", "other", "unknown"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -146,14 +175,46 @@ function isCanonicalLiveWindow(value: unknown) {
     && typeof value.historyComplete === "boolean";
 }
 
+function isCanonicalAlertFacets(value: unknown): value is CanonicalAlertFacets {
+  if (!isObject(value) || value.version !== 1) return false;
+  if (typeof value.languageGroup !== "string" || !languageGroups.has(value.languageGroup)) return false;
+  if (!nullableString(value.languageCode) || !nullableString(value.marketCode) || typeof value.languageLabel !== "string") return false;
+  if (!nullableString(value.setKey) || !nullableString(value.setName)) return false;
+  if (!isObject(value.confidence) || typeof value.confidence.language !== "number" || typeof value.confidence.set !== "number") return false;
+  return isObject(value.source) && typeof value.source.language === "string" && typeof value.source.set === "string";
+}
+
+function isCanonicalPresentation(value: unknown): value is CanonicalAlertPresentation {
+  return isObject(value)
+    && nullableString(value.referenceKind)
+    && nullableString(value.referenceBasis)
+    && nullableString(value.sourceMarket)
+    && nullableString(value.sourceCurrency)
+    && nullableString(value.sourceMsrp);
+}
+
+function isCanonicalDelivery(value: unknown) {
+  if (!isObject(value)) return false;
+  if (value.discord === null) return true;
+  return isObject(value.discord)
+    && typeof value.discord.status === "string"
+    && nullableString(value.discord.attemptedAt)
+    && nullableString(value.discord.issue)
+    && nullableString(value.discord.providerMessageId);
+}
+
 function isCanonicalAlert(value: unknown): value is CanonicalAlert {
   if (!isObject(value)) return false;
   if (typeof value.id !== "string" || !value.id) return false;
   if (typeof value.title !== "string" || !value.title) return false;
   if (typeof value.detectedAt !== "string" || !value.detectedAt) return false;
   if (typeof value.fateStage !== "string" || !canonicalStages.has(value.fateStage as CanonicalSignalStage)) return false;
+  if (!nullableString(value.signalKind)) return false;
+  if (typeof value.deliveryPolicy !== "string" || !deliveryPolicies.has(value.deliveryPolicy as CanonicalAlertDeliveryPolicy)) return false;
+  if (typeof value.interruptEligible !== "boolean" || !isCanonicalAlertFacets(value.facets)) return false;
   if (!isCanonicalLiveWindow(value.liveWindow)) return false;
   if (!isObject(value.product) || !isObject(value.priceIntelligence) || !isObject(value.preparedLinks) || !isObject(value.notification)) return false;
+  if (!nullableString(value.product.stockStatus) || !isCanonicalPresentation(value.presentation) || !isCanonicalDelivery(value.delivery)) return false;
   if (typeof value.priceIntelligence.verdict !== "string" || !priceVerdicts.has(value.priceIntelligence.verdict as FatePriceVerdict)) return false;
   if (!Array.isArray(value.signalThread)) return false;
   return true;
@@ -174,4 +235,28 @@ export async function listCanonicalAlerts({
     throw new Error("Canonical Cloud alert feed unavailable");
   }
   return response.alerts.filter(isCanonicalAlert).slice(0, safeLimit);
+}
+
+const balancedLifecycleStates = ["whisper", "echo", "manifested", "vanished"] as const satisfies readonly CloudLifecycleState[];
+
+export async function listCanonicalAlertWindow({
+  id,
+  state,
+  limitPerStage = 50,
+}: {
+  id?: string | null;
+  state?: CloudLifecycleState | null;
+  limitPerStage?: number;
+} = {}) {
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(limitPerStage)));
+  if (id || state) return listCanonicalAlerts({ id, state, limit: safeLimit });
+
+  const windows = await Promise.all(
+    balancedLifecycleStates.map((lifecycleState) => listCanonicalAlerts({ state: lifecycleState, limit: safeLimit })),
+  );
+  const byId = new Map<string, CanonicalAlert>();
+  for (const alert of windows.flat()) byId.set(alert.id, alert);
+  return [...byId.values()].sort((left, right) => (
+    Date.parse(right.detectedAt) - Date.parse(left.detectedAt) || left.id.localeCompare(right.id)
+  ));
 }
