@@ -55,6 +55,55 @@ jobs:
           printf 'FATEDROP_RRP_AUDIT_SECRET=%s\n' "$audit_secret" >> "$GITHUB_ENV"
           unset audit_secret
 
+      - name: Detect pre-RRP recovery checkpoint deploy
+        id: checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git log -1 --pretty=%B | grep -Fq '[rrp-recovery-checkpoint]'; then
+            echo "capture=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "capture=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Capture durable pre-RRP recovery checkpoint
+        if: steps.checkpoint.outputs.capture == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WEB="https://fatedrop.co.uk"
+          checkpoint_status="$(curl --silent --show-error --retry 5 --retry-delay 3 \
+            --output /tmp/rrp-recovery-checkpoint.json \
+            --write-out '%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $FATEDROP_RRP_AUDIT_SECRET" \
+            -H "Accept: application/json" \
+            "$WEB/api/dashboard/rrp-recovery-checkpoint")"
+          test "$checkpoint_status" = "200" || {
+            echo "RRP recovery checkpoint returned HTTP $checkpoint_status"
+            cat /tmp/rrp-recovery-checkpoint.json
+            exit 20
+          }
+
+          node <<'NODE'
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('/tmp/rrp-recovery-checkpoint.json', 'utf8'));
+          if (result?.accepted !== true || result?.complete !== true) throw new Error('RRP recovery checkpoint was not accepted');
+          if (!result.checkpointId || Number(result.snapshotCount) <= 0) throw new Error('RRP recovery checkpoint is empty');
+          if (Number(result.snapshotCount) !== Number(result.expectedIdentityCount)) throw new Error('RRP recovery checkpoint count mismatch');
+          if (Number(result.captureVersions) !== 1) throw new Error('RRP recovery checkpoint contains multiple capture versions');
+          console.log(JSON.stringify({
+            checkpointId: result.checkpointId,
+            created: result.created,
+            capturedAt: result.capturedAt,
+            snapshotCount: result.snapshotCount,
+            expectedIdentityCount: result.expectedIdentityCount,
+            canonicalCountNow: result.canonicalCountNow,
+            captureVersions: result.captureVersions,
+            complete: result.complete,
+          }));
+          NODE
+
       - name: Read production RRP audit
         shell: bash
         run: |
