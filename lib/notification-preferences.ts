@@ -1,5 +1,10 @@
 import { fateDropPostgres } from "@/lib/postgres";
 
+export const LIFECYCLE_MARKET_GROUPS = ["english", "japanese", "korean", "simplified_chinese", "traditional_chinese"] as const;
+export type LifecycleMarketGroup = typeof LIFECYCLE_MARKET_GROUPS[number];
+export type LifecycleMarketSelection = "all" | LifecycleMarketGroup[];
+export type LifecycleMarketPreferences = Record<"whisper" | "echo" | "manifested" | "vanished", LifecycleMarketSelection>;
+
 export type NotificationPreferences = {
   whisper: boolean;
   echo: boolean;
@@ -19,6 +24,7 @@ export type NotificationPreferences = {
   traditionalChinese: boolean;
   otherLanguages: boolean;
   unknownLanguage: boolean;
+  lifecycleMarkets: LifecycleMarketPreferences;
   allSets: boolean;
   selectedSetKeys: string[];
   unknownSets: boolean;
@@ -30,6 +36,13 @@ export type NotificationPreferences = {
   quietEnd: string | null;
   timezone: string;
   updatedAt: number;
+};
+
+export const DEFAULT_LIFECYCLE_MARKETS: LifecycleMarketPreferences = {
+  whisper: "all",
+  echo: "all",
+  manifested: "all",
+  vanished: "all",
 };
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -51,6 +64,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   traditionalChinese: true,
   otherLanguages: true,
   unknownLanguage: true,
+  lifecycleMarkets: DEFAULT_LIFECYCLE_MARKETS,
   allSets: true,
   selectedSetKeys: [],
   unknownSets: true,
@@ -73,6 +87,26 @@ export function isValidIanaTimezone(value: string) {
 
 function lifecyclePreference(value: unknown) {
   return value == null ? true : Boolean(value);
+}
+
+const lifecycleMarketStages = ["whisper", "echo", "manifested", "vanished"] as const;
+const lifecycleMarketGroups = new Set<string>(LIFECYCLE_MARKET_GROUPS);
+
+export function normalizeLifecycleMarkets(value: unknown, fallback: LifecycleMarketPreferences = DEFAULT_LIFECYCLE_MARKETS): LifecycleMarketPreferences {
+  let parsed = value;
+  if (typeof parsed === "string") {
+    try { parsed = JSON.parse(parsed); } catch { parsed = null; }
+  }
+  const input = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  const next = { ...fallback };
+  for (const stage of lifecycleMarketStages) {
+    const raw = input[stage];
+    if (raw === "all") { next[stage] = "all"; continue; }
+    if (!Array.isArray(raw)) continue;
+    const groups = [...new Set(raw.filter((item): item is LifecycleMarketGroup => typeof item === "string" && lifecycleMarketGroups.has(item)))];
+    if (groups.length) next[stage] = groups;
+  }
+  return next;
 }
 
 const setKeyPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -112,6 +146,7 @@ function mapPreferences(row: Record<string, unknown>): NotificationPreferences {
     traditionalChinese: row.traditional_chinese_enabled == null ? true : Boolean(row.traditional_chinese_enabled),
     otherLanguages: row.other_languages_enabled == null ? true : Boolean(row.other_languages_enabled),
     unknownLanguage: row.unknown_language_enabled == null ? true : Boolean(row.unknown_language_enabled),
+    lifecycleMarkets: normalizeLifecycleMarkets(row.lifecycle_market_preferences),
     allSets: row.all_sets_enabled == null ? true : Boolean(row.all_sets_enabled),
     selectedSetKeys: normalizeSelectedSetKeys(row.selected_set_keys),
     unknownSets: row.unknown_sets_enabled == null ? true : Boolean(row.unknown_sets_enabled),
@@ -134,13 +169,13 @@ export async function saveNotificationPreferences(userId: string, preferences: N
     user_id,whisper_enabled,echo_enabled,manifested_enabled,vanished_enabled,price_change_enabled,fate_match_enabled,
     sealed_tcg_enabled,single_cards_enabled,accessories_enabled,merchandise_enabled,unknown_products_enabled,
     english_enabled,japanese_enabled,korean_enabled,simplified_chinese_enabled,traditional_chinese_enabled,other_languages_enabled,unknown_language_enabled,
-    all_sets_enabled,selected_set_keys,unknown_sets_enabled,
+    lifecycle_market_preferences,all_sets_enabled,selected_set_keys,unknown_sets_enabled,
     web_enabled,push_enabled,discord_enabled,quiet_hours_enabled,quiet_hours_start,quiet_hours_end,timezone,updated_at
   ) VALUES (
     ${userId},${preferences.whisper},${preferences.echo},${preferences.manifested},${preferences.vanished},${preferences.priceChange},${preferences.fateMatch},
     ${preferences.sealedTcg},${preferences.singleCards},${preferences.accessories},${preferences.merchandise},${preferences.unknownProducts},
     ${preferences.english},${preferences.japanese},${preferences.korean},${preferences.simplifiedChinese},${preferences.traditionalChinese},${preferences.otherLanguages},${preferences.unknownLanguage},
-    ${preferences.allSets},${JSON.stringify(preferences.selectedSetKeys)}::jsonb,${preferences.unknownSets},
+    ${JSON.stringify(preferences.lifecycleMarkets)}::jsonb,${preferences.allSets},${JSON.stringify(preferences.selectedSetKeys)}::jsonb,${preferences.unknownSets},
     ${preferences.web},${preferences.push},${preferences.discord},${preferences.quietHours},${preferences.quietStart},${preferences.quietEnd},${preferences.timezone},${preferences.updatedAt}
   ) ON CONFLICT (user_id) DO UPDATE SET
     whisper_enabled=EXCLUDED.whisper_enabled, echo_enabled=EXCLUDED.echo_enabled, manifested_enabled=EXCLUDED.manifested_enabled, vanished_enabled=EXCLUDED.vanished_enabled,
@@ -150,6 +185,7 @@ export async function saveNotificationPreferences(userId: string, preferences: N
     english_enabled=EXCLUDED.english_enabled, japanese_enabled=EXCLUDED.japanese_enabled, korean_enabled=EXCLUDED.korean_enabled,
     simplified_chinese_enabled=EXCLUDED.simplified_chinese_enabled, traditional_chinese_enabled=EXCLUDED.traditional_chinese_enabled,
     other_languages_enabled=EXCLUDED.other_languages_enabled, unknown_language_enabled=EXCLUDED.unknown_language_enabled,
+    lifecycle_market_preferences=EXCLUDED.lifecycle_market_preferences,
     all_sets_enabled=EXCLUDED.all_sets_enabled, selected_set_keys=EXCLUDED.selected_set_keys, unknown_sets_enabled=EXCLUDED.unknown_sets_enabled,
     web_enabled=EXCLUDED.web_enabled, push_enabled=EXCLUDED.push_enabled, discord_enabled=EXCLUDED.discord_enabled,
     quiet_hours_enabled=EXCLUDED.quiet_hours_enabled, quiet_hours_start=EXCLUDED.quiet_hours_start, quiet_hours_end=EXCLUDED.quiet_hours_end,
