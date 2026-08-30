@@ -12,11 +12,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      METRICS_SECRET: ${{ secrets.FATEDROP_METRICS_INGEST_SECRET }}
+    timeout-minutes: 5
     steps:
       - name: Inspect live canonical alert feed
         shell: bash
@@ -40,92 +36,26 @@ jobs:
             out[value] = (out[value] || 0) + 1;
             return out;
           }, {});
-          console.log('contract', {
+          console.log('canonical', {
             success: payload.success,
             available: payload.available,
             source: payload.source,
-            contractVersion: payload.contractVersion,
             returned: alerts.length,
             recent15m: recent.length,
+            recentStages: countBy(recent, (a) => a.fateStage),
+            recentCategories: countBy(recent, (a) => a?.productIntelligence?.category),
           });
-          console.log('allStages', countBy(alerts, (a) => a.fateStage));
-          console.log('recentStages', countBy(recent, (a) => a.fateStage));
-          console.log('recentCategories', countBy(recent, (a) => a?.productIntelligence?.category));
-          console.log('recentSample', recent.slice(0, 20).map((a) => ({
-            id: a.id,
-            stage: a.fateStage,
-            category: a?.productIntelligence?.category,
-            ageSeconds: Math.max(0, Math.round((now - Date.parse(a.detectedAt)) / 1000)),
-            title: String(a.title || '').slice(0, 120),
-          })));
           NODE
 
-      - name: Inspect public health gates
+      - name: Inspect safe production push counters
         shell: bash
         run: |
           set -euo pipefail
-          for path in push signal; do
-            code="$(curl --silent --show-error --retry 3 --retry-delay 2 --output /tmp/health-$path --write-out '%{http_code}' "https://fatedrop.co.uk/api/health/$path" || true)"
-            echo "$path health HTTP $code"
-            if [ -s "/tmp/health-$path" ]; then
-              head -c 1000 "/tmp/health-$path"; echo
-            fi
-          done
-
-      - name: Checkout diagnostic branch if a temporary auth secret is needed
-        if: env.METRICS_SECRET == ''
-        uses: actions/checkout@v7
-
-      - name: Use Node.js if a temporary auth secret is needed
-        if: env.METRICS_SECRET == ''
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install locked dependencies if a temporary auth secret is needed
-        if: env.METRICS_SECRET == ''
-        run: npm ci
-
-      - name: Exercise real canonical production dispatcher
-        shell: bash
-        run: |
-          set -euo pipefail
-          auth_secret="${METRICS_SECRET:-}"
-          if [ -z "$auth_secret" ]; then
-            test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "Missing Cloudflare API token"; exit 2; }
-            test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "Missing Cloudflare account ID"; exit 2; }
-            auth_secret="$(openssl rand -hex 32)"
-            echo "::add-mask::$auth_secret"
-            printf '%s' "$auth_secret" | npx wrangler secret put FATEDROP_PUSH_CRON_SECRET >/tmp/wrangler-secret.log
-          else
-            echo "::add-mask::$auth_secret"
-          fi
-
-          code="$(curl --silent --show-error --retry 3 --retry-delay 2 \
-            --output /tmp/push-dispatch.json \
+          code="$(curl --silent --show-error --retry 5 --retry-delay 2 \
+            --output /tmp/push-health.json \
             --write-out '%{http_code}' \
-            -X POST \
-            -H "Authorization: Bearer $auth_secret" \
-            -H "Accept: application/json" \
-            "https://fatedrop.co.uk/api/dashboard/push-dispatch")"
-          echo "push dispatch HTTP $code"
-          node <<'NODE'
-          const fs = require('fs');
-          const body = fs.readFileSync('/tmp/push-dispatch.json', 'utf8');
-          let result;
-          try { result = JSON.parse(body); } catch { throw new Error('Push dispatcher returned non-JSON'); }
-          const safe = {
-            accepted: result.accepted === true,
-            enabled: result.enabled === true,
-            alerts: Number(result.alerts || 0),
-            recipients: Number(result.recipients || 0),
-            queued: Number(result.queued || 0),
-            claimed: Number(result.claimed || 0),
-            sent: Number(result.sent || 0),
-            failed: Number(result.failed || 0),
-            error: typeof result.error === 'string' ? result.error.slice(0, 200) : null,
-          };
-          console.log('dispatcher', safe);
-          if (!safe.accepted || !safe.enabled) process.exitCode = 3;
-          NODE
+            'https://fatedrop.co.uk/api/health/push?detail=1')"
+          echo "detailed push health HTTP $code"
+          cat /tmp/push-health.json
+          echo
+          test "$code" = "200" || exit 1
