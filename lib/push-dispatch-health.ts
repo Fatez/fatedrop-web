@@ -4,6 +4,7 @@ import { fateDropPostgres } from "@/lib/postgres";
 const HEALTH_ID = "canonical";
 const STALE_AFTER_SECONDS = 180;
 const DIAGNOSTIC_LOOKBACK_SECONDS = 15 * 60;
+const DIAGNOSTIC_HISTORY_SECONDS = 24 * 60 * 60;
 
 export type PushDispatchHeartbeat = {
   startedAt: number;
@@ -40,7 +41,8 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
   const sql = await fateDropPostgres();
   const temporaryBetaPremium = betaPremiumEnabled();
   const recentSince = Math.max(0, now - DIAGNOSTIC_LOOKBACK_SECONDS);
-  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows] = await Promise.all([
+  const historySince = Math.max(0, now - DIAGNOSTIC_HISTORY_SECONDS);
+  const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows, historyOutboxRows] = await Promise.all([
     sql`
       SELECT last_completed_at,last_status,last_queued,last_claimed,last_sent,last_failed,last_error
       FROM fatedrop_push_dispatch_health
@@ -86,11 +88,29 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
       FROM fatedrop_notification_outbox
       WHERE channel='push'
         AND created_at >= ${recentSince}`,
+    sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE event_type='whisper')::int AS whisper,
+        COUNT(*) FILTER (WHERE event_type='echo')::int AS echo,
+        COUNT(*) FILTER (WHERE event_type='manifested')::int AS manifested,
+        COUNT(*) FILTER (WHERE event_type='vanished')::int AS vanished,
+        COUNT(*) FILTER (WHERE event_type LIKE 'local_radar_%')::int AS local_radar,
+        COUNT(*) FILTER (WHERE state='pending')::int AS pending,
+        COUNT(*) FILTER (WHERE state='sending')::int AS sending,
+        COUNT(*) FILTER (WHERE state='sent')::int AS sent,
+        COUNT(*) FILTER (WHERE state='failed')::int AS failed,
+        COUNT(*) FILTER (WHERE event_type='whisper' AND state='sent')::int AS whisper_sent,
+        COUNT(*) FILTER (WHERE event_type='whisper' AND state='failed')::int AS whisper_failed
+      FROM fatedrop_notification_outbox
+      WHERE channel='push'
+        AND created_at >= ${historySince}`,
   ]);
 
   const heartbeat = heartbeatRows[0] as Record<string, unknown> | undefined;
   const recipient = recipientRows[0] as Record<string, unknown> | undefined;
   const recentOutbox = recentOutboxRows[0] as Record<string, unknown> | undefined;
+  const historyOutbox = historyOutboxRows[0] as Record<string, unknown> | undefined;
   const completedAt = Number(heartbeat?.last_completed_at ?? 0);
   const status = String(heartbeat?.last_status ?? "missing");
   const ageSeconds = completedAt > 0 ? Math.max(0, now - completedAt) : null;
@@ -124,6 +144,18 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
     recentOutboxSending: Number(recentOutbox?.sending ?? 0),
     recentOutboxSent: Number(recentOutbox?.sent ?? 0),
     recentOutboxFailed: Number(recentOutbox?.failed ?? 0),
+    outbox24hTotal: Number(historyOutbox?.total ?? 0),
+    outbox24hWhisper: Number(historyOutbox?.whisper ?? 0),
+    outbox24hEcho: Number(historyOutbox?.echo ?? 0),
+    outbox24hManifested: Number(historyOutbox?.manifested ?? 0),
+    outbox24hVanished: Number(historyOutbox?.vanished ?? 0),
+    outbox24hLocalRadar: Number(historyOutbox?.local_radar ?? 0),
+    outbox24hPending: Number(historyOutbox?.pending ?? 0),
+    outbox24hSending: Number(historyOutbox?.sending ?? 0),
+    outbox24hSent: Number(historyOutbox?.sent ?? 0),
+    outbox24hFailed: Number(historyOutbox?.failed ?? 0),
+    outbox24hWhisperSent: Number(historyOutbox?.whisper_sent ?? 0),
+    outbox24hWhisperFailed: Number(historyOutbox?.whisper_failed ?? 0),
     vanishedDefaultVerified: vanishedDefault.includes("true"),
     historicalAsymmetryCount,
     lastQueued: Number(heartbeat?.last_queued ?? 0),
