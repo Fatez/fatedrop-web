@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
+import { ensureExpoPushReceiptSchema } from "@/lib/expo-push-receipts";
 import { ensureCanonicalOwnerBootstrapAccount } from "@/lib/owner-bootstrap";
 import { runProductionMigrations } from "@/lib/production-migrations";
 import { fateDropPostgres } from "@/lib/postgres";
@@ -44,8 +45,9 @@ export async function POST(request: Request) {
   try {
     const ownerBootstrap = await ensureCanonicalOwnerBootstrapAccount();
     const result = await runProductionMigrations();
+    const expoPushReceipts = await ensureExpoPushReceiptSchema();
     const temporaryOwnerBootstrap = await ensureTemporaryOwnerBootstrap();
-    return Response.json({ accepted: true, ownerBootstrap, temporaryOwnerBootstrap, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
+    return Response.json({ accepted: true, ownerBootstrap, expoPushReceipts, temporaryOwnerBootstrap, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Production migration failed.";
     const diagnostic = await ownerBootstrapDiagnostic(detail);
