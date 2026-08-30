@@ -15,7 +15,7 @@ function matchesSecret(provided: string, expected: string | undefined) {
 function authorized(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) return false;
-  return matchesSecret(authorization.slice(7), process.env.FATEDROP_PUSH_CRON_SECRET);
+  return matchesSecret(authorization.slice(7), process.env.FATEDROP_RRP_AUDIT_SECRET);
 }
 
 function number(value: unknown) {
