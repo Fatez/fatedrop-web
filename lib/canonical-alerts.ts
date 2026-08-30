@@ -39,6 +39,14 @@ export type CanonicalPreparedLinks = {
   fateFindQuery: string;
 };
 
+export type CanonicalLiveWindow = {
+  manifestedAt: string | null;
+  lastConfirmedLiveAt: string | null;
+  vanishedAt: string | null;
+  observedDurationSeconds: number | null;
+  historyComplete: boolean;
+};
+
 export type CanonicalAlert = {
   id: string;
   type: string;
@@ -51,6 +59,7 @@ export type CanonicalAlert = {
   retailer: string;
   detectedAt: string;
   observedDurationSeconds: number | null;
+  liveWindow?: CanonicalLiveWindow | null;
   productIntelligence: ProductAlertClassification;
   confirmed: boolean;
   confirmedRestock: boolean;
@@ -119,12 +128,31 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function nullableString(value: unknown) {
+  return value === null || typeof value === "string";
+}
+
+function nullableFiniteNumber(value: unknown) {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isCanonicalLiveWindow(value: unknown) {
+  if (value == null) return true;
+  if (!isObject(value)) return false;
+  return nullableString(value.manifestedAt)
+    && nullableString(value.lastConfirmedLiveAt)
+    && nullableString(value.vanishedAt)
+    && nullableFiniteNumber(value.observedDurationSeconds)
+    && typeof value.historyComplete === "boolean";
+}
+
 function isCanonicalAlert(value: unknown): value is CanonicalAlert {
   if (!isObject(value)) return false;
   if (typeof value.id !== "string" || !value.id) return false;
   if (typeof value.title !== "string" || !value.title) return false;
   if (typeof value.detectedAt !== "string" || !value.detectedAt) return false;
   if (typeof value.fateStage !== "string" || !canonicalStages.has(value.fateStage as CanonicalSignalStage)) return false;
+  if (!isCanonicalLiveWindow(value.liveWindow)) return false;
   if (!isObject(value.product) || !isObject(value.priceIntelligence) || !isObject(value.preparedLinks) || !isObject(value.notification)) return false;
   if (typeof value.priceIntelligence.verdict !== "string" || !priceVerdicts.has(value.priceIntelligence.verdict as FatePriceVerdict)) return false;
   if (!Array.isArray(value.signalThread)) return false;
