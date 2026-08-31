@@ -1,5 +1,6 @@
 import type { NetworkLocation, NetworkOffer, TruePriceResult } from "./network-domain";
 import { distanceKm } from "./location";
+import type { TcgCode } from "./tcg-registry";
 
 export type FateMatchScope = "online" | "local" | "either";
 export type FateMatchStockRequirement = "in_stock" | "purchasable" | "any";
@@ -7,6 +8,7 @@ export type FateMatchStockRequirement = "in_stock" | "purchasable" | "any";
 export type FateMatch = {
   id: string;
   userId: string;
+  tcgCode: TcgCode;
   query: string;
   productIdentityId: string | null;
   maxItemPricePence: number | null;

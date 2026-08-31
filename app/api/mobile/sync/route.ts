@@ -5,6 +5,7 @@ import { listWishlist } from "@/lib/wishlist-storage";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
 import { listHostedFateMatches } from "@/lib/hosted-fate-match-storage";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
+import { normalizeSelectedTcgCodes, normalizeTcgAlertPreferences } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +57,11 @@ export async function GET(request: Request) {
     fateFinds: fateFindResult.status === "fulfilled" ? fateFindResult.value : [],
     fateMatches: fateMatchResult.status === "fulfilled" ? fateMatchResult.value : [],
     notificationPreferences: preferenceResult.status === "fulfilled" ? preferenceResult.value : DEFAULT_NOTIFICATION_PREFERENCES,
+    tcgPreferences: {
+      selectedTcgCodes: normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes),
+      onboardingCompleted: snapshot.account.tcgOnboardingCompleted === true,
+      alertPreferences: normalizeTcgAlertPreferences(snapshot.account.tcgAlertPreferences,normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes)),
+    },
     pendingMigrations,
   }, { headers: { "cache-control": "private, no-store, max-age=0" } });
 }

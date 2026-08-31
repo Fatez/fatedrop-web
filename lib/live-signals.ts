@@ -2,6 +2,7 @@ export type CloudLifecycleState = "whisper" | "echo" | "manifested" | "vanished"
 
 export type CloudPublicSignal = {
   id: string;
+  tcgCode?: string;
   state: CloudLifecycleState;
   kind?: string | null;
   deliveryPolicy?: "interrupt" | "inbox_only" | "history_only" | "anomaly_quarantine";
@@ -171,11 +172,17 @@ export async function getLiveCloudSignalsByState({
 export async function getLiveCloudAlerts({
   id,
   state,
+  since,
+  before,
+  beforeId,
   limit = 50,
   timeoutMs = 8_000,
 }: {
   id?: string | null;
   state?: CloudLifecycleState | null;
+  since?: number | null;
+  before?: number | null;
+  beforeId?: string | null;
   limit?: number;
   timeoutMs?: number;
 } = {}) {
@@ -183,6 +190,9 @@ export async function getLiveCloudAlerts({
   const params = new URLSearchParams({ detail: "alerts", limit: String(safeLimit) });
   if (id) params.set("id", id);
   if (state) params.set("state", state);
+  if (since && since > 0) params.set("since",String(Math.trunc(since)));
+  if (before && before > 0) params.set("before",String(Math.trunc(before)));
+  if (beforeId) params.set("beforeId",beforeId);
   const result = await liveFetch<CloudAlertResponse>("/api/signals", params, timeoutMs);
   return validCloudContract(result) ? result : null;
 }

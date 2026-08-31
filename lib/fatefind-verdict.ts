@@ -70,7 +70,9 @@ export type SignalFatePairVerdict = {
 
 export type SignalFateVerdictResponse = {
   success: boolean;
+  available?: boolean;
   mode: "verdict";
+  tcgCode?: string;
   count: number;
   groups: SignalTruePriceGroup[];
   verdict: SignalFateVerdict;
@@ -107,12 +109,12 @@ function safeGroup(group: SignalTruePriceGroup): SignalTruePriceGroup | null {
 
 export async function searchSignalFateVerdict(
   query: string,
-  options: { leftId?: string; rightId?: string; timeoutMs?: number } = {},
+  options: { tcgCode?: string; leftId?: string; rightId?: string; timeoutMs?: number } = {},
 ): Promise<SignalFateVerdictResponse | null> {
   const clean = query.trim();
   if (clean.length < 2) return null;
 
-  const body: Record<string, string> = { mode: "verdict", query: clean };
+  const body: Record<string, string> = { mode: "verdict", query: clean, tcgCode: options.tcgCode || "pokemon" };
   if (options.leftId?.trim()) body.leftId = options.leftId.trim();
   if (options.rightId?.trim()) body.rightId = options.rightId.trim();
 

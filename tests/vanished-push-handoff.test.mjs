@@ -12,7 +12,7 @@ test("Vanished remains a canonical mobile alert stage", () => {
 
 test("Vanished is enabled by the canonical push preference fallback", () => {
   assert.match(push, /alert\.fateStage === "VANISHED"/);
-  assert.match(push, /return recipient\.vanished_enabled/);
+  assert.match(push, /alert\.fateStage === "VANISHED" \? recipient\.vanished_enabled/);
   assert.match(push, /COALESCE\(np\.vanished_enabled,\s*true\)/);
 });
 

@@ -17,8 +17,17 @@ test('Expo tickets are followed by receipt verification instead of being treated
 
 test('receipt failures restore retryable outbox truth while dead tokens are retired', () => {
   assert.match(receiptSource, /state='failed'/);
+  assert.match(receiptSource, /permanentFailure/);
+  assert.match(receiptSource, /MessageRateExceeded|nextAttempt/);
   assert.match(receiptSource, /GREATEST\(attempts,\$\{MAX_ATTEMPTS\}\)/);
-  assert.match(receiptSource, /next_attempt_at=\$\{now\}/);
+  assert.match(receiptSource, /WHERE id=\$\{candidate\.outbox_id\} AND state='sent'/);
+});
+
+test('only the latest attempt can reconcile an outbox row and missing receipts cannot disappear silently', () => {
+  assert.match(receiptSource, /SELECT DISTINCT ON \(attempt\.outbox_id\)/);
+  assert.match(receiptSource, /ORDER BY attempt\.outbox_id,attempt\.attempted_at DESC,attempt\.id DESC/);
+  assert.match(receiptSource, /receipt_status='unverified_expired'/);
+  assert.match(receiptSource, /24-hour retention window expired/);
 });
 
 test('production migration gate provisions receipt columns before receipt polling is relied on', () => {
@@ -32,5 +41,7 @@ test('canonical push dispatch reconciles receipts without blocking fresh pushes'
   assert.match(dispatchRoute, /reconcileExpoPushReceipts\(\)/);
   assert.match(dispatchRoute, /dispatchCanonicalPushAlerts\(\)/);
   assert.match(dispatchRoute, /failed: result\.failed \+ receipts\.failed/);
+  assert.match(dispatchRoute, /receipts\.pending > 0/);
+  assert.match(dispatchRoute, /receipts\.expired > 0/);
   assert.match(dispatchRoute, /accepted: true, \.\.\.result, receipts/);
 });

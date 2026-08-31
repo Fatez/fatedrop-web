@@ -1,6 +1,6 @@
 import { fateDropPostgres } from "@/lib/postgres";
 
-const MIGRATION_CUTOFF = "2026-08-30";
+const MIGRATION_CUTOFF = "2026-08-31";
 const OWNER_EMAIL = "hello@fatedrop.co.uk";
 
 export const PRODUCTION_MIGRATIONS = [
@@ -254,6 +254,51 @@ END;
 $$`,
     ],
   },
+  {
+    id: "2026-08-31-multi-tcg-account-preferences.sql",
+    statements: [
+      `ALTER TABLE fatedrop_users
+  ADD COLUMN IF NOT EXISTS selected_tcg_codes jsonb NOT NULL DEFAULT '["pokemon"]'::jsonb,
+  ADD COLUMN IF NOT EXISTS tcg_onboarding_completed boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS tcg_alert_preferences jsonb NOT NULL DEFAULT '{}'::jsonb`,
+      `UPDATE fatedrop_users
+SET selected_tcg_codes='["pokemon"]'::jsonb
+WHERE jsonb_typeof(selected_tcg_codes)<>'array' OR jsonb_array_length(selected_tcg_codes)=0`,
+      `ALTER TABLE fatedrop_notification_preferences
+  ADD COLUMN IF NOT EXISTS manifested_reminders_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS manifested_reminders_max_per_day integer NOT NULL DEFAULT 1
+    CHECK (manifested_reminders_max_per_day BETWEEN 0 AND 3)`,
+    ],
+  },
+  {
+    id: "2026-08-31-push-recovery-checkpoint.sql",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS fatedrop_push_recovery_checkpoint (
+  id text PRIMARY KEY,
+  last_completed_at bigint NOT NULL,
+  updated_at bigint NOT NULL
+)`,
+    ],
+  },
+  {
+    id: "2026-08-31-fate-match-tcg-scope.sql",
+    statements: [
+      `ALTER TABLE fatedrop_fate_matches
+  ADD COLUMN IF NOT EXISTS tcg_code text NOT NULL DEFAULT 'pokemon'`,
+      `ALTER TABLE fatedrop_hosted_fate_matches
+  ADD COLUMN IF NOT EXISTS tcg_code text NOT NULL DEFAULT 'pokemon'`,
+      `UPDATE fatedrop_fate_matches
+SET tcg_code='pokemon'
+WHERE NULLIF(BTRIM(tcg_code),'') IS NULL`,
+      `UPDATE fatedrop_hosted_fate_matches
+SET tcg_code='pokemon'
+WHERE NULLIF(BTRIM(tcg_code),'') IS NULL`,
+      `CREATE INDEX IF NOT EXISTS fatedrop_fate_matches_tcg_active_idx
+  ON fatedrop_fate_matches (tcg_code,enabled,updated_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS fatedrop_hosted_fate_matches_tcg_time_idx
+  ON fatedrop_hosted_fate_matches (tcg_code,matched_at DESC)`,
+    ],
+  },
 ] as const;
 
 export const PRODUCTION_MIGRATION_CUTOFF = MIGRATION_CUTOFF;
@@ -312,12 +357,35 @@ export async function runProductionMigrations() {
     JOIN fatedrop_admin_roles r ON r.user_id=u.id AND r.role='owner'
     LEFT JOIN fatedrop_beta_access b ON b.user_id=u.id
     WHERE lower(u.email)=${OWNER_EMAIL}`;
+  const tcgColumnRows = await sql`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='public'
+      AND (
+        (table_name='fatedrop_users' AND column_name IN ('selected_tcg_codes','tcg_onboarding_completed','tcg_alert_preferences'))
+        OR (table_name='fatedrop_notification_preferences' AND column_name IN ('manifested_reminders_enabled','manifested_reminders_max_per_day'))
+      )`;
+  const recoveryCheckpointRows = await sql`SELECT to_regclass('public.fatedrop_push_recovery_checkpoint')::text AS checkpoint_table`;
+  const fateMatchTcgRows = await sql`
+    SELECT table_name,column_default,is_nullable
+    FROM information_schema.columns
+    WHERE table_schema='public'
+      AND table_name IN ('fatedrop_fate_matches','fatedrop_hosted_fate_matches')
+      AND column_name='tcg_code'`;
+  const unscopedFateMatchRows = await sql`
+    SELECT
+      (SELECT COUNT(*) FROM fatedrop_fate_matches WHERE NULLIF(BTRIM(tcg_code),'') IS NULL)::int
+      + (SELECT COUNT(*) FROM fatedrop_hosted_fate_matches WHERE NULLIF(BTRIM(tcg_code),'') IS NULL)::int AS count`;
 
   if (!vanishedDefault.includes("true")) throw new Error("Production migration verification failed: Vanished default is not enabled.");
   if (facetColumns.size !== 10) throw new Error(`Production migration verification failed: expected 10 alert market/set preference columns, found ${facetColumns.size}.`);
   if (historicalAsymmetryCount !== 0) throw new Error(`Production migration verification failed: ${historicalAsymmetryCount} legacy asymmetric lifecycle preference row(s) remain.`);
   if (betaAccessMissingCount !== 0) throw new Error(`Production migration verification failed: ${betaAccessMissingCount} FateDrop account(s) are missing closed-beta access state.`);
   if (ownerRows.length !== 1 || String(ownerRows[0].beta_status) !== "approved") throw new Error("Production migration verification failed: canonical FateDrop Owner is missing or not beta-approved.");
+  if (tcgColumnRows.length !== 5) throw new Error(`Production migration verification failed: expected 5 multi-TCG/reminder columns, found ${tcgColumnRows.length}.`);
+  if (!recoveryCheckpointRows[0]?.checkpoint_table) throw new Error("Production migration verification failed: push recovery checkpoint is missing.");
+  if (fateMatchTcgRows.length !== 2 || fateMatchTcgRows.some((row) => String(row.is_nullable) !== "NO")) throw new Error("Production migration verification failed: FateMatch TCG scope is missing or nullable.");
+  if (Number(unscopedFateMatchRows[0]?.count ?? 0) !== 0) throw new Error("Production migration verification failed: unscoped FateMatch rows remain.");
   if (pending.length) throw new Error(`Production migration verification failed: pending migrations: ${pending.join(", ")}`);
 
   return {
@@ -330,5 +398,8 @@ export async function runProductionMigrations() {
     betaAccessMissingCount,
     ownerVerified: true,
     ownerUserId: String(ownerRows[0].id),
+    multiTcgPreferenceColumnsVerified: true,
+    pushRecoveryCheckpointVerified: true,
+    fateMatchTcgScopeVerified: true,
   };
 }

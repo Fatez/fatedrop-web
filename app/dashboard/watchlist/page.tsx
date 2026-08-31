@@ -9,14 +9,18 @@ import { defaultAvatarRecord, getUserAvatar } from "@/lib/avatar-storage";
 import { buildDashboardData, moneyFromPence, relativeTime } from "@/lib/dashboard";
 import { hasCapability } from "@/lib/entitlements";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
+import { isTcgCode, normalizeSelectedTcgCodes, TCG_REGISTRY } from "@/lib/tcg-registry";
 
 export const metadata: Metadata = { title: "FateMatch | FateDrop Dashboard", robots: { index: false, follow: false } };
 
-export default async function DashboardFateMatchPage({ searchParams }: { searchParams: Promise<{ q?: string; productId?: string }> }) {
+export default async function DashboardFateMatchPage({ searchParams }: { searchParams: Promise<{ q?: string; productId?: string; tcg?: string }> }) {
   const params = await searchParams;
   const initialQuery = (params.q ?? "").trim().slice(0, 160);
   const initialProductIdentityId = (params.productId ?? "").trim().slice(0, 180) || null;
   const snapshot = await getCurrentSnapshot();
+  const selectedTcgCodes = normalizeSelectedTcgCodes(snapshot?.account.selectedTcgCodes);
+  const requestedTcg = isTcgCode(params.tcg) ? params.tcg : selectedTcgCodes[0];
+  const initialTcgCode = selectedTcgCodes.includes(requestedTcg) ? requestedTcg : selectedTcgCodes[0];
   const data = snapshot ? await buildDashboardData(snapshot) : null;
   const legacyHits = data?.personal.watchlist ?? [];
   const premium = snapshot ? hasCapability(snapshot.membership, "advanced_fate_match") : false;
@@ -44,7 +48,7 @@ export default async function DashboardFateMatchPage({ searchParams }: { searchP
             <div className="match"><b>3</b><strong>GET A FATEMATCH</strong><small>Only when a real observed offer actually meets your watch conditions.</small></div>
           </div>
           <p className="fd-ff-kid-copy"><b>Simple version:</b> press “let me know when this is in stock.” Your chosen companion represents the watch while FateDrop Cloud does the monitoring. When a qualifying offer appears, you get <b>FATEMATCH — LIVE NOW</b> and a route to buy.</p>
-          <FateMatchBuilder premium={premium} initialQuery={initialQuery} initialProductIdentityId={initialProductIdentityId}/>
+          <FateMatchBuilder premium={premium} selectedTcgCodes={selectedTcgCodes} initialTcgCode={initialTcgCode} initialQuery={initialQuery} initialProductIdentityId={initialProductIdentityId}/>
         </div>
         {avatar ? <aside className="fd-ff-companion"><div><span>YOUR COMPANION</span><small>Watching the network with you</small></div><CompanionRenderer request={{ companionId: avatar.loadout.companion, reaction: matches.some((match)=>match.enabled) ? "watching" : "idle", compact: true, label: "FateMatch companion" }}/><Link href="/dashboard/avatar">CHOOSE COMPANION →</Link></aside> : null}
       </section>
@@ -53,7 +57,7 @@ export default async function DashboardFateMatchPage({ searchParams }: { searchP
         <section className="fd-dash-card fd-ff-list"><div className="fd-ff-head"><div><span>YOUR FATEMATCH WATCHES</span><h2>What are your companions watching?</h2></div><small>{migrationPending ? "Storage migration pending" : `${matches.length} saved`}</small></div>
           {matches.length ? <div className="fd-ff-hunt-list">{matches.map((match)=><article key={match.id}>
             <span className="fd-store-thumb">⌕</span>
-            <div className="fd-ff-hunt-copy"><strong>{match.query || "Resolved product"}</strong><small>{match.scope === "online" ? "Online only" : match.scope === "local" ? `Local · ${match.radiusKm ?? "?"} km` : match.latitude !== null && match.radiusKm !== null ? `Online or local · ${match.radiusKm} km local radius` : "Online or local"}{match.maxTruePricePence !== null ? ` · max £${(match.maxTruePricePence/100).toFixed(2)} True Price` : ""}{match.maxPercentAboveRrp !== null ? ` · max +${match.maxPercentAboveRrp}% RRP` : ""}</small></div>
+            <div className="fd-ff-hunt-copy"><strong>{match.query || "Resolved product"}</strong><small>{TCG_REGISTRY.find((entry)=>entry.code===match.tcgCode)?.shortName ?? match.tcgCode} · {match.scope === "online" ? "Online only" : match.scope === "local" ? `Local · ${match.radiusKm ?? "?"} km` : match.latitude !== null && match.radiusKm !== null ? `Online or local · ${match.radiusKm} km local radius` : "Online or local"}{match.maxTruePricePence !== null ? ` · max £${(match.maxTruePricePence/100).toFixed(2)} True Price` : ""}{match.maxPercentAboveRrp !== null ? ` · max +${match.maxPercentAboveRrp}% RRP` : ""}</small></div>
             <div className="fd-ff-hunt-status"><b className={match.enabled ? "active" : "paused"}>{match.enabled ? "ACTIVE" : "PAUSED"}</b><small>{match.productIdentityId ? "Product identity locked" : "Search intent"}</small></div>
             <FateFindActions id={match.id} enabled={match.enabled}/>
           </article>)}</div> : <div className="fd-dashboard-empty"><strong>{migrationPending ? "FateMatch storage is staged, not live yet." : "No FateMatch watches yet."}</strong><span>{migrationPending ? "Existing history stays untouched while the additive migration waits for approval." : "Create one above. FateDrop only alerts when a real observed offer satisfies your rules."}</span></div>}

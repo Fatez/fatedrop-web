@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
 import type { FateMatch } from "@/lib/fate-match";
-import { createFateMatch, deleteFateMatch, listUserFateMatches, setFateMatchEnabled } from "@/lib/fate-match-storage";
+import { createFateMatch, deleteFateMatch, getProductIdentityTcg, listUserFateMatches, setFateMatchEnabled } from "@/lib/fate-match-storage";
 import { hasCapability } from "@/lib/entitlements";
 import { evaluateHostedFateFindNow } from "@/lib/hosted-fatefind-client";
+import { isTcgCode, normalizeSelectedTcgCodes, TCG_REGISTRY } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,11 +51,23 @@ export async function POST(request: Request) {
     const query = typeof payload.query === "string" ? payload.query.trim().slice(0, 180) : "";
     const productIdentityId = typeof payload.productIdentityId === "string" && payload.productIdentityId.trim() ? payload.productIdentityId.trim().slice(0, 180) : null;
     if (!query && !productIdentityId) return Response.json({ error: "A product search or product identity is required." }, { status: 400 });
+    const tcgCode = payload.tcgCode === undefined ? "pokemon" : payload.tcgCode;
+    if (!isTcgCode(tcgCode)) return Response.json({ error: "A supported TCG must be selected." }, { status: 400 });
+    const tcg = TCG_REGISTRY.find((entry) => entry.code === tcgCode);
+    if (!tcg?.live) return Response.json({ error: `${tcg?.shortName ?? "This TCG"} monitoring is not active yet.` }, { status: 409 });
+    if (!normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes).includes(tcgCode)) {
+      return Response.json({ error: `${tcg.shortName} is not selected in your FateDrop TCG preferences.` }, { status: 409 });
+    }
+    if (productIdentityId) {
+      const identityTcg = await getProductIdentityTcg(productIdentityId);
+      if (!identityTcg) return Response.json({ error: "The canonical product identity could not be verified." }, { status: 400 });
+      if (identityTcg !== tcgCode) return Response.json({ error: "The product identity belongs to a different TCG." }, { status: 409 });
+    }
     const scope = payload.scope === "online" || payload.scope === "local" || payload.scope === "either" ? payload.scope : "either";
     const stockRequirement = payload.stockRequirement === "any" || payload.stockRequirement === "purchasable" || payload.stockRequirement === "in_stock" ? payload.stockRequirement : "in_stock";
     const now = Math.floor(Date.now() / 1000);
     const match: FateMatch = {
-      id: randomUUID(), userId: snapshot.account.id, query, productIdentityId,
+      id: randomUUID(), userId: snapshot.account.id, tcgCode, query, productIdentityId,
       maxItemPricePence: finiteOrNull(payload.maxItemPricePence, { min: 0, max: 10_000_000 }),
       maxTruePricePence: finiteOrNull(payload.maxTruePricePence, { min: 0, max: 10_000_000 }),
       maxPercentAboveRrp: finiteOrNull(payload.maxPercentAboveRrp, { min: 0, max: 1000 }),

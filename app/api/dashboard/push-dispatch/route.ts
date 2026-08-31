@@ -58,15 +58,21 @@ export async function POST(request: Request) {
     };
 
     const completedAt = Math.floor(Date.now() / 1000);
-    const totalProviderFailure = result.enabled && result.claimed > 0 && result.sent === 0 && result.failed > 0;
-    const receiptUnavailable = !receipts.schemaReady || receipts.error !== null;
-    const status = !result.enabled ? "disabled" : totalProviderFailure || receiptUnavailable ? "error" : "ok";
+    const providerFailure = result.enabled && result.failed > 0;
+    const totalProviderFailure = providerFailure && result.claimed > 0 && result.sent === 0;
+    const receiptIntegrityIssue = !receipts.schemaReady
+      || receipts.error !== null
+      || receipts.pending > 0
+      || receipts.expired > 0;
+    const status = !result.enabled ? "disabled" : providerFailure || receiptIntegrityIssue ? "error" : "ok";
     const heartbeatError = !result.enabled
       ? "Push dispatch is not enabled."
       : totalProviderFailure
         ? "Every claimed push delivery failed in the provider batch."
-        : receiptUnavailable
-          ? `Expo receipt verification unavailable: ${receipts.error || "receipt schema unavailable"}`
+        : providerFailure
+          ? `${result.failed} claimed push delivery attempt${result.failed === 1 ? "" : "s"} failed.`
+        : receiptIntegrityIssue
+          ? `Expo receipt verification incomplete: ${receipts.error || `${receipts.pending} pending, ${receipts.expired} expired`}`
           : null;
 
     await recordPushDispatchHeartbeat({
@@ -76,7 +82,7 @@ export async function POST(request: Request) {
       queued: result.queued,
       claimed: result.claimed,
       sent: result.sent,
-      failed: result.failed + receipts.failed,
+      failed: result.failed + receipts.failed + receipts.expired,
       error: heartbeatError,
     }).catch(() => undefined);
 

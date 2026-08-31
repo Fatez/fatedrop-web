@@ -33,11 +33,14 @@ export type ExpoReceiptReconciliation = {
   delivered: number;
   failed: number;
   pending: number;
+  expired: number;
   error: string | null;
 };
 
 function detailFor(receipt: ExpoReceipt) {
-  return receipt.message || receipt.details?.error || "Expo reported a push receipt failure.";
+  const errorCode = receipt.details?.error;
+  if (errorCode && receipt.message) return `${errorCode}: ${receipt.message}`;
+  return errorCode || receipt.message || "Expo reported a push receipt failure.";
 }
 
 function schemaUnavailable(error: unknown) {
@@ -62,6 +65,17 @@ async function candidates(now: number, limit: number) {
   const eligibleBefore = now - MIN_RECEIPT_AGE_SECONDS;
   const oldestAllowed = now - MAX_RECEIPT_AGE_SECONDS;
   const rows = await sql`
+    WITH latest_attempt AS (
+      SELECT DISTINCT ON (attempt.outbox_id)
+        attempt.id,
+        attempt.outbox_id,
+        attempt.provider_message_id,
+        attempt.attempted_at,
+        attempt.result,
+        attempt.receipt_checked_at
+      FROM fatedrop_notification_delivery_attempts attempt
+      ORDER BY attempt.outbox_id,attempt.attempted_at DESC,attempt.id DESC
+    )
     SELECT
       attempt.id AS attempt_id,
       attempt.outbox_id,
@@ -69,7 +83,7 @@ async function candidates(now: number, limit: number) {
       attempt.attempted_at,
       outbox.attempts,
       NULLIF(outbox.payload_json->>'endpointId','') AS endpoint_id
-    FROM fatedrop_notification_delivery_attempts attempt
+    FROM latest_attempt attempt
     JOIN fatedrop_notification_outbox outbox ON outbox.id=attempt.outbox_id
     WHERE attempt.result='sent'
       AND attempt.provider_message_id IS NOT NULL
@@ -79,6 +93,40 @@ async function candidates(now: number, limit: number) {
     ORDER BY attempt.attempted_at ASC
     LIMIT ${Math.max(1, Math.min(MAX_RECEIPTS_PER_BATCH, limit))}`;
   return rows as ReceiptCandidate[];
+}
+
+async function expireUnavailableReceipts(now: number) {
+  const sql = await fateDropPostgres();
+  const oldestAllowed = now - MAX_RECEIPT_AGE_SECONDS;
+  const rows = await sql`
+    WITH latest_attempt AS (
+      SELECT DISTINCT ON (attempt.outbox_id)
+        attempt.id,
+        attempt.outbox_id,
+        attempt.provider_message_id,
+        attempt.attempted_at,
+        attempt.result,
+        attempt.receipt_checked_at
+      FROM fatedrop_notification_delivery_attempts attempt
+      ORDER BY attempt.outbox_id,attempt.attempted_at DESC,attempt.id DESC
+    ), expired AS (
+      SELECT id
+      FROM latest_attempt
+      WHERE result='sent'
+        AND provider_message_id IS NOT NULL
+        AND receipt_checked_at IS NULL
+        AND attempted_at < ${oldestAllowed}
+      LIMIT 1000
+    )
+    UPDATE fatedrop_notification_delivery_attempts attempt
+    SET
+      receipt_status='unverified_expired',
+      receipt_checked_at=${now},
+      receipt_detail='Expo did not expose a provider receipt before its 24-hour retention window expired.'
+    FROM expired
+    WHERE attempt.id=expired.id
+    RETURNING attempt.id`;
+  return rows.length;
 }
 
 async function recordDelivered(candidate: ReceiptCandidate, now: number) {
@@ -94,6 +142,11 @@ async function recordFailed(candidate: ReceiptCandidate, receipt: ExpoReceipt, n
   const errorCode = receipt.details?.error || null;
   const detail = detailFor(receipt);
   const deadToken = errorCode === "DeviceNotRegistered";
+  const permanentFailure = deadToken
+    || errorCode === "MessageTooBig"
+    || errorCode === "MismatchSenderId"
+    || errorCode === "InvalidCredentials";
+  const nextAttempt = now + Math.min(900, 30 * (2 ** Math.max(0, candidate.attempts - 1)));
 
   await sql`
     UPDATE fatedrop_notification_delivery_attempts
@@ -104,11 +157,12 @@ async function recordFailed(candidate: ReceiptCandidate, receipt: ExpoReceipt, n
     UPDATE fatedrop_notification_outbox
     SET
       state='failed',
-      attempts=CASE WHEN ${deadToken} THEN GREATEST(attempts,${MAX_ATTEMPTS}) ELSE attempts END,
+      attempts=CASE WHEN ${permanentFailure} THEN GREATEST(attempts,${MAX_ATTEMPTS}) ELSE attempts END,
+      sent_at=NULL,
       last_error=${detail},
-      next_attempt_at=${now},
+      next_attempt_at=${permanentFailure ? now : nextAttempt},
       updated_at=${now}
-    WHERE id=${candidate.outbox_id}`;
+    WHERE id=${candidate.outbox_id} AND state='sent'`;
 
   if (candidate.endpoint_id) {
     await sql`
@@ -131,19 +185,21 @@ export async function reconcileExpoPushReceipts({
   limit?: number;
   fetchImpl?: typeof fetch;
 } = {}): Promise<ExpoReceiptReconciliation> {
+  let expired = 0;
   let rows: ReceiptCandidate[];
   try {
+    expired = await expireUnavailableReceipts(now);
     rows = await candidates(now, limit);
   } catch (error) {
     if (schemaUnavailable(error)) {
-      return { schemaReady: false, candidates: 0, checked: 0, delivered: 0, failed: 0, pending: 0, error: "receipt_schema_unavailable" };
+      return { schemaReady: false, candidates: 0, checked: 0, delivered: 0, failed: 0, pending: 0, expired: 0, error: "receipt_schema_unavailable" };
     }
     const detail = error instanceof Error ? error.message : "Push receipt candidates could not be loaded.";
-    return { schemaReady: true, candidates: 0, checked: 0, delivered: 0, failed: 0, pending: 0, error: detail.slice(0, 240) };
+    return { schemaReady: true, candidates: 0, checked: 0, delivered: 0, failed: 0, pending: 0, expired, error: detail.slice(0, 240) };
   }
 
   if (!rows.length) {
-    return { schemaReady: true, candidates: 0, checked: 0, delivered: 0, failed: 0, pending: 0, error: null };
+    return { schemaReady: true, candidates: 0, checked: 0, delivered: 0, failed: 0, pending: 0, expired, error: null };
   }
 
   const ids = rows.map((row) => row.provider_message_id);
@@ -172,6 +228,7 @@ export async function reconcileExpoPushReceipts({
       delivered: 0,
       failed: 0,
       pending: rows.length,
+      expired,
       error: detail.slice(0, 240),
     };
   }
@@ -197,5 +254,5 @@ export async function reconcileExpoPushReceipts({
     }
   }
 
-  return { schemaReady: true, candidates: rows.length, checked, delivered, failed, pending, error: null };
+  return { schemaReady: true, candidates: rows.length, checked, delivered, failed, pending, expired, error: null };
 }
