@@ -34,17 +34,21 @@ export type CloudPublicSignal = {
 };
 
 export type CloudAlertLanguageGroup = "english" | "japanese" | "korean" | "simplified_chinese" | "traditional_chinese" | "other" | "unknown";
+export type CloudAlertMarketGroup = "english" | "japanese" | "korean" | "simplified_chinese" | "traditional_chinese" | "other" | "unknown";
+export type CloudAlertMarketStatus = "verified" | "reused" | "candidate" | "unknown" | "conflict";
 
 export type CloudAlertFacets = {
   version: number;
   languageGroup: CloudAlertLanguageGroup;
   languageCode: string | null;
   marketCode: string | null;
+  marketGroup?: CloudAlertMarketGroup;
+  marketStatus?: CloudAlertMarketStatus;
   languageLabel: string;
   setKey: string | null;
   setName: string | null;
-  confidence: { language: number; set: number };
-  source: { language: string; set: string };
+  confidence: { language: number; market?: number; set: number };
+  source: { language: string; market?: string; set: string };
 };
 
 export type CloudSignalResponse = {
@@ -74,6 +78,7 @@ export type CloudAlertFacetOptionsResponse = {
   generatedAt: string;
   version: number;
   languages: Array<{ key: CloudAlertLanguageGroup; label: string }>;
+  markets?: Array<{ key: CloudAlertMarketGroup; label: string }>;
   sets: Array<{ key: string; name: string }>;
 };
 
