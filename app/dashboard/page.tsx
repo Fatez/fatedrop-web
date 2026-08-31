@@ -61,7 +61,7 @@ export default async function DashboardPage() {
   const network = data.network;
   const recentSignals = [...(network?.recentSignals ?? [])].sort((a, b) => b.occurredAt - a.occurredAt).slice(0, 5);
   const priceGroup = truePriceGroup(network?.recentSignals ?? []);
-  const recentDrops = data.recentManifested.slice(0, 4);
+  const verifiedLive = data.verifiedLive.slice(0, 4);
   const fateMatchWatches = data.personal.watchlist.slice(0, 3);
   const stores = data.personal.favoriteStores.slice(0, 5);
   const series = Object.fromEntries(
@@ -158,11 +158,11 @@ export default async function DashboardPage() {
         </article>
 
         <article className="fd-ref-card fd-recent-drops">
-          <div className="fd-ref-card-head compact"><div><h2>Recent Manifested Drops</h2><p>Confirmed live stock.</p></div></div>
+          <div className="fd-ref-card-head compact"><div><h2>Verified Live Now</h2><p>Open Manifested offer episodes, freshly reconfirmed by healthy monitors.</p></div></div>
           <div className="fd-drop-grid">
-            {recentDrops.length ? recentDrops.map((item) => <div className="fd-drop-mini" key={item.id}><span className="fd-drop-art"><i />{titleInitials(item.title)}</span><strong>{premium ? item.title : "Premium product"}</strong><small>{premium ? (item.retailer || "Retailer pending") : "Retailer hidden"}</small><b>{premium ? (moneyFromPence(item.deliveredPricePence) || "LIVE") : "LOCKED"}</b></div>) : <div className="fd-ref-empty"><strong>No Manifested drops yet.</strong><span>Confirmed live products will appear here.</span></div>}
+            {verifiedLive.length ? verifiedLive.map((item) => <div className="fd-drop-mini" key={item.id}><span className="fd-drop-art"><i />{titleInitials(item.title)}</span><strong>{premium ? item.title : "Premium product"}</strong><small>{premium ? `${item.retailer || "Retailer pending"} · ${item.tcgCode}` : "Retailer hidden"}</small><b>{premium ? (moneyFromPence(item.product.deliveredPricePence) || moneyFromPence(item.product.pricePence) || "STILL LIVE") : "LOCKED"}</b></div>) : <div className="fd-ref-empty"><strong>No stock is freshly verified live right now.</strong><span>FateDrop leaves this empty instead of recycling a closed or stale Manifested alert.</span></div>}
           </div>
-          <Link className="fd-card-link" href="/dashboard/alerts">View all drops <span>→</span></Link>
+          <Link className="fd-card-link" href="/dashboard/alerts?state=manifested">View Manifested history <span>→</span></Link>
         </article>
 
         <article className="fd-ref-card fd-retailer-card">

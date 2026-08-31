@@ -71,6 +71,14 @@ export type CanonicalStockEpisode = {
   eventAvailabilityEffect:string|null;
 };
 
+export type CanonicalOpportunity = {
+  eventKind: "listing_discovered" | "evidence_changed" | "retailer_behaviour_changed" | "availability_started" | "new_retailer_available" | "availability_ended";
+  current: boolean;
+  currentViewKind: "still_available" | null;
+  firstManifestedAt: string | null;
+  lastVerifiedAt: string | null;
+};
+
 export type CanonicalAlert = {
   id: string;
   tcgCode: string;
@@ -90,6 +98,7 @@ export type CanonicalAlert = {
   observedDurationSeconds: number | null;
   liveWindow?: CanonicalLiveWindow | null;
   stockEpisode?: CanonicalStockEpisode | null;
+  opportunity?: CanonicalOpportunity | null;
   productIntelligence: ProductAlertClassification;
   confirmed: boolean;
   confirmedRestock: boolean;
@@ -195,6 +204,16 @@ function isCanonicalLiveWindow(value: unknown) {
     && typeof value.historyComplete === "boolean";
 }
 
+function isCanonicalOpportunity(value: unknown) {
+  if (value == null) return true;
+  if (!isObject(value)) return false;
+  return ["listing_discovered", "evidence_changed", "retailer_behaviour_changed", "availability_started", "new_retailer_available", "availability_ended"].includes(String(value.eventKind))
+    && typeof value.current === "boolean"
+    && (value.currentViewKind === null || value.currentViewKind === "still_available")
+    && nullableString(value.firstManifestedAt)
+    && nullableString(value.lastVerifiedAt);
+}
+
 function isCanonicalAlertFacets(value: unknown): value is CanonicalAlertFacets {
   if (!isObject(value) || (value.version !== 1 && value.version !== 2)) return false;
   if (typeof value.languageGroup !== "string" || !languageGroups.has(value.languageGroup)) return false;
@@ -241,6 +260,7 @@ function isCanonicalAlert(value: unknown): value is CanonicalAlert {
   if (typeof value.deliveryPolicy !== "string" || !deliveryPolicies.has(value.deliveryPolicy as CanonicalAlertDeliveryPolicy)) return false;
   if (typeof value.interruptEligible !== "boolean" || !isCanonicalAlertFacets(value.facets)) return false;
   if (!isCanonicalLiveWindow(value.liveWindow)) return false;
+  if (!isCanonicalOpportunity(value.opportunity)) return false;
   if (!isObject(value.product) || !isObject(value.priceIntelligence) || !isObject(value.preparedLinks) || !isObject(value.notification)) return false;
   if (!nullableString(value.product.stockStatus) || !isCanonicalPresentation(value.presentation) || !isCanonicalDelivery(value.delivery)) return false;
   if (typeof value.priceIntelligence.verdict !== "string" || !priceVerdicts.has(value.priceIntelligence.verdict as FatePriceVerdict)) return false;
@@ -251,18 +271,28 @@ function isCanonicalAlert(value: unknown): value is CanonicalAlert {
 export async function listCanonicalAlerts({
   id,
   state,
+  currentOnly = false,
   limit = 50,
 }: {
   id?: string | null;
   state?: CloudLifecycleState | null;
+  currentOnly?: boolean;
   limit?: number;
 } = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
-  const response = await getLiveCloudAlerts({ id, state, limit: safeLimit });
+  const response = await getLiveCloudAlerts({ id, state, currentOnly, limit: safeLimit });
   if (!response?.success || response.available !== true || response.source !== "FATEDROP_CLOUD" || !Array.isArray(response.alerts)) {
     throw new Error("Canonical Cloud alert feed unavailable");
   }
-  return response.alerts.filter(isCanonicalAlert).slice(0, safeLimit);
+  const alerts = response.alerts.filter(isCanonicalAlert);
+  const current = currentOnly
+    ? alerts.filter((alert) => alert.fateStage === "MANIFESTED"
+      && alert.liveWindow?.historyComplete === true
+      && alert.liveWindow.vanishedAt === null
+      && alert.liveWindow.lastConfirmedLiveAt !== null
+      && alert.opportunity?.current !== false)
+    : alerts;
+  return current.slice(0, safeLimit);
 }
 
 const balancedLifecycleStates = ["whisper", "echo", "manifested", "vanished"] as const satisfies readonly CloudLifecycleState[];
@@ -270,14 +300,16 @@ const balancedLifecycleStates = ["whisper", "echo", "manifested", "vanished"] as
 export async function listCanonicalAlertWindow({
   id,
   state,
+  currentOnly = false,
   limitPerStage = 50,
 }: {
   id?: string | null;
   state?: CloudLifecycleState | null;
+  currentOnly?: boolean;
   limitPerStage?: number;
 } = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limitPerStage)));
-  if (id || state) return listCanonicalAlerts({ id, state, limit: safeLimit });
+  if (id || state || currentOnly) return listCanonicalAlerts({ id, state, currentOnly, limit: safeLimit });
 
   const windows = await Promise.all(
     balancedLifecycleStates.map((lifecycleState) => listCanonicalAlerts({ state: lifecycleState, limit: safeLimit })),
