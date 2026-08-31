@@ -10,9 +10,9 @@ export default function DashboardLocalRadarPage() {
       <section className="fd-local-radar-hero">
         <span>FATE NETWORK · LOCAL RADAR</span>
         <h1>Find nearby stores. See what may be arriving.</h1>
-        <p>Local Radar uses the canonical FateDrop Cloud discovery engine to answer two simple questions: <strong>where can you buy Pokémon and TCG products near you</strong>, and <strong>what stock may be arriving there</strong>. Expected stock is never presented as guaranteed availability, and only genuine exact-branch evidence becomes Confirmed.</p>
+        <p>Local Radar uses the canonical FateDrop Cloud discovery engine to answer two separate questions: <strong>which relevant physical retailer locations are near you</strong>, and <strong>what stock evidence exists for an exact branch</strong>. A branch is not automatically a verified Pokémon seller. Expected stock is never presented as guaranteed availability, and only genuine exact-branch evidence becomes Confirmed.</p>
         <div className="fd-local-radar-model" aria-label="Local Radar status model">
-          <div><b>STORE</b><small>Known physical retailer branch.</small></div>
+          <div><b>STORE</b><small>Known physical branch. Seller evidence is shown separately.</small></div>
           <div><b>EXPECTED</b><small>Credible incoming-stock intelligence. Not guaranteed.</small></div>
           <div><b>CONFIRMED</b><small>Physical availability verified at that exact branch.</small></div>
           <div><b>UNKNOWN</b><small>No reliable current stock information.</small></div>
