@@ -24,8 +24,14 @@ function lifecycleMarketEnabled(alert: CanonicalAlert, preferences: Notification
   const stage = alert.fateStage.toLowerCase() as keyof NotificationPreferences["lifecycleMarkets"];
   const selection = preferences.lifecycleMarkets[stage];
   if (selection === "all") return true;
-  const group = alert.facets.languageGroup;
-  if (!(["english", "japanese", "korean", "simplified_chinese", "traditional_chinese"] as string[]).includes(group)) return false;
+
+  // Market is canonical product identity metadata, not a synonym for language.
+  // During the v1 -> v2 rollout, or for candidate/conflict/unknown resolutions,
+  // an explicit market filter must fail closed rather than guess from wording.
+  if (alert.facets.version < 2) return false;
+  if (alert.facets.marketStatus !== "verified" && alert.facets.marketStatus !== "reused") return false;
+  const group = alert.facets.marketGroup;
+  if (!group || !(["english", "japanese", "korean", "simplified_chinese", "traditional_chinese"] as string[]).includes(group)) return false;
   return selection.includes(group as LifecycleMarketGroup);
 }
 
