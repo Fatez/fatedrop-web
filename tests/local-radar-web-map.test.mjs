@@ -7,6 +7,7 @@ const search = fs.readFileSync("components/local-radar-search.tsx", "utf8");
 const map = fs.readFileSync("components/local-radar-map.tsx", "utf8");
 const api = fs.readFileSync("app/api/local-radar/route.ts", "utf8");
 const config = fs.readFileSync("next.config.ts", "utf8");
+const mapPolicy = fs.readFileSync("lib/local-radar-map.ts", "utf8");
 
 test("Local Radar Web renders a real geographic map from the shared Cloud coordinates", () => {
   assert.ok(search.includes("LocalRadarMap"));
@@ -67,4 +68,23 @@ test("Local Radar dashboard uses one consistent collector flow", () => {
   assert.ok(search.includes("NEARBY STORES"));
   assert.ok(search.includes("EVENTS"));
   assert.ok(search.includes("Physical truth stays physical."));
+});
+
+test("Local Radar bounds map and store-list rendering for national datasets", () => {
+  assert.ok(map.includes("clusterProjectedRadarPoints"));
+  assert.ok(map.includes("safeMarkerBudget"));
+  assert.ok(map.includes("CLUSTER"));
+  assert.ok(search.includes("STORE_PAGE_SIZE = 80"));
+  assert.ok(search.includes("shops.slice(0, visibleStoreLimit)"));
+  assert.ok(search.includes("markerBudget={markerBudget}"));
+  assert.ok(mapPolicy.includes("MAX_MARKERS = 100"));
+});
+
+test("Web filters only by Cloud retailerGroup and never classifies retailer names or IDs", () => {
+  assert.ok(search.includes("retailerGroup(shop.retailerGroup)"));
+  assert.ok(search.includes("Unclassified"));
+  assert.ok(search.includes("Cloud owns branch identity, retailer grouping and seller evidence."));
+  assert.equal(mapPolicy.includes("retailerId"), false);
+  assert.equal(mapPolicy.includes("shop.name"), false);
+  assert.equal(mapPolicy.includes("Tesco"), false);
 });

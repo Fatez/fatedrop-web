@@ -48,9 +48,9 @@ test("one-shot ledger guard runs before account mutation and marker is written o
   assert.match(bootstrap, /alreadyApplied: true/);
 });
 
-test("authenticated production gate runs canonical migrations before the temporary Owner bootstrap", () => {
+test("authenticated production gate runs canonical and Local Radar migrations before the temporary Owner bootstrap", () => {
   const canonical = position(route, /ensureCanonicalOwnerBootstrapAccount\(\)/, "canonical Owner bootstrap");
-  const migrations = position(route, /runProductionMigrations\(\)/, "canonical migrations");
+  const migrations = position(route, /runProductionMigrationsWithLocalRadar\(\)/, "canonical and Local Radar migrations");
   const temporary = position(route, /ensureTemporaryOwnerBootstrap\(\)/, "temporary Owner bootstrap");
   assert.ok(canonical < migrations && migrations < temporary);
   assert.match(route, /FATEDROP_PUSH_CRON_SECRET/);

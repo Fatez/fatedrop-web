@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { clampMarkerBudget, clusterProjectedRadarPoints } from "@/lib/local-radar-map";
 
 export type LocalRadarMapPoint = {
   id: string;
@@ -25,6 +26,9 @@ const TILE_URL = process.env.NEXT_PUBLIC_LOCAL_RADAR_TILE_URL || DEFAULT_TILE_UR
 const UK_CENTRE: Coordinate = { latitude: 52.5, longitude: -1.5 };
 const MIN_ZOOM = 5;
 const MAX_ZOOM = 15;
+const MAP_WIDTH = GRID_COLUMNS * TILE_SIZE;
+const MAP_HEIGHT = GRID_ROWS * TILE_SIZE;
+const MARKER_PADDING = 28;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -83,15 +87,19 @@ export function LocalRadarMap({
   active,
   selectedId,
   onSelect,
+  markerBudget = 72,
 }: {
   points: LocalRadarMapPoint[];
   origin: LocalRadarOrigin;
   active: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  markerBudget?: number;
 }) {
   const [zoomAdjustment, setZoomAdjustment] = useState(0);
+  const [focusCoordinate, setFocusCoordinate] = useState<Coordinate | null>(null);
   const selected = useMemo(() => points.find((point) => point.id === selectedId) ?? null, [points, selectedId]);
+  const safeMarkerBudget = clampMarkerBudget(markerBudget);
 
   const scene = useMemo(() => {
     const coordinates: Coordinate[] = [
@@ -102,10 +110,12 @@ export function LocalRadarMap({
     const baseZoom = active ? chooseZoom(focusCoordinates) : 6;
     const zoom = clamp(baseZoom + zoomAdjustment, MIN_ZOOM, MAX_ZOOM);
     const projected = focusCoordinates.map((coordinate) => project(coordinate, zoom));
-    const centre = {
-      x: (Math.min(...projected.map((point) => point.x)) + Math.max(...projected.map((point) => point.x))) / 2,
-      y: (Math.min(...projected.map((point) => point.y)) + Math.max(...projected.map((point) => point.y))) / 2,
-    };
+    const centre = focusCoordinate
+      ? project(focusCoordinate, zoom)
+      : {
+          x: (Math.min(...projected.map((point) => point.x)) + Math.max(...projected.map((point) => point.x))) / 2,
+          y: (Math.min(...projected.map((point) => point.y)) + Math.max(...projected.map((point) => point.y))) / 2,
+        };
     const centreTileX = Math.floor(centre.x / TILE_SIZE);
     const centreTileY = Math.floor(centre.y / TILE_SIZE);
     const startTileX = centreTileX - Math.floor(GRID_COLUMNS / 2);
@@ -119,14 +129,16 @@ export function LocalRadarMap({
       const y = startTileY + row;
       return { key: `${zoom}:${x}:${y}`, column, row, src: tileUrl(zoom, x, y) };
     });
-    const markerPoints = points.map((point) => {
+    const visibleMarkerPoints = points.map((point) => {
       const projectedPoint = project(point, zoom);
       return {
         ...point,
         x: projectedPoint.x - startTileX * TILE_SIZE,
         y: projectedPoint.y - startTileY * TILE_SIZE,
       };
-    });
+    }).filter((point) => point.x >= -MARKER_PADDING && point.x <= MAP_WIDTH + MARKER_PADDING
+      && point.y >= -MARKER_PADDING && point.y <= MAP_HEIGHT + MARKER_PADDING);
+    const markers = clusterProjectedRadarPoints(visibleMarkerPoints, safeMarkerBudget);
     const originPoint = origin ? (() => {
       const projectedOrigin = project(origin, zoom);
       return {
@@ -134,8 +146,13 @@ export function LocalRadarMap({
         y: projectedOrigin.y - startTileY * TILE_SIZE,
       };
     })() : null;
-    return { zoom, tiles, markerPoints, originPoint, centreLocalX, centreLocalY };
-  }, [active, origin, points, zoomAdjustment]);
+    return { zoom, tiles, markers, visiblePointCount: visibleMarkerPoints.length, originPoint, centreLocalX, centreLocalY };
+  }, [active, focusCoordinate, origin, points, safeMarkerBudget, zoomAdjustment]);
+
+  function zoomCluster(latitude: number, longitude: number) {
+    setFocusCoordinate({ latitude, longitude });
+    setZoomAdjustment((value) => clamp(value + 2, -4, 4));
+  }
 
   return <div className="fd-local-map-shell">
     <div
@@ -166,15 +183,26 @@ export function LocalRadarMap({
         title="Your search area"
       /> : null}
 
-      {scene.markerPoints.map((point) => <button
+      {scene.markers.map((marker) => marker.kind === "cluster" ? <button
         type="button"
-        aria-label={`${pointLabel(point)} · ${point.name}`}
-        className={`fd-map-marker ${markerClass(point)}${selectedId === point.id ? " selected" : ""}`}
-        key={point.id}
-        onClick={() => onSelect(point.id)}
-        style={{ left: point.x, top: point.y }}
-        title={`${pointLabel(point)} · ${point.name}`}
-      ><span /></button>)}
+        aria-label={`CLUSTER · ${marker.count} locations · zoom in`}
+        className="fd-map-cluster"
+        key={marker.id}
+        onClick={() => zoomCluster(marker.latitude, marker.longitude)}
+        style={{ left: marker.x, top: marker.y }}
+        title={`${marker.count} locations · zoom in`}
+      >{marker.count}</button> : (() => {
+        const point = marker.point;
+        return <button
+          type="button"
+          aria-label={`${pointLabel(point)} · ${point.name}`}
+          className={`fd-map-marker ${markerClass(point)}${selectedId === point.id ? " selected" : ""}`}
+          key={point.id}
+          onClick={() => onSelect(point.id)}
+          style={{ left: point.x, top: point.y }}
+          title={`${pointLabel(point)} · ${point.name}`}
+        ><span /></button>;
+      })())}
     </div>
 
     {!active ? <div className="fd-local-map-overlay">
@@ -189,11 +217,13 @@ export function LocalRadarMap({
         <button type="button" aria-label="Zoom out" onClick={() => setZoomAdjustment((value) => clamp(value - 1, -4, 4))}>−</button>
       </div>
       <div className="fd-local-map-legend" aria-label="Map marker legend">
+        <span><i className="cluster" />CLUSTER</span>
         <span><i className="store" />STORE</span>
         <span><i className="expected" />EXPECTED</span>
         <span><i className="confirmed" />CONFIRMED</span>
         <span><i className="event" />EVENT</span>
       </div>
+      <div className="fd-local-map-capacity" aria-live="polite">{scene.visiblePointCount} visible locations · {scene.markers.length} map markers</div>
     </> : null}
 
     {selected ? <div className="fd-local-map-selected">
@@ -205,7 +235,7 @@ export function LocalRadarMap({
     <a className="fd-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>
 
     <style jsx>{`
-      .fd-local-map-shell{position:relative;height:440px;overflow:hidden;border:1px solid rgba(221,203,188,.09);border-radius:16px;background:#0b0e12}.fd-local-map-canvas{position:absolute;z-index:1}.fd-local-map-tile{position:absolute;display:block;max-width:none;user-select:none;-webkit-user-drag:none}.fd-map-marker{position:absolute;z-index:3;width:22px;height:22px;padding:0;transform:translate(-50%,-50%);border:2px solid;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.4);cursor:pointer}.fd-map-marker span{position:absolute;inset:4px;border-radius:50%;background:currentColor}.fd-map-marker.store{border-color:#a9dfe8;background:#5fa9b8;color:#d8f4f8}.fd-map-marker.expected{border-color:#d4bdf1;background:#aa7bd7;color:#eadcf7}.fd-map-marker.confirmed{width:25px;height:25px;border-color:#b8efd2;background:#6fc99a;color:#e1f8ec}.fd-map-marker.event{border-color:#b997e8;background:#8c63c9;color:#e7daf5}.fd-map-marker.selected{box-shadow:0 0 0 5px rgba(255,255,255,.13),0 5px 18px rgba(0,0,0,.5)}.fd-map-marker:focus-visible{outline:3px solid #fff;outline-offset:3px}.fd-origin-marker{position:absolute;z-index:2;width:15px;height:15px;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:50%;background:#7f5bc4;box-shadow:0 0 0 5px rgba(127,91,196,.22)}.fd-local-map-overlay{position:absolute;inset:0;z-index:5;display:grid;place-content:center;justify-items:center;padding:36px;text-align:center;background:radial-gradient(circle at 50% 45%,rgba(113,72,140,.17),transparent 32%),rgba(8,11,15,.82);backdrop-filter:blur(2px)}.fd-local-map-overlay>span{width:54px;height:54px;display:grid;place-items:center;border:1px solid rgba(176,133,208,.2);border-radius:50%;color:#c7a3df;font-size:28px;background:rgba(143,91,180,.08)}.fd-local-map-overlay strong{margin-top:12px;color:#eee4dc;font-family:Georgia,'Times New Roman',serif;font-size:23px;font-weight:500}.fd-local-map-overlay p{max-width:520px;margin:8px 0 0;color:#9b9398;font-size:12px;line-height:1.6}.fd-map-controls{position:absolute;z-index:6;top:12px;right:12px;display:grid;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(9,12,16,.9);box-shadow:0 5px 16px rgba(0,0,0,.3)}.fd-map-controls button{width:34px;height:31px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:#eee4dc;font-size:18px;cursor:pointer}.fd-map-controls button:last-child{border-bottom:0}.fd-local-map-legend{position:absolute;z-index:4;top:12px;left:12px;display:flex;flex-wrap:wrap;gap:6px;padding:7px 8px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(9,12,16,.88);backdrop-filter:blur(8px)}.fd-local-map-legend span{display:flex;align-items:center;gap:5px;color:#b5adb2;font-size:8px;font-weight:900;letter-spacing:.07em}.fd-local-map-legend i{width:8px;height:8px;border:2px solid;border-radius:50%}.fd-local-map-legend i.store{border-color:#a9dfe8;background:#5fa9b8}.fd-local-map-legend i.expected{border-color:#d4bdf1;background:#aa7bd7}.fd-local-map-legend i.confirmed{border-color:#b8efd2;background:#6fc99a}.fd-local-map-legend i.event{border-color:#b997e8;background:#8c63c9}.fd-local-map-selected{position:absolute;z-index:4;left:12px;bottom:28px;max-width:min(420px,calc(100% - 24px));padding:12px 14px;display:grid;gap:3px;border:1px solid rgba(221,203,188,.1);border-radius:11px;background:rgba(9,12,16,.92);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(10px)}.fd-local-map-selected small{color:#b997cf;font-size:8px;font-weight:900;letter-spacing:.1em}.fd-local-map-selected strong{color:#eee4dc;font-size:13px}.fd-local-map-selected span{color:#999196;font-size:10px;line-height:1.45}.fd-map-attribution{position:absolute;z-index:4;right:6px;bottom:4px;padding:2px 5px;border-radius:5px;background:rgba(9,12,16,.78);color:#b8b0b5;font-size:8px;text-decoration:none}@media(max-width:700px){.fd-local-map-shell{height:360px}.fd-local-map-legend{right:54px}.fd-local-map-overlay{padding:24px}.fd-local-map-overlay strong{font-size:20px}}
+      .fd-local-map-shell{position:relative;height:440px;overflow:hidden;border:1px solid rgba(221,203,188,.09);border-radius:16px;background:#0b0e12}.fd-local-map-canvas{position:absolute;z-index:1}.fd-local-map-tile{position:absolute;display:block;max-width:none;user-select:none;-webkit-user-drag:none}.fd-map-marker,.fd-map-cluster{position:absolute;z-index:3;padding:0;transform:translate(-50%,-50%);border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.4);cursor:pointer}.fd-map-marker{width:22px;height:22px;border:2px solid}.fd-map-marker span{position:absolute;inset:4px;border-radius:50%;background:currentColor}.fd-map-marker.store{border-color:#a9dfe8;background:#5fa9b8;color:#d8f4f8}.fd-map-marker.expected{border-color:#d4bdf1;background:#aa7bd7;color:#eadcf7}.fd-map-marker.confirmed{width:25px;height:25px;border-color:#b8efd2;background:#6fc99a;color:#e1f8ec}.fd-map-marker.event{border-color:#b997e8;background:#8c63c9;color:#e7daf5}.fd-map-marker.selected{box-shadow:0 0 0 5px rgba(255,255,255,.13),0 5px 18px rgba(0,0,0,.5)}.fd-map-marker:focus-visible,.fd-map-cluster:focus-visible{outline:3px solid #fff;outline-offset:3px}.fd-map-cluster{width:36px;height:36px;border:2px solid #e3d7ce;background:rgba(49,37,58,.94);color:#f3ebe5;font:900 10px/1 system-ui}.fd-origin-marker{position:absolute;z-index:2;width:15px;height:15px;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:50%;background:#7f5bc4;box-shadow:0 0 0 5px rgba(127,91,196,.22)}.fd-local-map-overlay{position:absolute;inset:0;z-index:5;display:grid;place-content:center;justify-items:center;padding:36px;text-align:center;background:radial-gradient(circle at 50% 45%,rgba(113,72,140,.17),transparent 32%),rgba(8,11,15,.82);backdrop-filter:blur(2px)}.fd-local-map-overlay>span{width:54px;height:54px;display:grid;place-items:center;border:1px solid rgba(176,133,208,.2);border-radius:50%;color:#c7a3df;font-size:28px;background:rgba(143,91,180,.08)}.fd-local-map-overlay strong{margin-top:12px;color:#eee4dc;font-family:Georgia,'Times New Roman',serif;font-size:23px;font-weight:500}.fd-local-map-overlay p{max-width:520px;margin:8px 0 0;color:#9b9398;font-size:12px;line-height:1.6}.fd-map-controls{position:absolute;z-index:6;top:12px;right:12px;display:grid;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(9,12,16,.9);box-shadow:0 5px 16px rgba(0,0,0,.3)}.fd-map-controls button{width:34px;height:31px;border:0;border-bottom:1px solid rgba(255,255,255,.08);background:transparent;color:#eee4dc;font-size:18px;cursor:pointer}.fd-map-controls button:last-child{border-bottom:0}.fd-local-map-legend{position:absolute;z-index:4;top:12px;left:12px;display:flex;flex-wrap:wrap;gap:6px;padding:7px 8px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(9,12,16,.88);backdrop-filter:blur(8px)}.fd-local-map-legend span{display:flex;align-items:center;gap:5px;color:#b5adb2;font-size:8px;font-weight:900;letter-spacing:.07em}.fd-local-map-legend i{width:8px;height:8px;border:2px solid;border-radius:50%}.fd-local-map-legend i.cluster{border-color:#e3d7ce;background:#31253a}.fd-local-map-legend i.store{border-color:#a9dfe8;background:#5fa9b8}.fd-local-map-legend i.expected{border-color:#d4bdf1;background:#aa7bd7}.fd-local-map-legend i.confirmed{border-color:#b8efd2;background:#6fc99a}.fd-local-map-legend i.event{border-color:#b997e8;background:#8c63c9}.fd-local-map-capacity{position:absolute;z-index:4;left:12px;bottom:6px;padding:3px 6px;border-radius:6px;background:rgba(9,12,16,.82);color:#8e878c;font-size:8px}.fd-local-map-selected{position:absolute;z-index:4;left:12px;bottom:28px;max-width:min(420px,calc(100% - 24px));padding:12px 14px;display:grid;gap:3px;border:1px solid rgba(221,203,188,.1);border-radius:11px;background:rgba(9,12,16,.92);box-shadow:0 12px 30px rgba(0,0,0,.3);backdrop-filter:blur(10px)}.fd-local-map-selected small{color:#b997cf;font-size:8px;font-weight:900;letter-spacing:.1em}.fd-local-map-selected strong{color:#eee4dc;font-size:13px}.fd-local-map-selected span{color:#999196;font-size:10px;line-height:1.45}.fd-map-attribution{position:absolute;z-index:4;right:6px;bottom:4px;padding:2px 5px;border-radius:5px;background:rgba(9,12,16,.78);color:#b8b0b5;font-size:8px;text-decoration:none}@media(max-width:700px){.fd-local-map-shell{height:360px}.fd-local-map-legend{right:54px}.fd-local-map-overlay{padding:24px}.fd-local-map-overlay strong{font-size:20px}}
     `}</style>
   </div>;
 }
