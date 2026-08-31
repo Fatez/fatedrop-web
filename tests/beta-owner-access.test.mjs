@@ -33,6 +33,11 @@ test("hello owner bootstrap is registered in the one canonical production migrat
   assert.match(productionMigrations, /2026-08-29-beta-owner-access\.sql/);
   assert.match(productionMigrations, /OWNER_EMAIL = "hello@fatedrop\.co\.uk"/);
   assert.match(productionMigrations, /ownerRows\.length !== 1/);
+  assert.match(productionMigrations, /found \$\{ownerRows\.length\}/);
+  const bootstrapStart = productionMigrations.indexOf('if (migration.id === "2026-08-29-beta-owner-access.sql")');
+  const cardinalityCheck = productionMigrations.indexOf("if (ownerRows.length !== 1)", bootstrapStart);
+  const ownerIdRead = productionMigrations.indexOf("ownerRows[0].id", bootstrapStart);
+  assert.ok(bootstrapStart >= 0 && cardinalityCheck > bootstrapStart && ownerIdRead > cardinalityCheck, "Owner bootstrap must validate cardinality before reading the canonical user id");
   assert.match(productionMigrations, /fatedrop_grant_owner/);
   assert.match(productionMigrations, /migration:hello-owner-bootstrap/);
   assert.match(productionMigrations, /fatedrop_schema_migrations/);

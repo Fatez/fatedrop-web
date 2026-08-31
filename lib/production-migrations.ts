@@ -260,7 +260,9 @@ export async function runProductionMigrations() {
 
     if (migration.id === "2026-08-29-beta-owner-access.sql") {
       const ownerRows = await sql`SELECT id FROM fatedrop_users WHERE lower(email)=${OWNER_EMAIL}`;
-      if (ownerRows.length !== 1) throw new Error(`Owner bootstrap requires exactly one canonical ${OWNER_EMAIL} FateDrop account.`);
+      if (ownerRows.length !== 1) {
+        throw new Error(`Owner bootstrap requires exactly one canonical ${OWNER_EMAIL} FateDrop account; found ${ownerRows.length}.`);
+      }
       const ownerUserId = String(ownerRows[0].id);
       const ownerExists = await sql`SELECT user_id FROM fatedrop_admin_roles WHERE user_id=${ownerUserId} AND role='owner' LIMIT 1`;
       if (!ownerExists[0]) await sql`SELECT * FROM fatedrop_grant_owner(${ownerUserId}, ${"migration:hello-owner-bootstrap"})`;
