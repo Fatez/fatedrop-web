@@ -1,12 +1,17 @@
+import { createHmac } from "node:crypto";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.app";
 const SUCCESS_CACHE_CONTROL = "public, max-age=0, s-maxage=30, stale-while-revalidate=120";
+const PRIVATE_DIAGNOSTIC_AUTH_CONTEXT = "fatedrop:private-diagnostics:v1";
 
 type JsonRecord = Record<string, unknown>;
 type FailureReason =
   | "invalid_request"
+  | "missing_web_token"
+  | "upstream_unauthorized"
   | "upstream_error"
   | "upstream_invalid_response"
   | "upstream_unavailable"
@@ -43,11 +48,20 @@ function stringList(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
-function signalSummaryUrl() {
+function signalHealthUrl() {
   const base = (process.env.FATEDROP_SIGNAL_ENGINE_URL || DEFAULT_SIGNAL_ENGINE_URL).replace(/\/+$/, "");
-  const url = new URL("/api/signal-summary", `${base}/`);
-  if (url.protocol !== "https:") throw new Error("Signal Engine health summary requires HTTPS.");
+  const url = new URL("/api/signal-health", `${base}/`);
+  if (url.protocol !== "https:") throw new Error("Signal Engine health endpoint requires HTTPS.");
   return url;
+}
+
+function signalHealthToken() {
+  const dedicated = String(process.env.FATEDROP_SIGNAL_API_TOKEN || "").trim();
+  if (dedicated) return dedicated;
+
+  const shared = String(process.env.FATEDROP_METRICS_INGEST_SECRET || "").trim();
+  if (!shared) return "";
+  return createHmac("sha256", shared).update(PRIVATE_DIAGNOSTIC_AUTH_CONTEXT).digest("hex");
 }
 
 function unavailable(reason: FailureReason, status = 503) {
@@ -64,10 +78,13 @@ function requestFailureReason(error: unknown): FailureReason {
   return "upstream_request_failed";
 }
 
-async function fetchSignalSummary() {
-  return fetch(signalSummaryUrl(), {
+async function fetchSignalHealth(token: string) {
+  return fetch(signalHealthUrl(), {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     signal: AbortSignal.timeout(8_000),
   });
 }
@@ -76,8 +93,12 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   if (requestUrl.search) return unavailable("invalid_request", 400);
 
+  const token = signalHealthToken();
+  if (!token) return unavailable("missing_web_token");
+
   try {
-    const response = await fetchSignalSummary();
+    const response = await fetchSignalHealth(token);
+    if (response.status === 401 || response.status === 403) return unavailable("upstream_unauthorized");
     if (!response.ok) return unavailable("upstream_error");
 
     let payload: JsonRecord;
