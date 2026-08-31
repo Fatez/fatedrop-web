@@ -21,3 +21,14 @@ test("diagnostic reports candidate, recipient, outbox and provider receipt stage
   assert.match(source, /receiptOk/);
   assert.match(source, /ticketAccepted/);
 });
+
+test("diagnostic separately traces recent natural Manifested phone-push delivery", () => {
+  assert.match(source, /event_type='manifested'/);
+  assert.match(source, /naturalManifested:/);
+  assert.match(source, /latestEndpointExists/);
+  assert.match(source, /latestEndpointEnabled/);
+  assert.match(source, /latestEndpointIos/);
+  assert.match(source, /latestEndpointIsNewestEnabled/);
+  assert.match(source, /manifested_provider_path_proven/);
+  assert.match(source, /no_recent_manifested_outbox/);
+});
