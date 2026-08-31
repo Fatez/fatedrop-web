@@ -1,0 +1,108 @@
+name: Manual Four Stage Push Canary 2026-08-31
+
+on:
+  push:
+    branches:
+      - ops/four-stage-push-canary-2026-08-31
+    paths:
+      - .github/workflows/manual-four-stage-push-canary-2026-08-31.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: fatedrop-manual-four-stage-push-canary-2026-08-31
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Rotate production push canary secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 2; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "Missing CLOUDFLARE_ACCOUNT_ID"; exit 2; }
+          canary_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$canary_secret"
+          printf '%s' "$canary_secret" | npx wrangler secret put FATEDROP_PUSH_CRON_SECRET
+          printf 'FATEDROP_PUSH_CRON_SECRET=%s\n' "$canary_secret" >> "$GITHUB_ENV"
+          unset canary_secret
+
+      - name: Send Whisper Echo Manifested Vanished production canaries
+        id: send
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          WEB="https://fatedrop.co.uk"
+          : > /tmp/fatedrop-four-stage-results.md
+          echo "Production four-stage push canary run: $GITHUB_RUN_ID" >> /tmp/fatedrop-four-stage-results.md
+          echo >> /tmp/fatedrop-four-stage-results.md
+          overall=0
+          for kind in whisper echo manifested vanished; do
+            output="/tmp/${kind}.json"
+            if curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+              -X POST \
+              -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+              -H "Accept: application/json" \
+              -H "Content-Type: application/json" \
+              --data "{\"kind\":\"$kind\"}" \
+              "$WEB/api/dashboard/push-canary" \
+              -o "$output"; then
+              if node - "$kind" "$output" <<'NODE' >> /tmp/fatedrop-four-stage-results.md
+          const fs = require('fs');
+          const [kind, file] = process.argv.slice(2);
+          const result = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const outcome = Array.isArray(result.outcomes) ? result.outcomes[0] : null;
+          const ok = result.accepted === true && outcome?.kind === kind && outcome?.state === 'sent' && Boolean(outcome?.providerMessageId);
+          console.log(`- ${kind.toUpperCase()}: ${ok ? 'PROVIDER ACCEPTED' : 'FAILED'} | state=${outcome?.state ?? 'missing'} | providerMessageId=${outcome?.providerMessageId ?? 'none'} | deliveryResult=${outcome?.deliveryResult ?? 'none'} | reason=${result.reason ?? 'none'}`);
+          if (!ok) process.exit(1);
+          NODE
+              then
+                :
+              else
+                overall=1
+              fi
+            else
+              echo "- ${kind^^}: HTTP/dispatch failure" >> /tmp/fatedrop-four-stage-results.md
+              overall=1
+            fi
+          done
+          echo >> /tmp/fatedrop-four-stage-results.md
+          echo "Canonical stock/history mutation: NONE (push canary only)." >> /tmp/fatedrop-four-stage-results.md
+          exit "$overall"
+
+      - name: Record QA evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="[FATEDROP PUSH QA] Four-stage canary run $GITHUB_RUN_ID"
+          if [ ! -s /tmp/fatedrop-four-stage-results.md ]; then
+            printf 'Four-stage canary did not reach the result-writing step.\n' > /tmp/fatedrop-four-stage-results.md
+          fi
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file /tmp/fatedrop-four-stage-results.md
+
+      - name: Enforce provider acceptance
+        if: steps.send.outcome != 'success'
+        run: exit 1
