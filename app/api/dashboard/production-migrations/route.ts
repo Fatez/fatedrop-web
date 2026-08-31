@@ -1,8 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 
 import { ensureExpoPushReceiptSchema } from "@/lib/expo-push-receipts";
+import { runProductionMigrationsWithLocalRadar } from "@/lib/local-radar-production-migration";
 import { ensureCanonicalOwnerBootstrapAccount } from "@/lib/owner-bootstrap";
-import { runProductionMigrations } from "@/lib/production-migrations";
 import { fateDropPostgres } from "@/lib/postgres";
 import { ensureTemporaryOwnerBootstrap } from "@/lib/temporary-owner-bootstrap";
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   try {
     const ownerBootstrap = await ensureCanonicalOwnerBootstrapAccount();
-    const result = await runProductionMigrations();
+    const result = await runProductionMigrationsWithLocalRadar();
     const expoPushReceipts = await ensureExpoPushReceiptSchema();
     const temporaryOwnerBootstrap = await ensureTemporaryOwnerBootstrap();
     return Response.json({ accepted: true, ownerBootstrap, expoPushReceipts, temporaryOwnerBootstrap, ...result }, { status: 200, headers: { "cache-control": "no-store" } });
