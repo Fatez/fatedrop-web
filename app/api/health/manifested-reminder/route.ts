@@ -52,7 +52,7 @@ export async function GET() {
       if (confirmationAge > MANIFESTED_REMINDER_MAX_CONFIRMATION_AGE_SECONDS) staleConfirmation += 1;
     }
 
-    const [recipientRows, outboxRows, attemptRows, activityRows] = await Promise.all([
+    const [recipientRows, outboxRows, attemptRows, activityRows, naturalManifestedRows, naturalManifestedAttemptRows] = await Promise.all([
       sql`
         SELECT
           COUNT(DISTINCT pe.id)::int AS enabled_endpoints,
@@ -124,15 +124,77 @@ export async function GET() {
           ) AS latest_natural_created_at
         FROM fatedrop_notification_outbox
         WHERE channel='push'`,
+      sql`
+        WITH recent AS (
+          SELECT *
+          FROM fatedrop_notification_outbox
+          WHERE channel='push'
+            AND event_type='manifested'
+            AND created_at >= ${now - 2 * 60 * 60}
+        ), latest AS (
+          SELECT * FROM recent ORDER BY created_at DESC LIMIT 1
+        ), target AS (
+          SELECT pe.*
+          FROM latest
+          JOIN fatedrop_push_endpoints pe
+            ON pe.id=latest.payload_json->>'endpointId'
+          LIMIT 1
+        )
+        SELECT
+          COUNT(*)::int AS recent_total,
+          COUNT(*) FILTER (WHERE state='pending')::int AS recent_pending,
+          COUNT(*) FILTER (WHERE state='sending')::int AS recent_sending,
+          COUNT(*) FILTER (WHERE state='sent')::int AS recent_sent,
+          COUNT(*) FILTER (WHERE state='failed')::int AS recent_failed,
+          MAX(created_at) AS latest_created_at,
+          (SELECT state FROM latest LIMIT 1) AS latest_state,
+          EXISTS(SELECT 1 FROM target)::boolean AS latest_endpoint_exists,
+          COALESCE((SELECT enabled FROM target LIMIT 1), false)::boolean AS latest_endpoint_enabled,
+          COALESCE((SELECT platform='ios' FROM target LIMIT 1), false)::boolean AS latest_endpoint_ios,
+          COALESCE((
+            SELECT target.updated_at=(
+              SELECT MAX(peer.updated_at)
+              FROM fatedrop_push_endpoints peer
+              WHERE peer.user_id=target.user_id
+                AND peer.enabled=true
+            )
+            FROM target
+          ), false)::boolean AS latest_endpoint_is_newest_enabled
+        FROM recent`,
+      sql`
+        SELECT
+          COUNT(*)::int AS attempts,
+          COUNT(*) FILTER (
+            WHERE attempt.result='sent'
+              AND attempt.provider_message_id IS NOT NULL
+          )::int AS ticket_accepted,
+          COUNT(*) FILTER (WHERE attempt.result='failed')::int AS ticket_failed,
+          COUNT(*) FILTER (WHERE attempt.receipt_status='ok')::int AS receipt_ok,
+          COUNT(*) FILTER (WHERE attempt.receipt_status='error')::int AS receipt_error,
+          COUNT(*) FILTER (
+            WHERE attempt.result='sent'
+              AND attempt.provider_message_id IS NOT NULL
+              AND attempt.receipt_status IS NULL
+          )::int AS receipt_pending,
+          MAX(attempt.receipt_checked_at) AS latest_receipt_checked_at
+        FROM fatedrop_notification_delivery_attempts attempt
+        JOIN fatedrop_notification_outbox outbox ON outbox.id=attempt.outbox_id
+        WHERE outbox.channel='push'
+          AND outbox.event_type='manifested'
+          AND outbox.created_at >= ${now - 2 * 60 * 60}`,
     ]);
 
     const recipients = recipientRows[0] as Record<string, unknown> | undefined;
     const outbox = outboxRows[0] as Record<string, unknown> | undefined;
     const attempts = attemptRows[0] as Record<string, unknown> | undefined;
     const activity = activityRows[0] as Record<string, unknown> | undefined;
+    const naturalManifested = naturalManifestedRows[0] as Record<string, unknown> | undefined;
+    const naturalManifestedAttempts = naturalManifestedAttemptRows[0] as Record<string, unknown> | undefined;
     const latestCreatedAt = Number(outbox?.latest_created_at ?? 0);
     const latestReceiptCheckedAt = Number(attempts?.latest_receipt_checked_at ?? 0);
     const latestNaturalCreatedAt = Number(activity?.latest_natural_created_at ?? 0);
+    const latestNaturalManifestedCreatedAt = Number(naturalManifested?.latest_created_at ?? 0);
+    const latestNaturalManifestedReceiptCheckedAt = Number(naturalManifestedAttempts?.latest_receipt_checked_at ?? 0);
 
     const manifestedPushUsers = Number(recipients?.manifested_push_users ?? 0);
     const outboxTotal = Number(outbox?.total ?? 0);
@@ -140,6 +202,23 @@ export async function GET() {
     const receiptOk = Number(attempts?.receipt_ok ?? 0);
     const receiptError = Number(attempts?.receipt_error ?? 0);
     const naturalPushes30m = Number(activity?.natural_pushes_30m ?? 0);
+    const naturalManifestedRecentTotal = Number(naturalManifested?.recent_total ?? 0);
+    const naturalManifestedRecentSent = Number(naturalManifested?.recent_sent ?? 0);
+    const naturalManifestedTicketAccepted = Number(naturalManifestedAttempts?.ticket_accepted ?? 0);
+    const naturalManifestedReceiptOk = Number(naturalManifestedAttempts?.receipt_ok ?? 0);
+    const naturalManifestedReceiptError = Number(naturalManifestedAttempts?.receipt_error ?? 0);
+
+    const likelyNaturalManifestedBlocker = naturalManifestedRecentTotal === 0
+      ? "no_recent_manifested_outbox"
+      : naturalManifestedRecentSent === 0
+        ? "manifested_queued_not_sent"
+        : naturalManifestedTicketAccepted === 0
+          ? "manifested_no_provider_ticket"
+          : naturalManifestedReceiptError > 0
+            ? "manifested_provider_receipt_error"
+            : naturalManifestedReceiptOk > 0
+              ? "manifested_provider_path_proven"
+              : "manifested_awaiting_provider_receipt";
 
     const likelyBlocker = eligibleCandidates === 0
       ? "no_current_candidate"
@@ -174,6 +253,30 @@ export async function GET() {
         endpointUsers: Number(recipients?.endpoint_users ?? 0),
         entitledEndpoints: Number(recipients?.entitled_endpoints ?? 0),
         manifestedPushUsers,
+      },
+      naturalManifested: {
+        windowSeconds: 2 * 60 * 60,
+        outboxTotal: naturalManifestedRecentTotal,
+        pending: Number(naturalManifested?.recent_pending ?? 0),
+        sending: Number(naturalManifested?.recent_sending ?? 0),
+        sent: naturalManifestedRecentSent,
+        failed: Number(naturalManifested?.recent_failed ?? 0),
+        latestState: typeof naturalManifested?.latest_state === "string" ? naturalManifested.latest_state : null,
+        latestCreatedAgeSeconds: latestNaturalManifestedCreatedAt > 0 ? Math.max(0, now - latestNaturalManifestedCreatedAt) : null,
+        latestEndpointExists: naturalManifested?.latest_endpoint_exists === true,
+        latestEndpointEnabled: naturalManifested?.latest_endpoint_enabled === true,
+        latestEndpointIos: naturalManifested?.latest_endpoint_ios === true,
+        latestEndpointIsNewestEnabled: naturalManifested?.latest_endpoint_is_newest_enabled === true,
+        attempts: Number(naturalManifestedAttempts?.attempts ?? 0),
+        ticketAccepted: naturalManifestedTicketAccepted,
+        ticketFailed: Number(naturalManifestedAttempts?.ticket_failed ?? 0),
+        receiptOk: naturalManifestedReceiptOk,
+        receiptError: naturalManifestedReceiptError,
+        receiptPending: Number(naturalManifestedAttempts?.receipt_pending ?? 0),
+        latestReceiptCheckedAgeSeconds: latestNaturalManifestedReceiptCheckedAt > 0
+          ? Math.max(0, now - latestNaturalManifestedReceiptCheckedAt)
+          : null,
+        likelyBlocker: likelyNaturalManifestedBlocker,
       },
       outbox: {
         total: outboxTotal,
