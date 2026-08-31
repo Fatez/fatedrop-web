@@ -1,6 +1,7 @@
 import type { CanonicalAlert } from "@/lib/canonical-alerts";
 
 export const MANIFESTED_REMINDER_INTERVAL_SECONDS = 30 * 60;
+export const MANIFESTED_REMINDER_MIN_LIVE_AGE_SECONDS = 30 * 60;
 export const MANIFESTED_REMINDER_PRODUCT_COOLDOWN_SECONDS = 6 * 60 * 60;
 export const MANIFESTED_REMINDER_MAX_CONFIRMATION_AGE_SECONDS = 20 * 60;
 
@@ -34,10 +35,15 @@ export function manifestedReminderEligible(alert: CanonicalAlert, measuredAt: nu
   if (alert.confirmed !== true || alert.interruptEligible !== true) return false;
   if (alert.liveWindow?.vanishedAt) return false;
 
+  const manifestedAt = epoch(alert.liveWindow?.manifestedAt);
   const confirmedAt = epoch(alert.liveWindow?.lastConfirmedLiveAt);
-  if (!confirmedAt) return false;
-  const ageSeconds = measuredAt - confirmedAt;
-  return ageSeconds >= 0 && ageSeconds <= MANIFESTED_REMINDER_MAX_CONFIRMATION_AGE_SECONDS;
+  if (!manifestedAt || !confirmedAt) return false;
+
+  const liveAgeSeconds = measuredAt - manifestedAt;
+  const confirmationAgeSeconds = measuredAt - confirmedAt;
+  return liveAgeSeconds >= MANIFESTED_REMINDER_MIN_LIVE_AGE_SECONDS
+    && confirmationAgeSeconds >= 0
+    && confirmationAgeSeconds <= MANIFESTED_REMINDER_MAX_CONFIRMATION_AGE_SECONDS;
 }
 
 export function chooseManifestedReminder({
