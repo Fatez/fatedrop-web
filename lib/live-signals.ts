@@ -175,6 +175,7 @@ export async function getLiveCloudAlerts({
   since,
   before,
   beforeId,
+  currentOnly = false,
   limit = 50,
   timeoutMs = 8_000,
 }: {
@@ -183,6 +184,7 @@ export async function getLiveCloudAlerts({
   since?: number | null;
   before?: number | null;
   beforeId?: string | null;
+  currentOnly?: boolean;
   limit?: number;
   timeoutMs?: number;
 } = {}) {
@@ -193,6 +195,7 @@ export async function getLiveCloudAlerts({
   if (since && since > 0) params.set("since",String(Math.trunc(since)));
   if (before && before > 0) params.set("before",String(Math.trunc(before)));
   if (beforeId) params.set("beforeId",beforeId);
+  if (currentOnly) params.set("current", "true");
   const result = await liveFetch<CloudAlertResponse>("/api/signals", params, timeoutMs);
   return validCloudContract(result) ? result : null;
 }

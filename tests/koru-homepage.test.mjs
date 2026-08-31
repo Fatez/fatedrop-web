@@ -207,7 +207,8 @@ test("dashboard home matches the approved evidence-backed collector workspace", 
   assert.ok(dashboard.includes("DashboardToolGuide"));
   assert.ok(dashboard.includes("FateMatch"));
   assert.ok(dashboard.includes("Network Pulse"));
-  assert.ok(dashboard.includes("Recent Manifested Drops"));
+  assert.ok(dashboard.includes("Verified Live Now"));
+  assert.ok(dashboard.includes("FateDrop leaves this empty instead of recycling a closed or stale Manifested alert."));
   assert.ok(dashboard.includes("Fate Network"));
   assert.ok(dashboard.includes("Retailers you have discovered or interacted with."));
   assert.ok(dashboard.includes("Explore Fate Network"));

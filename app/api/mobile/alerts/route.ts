@@ -60,6 +60,10 @@ export async function GET(request: Request) {
       return Response.json({ error: "Invalid lifecycle state." }, { status: 400, headers: { "cache-control": "private, no-store" } });
     }
     const requestedState = requestedStateRaw as CloudLifecycleState | null;
+    const currentOnly = ["1", "true", "yes"].includes((url.searchParams.get("current") || "").trim().toLowerCase());
+    if (currentOnly && requestedState !== "manifested") {
+      return Response.json({ error: "Current availability can only be requested for Manifested." }, { status: 400, headers: { "cache-control": "private, no-store" } });
+    }
     const requestedLimit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
     const limit = Math.max(1, Math.min(100, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const premium = hasCapability(snapshot.membership, "priority_alerts");
@@ -68,7 +72,7 @@ export async function GET(request: Request) {
     // is passed to Cloud before LIMIT so one lifecycle burst cannot starve another.
     // User notification preferences remain a downstream visibility filter only.
     const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
-    const canonicalAlerts = await listCanonicalAlertWindow({ id: requestedId, state: requestedState, limitPerStage: retrievalLimit });
+    const canonicalAlerts = await listCanonicalAlertWindow({ id: requestedId, state: requestedState, currentOnly, limitPerStage: retrievalLimit });
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
     const selectedTcgCodes=normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes);
     const selectedTcgs=new Set(selectedTcgCodes);
@@ -80,7 +84,7 @@ export async function GET(request: Request) {
       .slice(0, limit);
     const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);
 
-    return Response.json({ success: true, premium, state: requestedState, count: alerts.length, alerts }, { headers: { "cache-control": "private, no-store" } });
+    return Response.json({ success: true, premium, state: requestedState, currentOnly, count: alerts.length, alerts }, { headers: { "cache-control": "private, no-store" } });
   } catch {
     return Response.json({ error: "Canonical alert history is temporarily unavailable." }, { status: 503, headers: { "cache-control": "private, no-store" } });
   }

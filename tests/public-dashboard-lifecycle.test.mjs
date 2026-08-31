@@ -32,7 +32,8 @@ test("dashboard exposes the final four-stage lifecycle terminology", () => {
   assert.match(dashboardPage, /Echo/);
   assert.match(dashboardPage, /Manifested/);
   assert.match(dashboardPage, /Vanished/);
-  assert.match(dashboardPage, /Confirmed live stock/);
+  assert.match(dashboardPage, /Verified Live Now/);
+  assert.match(dashboardPage, /freshly reconfirmed by healthy monitors/);
   assert.match(dashboardData, /if \(kind === "whisper"\) return "Whisper"/);
   assert.match(dashboardData, /kind === "echo" \|\| kind === "queue" \|\| kind === "security"/);
   assert.match(dashboardData, /if \(kind === "manifested"\) return "Manifested"/);

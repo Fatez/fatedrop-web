@@ -1,7 +1,9 @@
 import type { AccountSnapshot } from "./account-storage";
 import { getCanonicalRecentSignals } from "./canonical-signals";
+import { listCanonicalAlerts } from "./canonical-alerts";
 import { listDashboardActivity, getLatestNetworkMetricSnapshot, listNetworkMetricSnapshots, type DashboardActivityEvent, type NetworkSignal, type NetworkMetricSnapshot } from "./dashboard-storage";
 import { getSignalDeliverySummary, getSignalLifecycleSummary } from "./signal-trends";
+import { normalizeSelectedTcgCodes } from "./tcg-registry";
 
 export type DashboardData = Awaited<ReturnType<typeof buildDashboardData>>;
 
@@ -81,13 +83,14 @@ function signalBackedNetwork(network: NetworkMetricSnapshot | null, recentSignal
 }
 
 export async function buildDashboardData(snapshot: AccountSnapshot) {
-  const [activity, storedNetwork, history, signalSummary, signalDeliverySummary, recentSignals] = await Promise.all([
+  const [activity, storedNetwork, history, signalSummary, signalDeliverySummary, recentSignals, currentOpportunities] = await Promise.all([
     listDashboardActivity(snapshot.account.id, 750),
     getLatestNetworkMetricSnapshot(),
     listNetworkMetricSnapshots(30),
     getSignalLifecycleSummary(7),
     getSignalDeliverySummary(7),
     getCanonicalRecentSignals(100).catch(() => []),
+    listCanonicalAlerts({ state: "manifested", currentOnly: true, limit: 24 }).catch(() => []),
   ]);
 
   const stores = new Map<string, { name: string; count: number; latestAt: number }>();
@@ -120,6 +123,8 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
   const personalRecent = activity.slice(0, 6);
   const confirmed = recentSignals.filter((signal) => signal.state === "manifested").slice(0, 4);
   const early = recentSignals.filter((signal) => signal.state === "whisper" || signal.state === "echo").slice(0, 4);
+  const selectedTcgs = new Set<string>(normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes));
+  const verifiedLive = currentOpportunities.filter((alert) => selectedTcgs.has(alert.tcgCode)).slice(0, 8);
 
   const publishedBaseline = {
     productsTracked: storedNetwork?.metrics.productsTracked ?? null,
@@ -152,6 +157,7 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
       recent: personalRecent,
     },
     recentManifested: confirmed,
+    verifiedLive,
     echoWhispers: early,
     upcomingEvents: (storedNetwork?.upcomingEvents ?? []).filter((item) => item.startsAt >= now - 86_400).sort((a, b) => a.startsAt - b.startsAt).slice(0, 3),
     provenance: [
@@ -184,6 +190,12 @@ export async function buildDashboardData(snapshot: AccountSnapshot) {
         source: recentSignals.length ? "FateDrop signal ledger" : "Signal ledger unavailable",
         updatedAt: recentSignals[0]?.occurredAt ?? null,
         note: recentSignals.length ? "Recent dashboard signals are read directly from canonical persisted signal rows; stale network snapshots are not used as the signal feed." : "Recent signals remain unavailable rather than falling back to stale snapshot data.",
+      },
+      {
+        label: "Verified Live Now",
+        source: verifiedLive.length ? "Open canonical stock episodes" : "No currently verified open episodes",
+        updatedAt: verifiedLive[0]?.liveWindow?.lastConfirmedLiveAt ? Math.floor(Date.parse(verifiedLive[0].liveWindow.lastConfirmedLiveAt) / 1000) : null,
+        note: "Only open Manifested offer episodes with a fresh healthy-retailer confirmation appear here. Cycling this view never creates or repeats an alert.",
       },
       {
         label: "Alert delivery health",
