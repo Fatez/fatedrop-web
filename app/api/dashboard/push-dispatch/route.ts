@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { dispatchCanonicalPushAlerts } from "@/lib/canonical-push";
 import { reconcileExpoPushReceipts } from "@/lib/expo-push-receipts";
+import { enqueueManifestedReminderPush } from "@/lib/manifested-reminder-push";
 import { recordPushDispatchHeartbeat } from "@/lib/push-dispatch-health";
 
 export const runtime = "nodejs";
@@ -34,7 +35,28 @@ export async function POST(request: Request) {
 
   try {
     const receipts = await reconcileExpoPushReceipts();
-    const result = await dispatchCanonicalPushAlerts();
+    const primary = await dispatchCanonicalPushAlerts();
+
+    let reminder = { candidates: 0, recipients: 0, queued: 0 };
+    let reminderDelivery = { enabled: primary.enabled, queued: 0, claimed: 0, sent: 0, failed: 0 };
+    const naturalPushActivity = primary.queued > 0 || primary.claimed > 0 || primary.sent > 0 || primary.failed > 0;
+
+    if (primary.enabled && !naturalPushActivity) {
+      reminder = await enqueueManifestedReminderPush({ measuredAt: Math.floor(Date.now() / 1000) });
+      if (reminder.queued > 0) {
+        reminderDelivery = await dispatchCanonicalPushAlerts();
+      }
+    }
+
+    const result = {
+      enabled: primary.enabled,
+      queued: primary.queued + reminder.queued + reminderDelivery.queued,
+      claimed: primary.claimed + reminderDelivery.claimed,
+      sent: primary.sent + reminderDelivery.sent,
+      failed: primary.failed + reminderDelivery.failed,
+      reminder,
+    };
+
     const completedAt = Math.floor(Date.now() / 1000);
     const totalProviderFailure = result.enabled && result.claimed > 0 && result.sent === 0 && result.failed > 0;
     const receiptUnavailable = !receipts.schemaReady || receipts.error !== null;
