@@ -8,7 +8,8 @@
   ],
   "vars": {
     "FATEDROP_ACCOUNT_STORE": "postgres",
-    "FATEDROP_PUSH_DISPATCH_ENABLED": "true"
+    "FATEDROP_PUSH_DISPATCH_ENABLED": "true",
+    "FATEDROP_LOCAL_RADAR_CANARY_KEY": "2026-08-29-smyths-monday"
   },
   "triggers": {
     "crons": ["* * * * *"]
