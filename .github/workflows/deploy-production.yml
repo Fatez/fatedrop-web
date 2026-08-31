@@ -117,7 +117,6 @@ jobs:
               "$api" \
               -o /tmp/turnstile-widget.json
           fi
-
           turnstile_sitekey="$(node -e '
             const fs = require("fs");
             const payload = JSON.parse(fs.readFileSync("/tmp/turnstile-widget.json", "utf8"));
@@ -352,7 +351,7 @@ jobs:
             -X POST \
             -H 'Origin: https://fatedrop.co.uk' \
             -H 'Content-Type: application/json' \
-            --data '{"displayName":"FateDrop Production Probe","email":"production-probe@invalid.example","password":"not-a-real-password-123","confirmPassword":"not-a-real-password-123","acceptTerms":true,"turnstileToken":""}' \
+            --data '{"displayName":"FateDrop Production Probe","email":"production-probe@invalid.example","password":"not-a-real-password-123","confirmPassword":"not-a-real-password-123","acceptTerms":true,"selectedTcgCodes":["pokemon"],"turnstileToken":""}' \
             "$WEB/api/auth/register")"
           test "$register_status" = "403" || {
             echo "Registration Turnstile server gate expected HTTP 403 but received $register_status"
