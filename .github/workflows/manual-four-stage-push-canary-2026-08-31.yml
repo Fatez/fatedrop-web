@@ -48,6 +48,9 @@ jobs:
           printf 'FATEDROP_PUSH_CRON_SECRET=%s\n' "$canary_secret" >> "$GITHUB_ENV"
           unset canary_secret
 
+      - name: Allow Cloudflare secret propagation
+        run: sleep 30
+
       - name: Diagnose Whisper Echo Manifested production canaries
         id: send
         shell: bash
@@ -87,7 +90,8 @@ jobs:
             fi
           done
           echo >> /tmp/fatedrop-four-stage-results.md
-          echo "Vanished was already provider-accepted in prior run 33370355120." >> /tmp/fatedrop-four-stage-results.md
+          echo "Vanished was already provider-accepted in prior run 33370355120 and physically received on iPhone." >> /tmp/fatedrop-four-stage-results.md
+          echo "Local Radar was physically received on iPhone via TEST ONLY operator alert." >> /tmp/fatedrop-four-stage-results.md
           echo "Canonical stock/history mutation: NONE (push canary only)." >> /tmp/fatedrop-four-stage-results.md
           exit "$overall"
 
