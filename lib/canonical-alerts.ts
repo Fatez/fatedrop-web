@@ -152,6 +152,8 @@ const canonicalStages = new Set<CanonicalSignalStage>(["WHISPER", "ECHO", "MANIF
 const priceVerdicts = new Set<FatePriceVerdict>(["LOWEST_KNOWN", "BETTER_OFFER_FOUND", "NO_FAIR_COMPARISON"]);
 const deliveryPolicies = new Set<CanonicalAlertDeliveryPolicy>(["interrupt", "inbox_only", "history_only", "anomaly_quarantine"]);
 const languageGroups = new Set(["english", "japanese", "korean", "simplified_chinese", "traditional_chinese", "other", "unknown"]);
+const marketGroups = new Set(["english", "japanese", "korean", "simplified_chinese", "traditional_chinese", "other", "unknown"]);
+const marketStatuses = new Set(["verified", "reused", "candidate", "unknown", "conflict"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -176,12 +178,19 @@ function isCanonicalLiveWindow(value: unknown) {
 }
 
 function isCanonicalAlertFacets(value: unknown): value is CanonicalAlertFacets {
-  if (!isObject(value) || value.version !== 1) return false;
+  if (!isObject(value) || (value.version !== 1 && value.version !== 2)) return false;
   if (typeof value.languageGroup !== "string" || !languageGroups.has(value.languageGroup)) return false;
   if (!nullableString(value.languageCode) || !nullableString(value.marketCode) || typeof value.languageLabel !== "string") return false;
   if (!nullableString(value.setKey) || !nullableString(value.setName)) return false;
   if (!isObject(value.confidence) || typeof value.confidence.language !== "number" || typeof value.confidence.set !== "number") return false;
-  return isObject(value.source) && typeof value.source.language === "string" && typeof value.source.set === "string";
+  if (!isObject(value.source) || typeof value.source.language !== "string" || typeof value.source.set !== "string") return false;
+  if (value.version === 1) return true;
+  return typeof value.marketGroup === "string"
+    && marketGroups.has(value.marketGroup)
+    && typeof value.marketStatus === "string"
+    && marketStatuses.has(value.marketStatus)
+    && typeof value.confidence.market === "number"
+    && typeof value.source.market === "string";
 }
 
 function isCanonicalPresentation(value: unknown): value is CanonicalAlertPresentation {
