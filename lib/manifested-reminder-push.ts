@@ -4,9 +4,9 @@ import { betaPremiumEnabled } from "@/lib/beta-premium";
 import { listCanonicalAlertWindow, type CanonicalAlert, type CanonicalAlertFacets } from "@/lib/canonical-alerts";
 import {
   MANIFESTED_REMINDER_INTERVAL_SECONDS,
+  MANIFESTED_REMINDER_HISTORY_SECONDS,
   MANIFESTED_REMINDER_PRODUCT_COOLDOWN_SECONDS,
   chooseManifestedReminder,
-  manifestedReminderBucket,
   manifestedReminderConfirmationAgeSeconds,
 } from "@/lib/manifested-reminder-policy";
 import { fateDropPostgres } from "@/lib/postgres";
@@ -18,6 +18,8 @@ type RecipientRow = {
   expo_push_token: string;
   platform: string | null;
   manifested_enabled: boolean;
+  manifested_reminders_enabled: boolean;
+  manifested_reminders_max_per_day: number;
   sealed_tcg_enabled: boolean;
   single_cards_enabled: boolean;
   accessories_enabled: boolean;
@@ -38,6 +40,8 @@ type RecipientRow = {
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   timezone: string;
+  selected_tcg_codes: unknown;
+  tcg_alert_preferences: unknown;
 };
 
 type HistoryRow = {
@@ -57,6 +61,9 @@ function selectedSetKeys(value: unknown) {
   if (!Array.isArray(parsed)) return new Set<string>();
   return new Set(parsed.filter((item): item is string => typeof item === "string"));
 }
+
+function tcgEnabled(tcgCode:string,recipient:RecipientRow){return selectedSetKeys(recipient.selected_tcg_codes).has(tcgCode);}
+function tcgManifestedEnabled(tcgCode:string,recipient:RecipientRow){let raw=recipient.tcg_alert_preferences;if(typeof raw==="string"){try{raw=JSON.parse(raw);}catch{return false;}}if(!raw||typeof raw!=="object"||Array.isArray(raw))return true;const entry=(raw as Record<string,unknown>)[tcgCode];if(!entry||typeof entry!=="object"||Array.isArray(entry))return true;const preference=entry as Record<string,unknown>;return preference.mode!=="custom"||preference.manifested!==false;}
 
 function languageGroupEnabled(languageGroup: CanonicalAlertFacets["languageGroup"], recipient: RecipientRow) {
   if (languageGroup === "english") return recipient.english_enabled;
@@ -132,6 +139,8 @@ async function eligibleRecipients() {
       pe.expo_push_token,
       pe.platform,
       COALESCE(np.manifested_enabled,true) AS manifested_enabled,
+      COALESCE(np.manifested_reminders_enabled,false) AS manifested_reminders_enabled,
+      COALESCE(np.manifested_reminders_max_per_day,1) AS manifested_reminders_max_per_day,
       COALESCE(np.sealed_tcg_enabled,true) AS sealed_tcg_enabled,
       COALESCE(np.single_cards_enabled,true) AS single_cards_enabled,
       COALESCE(np.accessories_enabled,false) AS accessories_enabled,
@@ -151,8 +160,11 @@ async function eligibleRecipients() {
       COALESCE(np.quiet_hours_enabled,false) AS quiet_hours_enabled,
       np.quiet_hours_start,
       np.quiet_hours_end,
-      COALESCE(np.timezone,'Europe/London') AS timezone
+      COALESCE(np.timezone,'Europe/London') AS timezone,
+      COALESCE(u.selected_tcg_codes,'["pokemon"]'::jsonb) AS selected_tcg_codes,
+      COALESCE(u.tcg_alert_preferences,'{}'::jsonb) AS tcg_alert_preferences
     FROM fatedrop_push_endpoints pe
+    JOIN fatedrop_users u ON u.id=pe.user_id
     JOIN fatedrop_memberships m ON m.user_id=pe.user_id
     JOIN fatedrop_beta_access ba ON ba.user_id=pe.user_id AND ba.status='approved'
     LEFT JOIN fatedrop_notification_preferences np ON np.user_id=pe.user_id
@@ -181,7 +193,7 @@ export async function enqueueManifestedReminderPush({ measuredAt = Math.floor(Da
   if (!alerts.length || !recipients.length) return { candidates: alerts.length, recipients: recipients.length, queued: 0 };
 
   const sql = await fateDropPostgres();
-  const historyCutoff = measuredAt - MANIFESTED_REMINDER_PRODUCT_COOLDOWN_SECONDS;
+  const historyCutoff = measuredAt - MANIFESTED_REMINDER_HISTORY_SECONDS;
   const history = await sql`
     SELECT user_id,event_type,created_at,payload_json
     FROM fatedrop_notification_outbox
@@ -193,6 +205,8 @@ export async function enqueueManifestedReminderPush({ measuredAt = Math.floor(Da
 
   const recentActivityUsers = new Set<string>();
   const excludedProductsByUser = new Map<string, Set<string>>();
+  const excludedEpisodesByUser = new Map<string,Set<string>>();
+  const reminderEventsByUser = new Map<string,Set<string>>();
   for (const row of history) {
     const createdAt = Number(row.created_at);
     if (!Number.isFinite(createdAt)) continue;
@@ -201,11 +215,19 @@ export async function enqueueManifestedReminderPush({ measuredAt = Math.floor(Da
       recentActivityUsers.add(row.user_id);
     }
     if (row.event_type !== "manifested_reminder") continue;
-    const productId = payload(row.payload_json).productId;
-    if (typeof productId !== "string" || !productId) continue;
-    const products = excludedProductsByUser.get(row.user_id) ?? new Set<string>();
-    products.add(productId);
-    excludedProductsByUser.set(row.user_id, products);
+    const rowPayload=payload(row.payload_json);
+    const reminderEvents=reminderEventsByUser.get(row.user_id)??new Set<string>();
+    const reminderEventId=typeof rowPayload.stockEpisodeId==="string"?rowPayload.stockEpisodeId:`legacy:${rowPayload.canonicalAlertId || createdAt}`;
+    reminderEvents.add(reminderEventId);reminderEventsByUser.set(row.user_id,reminderEvents);
+    const productId = rowPayload.productId;
+    if (typeof productId === "string" && productId
+      && createdAt >= measuredAt - MANIFESTED_REMINDER_PRODUCT_COOLDOWN_SECONDS) {
+      const products = excludedProductsByUser.get(row.user_id) ?? new Set<string>();
+      products.add(productId);
+      excludedProductsByUser.set(row.user_id, products);
+    }
+    const stockEpisodeId=rowPayload.stockEpisodeId;
+    if(typeof stockEpisodeId==="string"&&stockEpisodeId){const episodes=excludedEpisodesByUser.get(row.user_id)??new Set<string>();episodes.add(stockEpisodeId);excludedEpisodesByUser.set(row.user_id,episodes);}
   }
 
   const nowDate = new Date(measuredAt * 1000);
@@ -217,19 +239,19 @@ export async function enqueueManifestedReminderPush({ measuredAt = Math.floor(Da
   }
 
   const queueRows: Array<Record<string, unknown>> = [];
-  const bucket = manifestedReminderBucket(measuredAt);
-
   for (const [userId, endpoints] of recipientsByUser) {
     if (recentActivityUsers.has(userId)) continue;
     const preference = endpoints[0];
-    if (!preference.push_enabled || !preference.manifested_enabled || inQuietHours(preference, nowDate)) continue;
+    if (!preference.push_enabled || !preference.manifested_enabled || !preference.manifested_reminders_enabled || inQuietHours(preference, nowDate)) continue;
+    if((reminderEventsByUser.get(userId)?.size??0)>=preference.manifested_reminders_max_per_day)continue;
 
-    const filtered = alerts.filter((alert) => productEnabled(alert, preference) && facetEnabled(alert, preference));
+    const filtered = alerts.filter((alert) => tcgEnabled(alert.tcgCode,preference) && tcgManifestedEnabled(alert.tcgCode,preference) && productEnabled(alert, preference) && facetEnabled(alert, preference));
     const chosen = chooseManifestedReminder({
       alerts: filtered,
       userId,
       measuredAt,
       excludedProductIds: excludedProductsByUser.get(userId) ?? new Set<string>(),
+      excludedEpisodeIds: excludedEpisodesByUser.get(userId)??new Set<string>(),
     });
     if (!chosen) continue;
 
@@ -238,12 +260,12 @@ export async function enqueueManifestedReminderPush({ measuredAt = Math.floor(Da
     for (const endpoint of endpoints) {
       queueRows.push({
         id: randomUUID(),
-        dedupe_key: `manifested-reminder:${bucket}:${endpoint.endpoint_id}`,
+        dedupe_key: `manifested-reminder:${chosen.stockEpisode?.id}:${endpoint.endpoint_id}`,
         user_id: endpoint.user_id,
         event_type: "manifested_reminder",
-        event_id: `manifested_reminder:${chosen.id}:${bucket}`,
+        event_id: `manifested_reminder:${chosen.stockEpisode?.id}`,
         channel: "push",
-        title: "Still Manifested",
+        title: "Still observed available",
         body: `${productTitle} is still available at ${retailer}. ${confirmationLabel(chosen, measuredAt)}`,
         url: chosen.productUrl,
         payload_json: {
@@ -253,6 +275,8 @@ export async function enqueueManifestedReminderPush({ measuredAt = Math.floor(Da
           manifestedReminder: true,
           reminderKind: "still_manifested",
           canonicalAlertId: chosen.id,
+          tcgCode: chosen.tcgCode,
+          stockEpisodeId: chosen.stockEpisode?.id,
           productId: chosen.productId,
           retailerId: chosen.retailerId,
           lastConfirmedLiveAt: chosen.liveWindow?.lastConfirmedLiveAt ?? null,

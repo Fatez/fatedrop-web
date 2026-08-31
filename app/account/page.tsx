@@ -8,6 +8,7 @@ import { DiscordSyncButton } from "@/components/discord-sync-button";
 import { DiscordUnlinkButton } from "@/components/discord-unlink-button";
 import { SiteShell } from "@/components/page-shell";
 import { ProfileEditor } from "@/components/profile-editor";
+import { AccountTcgPreferences } from "@/components/account-tcg-preferences";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { betaAccessIsApproved } from "@/lib/beta-access";
 import { getBetaDistributionLinks } from "@/lib/beta-distribution";
@@ -122,8 +123,14 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <div className="button-row"><Link className="button button-secondary" href="/dashboard/avatar">Choose Koru &amp; Friends companion <span>↗</span></Link></div>
           </article>
 
+          <article className="fd-account-panel fd-profile-panel" id="my-tcgs">
+            <div className="fd-account-panel-head"><div><span>04 / MY TCGS</span><h2>Choose the games FateDrop follows for you.</h2></div><i>SYNCED</i></div>
+            <p>These account interests sync across Web and App. Screen filters remain local, and selecting a coming-soon game cannot turn its Cloud monitoring on.</p>
+            <AccountTcgPreferences initial={snapshot.account.selectedTcgCodes ?? ["pokemon"]} initialAlerts={snapshot.account.tcgAlertPreferences}/>
+          </article>
+
           <article className="fd-account-panel fd-history-panel">
-            <div className="fd-account-panel-head"><div><span>04 / ACCOUNT HISTORY</span><h2>{networkDays} days in FateDrop.</h2></div><i>PERMANENT</i></div>
+            <div className="fd-account-panel-head"><div><span>05 / ACCOUNT HISTORY</span><h2>{networkDays} days in FateDrop.</h2></div><i>PERMANENT</i></div>
             <div className="loyalty-orbit" aria-hidden="true"><span /><span /><span /><strong>{networkDays}</strong><small>DAYS</small></div>
             <p>Your original join date stays attached to the FateDrop ID. Membership changes do not reset your account age.</p>
           </article>

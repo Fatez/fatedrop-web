@@ -8,7 +8,7 @@ const cloudClient = fs.readFileSync("lib/fatefind-verdict.ts", "utf8");
 const proxy = fs.readFileSync("app/api/fatefind/verdict/route.ts", "utf8");
 
 test("FateFind page consumes the canonical Cloud verdict instead of ranking True Price groups itself", () => {
-  assert.match(page, /searchSignalFateVerdict\(q\)/);
+  assert.match(page, /searchSignalFateVerdict\(q,\{tcgCode:tcg\}\)/);
   assert.match(page, /result\?\.verdict\.ranking/);
   assert.match(page, /result\?\.verdict\.winnerId/);
   assert.match(page, /winner\.rrpPercent/);

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { TCG_REGISTRY, type TcgCode } from "@/lib/tcg-registry";
 
 const companions = ["koru", "fenn", "aeris", "nyxen", "solix"] as const;
 
-export function FateMatchBuilder({ premium, initialQuery = "", initialProductIdentityId = null }: { premium: boolean; initialQuery?: string; initialProductIdentityId?: string | null }) {
+export function FateMatchBuilder({ premium, selectedTcgCodes, initialTcgCode = "pokemon", initialQuery = "", initialProductIdentityId = null }: { premium: boolean; selectedTcgCodes: readonly TcgCode[]; initialTcgCode?: TcgCode; initialQuery?: string; initialProductIdentityId?: string | null }) {
   const [query, setQuery] = useState(initialQuery);
+  const [tcgCode, setTcgCode] = useState<TcgCode>(initialTcgCode);
   const [companionId, setCompanionId] = useState<(typeof companions)[number]>("koru");
   const [maxTruePrice, setMaxTruePrice] = useState("");
   const [maxPercent, setMaxPercent] = useState("");
@@ -17,6 +19,8 @@ export function FateMatchBuilder({ premium, initialQuery = "", initialProductIde
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const activeTcg = TCG_REGISTRY.find((entry) => entry.code === tcgCode);
+  const tcgCanRun = activeTcg?.live === true && selectedTcgCodes.includes(tcgCode);
 
   function resolveLocation() {
     if (!navigator.geolocation) { setLocationStatus("This browser cannot provide a location. Use Online only for this FateFind."); return; }
@@ -36,12 +40,14 @@ export function FateMatchBuilder({ premium, initialQuery = "", initialProductIde
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!premium) { setMessage("Premium unlocks active FateMatch monitoring."); return; }
+    if (!tcgCanRun) { setMessage(`${activeTcg?.shortName ?? "This TCG"} is saved as an interest, but monitoring is not active yet.`); return; }
     if (scope === "local" && (latitude === null || longitude === null)) { setMessage("Use your location before saving a Local-only FateMatch."); return; }
     setSaving(true); setMessage("");
     const includeLocal = scope === "local" || (scope === "either" && latitude !== null && longitude !== null);
     const response = await fetch("/api/fate-matches", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        tcgCode,
         query,
         productIdentityId: initialProductIdentityId,
         maxTruePricePence: maxTruePrice ? Math.round(Number(maxTruePrice) * 100) : null,
@@ -64,11 +70,12 @@ export function FateMatchBuilder({ premium, initialQuery = "", initialProductIde
 
   return <form className="fd-fatematch-builder" onSubmit={submit}>
     <div className="fd-fm-field wide"><label>WHAT SHOULD FATEDROP FIND?</label><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="e.g. Destined Rivals ETB" required /></div>
+    <div className="fd-fm-field"><label>TCG</label><select value={tcgCode} onChange={(e)=>setTcgCode(e.target.value as TcgCode)}>{TCG_REGISTRY.filter((entry)=>selectedTcgCodes.includes(entry.code)).map((entry)=><option key={entry.code} value={entry.code} disabled={!entry.live}>{entry.shortName}{entry.live?"":" · coming soon"}</option>)}</select></div>
     <div className="fd-fm-field"><label>MAX TRUE PRICE</label><div className="fd-money-input"><span>£</span><input inputMode="decimal" value={maxTruePrice} onChange={(e)=>setMaxTruePrice(e.target.value)} placeholder="65.00" /></div></div>
     <div className="fd-fm-field"><label>MAX ABOVE RRP</label><div className="fd-money-input"><input inputMode="decimal" value={maxPercent} onChange={(e)=>setMaxPercent(e.target.value)} placeholder="10" /><span>%</span></div></div>
     <div className="fd-fm-field"><label>WHO WATCHES?</label><select value={companionId} onChange={(e)=>setCompanionId(e.target.value as typeof companionId)}>{companions.map((id)=><option key={id} value={id}>{id.charAt(0).toUpperCase()+id.slice(1)}</option>)}</select></div>
     <div className="fd-fm-field"><label>WHERE?</label><select value={scope} onChange={(e)=>setScope(e.target.value as typeof scope)}><option value="either">Online or local</option><option value="online">Online only</option><option value="local">Local only</option></select></div>
-    <button type="submit" disabled={saving}>{premium ? saving ? "SAVING…" : "START FATEMATCH WATCH →" : "PREMIUM REQUIRED"}</button>
+    <button type="submit" disabled={saving || !tcgCanRun}>{!tcgCanRun ? "TCG COMING SOON" : premium ? saving ? "SAVING…" : "START FATEMATCH WATCH →" : "PREMIUM REQUIRED"}</button>
 
     {scope !== "online" ? <div className="fd-fm-location">
       <div><label>LOCAL RADIUS</label><select value={radiusKm} onChange={(e)=>{ const next = Number(e.target.value); setRadiusKm(next); if (latitude !== null) setLocationStatus(`Location ready · local offers can be evaluated within ${next} km.`); }}><option value={10}>10 km</option><option value={25}>25 km</option><option value={50}>50 km</option><option value={100}>100 km</option></select></div>
@@ -77,6 +84,7 @@ export function FateMatchBuilder({ premium, initialQuery = "", initialProductIde
     </div> : null}
 
     <p className="fd-fm-note"><b>FateMatch</b> is the watch. With no price rules it simply means “let me know when this is in stock.” When a qualifying observed offer goes live, your companion alerts you and gives you the retailer route.</p>
+    {!tcgCanRun ? <p className="fd-fm-note">{activeTcg?.shortName ?? "This TCG"} is interest-only until its canonical catalogue, retailer monitoring and lifecycle evidence pass release verification.</p> : null}
     {scope === "local" ? <p className="fd-fm-note">Local-only FateMatch watches are saved only after a real browser location is resolved. FateDrop does not guess your postcode or radius.</p> : null}
     {message ? <p className="fd-fm-message">{message}</p> : null}
     <style jsx>{`

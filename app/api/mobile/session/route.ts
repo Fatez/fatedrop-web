@@ -3,6 +3,7 @@ import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, read
 import { bearerTokenFromRequest, endApiSession, getSnapshotForRequest, startApiSession, verifyLoginPassword } from "@/lib/auth";
 import { betaAccessIsApproved } from "@/lib/beta-access";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
+import { normalizeSelectedTcgCodes, normalizeTcgAlertPreferences } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,11 @@ function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnaps
       handle: snapshot.account.username,
       displayName: snapshot.account.displayName,
       createdAt: snapshot.account.createdAt,
+    },
+    tcgPreferences: {
+      selectedTcgCodes: normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes),
+      onboardingCompleted: snapshot.account.tcgOnboardingCompleted === true,
+      alertPreferences: normalizeTcgAlertPreferences(snapshot.account.tcgAlertPreferences,normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes)),
     },
     membership: {
       configuredTier: snapshot.membership.tier,

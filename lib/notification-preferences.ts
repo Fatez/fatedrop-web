@@ -12,6 +12,8 @@ export type NotificationPreferences = {
   vanished: boolean;
   priceChange: boolean;
   fateMatch: boolean;
+  manifestedReminders: boolean;
+  manifestedRemindersMaxPerDay: number;
   sealedTcg: boolean;
   singleCards: boolean;
   accessories: boolean;
@@ -52,6 +54,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   vanished: true,
   priceChange: true,
   fateMatch: true,
+  manifestedReminders: false,
+  manifestedRemindersMaxPerDay: 1,
   sealedTcg: true,
   singleCards: true,
   accessories: false,
@@ -134,6 +138,8 @@ function mapPreferences(row: Record<string, unknown>): NotificationPreferences {
     manifested: lifecyclePreference(row.manifested_enabled),
     vanished: lifecyclePreference(row.vanished_enabled),
     priceChange: Boolean(row.price_change_enabled), fateMatch: Boolean(row.fate_match_enabled),
+    manifestedReminders: row.manifested_reminders_enabled == null ? false : Boolean(row.manifested_reminders_enabled),
+    manifestedRemindersMaxPerDay: Math.max(0,Math.min(3,Number(row.manifested_reminders_max_per_day ?? 1))),
     sealedTcg: row.sealed_tcg_enabled == null ? true : Boolean(row.sealed_tcg_enabled),
     singleCards: row.single_cards_enabled == null ? true : Boolean(row.single_cards_enabled),
     accessories: row.accessories_enabled == null ? false : Boolean(row.accessories_enabled),
@@ -166,13 +172,13 @@ export async function getNotificationPreferences(userId: string) {
 export async function saveNotificationPreferences(userId: string, preferences: NotificationPreferences) {
   const sql = await fateDropPostgres();
   const rows = await sql`INSERT INTO fatedrop_notification_preferences (
-    user_id,whisper_enabled,echo_enabled,manifested_enabled,vanished_enabled,price_change_enabled,fate_match_enabled,
+    user_id,whisper_enabled,echo_enabled,manifested_enabled,vanished_enabled,price_change_enabled,fate_match_enabled,manifested_reminders_enabled,manifested_reminders_max_per_day,
     sealed_tcg_enabled,single_cards_enabled,accessories_enabled,merchandise_enabled,unknown_products_enabled,
     english_enabled,japanese_enabled,korean_enabled,simplified_chinese_enabled,traditional_chinese_enabled,other_languages_enabled,unknown_language_enabled,
     lifecycle_market_preferences,all_sets_enabled,selected_set_keys,unknown_sets_enabled,
     web_enabled,push_enabled,discord_enabled,quiet_hours_enabled,quiet_hours_start,quiet_hours_end,timezone,updated_at
   ) VALUES (
-    ${userId},${preferences.whisper},${preferences.echo},${preferences.manifested},${preferences.vanished},${preferences.priceChange},${preferences.fateMatch},
+    ${userId},${preferences.whisper},${preferences.echo},${preferences.manifested},${preferences.vanished},${preferences.priceChange},${preferences.fateMatch},${preferences.manifestedReminders},${preferences.manifestedRemindersMaxPerDay},
     ${preferences.sealedTcg},${preferences.singleCards},${preferences.accessories},${preferences.merchandise},${preferences.unknownProducts},
     ${preferences.english},${preferences.japanese},${preferences.korean},${preferences.simplifiedChinese},${preferences.traditionalChinese},${preferences.otherLanguages},${preferences.unknownLanguage},
     ${JSON.stringify(preferences.lifecycleMarkets)}::jsonb,${preferences.allSets},${JSON.stringify(preferences.selectedSetKeys)}::jsonb,${preferences.unknownSets},
@@ -180,6 +186,7 @@ export async function saveNotificationPreferences(userId: string, preferences: N
   ) ON CONFLICT (user_id) DO UPDATE SET
     whisper_enabled=EXCLUDED.whisper_enabled, echo_enabled=EXCLUDED.echo_enabled, manifested_enabled=EXCLUDED.manifested_enabled, vanished_enabled=EXCLUDED.vanished_enabled,
     price_change_enabled=EXCLUDED.price_change_enabled, fate_match_enabled=EXCLUDED.fate_match_enabled,
+    manifested_reminders_enabled=EXCLUDED.manifested_reminders_enabled, manifested_reminders_max_per_day=EXCLUDED.manifested_reminders_max_per_day,
     sealed_tcg_enabled=EXCLUDED.sealed_tcg_enabled, single_cards_enabled=EXCLUDED.single_cards_enabled,
     accessories_enabled=EXCLUDED.accessories_enabled, merchandise_enabled=EXCLUDED.merchandise_enabled, unknown_products_enabled=EXCLUDED.unknown_products_enabled,
     english_enabled=EXCLUDED.english_enabled, japanese_enabled=EXCLUDED.japanese_enabled, korean_enabled=EXCLUDED.korean_enabled,

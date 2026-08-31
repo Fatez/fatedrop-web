@@ -14,6 +14,9 @@ export type AccountRecord = {
   bio: string | null;
   avatarUrl: string | null;
   primaryTcg: string | null;
+  selectedTcgCodes?: string[];
+  tcgOnboardingCompleted?: boolean;
+  tcgAlertPreferences?: Record<string,unknown>;
   collectorStyle: string | null;
   region: string | null;
   profileTheme: ProfileTheme;
@@ -162,7 +165,7 @@ export async function getAccountSnapshot(userId: string): Promise<AccountSnapsho
   throwUnavailable();
 }
 
-export async function updateAccountProfile(userId: string, updates: Partial<Pick<AccountRecord, "displayName" | "username" | "bio" | "avatarUrl" | "primaryTcg" | "collectorStyle" | "region" | "profileTheme">>) {
+export async function updateAccountProfile(userId: string, updates: Partial<Pick<AccountRecord, "displayName" | "username" | "bio" | "avatarUrl" | "primaryTcg" | "selectedTcgCodes" | "tcgOnboardingCompleted" | "tcgAlertPreferences" | "collectorStyle" | "region" | "profileTheme">>) {
   const mode = storageMode();
   if (mode === "postgres") return updateProfilePostgres(userId, updates);
   if (mode === "file") {
@@ -340,10 +343,10 @@ async function createAccountPostgres(account: AccountRecord, membership: Members
       WITH inserted_user AS (
         INSERT INTO fatedrop_users (
           id, fate_id, email, password_hash, display_name, username, bio, avatar_url,
-          primary_tcg, collector_style, region, profile_theme, created_at, updated_at
+          primary_tcg, selected_tcg_codes, tcg_onboarding_completed, tcg_alert_preferences, collector_style, region, profile_theme, created_at, updated_at
         ) VALUES (
           ${account.id}, ${account.fateId}, ${account.email}, ${account.passwordHash}, ${account.displayName},
-          ${account.username}, ${account.bio}, ${account.avatarUrl}, ${account.primaryTcg}, ${account.collectorStyle},
+          ${account.username}, ${account.bio}, ${account.avatarUrl}, ${account.primaryTcg}, ${JSON.stringify(account.selectedTcgCodes ?? ['pokemon'])}::jsonb, ${account.tcgOnboardingCompleted === true}, ${JSON.stringify(account.tcgAlertPreferences ?? {})}::jsonb, ${account.collectorStyle},
           ${account.region}, ${account.profileTheme}, ${account.createdAt}, ${account.updatedAt}
         )
         RETURNING id
@@ -386,7 +389,7 @@ async function getSnapshotPostgres(userId: string): Promise<AccountSnapshot | nu
   };
 }
 
-async function updateProfilePostgres(userId: string, updates: Partial<Pick<AccountRecord, "displayName" | "username" | "bio" | "avatarUrl" | "primaryTcg" | "collectorStyle" | "region" | "profileTheme">>) {
+async function updateProfilePostgres(userId: string, updates: Partial<Pick<AccountRecord, "displayName" | "username" | "bio" | "avatarUrl" | "primaryTcg" | "selectedTcgCodes" | "tcgOnboardingCompleted" | "tcgAlertPreferences" | "collectorStyle" | "region" | "profileTheme">>) {
   const snapshot = await getSnapshotPostgres(userId);
   if (!snapshot) return null;
   const account = { ...snapshot.account, ...updates, updatedAt: Math.floor(Date.now() / 1000) };
@@ -395,7 +398,9 @@ async function updateProfilePostgres(userId: string, updates: Partial<Pick<Accou
     const rows = await sql`
       UPDATE fatedrop_users SET
         display_name = ${account.displayName}, username = ${account.username}, bio = ${account.bio},
-        avatar_url = ${account.avatarUrl}, primary_tcg = ${account.primaryTcg}, collector_style = ${account.collectorStyle},
+        avatar_url = ${account.avatarUrl}, primary_tcg = ${account.primaryTcg},
+        selected_tcg_codes = ${JSON.stringify(account.selectedTcgCodes ?? ['pokemon'])}::jsonb,
+        tcg_onboarding_completed = ${account.tcgOnboardingCompleted === true}, tcg_alert_preferences = ${JSON.stringify(account.tcgAlertPreferences ?? {})}::jsonb, collector_style = ${account.collectorStyle},
         region = ${account.region}, profile_theme = ${account.profileTheme}, updated_at = ${account.updatedAt}
       WHERE id = ${userId}
       RETURNING *
@@ -486,7 +491,9 @@ function mapAccount(row: Record<string, unknown>): AccountRecord {
   return {
     id: String(row.id), fateId: String(row.fate_id), email: String(row.email), passwordHash: String(row.password_hash),
     displayName: String(row.display_name), username: String(row.username), bio: nullableString(row.bio), avatarUrl: nullableString(row.avatar_url),
-    primaryTcg: nullableString(row.primary_tcg), collectorStyle: nullableString(row.collector_style), region: nullableString(row.region),
+    primaryTcg: nullableString(row.primary_tcg), selectedTcgCodes: Array.isArray(row.selected_tcg_codes) ? row.selected_tcg_codes.map(String) : ['pokemon'],
+    tcgOnboardingCompleted: Boolean(row.tcg_onboarding_completed), collectorStyle: nullableString(row.collector_style), region: nullableString(row.region),
+    tcgAlertPreferences: row.tcg_alert_preferences && typeof row.tcg_alert_preferences === 'object' && !Array.isArray(row.tcg_alert_preferences) ? row.tcg_alert_preferences as Record<string,unknown> : {},
     profileTheme: (String(row.profile_theme ?? "signal") as ProfileTheme), createdAt: Number(row.created_at), updatedAt: Number(row.updated_at),
   };
 }

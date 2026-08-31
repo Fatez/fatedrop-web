@@ -7,6 +7,7 @@ const DIAGNOSTIC_LOOKBACK_SECONDS = 15 * 60;
 const DIAGNOSTIC_HISTORY_SECONDS = 24 * 60 * 60;
 const DIAGNOSTIC_OUTAGE_WINDOW_SECONDS = 3 * 60 * 60;
 const RECEIPT_MIN_AGE_SECONDS = 15 * 60;
+const MANIFESTED_BACKLOG_GRACE_SECONDS = 2 * 60;
 
 export type PushDispatchHeartbeat = {
   startedAt: number;
@@ -70,10 +71,12 @@ async function readReceiptDiagnostics(
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore})::int AS eligible_24h,
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND receipt_status='ok')::int AS ok_24h,
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND receipt_status='error')::int AS error_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND receipt_status='unverified_expired')::int AS expired_24h,
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND receipt_checked_at IS NULL)::int AS pending_24h,
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper')::int AS whisper_eligible_24h,
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper' AND receipt_status='ok')::int AS whisper_ok_24h,
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper' AND receipt_status='error')::int AS whisper_error_24h,
+        COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper' AND receipt_status='unverified_expired')::int AS whisper_expired_24h,
         COUNT(*) FILTER (WHERE attempted_at <= ${eligibleBefore} AND event_type='whisper' AND receipt_checked_at IS NULL)::int AS whisper_pending_24h,
         MAX(receipt_checked_at) FILTER (WHERE attempted_at <= ${eligibleBefore}) AS latest_checked_at
       FROM latest_sent_attempt`;
@@ -91,6 +94,7 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
   const historySince = Math.max(0, now - DIAGNOSTIC_HISTORY_SECONDS);
   const outageSince = Math.max(0, now - DIAGNOSTIC_OUTAGE_WINDOW_SECONDS);
   const receiptEligibleBefore = Math.max(0, now - RECEIPT_MIN_AGE_SECONDS);
+  const manifestedBacklogBefore = Math.max(0, now - MANIFESTED_BACKLOG_GRACE_SECONDS);
   const [heartbeatRows, defaultRows, asymmetricRows, endpointRows, recipientRows, recentOutboxRows, historyOutboxRows, provenanceRows, receiptDiagnostics] = await Promise.all([
     sql`
       SELECT last_completed_at,last_status,last_queued,last_claimed,last_sent,last_failed,last_error
@@ -149,6 +153,16 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
         COUNT(*) FILTER (WHERE state='sending')::int AS sending,
         COUNT(*) FILTER (WHERE state='sent')::int AS sent,
         COUNT(*) FILTER (WHERE state='failed')::int AS failed,
+        COUNT(*) FILTER (
+          WHERE event_type='manifested'
+            AND state IN ('pending','sending','failed')
+            AND created_at <= ${manifestedBacklogBefore}
+        )::int AS aged_manifested_unsettled,
+        MIN(created_at) FILTER (
+          WHERE event_type='manifested'
+            AND state IN ('pending','sending','failed')
+            AND created_at <= ${manifestedBacklogBefore}
+        ) AS oldest_manifested_unsettled_at,
         COUNT(*) FILTER (WHERE event_type='whisper' AND state='sent')::int AS whisper_sent,
         COUNT(*) FILTER (WHERE event_type='whisper' AND state='failed')::int AS whisper_failed
       FROM fatedrop_notification_outbox
@@ -188,6 +202,11 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
   const latestNaturalCreatedAt = Number(provenance?.latest_natural_created_at ?? 0);
   const latestNaturalSentAt = Number(provenance?.latest_natural_sent_at ?? 0);
   const latestReceiptCheckedAt = Number(receipt?.latest_checked_at ?? 0);
+  const receiptErrorCount = Number(receipt?.error_24h ?? 0);
+  const receiptExpiredCount = Number(receipt?.expired_24h ?? 0);
+  const receiptPendingCount = Number(receipt?.pending_24h ?? 0);
+  const agedManifestedUnsettled = Number(historyOutbox?.aged_manifested_unsettled ?? 0);
+  const oldestManifestedUnsettledAt = Number(historyOutbox?.oldest_manifested_unsettled_at ?? 0);
 
   const ok = dispatchEnabled
     && status === "ok"
@@ -195,7 +214,12 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
     && ageSeconds <= STALE_AFTER_SECONDS
     && vanishedDefault.includes("true")
     && historicalAsymmetryCount === 0
-    && enabledEndpointCount > 0;
+    && enabledEndpointCount > 0
+    && receipt?.schemaReady === true
+    && receiptErrorCount === 0
+    && receiptExpiredCount === 0
+    && receiptPendingCount === 0
+    && agedManifestedUnsettled === 0;
 
   return {
     ok,
@@ -224,6 +248,8 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
     outbox24hSending: Number(historyOutbox?.sending ?? 0),
     outbox24hSent: Number(historyOutbox?.sent ?? 0),
     outbox24hFailed: Number(historyOutbox?.failed ?? 0),
+    agedManifestedUnsettled,
+    oldestManifestedUnsettledAgeSeconds: oldestManifestedUnsettledAt > 0 ? Math.max(0, now - oldestManifestedUnsettledAt) : null,
     outbox24hWhisperSent: Number(historyOutbox?.whisper_sent ?? 0),
     outbox24hWhisperFailed: Number(historyOutbox?.whisper_failed ?? 0),
     naturalOutbox24h: Number(provenance?.natural_24h ?? 0),
@@ -240,11 +266,13 @@ export async function readPushProductionHealth(now = Math.floor(Date.now() / 100
     receiptSchemaReady: receipt?.schemaReady === true,
     naturalReceiptEligible24h: Number(receipt?.eligible_24h ?? 0),
     naturalReceiptOk24h: Number(receipt?.ok_24h ?? 0),
-    naturalReceiptError24h: Number(receipt?.error_24h ?? 0),
-    naturalReceiptPending24h: Number(receipt?.pending_24h ?? 0),
+    naturalReceiptError24h: receiptErrorCount,
+    naturalReceiptExpired24h: receiptExpiredCount,
+    naturalReceiptPending24h: receiptPendingCount,
     naturalWhisperReceiptEligible24h: Number(receipt?.whisper_eligible_24h ?? 0),
     naturalWhisperReceiptOk24h: Number(receipt?.whisper_ok_24h ?? 0),
     naturalWhisperReceiptError24h: Number(receipt?.whisper_error_24h ?? 0),
+    naturalWhisperReceiptExpired24h: Number(receipt?.whisper_expired_24h ?? 0),
     naturalWhisperReceiptPending24h: Number(receipt?.whisper_pending_24h ?? 0),
     latestNaturalReceiptCheckedAgeSeconds: latestReceiptCheckedAt > 0 ? Math.max(0, now - latestReceiptCheckedAt) : null,
     vanishedDefaultVerified: vanishedDefault.includes("true"),

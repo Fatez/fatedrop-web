@@ -4,6 +4,7 @@ export const MANIFESTED_REMINDER_INTERVAL_SECONDS = 30 * 60;
 export const MANIFESTED_REMINDER_MIN_LIVE_AGE_SECONDS = 30 * 60;
 export const MANIFESTED_REMINDER_PRODUCT_COOLDOWN_SECONDS = 6 * 60 * 60;
 export const MANIFESTED_REMINDER_MAX_CONFIRMATION_AGE_SECONDS = 20 * 60;
+export const MANIFESTED_REMINDER_HISTORY_SECONDS = 24 * 60 * 60;
 
 function epoch(iso: string | null | undefined) {
   if (!iso) return 0;
@@ -33,7 +34,9 @@ export function manifestedReminderConfirmationAgeSeconds(alert: CanonicalAlert, 
 export function manifestedReminderEligible(alert: CanonicalAlert, measuredAt: number) {
   if (alert.fateStage !== "MANIFESTED") return false;
   if (alert.confirmed !== true || alert.interruptEligible !== true) return false;
+  if (alert.stockEpisode?.availabilityState !== "available" || alert.stockEpisode.vanishedAt !== null) return false;
   if (alert.liveWindow?.vanishedAt) return false;
+  if (alert.liveWindow?.historyComplete !== true) return false;
 
   const manifestedAt = epoch(alert.liveWindow?.manifestedAt);
   const confirmedAt = epoch(alert.liveWindow?.lastConfirmedLiveAt);
@@ -51,15 +54,18 @@ export function chooseManifestedReminder({
   userId,
   measuredAt,
   excludedProductIds = new Set<string>(),
+  excludedEpisodeIds = new Set<string>(),
 }: {
   alerts: CanonicalAlert[];
   userId: string;
   measuredAt: number;
   excludedProductIds?: ReadonlySet<string>;
+  excludedEpisodeIds?: ReadonlySet<string>;
 }) {
   const eligible = alerts
     .filter((alert) => manifestedReminderEligible(alert, measuredAt))
     .filter((alert) => !excludedProductIds.has(alert.productId))
+    .filter((alert) => Boolean(alert.stockEpisode?.id) && !excludedEpisodeIds.has(alert.stockEpisode?.id || ""))
     .sort((left, right) => left.id.localeCompare(right.id));
 
   if (!eligible.length) return null;

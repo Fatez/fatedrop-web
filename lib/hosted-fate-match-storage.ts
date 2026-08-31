@@ -2,6 +2,7 @@ import { fateDropPostgres } from "@/lib/postgres";
 
 export type HostedFateMatch = {
   id: string;
+  tcgCode: string;
   fateFindId: string;
   userId: string;
   offerId: string;
@@ -31,7 +32,7 @@ export async function listHostedFateMatches(userId: string, limit = 100): Promis
     LIMIT ${safeLimit}
   ` as unknown as Record<string, unknown>[];
   return rows.map((row) => ({
-    id: String(row.id), fateFindId: String(row.fate_find_id), userId: String(row.user_id), offerId: String(row.signal_offer_id), productId: String(row.signal_product_id),
+    id: String(row.id), tcgCode: String(row.tcg_code ?? "pokemon"), fateFindId: String(row.fate_find_id), userId: String(row.user_id), offerId: String(row.signal_offer_id), productId: String(row.signal_product_id),
     retailerId: String(row.retailer_id), retailerName: String(row.retailer_name), title: String(row.title), url: String(row.url),
     itemPricePence: row.item_price_pence == null ? null : Number(row.item_price_pence), postagePence: row.postage_pence == null ? null : Number(row.postage_pence),
     deliveredPricePence: row.delivered_price_pence == null ? null : Number(row.delivered_price_pence), rrpPence: row.rrp_pence == null ? null : Number(row.rrp_pence),

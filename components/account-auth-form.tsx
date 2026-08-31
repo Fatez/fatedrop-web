@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TurnstileWidget } from "@/components/turnstile-widget";
+import { TcgSelectionPanel } from "@/components/tcg-selection-panel";
+import type { TcgCode } from "@/lib/tcg-registry";
 
 type Mode = "register" | "login";
 
@@ -19,6 +21,7 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [selectedTcgCodes, setSelectedTcgCodes] = useState<TcgCode[]>(["pokemon"]);
   const requestedNext = search.get("next");
   const defaultNext = mode === "register" ? "/beta-pending" : "/account";
   const safeNext = safeNextPath(requestedNext, defaultNext);
@@ -43,6 +46,7 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
           password: data.get("password"),
           confirmPassword: data.get("confirmPassword"),
           acceptTerms: data.get("acceptTerms") === "on",
+          selectedTcgCodes,
           turnstileToken,
         }
       : { email: data.get("email"), password: data.get("password"), turnstileToken };
@@ -93,6 +97,8 @@ export function AccountAuthForm({ mode, turnstileSiteKey }: { mode: Mode; turnst
       </label>
       {mode === "register" ? (
         <>
+          <TcgSelectionPanel selected={selectedTcgCodes} onChange={setSelectedTcgCodes} compact />
+          {fields.selectedTcgCodes ? <small className="field-error">{fields.selectedTcgCodes}</small> : null}
           <label>
             <span>Confirm password</span>
             <input name="confirmPassword" type="password" autoComplete="new-password" placeholder="Repeat your password" aria-invalid={Boolean(fields.confirmPassword)} />

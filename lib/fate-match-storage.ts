@@ -2,6 +2,7 @@ import type { FateMatch } from "@/lib/fate-match";
 import { fateDropPostgres } from "@/lib/postgres";
 import { safeExternalHttpsUrl } from "@/lib/external-url";
 import { calculateTruePrice } from "@/lib/true-price";
+import { isTcgCode } from "@/lib/tcg-registry";
 
 function stringArray(value: unknown) {
   if (Array.isArray(value)) return value.map(String);
@@ -18,7 +19,7 @@ function nullableString(value: unknown) { return value === null || value === und
 
 function mapFateMatch(row: Record<string, unknown>): FateMatch {
   return {
-    id: String(row.id), userId: String(row.user_id), query: String(row.query_text ?? ""), productIdentityId: nullableString(row.product_identity_id),
+    id: String(row.id), userId: String(row.user_id), tcgCode: isTcgCode(row.tcg_code) ? row.tcg_code : "pokemon", query: String(row.query_text ?? ""), productIdentityId: nullableString(row.product_identity_id),
     maxItemPricePence: nullableNumber(row.max_item_price_pence), maxTruePricePence: nullableNumber(row.max_true_price_pence), maxPercentAboveRrp: nullableNumber(row.max_percent_above_rrp),
     scope: String(row.scope) as FateMatch["scope"], radiusKm: nullableNumber(row.radius_km), postcode: nullableString(row.postcode), latitude: nullableNumber(row.latitude), longitude: nullableNumber(row.longitude),
     preferredRetailerIds: stringArray(row.preferred_retailers_json), excludedRetailerIds: stringArray(row.excluded_retailers_json), stockRequirement: String(row.stock_requirement) as FateMatch["stockRequirement"],
@@ -84,13 +85,19 @@ function mapFateMatchHit(row: Record<string, unknown>): FateMatchHitView {
 export async function createFateMatch(match: FateMatch) {
   const sql = await fateDropPostgres();
   const rows = await sql`INSERT INTO fatedrop_fate_matches (
-    id,user_id,query_text,product_identity_id,max_item_price_pence,max_true_price_pence,max_percent_above_rrp,scope,radius_km,postcode,latitude,longitude,
+    id,user_id,tcg_code,query_text,product_identity_id,max_item_price_pence,max_true_price_pence,max_percent_above_rrp,scope,radius_km,postcode,latitude,longitude,
     preferred_retailers_json,excluded_retailers_json,stock_requirement,notification_preferences_json,enabled,created_at,updated_at
   ) VALUES (
-    ${match.id},${match.userId},${match.query},${match.productIdentityId},${match.maxItemPricePence},${match.maxTruePricePence},${match.maxPercentAboveRrp},${match.scope},${match.radiusKm},${match.postcode},${match.latitude},${match.longitude},
+    ${match.id},${match.userId},${match.tcgCode},${match.query},${match.productIdentityId},${match.maxItemPricePence},${match.maxTruePricePence},${match.maxPercentAboveRrp},${match.scope},${match.radiusKm},${match.postcode},${match.latitude},${match.longitude},
     ${JSON.stringify(match.preferredRetailerIds)}::jsonb,${JSON.stringify(match.excludedRetailerIds)}::jsonb,${match.stockRequirement},${JSON.stringify(match.notificationPreferences)}::jsonb,${match.enabled},${match.createdAt},${match.updatedAt}
   ) RETURNING *`;
   return rows[0] ? mapFateMatch(rows[0] as Record<string, unknown>) : null;
+}
+
+export async function getProductIdentityTcg(productIdentityId: string) {
+  const sql = await fateDropPostgres();
+  const rows = await sql`SELECT tcg FROM fatedrop_product_identities WHERE id=${productIdentityId} LIMIT 1`;
+  return rows[0]?.tcg == null ? null : String(rows[0].tcg);
 }
 
 export async function setFateMatchEnabled(userId: string, matchId: string, enabled: boolean, updatedAt = Math.floor(Date.now() / 1000)) {

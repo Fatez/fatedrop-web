@@ -114,8 +114,8 @@ test("Alerts is a precise network ledger and keeps personal delivery controls se
   for (const state of ["WHISPER", "ECHO", "MANIFESTED", "VANISHED"]) assert.ok(alerts.includes(`"${state}"`));
   for (const cause of ["catalogue_new", "queue", "security", "restock", "sold_out", "lifecycle_unspecified"]) assert.ok(alerts.includes(`"${cause}"`));
   assert.ok(alerts.includes('/dashboard/notifications'));
-  assert.ok(alerts.includes('/dashboard/fatefind?q='));
-  assert.ok(alerts.includes('/dashboard/watchlist?q='));
+  assert.ok(alerts.includes('/dashboard/fatefind?tcg='));
+  assert.ok(alerts.includes('/dashboard/watchlist?tcg='));
   assert.ok(alerts.includes("CanonicalAlertSignalPack"));
   assert.ok(alerts.includes("Cause unclassified"));
   assert.equal(alerts.includes("<LiveAlertFeed"), false);
@@ -130,8 +130,8 @@ test("Search, FateFind and FateMatch form one working collector journey while Tr
   const verdictClient = fs.readFileSync("lib/fatefind-verdict.ts", "utf8");
   assert.ok(search.includes("searchSignalCatalogue"));
   assert.equal(search.includes('/dashboard/true-price?q='), false);
-  assert.ok(search.includes('/dashboard/fatefind?q='));
-  assert.ok(search.includes('/dashboard/watchlist?q='));
+  assert.ok(search.includes('/dashboard/fatefind?tcg='));
+  assert.ok(search.includes('/dashboard/watchlist?tcg='));
   assert.ok(search.includes("BUY ↗"));
   assert.ok(legacyTruePrice.includes("/dashboard/fatefind"));
   assert.ok(fateFind.includes("TRUE PRICE"));

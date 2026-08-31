@@ -3,6 +3,7 @@ import { AccountConflictError, AccountStorageUnavailableError, createAccount, fi
 import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, readBoundedJson } from "@/lib/auth-abuse";
 import { assertSameOrigin, hashPassword, startSession } from "@/lib/auth";
 import { assertTurnstile, TurnstileRejectedError, TurnstileUnavailableError } from "@/lib/turnstile";
+import { normalizeSelectedTcgCodes, normalizeTcgAlertPreferences } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
     const password = typeof payload.password === "string" ? payload.password : "";
     const confirmPassword = typeof payload.confirmPassword === "string" ? payload.confirmPassword : "";
     const acceptTerms = payload.acceptTerms === true;
+    const selectedTcgCodes = normalizeSelectedTcgCodes(payload.selectedTcgCodes, []);
 
     const fields: Record<string, string> = {};
     if (!validEmail(email)) fields.email = "Enter a valid email address.";
@@ -68,6 +70,7 @@ export async function POST(request: Request) {
     if (!confirmPassword) fields.confirmPassword = "Confirm your password.";
     else if (confirmPassword !== password) fields.confirmPassword = "Passwords do not match.";
     if (!acceptTerms) fields.acceptTerms = "You need to accept the Terms and Privacy Notice to request closed beta access.";
+    if (!selectedTcgCodes.length) fields.selectedTcgCodes = "Choose at least one TCG.";
     if (Object.keys(fields).length) return Response.json({ error: "Check the highlighted fields.", fields }, { status: 400 });
 
     await assertTurnstile(request, payload.turnstileToken, "register");
@@ -83,7 +86,12 @@ export async function POST(request: Request) {
       username: await uniqueUsername(displayName),
       bio: null,
       avatarUrl: null,
-      primaryTcg: "Pokémon TCG",
+      primaryTcg: selectedTcgCodes[0] || "pokemon",
+      selectedTcgCodes,
+      // Web records the initial interest selection. The signed-in App then
+      // confirms lifecycle choices in its two-step visual onboarding.
+      tcgOnboardingCompleted: false,
+      tcgAlertPreferences: normalizeTcgAlertPreferences(payload.tcgAlertPreferences,selectedTcgCodes),
       collectorStyle: null,
       region: null,
       profileTheme: "signal",

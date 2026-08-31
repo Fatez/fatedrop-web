@@ -5,6 +5,7 @@ import { listCanonicalAlertWindow, type CanonicalAlert } from "@/lib/canonical-a
 import { hasCapability } from "@/lib/entitlements";
 import type { CloudLifecycleState } from "@/lib/live-signals";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
+import { normalizeSelectedTcgCodes, normalizeTcgAlertPreferences } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,7 +70,12 @@ export async function GET(request: Request) {
     const retrievalLimit = requestedId ? 1 : Math.min(100, Math.max(limit, limit * 3));
     const canonicalAlerts = await listCanonicalAlertWindow({ id: requestedId, state: requestedState, limitPerStage: retrievalLimit });
     const preferences = await getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES);
+    const selectedTcgCodes=normalizeSelectedTcgCodes(snapshot.account.selectedTcgCodes);
+    const selectedTcgs=new Set(selectedTcgCodes);
+    const tcgAlertPreferences=normalizeTcgAlertPreferences(snapshot.account.tcgAlertPreferences,selectedTcgCodes);
     const alertsWithDelivery = canonicalAlerts
+      .filter((alert)=>selectedTcgs.has(alert.tcgCode as typeof selectedTcgCodes[number]))
+      .filter((alert)=>{const preference=tcgAlertPreferences[alert.tcgCode as typeof selectedTcgCodes[number]];return preference?.mode!=="custom"||preference[alert.fateStage.toLowerCase() as "whisper"|"echo"|"manifested"|"vanished"]!==false;})
       .filter((alert) => notificationPreferencesAllowAlert(alert, preferences))
       .slice(0, limit);
     const alerts = premium ? alertsWithDelivery : alertsWithDelivery.map(freeAlert);

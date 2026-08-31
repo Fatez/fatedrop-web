@@ -4,6 +4,7 @@ const DEFAULT_SIGNAL_ENGINE_URL = "https://fatedrop-cloud-production.up.railway.
 
 export type SignalCatalogueOffer = {
   id: string;
+  tcgCode?: string;
   sku: string;
   retailerKey: string;
   retailer: string;
@@ -29,6 +30,8 @@ export type SignalCatalogueOffer = {
 
 export type SignalCatalogueResponse = {
   success: boolean;
+  available?: boolean;
+  tcgCode?: string;
   total: number;
   count: number;
   products: SignalCatalogueOffer[];
@@ -55,6 +58,7 @@ export type SignalTruePriceOffer = {
 
 export type SignalTruePriceGroup = {
   id: string;
+  tcgCode?: string;
   title: string;
   category: string;
   matchingConfidence: number;
@@ -72,6 +76,8 @@ export type SignalTruePriceGroup = {
 
 export type SignalTruePriceResponse = {
   success: boolean;
+  available?: boolean;
+  tcgCode?: string;
   count: number;
   groups: SignalTruePriceGroup[];
   disclaimer: string;
@@ -252,6 +258,7 @@ async function retailerFilterForQuery(query: string) {
 }
 
 export async function searchSignalCatalogue(query: string, options: {
+  tcgCode?: string;
   inStock?: boolean;
   limit?: number;
   sort?: "relevance" | "recent" | "price" | "title";
@@ -267,6 +274,7 @@ export async function searchSignalCatalogue(query: string, options: {
   if (clean.length < 2 && !retailerFilter) return null;
 
   const params = new URLSearchParams({ limit: String(Math.min(Math.max(options.limit ?? 50, 1), 100)) });
+  params.set("tcg", options.tcgCode || "pokemon");
   if (clean.length >= 2 && !inferredRetailer) params.set("q", clean);
   if (retailerFilter) params.set("retailer", retailerFilter);
   if (options.inStock) params.set("inStock", "true");
@@ -300,10 +308,10 @@ export async function searchSignalFateFind(query: string) {
   return { ...result, rankedOffers, bestOpportunity };
 }
 
-export async function searchSignalTruePrice(query: string) {
+export async function searchSignalTruePrice(query: string, tcgCode = "pokemon") {
   const clean = query.trim();
   if (clean.length < 2) return null;
-  const result = await signalFetch<SignalTruePriceResponse>("/api/true-price", new URLSearchParams({ q: clean }));
+  const result = await signalFetch<SignalTruePriceResponse>("/api/true-price", new URLSearchParams({ q: clean, tcg: tcgCode }));
   if (!result) return null;
   const groups = result.groups.flatMap((group) => {
     const offers = group.offers.flatMap((offer) => {

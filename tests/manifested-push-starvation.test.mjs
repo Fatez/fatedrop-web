@@ -8,7 +8,7 @@ const canonical = fs.readFileSync(new URL("../lib/canonical-alerts.ts", import.m
 test("all lifecycle signals have rich stage-scoped retrieval independent of a global latest-100 feed", () => {
   assert.match(canonical, /balancedLifecycleStates = \["whisper", "echo", "manifested", "vanished"\]/);
   assert.match(canonical, /balancedLifecycleStates\.map\(\(lifecycleState\) => listCanonicalAlerts\(\{ state: lifecycleState, limit: safeLimit \}\)\)/);
-  assert.match(push, /listCanonicalAlertWindow\(\{ limitPerStage: 100 \}\)/);
+  assert.match(push, /listCanonicalAlertRecoveryWindow\(\{since\}\)/);
 });
 
 test("balanced lifecycle rows are merged without duplicate canonical alert ids", () => {

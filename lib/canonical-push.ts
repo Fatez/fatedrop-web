@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { betaPremiumEnabled } from "@/lib/beta-premium";
-import { listCanonicalAlertWindow, type CanonicalAlert, type CanonicalAlertFacets } from "@/lib/canonical-alerts";
+import { listCanonicalAlertRecoveryWindow, type CanonicalAlert, type CanonicalAlertFacets } from "@/lib/canonical-alerts";
 import { fateDropPostgres } from "@/lib/postgres";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 import { expoAndroidIcon, pushNotificationBranding } from "@/lib/push-notification-branding";
@@ -11,6 +11,8 @@ const SENDING_LEASE_SECONDS = 5 * 60;
 const BURST_WINDOW_SECONDS = 60;
 const BURST_GRACE_SECONDS = 5;
 const BURST_MIN_SIZE = 5;
+const CANONICAL_PUSH_RECOVERY_LOOKBACK_SECONDS = 6 * 60 * 60;
+const CANONICAL_PUSH_RECOVERY_OVERLAP_SECONDS = 5 * 60;
 
 type BurstControlledStage = "WHISPER" | "ECHO" | "VANISHED";
 
@@ -43,6 +45,8 @@ type RecipientRow = {
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   timezone: string;
+  selected_tcg_codes: unknown;
+  tcg_alert_preferences: unknown;
 };
 
 type OutboxRow = {
@@ -105,11 +109,29 @@ function burstBucketClosed(bucket: number, measuredAt: number) {
 
 function stageEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
   if (!recipient.push_enabled) return false;
-  if (alert.fateStage === "WHISPER") return recipient.whisper_enabled;
-  if (alert.fateStage === "ECHO") return recipient.echo_enabled;
-  if (alert.fateStage === "MANIFESTED") return recipient.manifested_enabled;
-  if (alert.fateStage === "VANISHED") return recipient.vanished_enabled;
-  return false;
+  const globallyEnabled=alert.fateStage === "WHISPER" ? recipient.whisper_enabled
+    : alert.fateStage === "ECHO" ? recipient.echo_enabled
+      : alert.fateStage === "MANIFESTED" ? recipient.manifested_enabled
+        : alert.fateStage === "VANISHED" ? recipient.vanished_enabled : false;
+  if(!globallyEnabled)return false;
+  let raw=recipient.tcg_alert_preferences;
+  if(typeof raw==="string"){try{raw=JSON.parse(raw);}catch{return false;}}
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))return true;
+  const entry=(raw as Record<string,unknown>)[alert.tcgCode];
+  if(!entry||typeof entry!=="object"||Array.isArray(entry))return true;
+  const preference=entry as Record<string,unknown>;
+  if(preference.mode!=="custom")return true;
+  return preference[alert.fateStage.toLowerCase()]!==false;
+}
+
+function tcgEnabled(tcgCode:string,recipient:RecipientRow){return selectedSetKeys(recipient.selected_tcg_codes).has(tcgCode);}
+
+function manifestedEpisodeStillActionable(alert: CanonicalAlert) {
+  if (alert.fateStage !== "MANIFESTED") return true;
+  return alert.stockEpisode?.availabilityState === "available"
+    && alert.stockEpisode.vanishedAt === null
+    && alert.liveWindow?.historyComplete === true
+    && alert.liveWindow.lastConfirmedLiveAt !== null;
 }
 
 function operatorStageEnabled(event: LocalRadarOperatorPush, recipient: RecipientRow) {
@@ -195,6 +217,50 @@ function retryAt(now: number, attempts: number) {
   return now + Math.min(900, 30 * (2 ** Math.max(0, attempts - 1)));
 }
 
+function recoveryCheckpointUnavailable(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  return code === "42P01";
+}
+
+async function recoverySince(measuredAt: number, lookbackSeconds: number) {
+  const fallback = Math.max(0, measuredAt - lookbackSeconds);
+  try {
+    const sql = await fateDropPostgres();
+    const rows = await sql`SELECT last_completed_at FROM fatedrop_push_recovery_checkpoint WHERE id='canonical'`;
+    const checkpoint = Number(rows[0]?.last_completed_at ?? 0);
+    return Number.isFinite(checkpoint) && checkpoint > 0
+      ? Math.max(fallback, checkpoint - CANONICAL_PUSH_RECOVERY_OVERLAP_SECONDS)
+      : fallback;
+  } catch (error) {
+    if (recoveryCheckpointUnavailable(error)) return fallback;
+    throw error;
+  }
+}
+
+async function recordRecoveryCheckpoint(measuredAt: number) {
+  try {
+    const sql = await fateDropPostgres();
+    await sql`
+      INSERT INTO fatedrop_push_recovery_checkpoint (id,last_completed_at,updated_at)
+      VALUES ('canonical',${measuredAt},${measuredAt})
+      ON CONFLICT (id) DO UPDATE SET
+        last_completed_at=GREATEST(fatedrop_push_recovery_checkpoint.last_completed_at,EXCLUDED.last_completed_at),
+        updated_at=EXCLUDED.updated_at`;
+  } catch (error) {
+    if (!recoveryCheckpointUnavailable(error)) throw error;
+  }
+}
+
+function stablePushHash(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 function individualPushRow(alert: CanonicalAlert, recipient: RecipientRow, now: number) {
   return {
     id: randomUUID(),
@@ -209,6 +275,7 @@ function individualPushRow(alert: CanonicalAlert, recipient: RecipientRow, now: 
     payload_json: {
       ...alert.notification.data,
       stage: alert.fateStage,
+      stockEpisodeId: alert.stockEpisode?.id ?? null,
       endpointId: recipient.endpoint_id,
       expoPushToken: recipient.expo_push_token,
       pushPlatform: recipient.platform,
@@ -250,6 +317,7 @@ function burstSummaryPushRow(
       summaryFirstAlertId: first.id,
       summaryWindowStart: first.detectedAt,
       summaryWindowEnd: last.detectedAt,
+      tcgCode: first.tcgCode,
       endpointId: recipient.endpoint_id,
       expoPushToken: recipient.expo_push_token,
       pushPlatform: recipient.platform,
@@ -295,7 +363,10 @@ async function eligibleRecipients() {
       np.quiet_hours_start,
       np.quiet_hours_end,
       COALESCE(np.timezone,'Europe/London') AS timezone
+      ,COALESCE(u.selected_tcg_codes,'["pokemon"]'::jsonb) AS selected_tcg_codes
+      ,COALESCE(u.tcg_alert_preferences,'{}'::jsonb) AS tcg_alert_preferences
     FROM fatedrop_push_endpoints pe
+    JOIN fatedrop_users u ON u.id=pe.user_id
     JOIN fatedrop_memberships m ON m.user_id=pe.user_id
     JOIN fatedrop_beta_access ba ON ba.user_id=pe.user_id AND ba.status='approved'
     LEFT JOIN fatedrop_notification_preferences np ON np.user_id=pe.user_id
@@ -309,16 +380,22 @@ async function eligibleRecipients() {
   return rows as RecipientRow[];
 }
 
-async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { measuredAt: number; lookbackSeconds?: number }) {
-  const since = Math.max(0, measuredAt - lookbackSeconds);
+async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = CANONICAL_PUSH_RECOVERY_LOOKBACK_SECONDS }: { measuredAt: number; lookbackSeconds?: number }) {
+  const since = await recoverySince(measuredAt, lookbackSeconds);
   const [alerts, recipients] = await Promise.all([
-    listCanonicalAlertWindow({ limitPerStage: 100 }),
+    listCanonicalAlertRecoveryWindow({since}),
     eligibleRecipients(),
   ]);
-  if (!alerts.length || !recipients.length) return { alerts: 0, recipients: recipients.length, queued: 0 };
+  if (!alerts.length || !recipients.length) {
+    await recordRecoveryCheckpoint(measuredAt);
+    return { alerts: 0, recipients: recipients.length, queued: 0 };
+  }
 
   const recent = alerts.filter((alert) => epoch(alert.detectedAt) >= since && epoch(alert.detectedAt) <= measuredAt + 60);
-  if (!recent.length) return { alerts: 0, recipients: recipients.length, queued: 0 };
+  if (!recent.length) {
+    await recordRecoveryCheckpoint(measuredAt);
+    return { alerts: 0, recipients: recipients.length, queued: 0 };
+  }
 
   const nowDate = new Date();
   const now = Math.floor(nowDate.getTime() / 1000);
@@ -329,7 +406,8 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
     const controlledBuckets = new Map<string, { stage: BurstControlledStage; bucket: number; alerts: CanonicalAlert[] }>();
 
     for (const alert of recent) {
-      if (!alert.interruptEligible || !stageEnabled(alert, recipient) || !productEnabled(alert, recipient) || !facetEnabled(alert.facets, recipient)) continue;
+      if (!alert.interruptEligible || !tcgEnabled(alert.tcgCode,recipient) || !stageEnabled(alert, recipient) || !productEnabled(alert, recipient) || !facetEnabled(alert.facets, recipient)) continue;
+      if (!manifestedEpisodeStillActionable(alert)) continue;
 
       if (alert.fateStage === "MANIFESTED") {
         queueRows.push(individualPushRow(alert, recipient, now));
@@ -339,7 +417,7 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
       if (!burstControlledStage(alert.fateStage)) continue;
       const bucket = Math.floor(epoch(alert.detectedAt) / BURST_WINDOW_SECONDS);
       if (!burstBucketClosed(bucket, measuredAt)) continue;
-      const key = `${alert.fateStage}:${bucket}`;
+      const key = `${alert.fateStage}:${alert.tcgCode}:${bucket}`;
       const existing = controlledBuckets.get(key) ?? { stage: alert.fateStage, bucket, alerts: [] };
       existing.alerts.push(alert);
       controlledBuckets.set(key, existing);
@@ -354,7 +432,10 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
     }
   }
 
-  if (!queueRows.length) return { alerts: recent.length, recipients: recipients.length, queued: 0 };
+  if (!queueRows.length) {
+    await recordRecoveryCheckpoint(measuredAt);
+    return { alerts: recent.length, recipients: recipients.length, queued: 0 };
+  }
   const sql = await fateDropPostgres();
   const serialized = JSON.stringify(queueRows);
   const inserted = await sql`
@@ -370,6 +451,7 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = 900 }: { meas
     )
     ON CONFLICT (dedupe_key) DO NOTHING
     RETURNING id`;
+  await recordRecoveryCheckpoint(measuredAt);
   return { alerts: recent.length, recipients: recipients.length, queued: inserted.length };
 }
 
@@ -465,7 +547,14 @@ async function claimPending(limit = 100) {
         AND state IN ('pending','failed')
         AND attempts < ${MAX_ATTEMPTS}
         AND next_attempt_at <= ${now}
-      ORDER BY created_at ASC
+      ORDER BY
+        CASE
+          WHEN event_type IN ('manifested','fate_match') THEN 0
+          WHEN event_type='vanished' THEN 1
+          ELSE 2
+        END ASC,
+        created_at ASC,
+        id ASC
       FOR UPDATE SKIP LOCKED
       LIMIT ${Math.max(1, Math.min(100, limit))}
     )
@@ -529,15 +618,27 @@ async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
     const data = payload(row.payload_json);
     const branding = pushNotificationBranding({ platform: data.pushPlatform, stage: data.stage, route: data.route });
     const icon = expoAndroidIcon(data.pushPlatform, branding);
+    const stage = typeof data.stage === "string" ? data.stage.toUpperCase() : "";
+    const manifestedReminder = data.manifestedReminder === true;
+    const urgentAvailability = stage === "MANIFESTED" && !manifestedReminder;
+    const stockEpisodeId = typeof data.stockEpisodeId === "string" && data.stockEpisodeId ? data.stockEpisodeId : null;
+    const tcgCode = typeof data.tcgCode === "string" && data.tcgCode ? data.tcgCode : null;
+    const collapseKind = manifestedReminder ? "manifested-reminder" : stage.toLowerCase();
+    const episodeCollapseId = stockEpisodeId && collapseKind ? `fatedrop-episode-${stablePushHash(stockEpisodeId)}-${collapseKind}` : null;
     const publicData = Object.fromEntries(
       Object.entries(data).filter(([key]) => !["expoPushToken", "endpointId", "pushPlatform"].includes(key)),
     );
     return {
       to: data.expoPushToken,
       sound: "default",
+      priority: urgentAvailability ? "high" : "default",
+      ttl: urgentAvailability ? CANONICAL_PUSH_RECOVERY_LOOKBACK_SECONDS : 60 * 60,
       title: row.title,
       body: row.body,
       ...(icon ? { icon } : {}),
+      ...(data.pushPlatform === "ios" && urgentAvailability ? { interruptionLevel: "time-sensitive", relevanceScore: 1 } : {}),
+      ...(episodeCollapseId ? { collapseId: episodeCollapseId } : {}),
+      ...(tcgCode ? { threadId: `fatedrop-${tcgCode}` } : {}),
       data: {
         ...publicData,
         notificationCompanion: branding.companion,

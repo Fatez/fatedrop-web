@@ -57,8 +57,23 @@ export type CanonicalLiveWindow = {
   historyComplete: boolean;
 };
 
+export type CanonicalStockEpisode = {
+  id:string;
+  scopeType:string|null;
+  cycleNumber:number|null;
+  episodeState:string|null;
+  availabilityState:string|null;
+  openedAt:string|null;
+  manifestedAt:string|null;
+  vanishedAt:string|null;
+  latestEventAt:string|null;
+  eventStage:string|null;
+  eventAvailabilityEffect:string|null;
+};
+
 export type CanonicalAlert = {
   id: string;
+  tcgCode: string;
   type: string;
   fateStage: CanonicalSignalStage;
   productId: string;
@@ -74,12 +89,14 @@ export type CanonicalAlert = {
   detectedAt: string;
   observedDurationSeconds: number | null;
   liveWindow?: CanonicalLiveWindow | null;
+  stockEpisode?: CanonicalStockEpisode | null;
   productIntelligence: ProductAlertClassification;
   confirmed: boolean;
   confirmedRestock: boolean;
   productUrl: string;
   product: {
     title: string;
+    tcgCode: string;
     productType: string | null;
     url: string;
     imageUrl: string | null;
@@ -124,6 +141,7 @@ export type CanonicalAlert = {
     data: {
       route: "alerts";
       alertId: string;
+      tcgCode: string;
       productUrl: string;
       stage: CanonicalSignalStage;
       verdict: FatePriceVerdict;
@@ -215,6 +233,7 @@ function isCanonicalDelivery(value: unknown) {
 function isCanonicalAlert(value: unknown): value is CanonicalAlert {
   if (!isObject(value)) return false;
   if (typeof value.id !== "string" || !value.id) return false;
+  if (typeof value.tcgCode !== "string" || !value.tcgCode) return false;
   if (typeof value.title !== "string" || !value.title) return false;
   if (typeof value.detectedAt !== "string" || !value.detectedAt) return false;
   if (typeof value.fateStage !== "string" || !canonicalStages.has(value.fateStage as CanonicalSignalStage)) return false;
@@ -268,4 +287,29 @@ export async function listCanonicalAlertWindow({
   return [...byId.values()].sort((left, right) => (
     Date.parse(right.detectedAt) - Date.parse(left.detectedAt) || left.id.localeCompare(right.id)
   ));
+}
+
+export async function listCanonicalAlertRecoveryWindow({since,maxPagesPerStage=50}:{since:number;maxPagesPerStage?:number}) {
+  const safeSince=Math.max(0,Math.trunc(since));
+  const pages=Math.max(1,Math.min(50,Math.trunc(maxPagesPerStage)));
+  const byId=new Map<string,CanonicalAlert>();
+  await Promise.all(balancedLifecycleStates.map(async(state)=>{
+    let before:number|null=null;
+    let beforeId:string|null=null;
+    let complete=false;
+    for(let page=0;page<pages;page+=1){
+      const response=await getLiveCloudAlerts({state,since:safeSince,before,beforeId,limit:100});
+      if(!response?.success||response.available!==true||response.source!=="FATEDROP_CLOUD"||!Array.isArray(response.alerts))throw new Error("Canonical Cloud alert recovery feed unavailable");
+      const alerts=response.alerts.filter(isCanonicalAlert);
+      for(const alert of alerts)byId.set(alert.id,alert);
+      if(response.alerts.length<100||!alerts.length){complete=true;break;}
+      const last=alerts[alerts.length-1];
+      const lastEpoch=Math.floor(Date.parse(last.detectedAt)/1000);
+      if(!Number.isFinite(lastEpoch))throw new Error("Canonical Cloud alert recovery cursor invalid");
+      if(lastEpoch<=safeSince){complete=true;break;}
+      before=lastEpoch;beforeId=last.id;
+    }
+    if(!complete)throw new Error(`Canonical Cloud ${state} recovery window exceeded the safe page budget`);
+  }));
+  return [...byId.values()].sort((left,right)=>Date.parse(right.detectedAt)-Date.parse(left.detectedAt)||left.id.localeCompare(right.id));
 }
