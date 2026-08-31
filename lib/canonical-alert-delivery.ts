@@ -124,6 +124,7 @@ export async function listDeliveryBackedCanonicalAlerts({
           status: delivery.result,
           attemptedAt: new Date(delivery.attemptedAt * 1000).toISOString(),
           issue: delivery.result === "sent" ? null : delivery.detail,
+          providerMessageId: delivery.providerMessageId,
         },
       },
     } satisfies CanonicalAlertWithDelivery;

@@ -14,15 +14,16 @@ test("dashboard recent signals come from live Cloud rather than network snapshot
   assert.match(dashboardSource, /confirmed = recentSignals\.filter/);
   assert.match(signalsApi, /getCanonicalRecentSignals\(100\)/);
   assert.doesNotMatch(signalsApi, /getLatestNetworkMetricSnapshot/);
-  assert.match(recentSource, /getLiveCloudSignals/);
+  assert.match(recentSource, /listCanonicalAlertWindow/);
+  assert.match(recentSource, /limitPerStage: safeLimit/);
   assert.doesNotMatch(recentSource, /fateDropPostgres|DATABASE_URL|fatedrop_signals|neon\(/);
 });
 
 test("Web consumes Cloud lifecycle truth instead of re-implementing Vanished semantics", () => {
   assert.match(recentSource, /lifecycleStates/);
   assert.doesNotMatch(recentSource, /m\.state='manifested'|v\.state='vanished'|s\.state <> 'vanished'/);
-  assert.doesNotMatch(recentSource, /queue|security|catalogue_new|restock|sold_out/);
-  assert.doesNotMatch(recentSource, /kind:/);
+  assert.match(recentSource, /knownSignalKind\(row\.signalKind\)/);
+  assert.doesNotMatch(recentSource, /signal_kind|evidence_item/);
 });
 
 test("seven-day detection and delivery summaries come from the same live Cloud summary", () => {

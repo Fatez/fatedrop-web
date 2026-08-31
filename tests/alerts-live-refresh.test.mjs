@@ -18,7 +18,8 @@ test("Alerts refresh the existing server-owned canonical view every ten seconds 
 });
 
 test("Live refresh preserves the Alerts server authority for preferences, premium gating and Cloud alert truth", () => {
-  assert.match(alertsPage, /listCanonicalAlerts/);
+  assert.match(alertsPage, /listCanonicalAlertWindow/);
+  assert.match(alertsPage, /limitPerStage: 100/);
   assert.match(alertsPage, /getNotificationPreferences/);
   assert.match(alertsPage, /notificationPreferencesAllowAlert/);
   assert.match(alertsPage, /hasPremiumAccess/);

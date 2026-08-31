@@ -3,6 +3,10 @@ export type CloudLifecycleState = "whisper" | "echo" | "manifested" | "vanished"
 export type CloudPublicSignal = {
   id: string;
   state: CloudLifecycleState;
+  kind?: string | null;
+  deliveryPolicy?: "interrupt" | "inbox_only" | "history_only" | "anomaly_quarantine";
+  interruptEligible?: boolean;
+  facets?: CloudAlertFacets;
   productId: string | null;
   offerId: string | null;
   retailerId: string | null;
@@ -29,6 +33,24 @@ export type CloudPublicSignal = {
   };
 };
 
+export type CloudAlertLanguageGroup = "english" | "japanese" | "korean" | "simplified_chinese" | "traditional_chinese" | "other" | "unknown";
+export type CloudAlertMarketGroup = "english" | "japanese" | "korean" | "simplified_chinese" | "traditional_chinese" | "other" | "unknown";
+export type CloudAlertMarketStatus = "verified" | "reused" | "candidate" | "unknown" | "conflict";
+
+export type CloudAlertFacets = {
+  version: number;
+  languageGroup: CloudAlertLanguageGroup;
+  languageCode: string | null;
+  marketCode: string | null;
+  marketGroup?: CloudAlertMarketGroup;
+  marketStatus?: CloudAlertMarketStatus;
+  languageLabel: string;
+  setKey: string | null;
+  setName: string | null;
+  confidence: { language: number; market?: number; set: number };
+  source: { language: string; market?: string; set: string };
+};
+
 export type CloudSignalResponse = {
   success: boolean;
   contractVersion: number;
@@ -46,6 +68,18 @@ export type CloudAlertResponse = {
   count: number;
   generatedAt: string;
   alerts: unknown[];
+};
+
+export type CloudAlertFacetOptionsResponse = {
+  success: boolean;
+  available: boolean;
+  contractVersion: number;
+  source?: string;
+  generatedAt: string;
+  version: number;
+  languages: Array<{ key: CloudAlertLanguageGroup; label: string }>;
+  markets?: Array<{ key: CloudAlertMarketGroup; label: string }>;
+  sets: Array<{ key: string; name: string }>;
 };
 
 export type CloudSignalTrendPoint = { measuredAt: number; value: number };
@@ -151,6 +185,12 @@ export async function getLiveCloudAlerts({
   if (state) params.set("state", state);
   const result = await liveFetch<CloudAlertResponse>("/api/signals", params, timeoutMs);
   return validCloudContract(result) ? result : null;
+}
+
+export async function getLiveCloudAlertFacets(timeoutMs = 8_000) {
+  const result = await liveFetch<CloudAlertFacetOptionsResponse>("/api/alert-facets", new URLSearchParams(), timeoutMs);
+  if (!validCloudContract(result) || result?.available !== true || !Array.isArray(result.languages) || !Array.isArray(result.sets)) return null;
+  return result;
 }
 
 export async function getLiveCloudSignalSummary(days = 7, timeoutMs = 8_000) {

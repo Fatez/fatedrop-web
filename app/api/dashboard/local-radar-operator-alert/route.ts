@@ -17,6 +17,19 @@ function nullableIso(value: unknown) {
   return new Date(clean).toISOString();
 }
 
+const languageGroups = new Set(["english", "japanese", "korean", "simplified_chinese", "traditional_chinese", "other", "unknown"]);
+
+function optionalLanguageGroup(value: unknown) {
+  if (value === null || value === undefined || value === "") return undefined;
+  return typeof value === "string" && languageGroups.has(value) ? value as LocalRadarOperatorPush["languageGroup"] : null;
+}
+
+function optionalSetKey(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const clean = text(value, 120);
+  return clean && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(clean) ? clean : undefined;
+}
+
 function authorized(request: Request) {
   const secret = process.env.FATEDROP_METRICS_INGEST_SECRET;
   const authorization = request.headers.get("authorization") || "";
@@ -44,10 +57,13 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
   const expectedFrom = nullableIso(value.expectedFrom);
   const expectedTo = nullableIso(value.expectedTo);
   const expectedLabel = value.expectedLabel === null || value.expectedLabel === undefined ? null : text(value.expectedLabel, 140);
+  const languageGroup = optionalLanguageGroup(value.languageGroup);
+  const setKey = optionalSetKey(value.setKey);
 
   if (!Number.isInteger(operatorIssue) || operatorIssue <= 0) return null;
   if (!Number.isInteger(branchCount) || branchCount < 1 || branchCount > 100) return null;
   if (!stage || !title || !body || !retailerId || !retailerName || !productTitle) return null;
+  if (languageGroup === null || setKey === undefined) return null;
 
   if (testOnly) {
     if (eventId !== `local-radar-operator-test:${operatorIssue}`) return null;
@@ -77,6 +93,8 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
     expectedLabel,
     branchCount,
     operatorIssue,
+    languageGroup,
+    setKey,
   };
 }
 

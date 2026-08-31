@@ -1,5 +1,5 @@
 import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
-import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, isValidIanaTimezone, saveNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
+import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, isValidIanaTimezone, normalizeLifecycleMarkets, normalizeSelectedSetKeys, saveNotificationPreferences, type NotificationPreferences } from "@/lib/notification-preferences";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,17 +28,36 @@ export async function PATCH(request: Request) {
     if (!payload) return Response.json({ error: "Invalid preference payload." }, { status: 400 });
     const timezone = typeof payload.timezone === "string" && payload.timezone.trim() ? payload.timezone.trim().slice(0, 80) : current.timezone;
     if (!isValidIanaTimezone(timezone)) return Response.json({ error: "Choose a valid timezone." }, { status: 400 });
+    if (payload.selectedSetKeys !== undefined && !Array.isArray(payload.selectedSetKeys)) {
+      return Response.json({ error: "Selected sets must be an array." }, { status: 400 });
+    }
+    if (payload.lifecycleMarkets !== undefined && (!payload.lifecycleMarkets || typeof payload.lifecycleMarkets !== "object" || Array.isArray(payload.lifecycleMarkets))) {
+      return Response.json({ error: "Lifecycle market preferences must be an object." }, { status: 400 });
+    }
+    const selectedSetKeys = payload.selectedSetKeys === undefined ? current.selectedSetKeys : normalizeSelectedSetKeys(payload.selectedSetKeys);
+    if (Array.isArray(payload.selectedSetKeys) && selectedSetKeys.length !== new Set(payload.selectedSetKeys).size) {
+      return Response.json({ error: "One or more selected set keys are invalid." }, { status: 400 });
+    }
+    const lifecycleMarkets = payload.lifecycleMarkets === undefined
+      ? current.lifecycleMarkets
+      : normalizeLifecycleMarkets(payload.lifecycleMarkets, current.lifecycleMarkets);
     const next: NotificationPreferences = {
       whisper: boolean(payload.whisper, current.whisper), echo: boolean(payload.echo, current.echo), manifested: boolean(payload.manifested, current.manifested), vanished: boolean(payload.vanished, current.vanished),
       priceChange: boolean(payload.priceChange, current.priceChange), fateMatch: boolean(payload.fateMatch, current.fateMatch),
       sealedTcg: boolean(payload.sealedTcg, current.sealedTcg), singleCards: boolean(payload.singleCards, current.singleCards),
       accessories: boolean(payload.accessories, current.accessories), merchandise: boolean(payload.merchandise, current.merchandise),
       unknownProducts: boolean(payload.unknownProducts, current.unknownProducts),
+      english: boolean(payload.english, current.english), japanese: boolean(payload.japanese, current.japanese), korean: boolean(payload.korean, current.korean),
+      simplifiedChinese: boolean(payload.simplifiedChinese, current.simplifiedChinese), traditionalChinese: boolean(payload.traditionalChinese, current.traditionalChinese),
+      otherLanguages: boolean(payload.otherLanguages, current.otherLanguages), unknownLanguage: boolean(payload.unknownLanguage, current.unknownLanguage),
+      lifecycleMarkets,
+      allSets: boolean(payload.allSets, current.allSets), selectedSetKeys, unknownSets: boolean(payload.unknownSets, current.unknownSets),
       web: boolean(payload.web, current.web), push: boolean(payload.push, current.push), discord: boolean(payload.discord, current.discord),
       quietHours: boolean(payload.quietHours, current.quietHours), quietStart: time(payload.quietStart), quietEnd: time(payload.quietEnd), timezone,
       updatedAt: Math.floor(Date.now() / 1000),
     };
     if (next.quietHours && (!next.quietStart || !next.quietEnd)) return Response.json({ error: "Quiet hours require a valid start and end time." }, { status: 400 });
+    if (!next.allSets && !next.selectedSetKeys.length && !next.unknownSets) return Response.json({ error: "Choose at least one set or keep unknown sets enabled." }, { status: 400 });
     const saved = await saveNotificationPreferences(snapshot.account.id, next);
     return Response.json({ preferences: saved }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

@@ -17,6 +17,6 @@ test("rich Cloud alert reads can be scoped by lifecycle before Cloud LIMIT", () 
 test("mobile gateway passes a validated lifecycle state into the canonical Cloud read", () => {
   assert.match(mobileRoute, /lifecycleStates = new Set<CloudLifecycleState>/);
   assert.match(mobileRoute, /requestedStateRaw/);
-  assert.match(mobileRoute, /listCanonicalAlerts\(\{ id: requestedId, state: requestedState, limit: retrievalLimit \}\)/);
+  assert.match(mobileRoute, /listCanonicalAlertWindow\(\{ id: requestedId, state: requestedState, limitPerStage: retrievalLimit \}\)/);
   assert.match(mobileRoute, /one lifecycle burst cannot starve another/);
 });

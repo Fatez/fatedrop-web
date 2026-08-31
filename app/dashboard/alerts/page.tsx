@@ -7,11 +7,11 @@ import { CanonicalAlertSignalPack } from "@/components/canonical-alert-signal-pa
 import { DashboardPageShell } from "@/components/dashboard-page-shell";
 import { StartMembershipButton } from "@/components/membership-actions";
 import { getCurrentSnapshot } from "@/lib/auth";
-import { listCanonicalAlerts, type CanonicalAlert, type CanonicalSignalStage } from "@/lib/canonical-alerts";
-import { listCanonicalAlertPresentations, referenceLabel, type CanonicalAlertPresentation } from "@/lib/canonical-alert-presentation";
+import { listCanonicalAlertWindow, type CanonicalAlert, type CanonicalSignalStage } from "@/lib/canonical-alerts";
+import { referenceLabel, type CanonicalAlertPresentation } from "@/lib/canonical-alert-presentation";
 import { getCanonicalSignalTrend } from "@/lib/canonical-alert-trends";
-import { activityLabel, buildDashboardData, moneyFromPence, relativeTime, signalCauseLabel } from "@/lib/dashboard";
-import type { NetworkSignal, SignalKind } from "@/lib/dashboard-storage";
+import { activityLabel, currentEpochSeconds, moneyFromPence, relativeTime, signalCauseLabelFromKind } from "@/lib/dashboard";
+import { listDashboardActivity, type SignalKind } from "@/lib/dashboard-storage";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
 import { hasPremiumAccess, membershipLabel } from "@/lib/membership";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
@@ -35,6 +35,10 @@ const alertStageMeta = [
 const causeOptions: readonly [SignalKind, string][] = [
   ["catalogue_new", "Catalogue new"],
   ["catalogue_state_change", "Catalogue change"],
+  ["catalogue_price_change", "Price change"],
+  ["inventory_quantity_change", "Inventory metadata"],
+  ["product_evidence_change", "Product evidence"],
+  ["stock_watch_refresh", "Stock watch refresh"],
   ["price_change", "Price change"],
   ["launch_date_change", "Launch change"],
   ["queue", "Queue"],
@@ -96,11 +100,9 @@ function primaryActionLabel(stage: CanonicalSignalStage) {
   return "INSPECT ↗";
 }
 
-function causeFor(alert: CanonicalAlert, exactSignals: Map<string, NetworkSignal>) {
-  const signal = exactSignals.get(alert.id);
-  const label = signal ? signalCauseLabel(signal) : null;
-  const kind = signal?.kind && signal.kind !== signal.state ? signal.kind : "lifecycle_unspecified";
-  return { key: kind as SignalKind, label: label ?? "Cause unclassified" };
+function causeFor(alert: CanonicalAlert) {
+  const kind = causeOptions.some(([key]) => key === alert.signalKind) ? alert.signalKind as SignalKind : "lifecycle_unspecified";
+  return { key: kind, label: signalCauseLabelFromKind(alert.signalKind) ?? "Cause unclassified" };
 }
 
 function filterHref(input: { stage?: string; cause?: string; q?: string }) {
@@ -118,32 +120,30 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   const params = await searchParams;
   const premium = hasPremiumAccess(snapshot.membership);
   const plan = membershipLabel(snapshot.membership);
-  const data = await buildDashboardData(snapshot);
+  const generatedAt = currentEpochSeconds();
   const stage = lifecycle.includes((params.stage ?? "").toUpperCase() as FilterStage) ? (params.stage ?? "").toUpperCase() as FilterStage : null;
   const cause = causeOptions.some(([key]) => key === params.cause) ? params.cause as SignalKind : null;
   const q = (params.q ?? "").trim().slice(0, 120);
 
   let alerts: CanonicalAlert[] = [];
-  let alertPresentations = new Map<string, CanonicalAlertPresentation>();
+  let personalHistory: Awaited<ReturnType<typeof listDashboardActivity>> = [];
   let fateMatchWatches: Awaited<ReturnType<typeof listUserFateMatches>> = [];
   let alertTrend: Awaited<ReturnType<typeof getCanonicalSignalTrend>> | null = null;
   try {
-    const [rawAlerts, preferences, presentations] = await Promise.all([
-      listCanonicalAlerts({ limit: 100 }),
+    const [rawAlerts, preferences] = await Promise.all([
+      listCanonicalAlertWindow({ limitPerStage: 100 }),
       getNotificationPreferences(snapshot.account.id).catch(() => DEFAULT_NOTIFICATION_PREFERENCES),
-      listCanonicalAlertPresentations({ limit: 100 }).catch(() => new Map<string, CanonicalAlertPresentation>()),
     ]);
     alerts = rawAlerts.filter((alert) => notificationPreferencesAllowAlert(alert, preferences));
-    alertPresentations = presentations;
   } catch { alerts = []; }
   try { fateMatchWatches = await listUserFateMatches(snapshot.account.id); } catch { fateMatchWatches = []; }
   try { alertTrend = await getCanonicalSignalTrend(7); } catch { alertTrend = null; }
+  try { personalHistory = await listDashboardActivity(snapshot.account.id, 6); } catch { personalHistory = []; }
 
-  const exactSignals = new Map((data.network?.recentSignals ?? []).map((signal) => [signal.id, signal]));
   const stageCounts = Object.fromEntries(lifecycle.map((key) => [key, alerts.filter((alert) => alert.fateStage === key).length])) as Record<FilterStage, number>;
   const filtered = alerts.filter((alert) => {
     if (stage && alert.fateStage !== stage) return false;
-    const exactCause = causeFor(alert, exactSignals);
+    const exactCause = causeFor(alert);
     if (cause && exactCause.key !== cause) return false;
     if (q) {
       const haystack = `${alert.title} ${alert.retailer} ${alert.message}`.toLowerCase();
@@ -153,7 +153,6 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   });
 
   const activeFateMatchWatches = fateMatchWatches.filter((item) => item.enabled);
-  const personalHistory = data.personal.recent;
   const trialEligible = !snapshot.membership.stripeCustomerId && !snapshot.membership.trialStartedAt;
   const hasOpenSubscription = Boolean(snapshot.membership.stripeSubscriptionId && snapshot.membership.status !== "canceled");
 
@@ -193,15 +192,15 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
       <section className="fd-ledger-card fd-dash-card">
         <header><div><span>SIGNAL LEDGER</span><h2>{filtered.length} record{filtered.length === 1 ? "" : "s"} in this view</h2></div><small>{plan} access · newest first</small></header>
         {filtered.length ? <div className="fd-ledger-list">{filtered.map((alert) => {
-          const exactCause = causeFor(alert, exactSignals);
+          const exactCause = causeFor(alert);
           const stageClass = alert.fateStage.toLowerCase();
-          const presentation = alertPresentations.get(alert.id) ?? null;
+          const presentation = alert.presentation;
           const context = priceContext(alert, presentation);
           return <article className={`fd-ledger-row ${stageClass}`} key={alert.id}>
-            <div className="fd-ledger-state"><i/><b>{alert.fateStage}</b><em>{exactCause.label}</em><small>{relativeTime(alertTime(alert), data.generatedAt)}</small></div>
+            <div className="fd-ledger-state"><i/><b>{alert.fateStage}</b><em>{exactCause.label}</em><small>{relativeTime(alertTime(alert), generatedAt)}</small></div>
             <div className="fd-ledger-product"><small>{premium ? alert.retailer : "Connected retailer"}</small><strong>{premium ? alert.title : "Premium signal detail"}</strong><p>{premium ? alert.message : alert.fateStage === "WHISPER" ? "Product or catalogue movement detected." : alert.fateStage === "ECHO" ? "Retailer preparation or readiness changed." : alert.fateStage === "MANIFESTED" ? "Confirmed purchasable availability is live." : "Previously confirmed availability is gone."}</p>{alert.fateStage === "VANISHED" && observedDurationLabel(alert.observedDurationSeconds) ? <em className="observed">OBSERVED LIVE · {observedDurationLabel(alert.observedDurationSeconds)}</em> : null}{premium && context ? <em>{context}</em> : null}<em className="verdict">{verdict(alert)}</em></div>
             <div className="fd-ledger-actions">{premium ? <a className="primary" href={alert.productUrl} target="_blank" rel="noreferrer">{primaryActionLabel(alert.fateStage)}</a> : <Link className="primary" href="/dashboard/membership">UNLOCK →</Link>}<Link href={`/dashboard/fatefind?q=${encodeURIComponent(alert.preparedLinks.compareQuery)}`}>FATEFIND</Link><Link href={`/dashboard/watchlist?q=${encodeURIComponent(alert.preparedLinks.fateFindQuery)}`}>FATEMATCH</Link></div>
-            {premium ? <CanonicalAlertSignalPack alert={alert} now={data.generatedAt} presentation={presentation}/> : null}
+            {premium ? <CanonicalAlertSignalPack alert={alert} now={generatedAt} presentation={presentation}/> : null}
           </article>;
         })}</div> : <div className="fd-dashboard-empty"><strong>No signals match this view.</strong><span>Clear a filter or wait for new evidence. FateDrop does not create filler activity.</span></div>}
       </section>
@@ -211,7 +210,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         <section className="fd-dash-card fd-ledger-delivery"><header><div><span>WHERE ALERTS REACH YOU</span><h2>One preference record.</h2></div><Link href="/dashboard/notifications">Edit →</Link></header><p>Website, app and Discord consume the same lifecycle preferences only when that channel is actually configured and entitled. An unavailable channel is never reported as delivered.</p><div><span><b>WEB</b><small>Available</small></span><span><b>APP PUSH</b><small>Controlled validation</small></span><span><b>DISCORD</b><small>Configuration dependent</small></span></div></section>
       </div>
 
-      <section className="fd-dash-card fd-ledger-personal"><header><div><span>YOUR PERSONAL HISTORY</span><h2>What FateDrop has recorded for your account.</h2></div><small>{personalHistory.length} recent</small></header>{personalHistory.length ? <div className="fd-dashboard-list">{personalHistory.map((event) => <article key={event.id}><span className="fd-store-thumb">◇</span><div><strong>{event.title || activityLabel(event)}</strong><small>{event.subtitle || event.retailer || activityLabel(event)}</small></div><aside>{event.amountPence ? moneyFromPence(event.amountPence) : activityLabel(event).toUpperCase()}<small>{relativeTime(event.occurredAt, data.generatedAt)}</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>No personal events yet.</strong><span>The network ledger above can still be active; this section only records events tied to your account.</span></div>}</section>
+      <section className="fd-dash-card fd-ledger-personal"><header><div><span>YOUR PERSONAL HISTORY</span><h2>What FateDrop has recorded for your account.</h2></div><small>{personalHistory.length} recent</small></header>{personalHistory.length ? <div className="fd-dashboard-list">{personalHistory.map((event) => <article key={event.id}><span className="fd-store-thumb">◇</span><div><strong>{event.title || activityLabel(event)}</strong><small>{event.subtitle || event.retailer || activityLabel(event)}</small></div><aside>{event.amountPence ? moneyFromPence(event.amountPence) : activityLabel(event).toUpperCase()}<small>{relativeTime(event.occurredAt, generatedAt)}</small></aside></article>)}</div> : <div className="fd-dashboard-empty"><strong>No personal events yet.</strong><span>The network ledger above can still be active; this section only records events tied to your account.</span></div>}</section>
     </div>
 
     <style>{`
