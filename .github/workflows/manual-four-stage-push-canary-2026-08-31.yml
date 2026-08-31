@@ -48,7 +48,7 @@ jobs:
           printf 'FATEDROP_PUSH_CRON_SECRET=%s\n' "$canary_secret" >> "$GITHUB_ENV"
           unset canary_secret
 
-      - name: Send Whisper Echo Manifested Vanished production canaries
+      - name: Diagnose Whisper Echo Manifested production canaries
         id: send
         shell: bash
         continue-on-error: true
@@ -56,39 +56,38 @@ jobs:
           set -uo pipefail
           WEB="https://fatedrop.co.uk"
           : > /tmp/fatedrop-four-stage-results.md
-          echo "Production four-stage push canary run: $GITHUB_RUN_ID" >> /tmp/fatedrop-four-stage-results.md
+          echo "Production three-stage diagnostic run: $GITHUB_RUN_ID" >> /tmp/fatedrop-four-stage-results.md
           echo >> /tmp/fatedrop-four-stage-results.md
           overall=0
-          for kind in whisper echo manifested vanished; do
+          for kind in whisper echo manifested; do
             output="/tmp/${kind}.json"
-            if curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            status="$(curl --silent --show-error --retry 3 --retry-delay 2 \
               -X POST \
               -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
               -H "Accept: application/json" \
               -H "Content-Type: application/json" \
               --data "{\"kind\":\"$kind\"}" \
               "$WEB/api/dashboard/push-canary" \
-              -o "$output"; then
-              if node - "$kind" "$output" <<'NODE' >> /tmp/fatedrop-four-stage-results.md
+              -o "$output" \
+              -w '%{http_code}' || echo 000)"
+            if node - "$kind" "$status" "$output" <<'NODE' >> /tmp/fatedrop-four-stage-results.md
           const fs = require('fs');
-          const [kind, file] = process.argv.slice(2);
-          const result = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const [kind, status, file] = process.argv.slice(2);
+          let result = {};
+          try { result = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
           const outcome = Array.isArray(result.outcomes) ? result.outcomes[0] : null;
-          const ok = result.accepted === true && outcome?.kind === kind && outcome?.state === 'sent' && Boolean(outcome?.providerMessageId);
-          console.log(`- ${kind.toUpperCase()}: ${ok ? 'PROVIDER ACCEPTED' : 'FAILED'} | state=${outcome?.state ?? 'missing'} | providerMessageId=${outcome?.providerMessageId ?? 'none'} | deliveryResult=${outcome?.deliveryResult ?? 'none'} | reason=${result.reason ?? 'none'}`);
+          const ok = status === '200' && result.accepted === true && outcome?.kind === kind && outcome?.state === 'sent' && Boolean(outcome?.providerMessageId);
+          console.log(`- ${kind.toUpperCase()}: ${ok ? 'PROVIDER ACCEPTED' : 'BLOCKED'} | http=${status} | reason=${result.reason ?? result.error ?? 'unknown'} | state=${outcome?.state ?? 'missing'} | providerMessageId=${outcome?.providerMessageId ?? 'none'} | deliveryResult=${outcome?.deliveryResult ?? 'none'} | eligibleUsers=${result.eligibleUsers ?? 'n/a'} | eligibleEndpoints=${result.eligibleEndpoints ?? 'n/a'}`);
           if (!ok) process.exit(1);
           NODE
-              then
-                :
-              else
-                overall=1
-              fi
+            then
+              :
             else
-              echo "- ${kind^^}: HTTP/dispatch failure" >> /tmp/fatedrop-four-stage-results.md
               overall=1
             fi
           done
           echo >> /tmp/fatedrop-four-stage-results.md
+          echo "Vanished was already provider-accepted in prior run 33370355120." >> /tmp/fatedrop-four-stage-results.md
           echo "Canonical stock/history mutation: NONE (push canary only)." >> /tmp/fatedrop-four-stage-results.md
           exit "$overall"
 
@@ -97,9 +96,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          title="[FATEDROP PUSH QA] Four-stage canary run $GITHUB_RUN_ID"
+          title="[FATEDROP PUSH QA] Three-stage diagnostic run $GITHUB_RUN_ID"
           if [ ! -s /tmp/fatedrop-four-stage-results.md ]; then
-            printf 'Four-stage canary did not reach the result-writing step.\n' > /tmp/fatedrop-four-stage-results.md
+            printf 'Three-stage diagnostic did not reach the result-writing step.\n' > /tmp/fatedrop-four-stage-results.md
           fi
           gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file /tmp/fatedrop-four-stage-results.md
 
