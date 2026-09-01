@@ -72,16 +72,26 @@ jobs:
         run: |
           set -euo pipefail
           WEB="https://fatedrop.co.uk"
-          checkpoint_status="$(curl --silent --show-error --retry 5 --retry-delay 3 \
-            --output /tmp/rrp-recovery-checkpoint.json \
-            --write-out '%{http_code}' \
-            -X POST \
-            -H "Authorization: Bearer $FATEDROP_RRP_AUDIT_SECRET" \
-            -H "Accept: application/json" \
-            "$WEB/api/dashboard/rrp-recovery-checkpoint")"
+          checkpoint_status=''
+          for attempt in 1 2 3 4 5 6; do
+            checkpoint_status="$(curl --silent --show-error \
+              --output /tmp/rrp-recovery-checkpoint.json \
+              --write-out '%{http_code}' \
+              -X POST \
+              -H "Authorization: Bearer $FATEDROP_RRP_AUDIT_SECRET" \
+              -H "Accept: application/json" \
+              "$WEB/api/dashboard/rrp-recovery-checkpoint")"
+            if [ "$checkpoint_status" = "200" ]; then
+              break
+            fi
+            if [ "$checkpoint_status" != "401" ]; then
+              break
+            fi
+            echo "RRP audit secret not active for checkpoint yet (attempt $attempt/6); retrying."
+            sleep 3
+          done
           test "$checkpoint_status" = "200" || {
             echo "RRP recovery checkpoint returned HTTP $checkpoint_status"
-            cat /tmp/rrp-recovery-checkpoint.json
             exit 20
           }
 
@@ -119,12 +129,23 @@ jobs:
             exit 21
           }
 
-          detail_status="$(curl --silent --show-error --retry 5 --retry-delay 3 \
-            --output /tmp/rrp-audit-detail.json \
-            --write-out '%{http_code}' \
-            -H "Authorization: Bearer $FATEDROP_RRP_AUDIT_SECRET" \
-            -H "Accept: application/json" \
-            "$WEB/api/health/rrp-audit?detail=1")"
+          detail_status=''
+          for attempt in 1 2 3 4 5 6; do
+            detail_status="$(curl --silent --show-error \
+              --output /tmp/rrp-audit-detail.json \
+              --write-out '%{http_code}' \
+              -H "Authorization: Bearer $FATEDROP_RRP_AUDIT_SECRET" \
+              -H "Accept: application/json" \
+              "$WEB/api/health/rrp-audit?detail=1")"
+            if [ "$detail_status" = "200" ]; then
+              break
+            fi
+            if [ "$detail_status" != "401" ]; then
+              break
+            fi
+            echo "RRP audit secret not active for detail yet (attempt $attempt/6); retrying."
+            sleep 3
+          done
           test "$detail_status" = "200" || {
             echo "Protected RRP detail audit returned HTTP $detail_status"
             exit 22
