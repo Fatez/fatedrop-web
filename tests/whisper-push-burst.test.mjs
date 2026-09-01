@@ -31,6 +31,7 @@ test('large Whisper Echo and Vanished bursts collapse to one truthful feed summa
 test('canonical feed truth and manual Local Radar delivery remain separate from burst control', () => {
   assert.match(source, /event_type: alert\.fateStage\.toLowerCase\(\)/);
   assert.match(source, /dedupe_key: `push:\$\{alert\.id\}:\$\{recipient\.endpoint_id\}`/);
-  assert.match(source, /event_type: `local_radar_\$\{event\.stage\.toLowerCase\(\)\}`/);
+  assert.match(source, /event\.route === "alerts" \? `operator_readiness_/);
+  assert.match(source, /: `local_radar_\$\{event\.stage\.toLowerCase\(\)\}`/);
   assert.match(source, /dispatchLocalRadarOperatorPush/);
 });

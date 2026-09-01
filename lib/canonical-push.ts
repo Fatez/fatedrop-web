@@ -69,7 +69,12 @@ type ExpoTicket = {
 
 export type LocalRadarOperatorPush = {
   eventId: string;
+  tcgCode: string;
   stage: "WHISPER" | "ECHO";
+  route: "local-radar" | "alerts";
+  presentationType: "test_only" | "readiness_echo";
+  availabilityScope: "physical_branch" | "online_retailer_readiness";
+  availabilityVerified: false;
   title: string;
   body: string;
   retailerId: string;
@@ -80,6 +85,8 @@ export type LocalRadarOperatorPush = {
   expectedLabel: string | null;
   branchCount: number;
   operatorIssue: number;
+  sourceUrl?: string | null;
+  evidenceObservedAt?: string | null;
   languageGroup?: CanonicalAlertFacets["languageGroup"];
   setKey?: string | null;
 };
@@ -114,14 +121,19 @@ function stageEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
       : alert.fateStage === "MANIFESTED" ? recipient.manifested_enabled
         : alert.fateStage === "VANISHED" ? recipient.vanished_enabled : false;
   if(!globallyEnabled)return false;
+  return tcgStagePreferenceEnabled(alert.tcgCode, alert.fateStage, recipient);
+}
+
+function tcgStagePreferenceEnabled(tcgCode: string, stage: CanonicalAlert["fateStage"], recipient: RecipientRow) {
+  if (stage === "NETWORK") return false;
   let raw=recipient.tcg_alert_preferences;
   if(typeof raw==="string"){try{raw=JSON.parse(raw);}catch{return false;}}
   if(!raw||typeof raw!=="object"||Array.isArray(raw))return true;
-  const entry=(raw as Record<string,unknown>)[alert.tcgCode];
+  const entry=(raw as Record<string,unknown>)[tcgCode];
   if(!entry||typeof entry!=="object"||Array.isArray(entry))return true;
   const preference=entry as Record<string,unknown>;
   if(preference.mode!=="custom")return true;
-  return preference[alert.fateStage.toLowerCase()]!==false;
+  return preference[stage.toLowerCase()]!==false;
 }
 
 function tcgEnabled(tcgCode:string,recipient:RecipientRow){return selectedSetKeys(recipient.selected_tcg_codes).has(tcgCode);}
@@ -136,9 +148,8 @@ function manifestedEpisodeStillActionable(alert: CanonicalAlert) {
 
 function operatorStageEnabled(event: LocalRadarOperatorPush, recipient: RecipientRow) {
   if (!recipient.push_enabled) return false;
-  if (event.stage === "WHISPER") return recipient.whisper_enabled;
-  if (event.stage === "ECHO") return recipient.echo_enabled;
-  return false;
+  const globallyEnabled = event.stage === "WHISPER" ? recipient.whisper_enabled : recipient.echo_enabled;
+  return globallyEnabled && tcgStagePreferenceEnabled(event.tcgCode, event.stage, recipient);
 }
 
 function productEnabled(alert: CanonicalAlert, recipient: RecipientRow) {
@@ -464,21 +475,25 @@ async function enqueueLocalRadarOperatorPush(event: LocalRadarOperatorPush) {
 
   for (const recipient of recipients) {
     const operatorFacets = { languageGroup: event.languageGroup ?? "unknown", setKey: event.setKey ?? null };
-    if (!operatorStageEnabled(event, recipient) || !facetEnabled(operatorFacets, recipient) || inQuietHours(recipient, nowDate)) continue;
+    if (!tcgEnabled(event.tcgCode, recipient) || !operatorStageEnabled(event, recipient) || !facetEnabled(operatorFacets, recipient) || inQuietHours(recipient, nowDate)) continue;
     queueRows.push({
       id: randomUUID(),
       dedupe_key: `local-radar:${event.eventId}:${recipient.endpoint_id}`,
       user_id: recipient.user_id,
-      event_type: `local_radar_${event.stage.toLowerCase()}`,
+      event_type: event.route === "alerts" ? `operator_readiness_${event.stage.toLowerCase()}` : `local_radar_${event.stage.toLowerCase()}`,
       event_id: event.eventId,
       channel: "push",
       title: event.title,
       body: event.body,
       url: null,
       payload_json: {
-        route: "local-radar",
+        route: event.route,
         localIntelId: event.eventId,
+        presentationType: event.presentationType,
+        availabilityScope: event.availabilityScope,
+        availabilityVerified: event.availabilityVerified,
         stage: event.stage,
+        tcgCode: event.tcgCode,
         retailerId: event.retailerId,
         retailerName: event.retailerName,
         productTitle: event.productTitle,
@@ -487,6 +502,8 @@ async function enqueueLocalRadarOperatorPush(event: LocalRadarOperatorPush) {
         expectedLabel: event.expectedLabel,
         branchCount: event.branchCount,
         operatorIssue: event.operatorIssue,
+        sourceUrl: event.sourceUrl ?? null,
+        evidenceObservedAt: event.evidenceObservedAt ?? null,
         languageGroup: operatorFacets.languageGroup,
         setKey: operatorFacets.setKey,
         endpointId: recipient.endpoint_id,
