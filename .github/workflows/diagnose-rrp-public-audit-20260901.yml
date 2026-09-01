@@ -1,0 +1,51 @@
+name: Diagnose FateDrop Public RRP Audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/diagnose-rrp-public-audit-20260901.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Read current production public RRP audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://fatedrop.co.uk/api/health/rrp-audit'
+          status=''
+          for attempt in 1 2 3 4 5; do
+            status="$(curl --silent --show-error --connect-timeout 10 --max-time 20 \
+              --output response.json --write-out '%{http_code}' \
+              -H 'Accept: application/json' "$url" || true)"
+            echo "attempt=$attempt status=$status"
+            if [ "$status" = '200' ]; then
+              break
+            fi
+            sleep 5
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('response.json')
+          if not p.exists():
+              raise SystemExit('No production response body was returned')
+          try:
+              data = json.loads(p.read_text(encoding='utf-8'))
+          except Exception as exc:
+              raise SystemExit(f'Production response was not JSON: {exc}')
+          safe = {
+              'ok': data.get('ok'),
+              'error': data.get('error'),
+              'auditedAt': data.get('auditedAt'),
+              'totals': data.get('totals'),
+              'byTcg': data.get('byTcg'),
+          }
+          print(json.dumps(safe, sort_keys=True))
+          PY
+          test "$status" = '200' || exit 21
