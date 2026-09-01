@@ -30,7 +30,7 @@ test("operator push uses the existing canonical outbox and Expo sender", () => {
 
 test("operator notification is deduped per exact event and endpoint and routes into Local Radar", () => {
   assert.match(push, /dedupe_key: `local-radar:\$\{event\.eventId\}:\$\{recipient\.endpoint_id\}`/);
-  assert.match(push, /route: "local-radar"/);
+  assert.match(push, /route: event\.route/);
   assert.match(push, /localIntelId: event\.eventId/);
   assert.match(push, /branchCount: event\.branchCount/);
   assert.match(push, /operatorIssue: event\.operatorIssue/);
@@ -38,8 +38,10 @@ test("operator notification is deduped per exact event and endpoint and routes i
 
 test("operator delivery keeps membership, lifecycle preference and quiet-hours gates", () => {
   assert.match(push, /m\.tier IN \('plus','pro'\)/);
+  assert.match(push, /tcgEnabled\(event\.tcgCode, recipient\)/);
   assert.match(push, /event\.stage === "WHISPER".*recipient\.whisper_enabled/s);
-  assert.match(push, /event\.stage === "ECHO".*recipient\.echo_enabled/s);
+  assert.match(push, /recipient\.echo_enabled/);
+  assert.match(push, /tcgStagePreferenceEnabled\(event\.tcgCode, event\.stage, recipient\)/);
   assert.match(push, /inQuietHours\(recipient, nowDate\)/);
 });
 
@@ -54,9 +56,20 @@ test("operator dispatch inherits stale-sending lease recovery before claiming wo
   assert.match(push, /const SENDING_LEASE_SECONDS = 5 \* 60/);
 });
 
-test("Web validates descriptive Local Radar copy rather than accepting arbitrary push text", () => {
-  assert.match(route, /FateDrop · Local Radar · Incoming stock/);
-  assert.match(route, /Check Local Radar to see if a participating store is near you\./);
+test("Web validates online readiness Echo copy and rejects physical national interruption", () => {
+  assert.match(route, /FateDrop · Echo · Be ready/);
+  assert.match(route, /This is readiness evidence, not confirmed stock\./);
   assert.match(route, /eventId !== `local-radar-operator:\$\{operatorIssue\}`/);
-  assert.match(route, /branchCount < 1 \|\| branchCount > 100/);
+  assert.match(route, /availabilityScope === "online_retailer_readiness"/);
+  assert.match(route, /Physical Big Fate intelligence is consumed from Cloud through radius-filtered/);
+  assert.doesNotMatch(route, /FateDrop · Local Radar · Incoming stock/);
+});
+
+test("readiness Echo preserves alert routing and advisory provenance in the canonical outbox", () => {
+  assert.match(push, /event\.route === "alerts" \? `operator_readiness_/);
+  assert.match(push, /presentationType: event\.presentationType/);
+  assert.match(push, /availabilityScope: event\.availabilityScope/);
+  assert.match(push, /availabilityVerified: event\.availabilityVerified/);
+  assert.match(push, /tcgCode: event\.tcgCode/);
+  assert.match(push, /sourceUrl: event\.sourceUrl \?\? null/);
 });

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { dispatchLocalRadarOperatorPush, type LocalRadarOperatorPush } from "@/lib/canonical-push";
 import { readPushProductionHealth } from "@/lib/push-dispatch-health";
+import { isTcgCode, TCG_REGISTRY } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,24 @@ function optionalSetKey(value: unknown) {
   return clean && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(clean) ? clean : undefined;
 }
 
+function optionalHttpsUrl(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const clean = text(value, 700);
+  if (!clean) return undefined;
+  try {
+    const parsed = new URL(clean);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password || !parsed.hostname) return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function activeTcgCode(value: unknown) {
+  if (!isTcgCode(value)) return null;
+  return TCG_REGISTRY.some((entry) => entry.code === value && entry.live) ? value : null;
+}
+
 function authorized(request: Request) {
   const secret = process.env.FATEDROP_METRICS_INGEST_SECRET;
   const authorization = request.headers.get("authorization") || "";
@@ -48,6 +67,7 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
   const operatorIssue = Number(value.operatorIssue);
   const branchCount = Number(value.branchCount);
   const eventId = text(value.eventId, 180);
+  const tcgCode = activeTcgCode(value.tcgCode);
   const stage = value.stage === "WHISPER" || value.stage === "ECHO" ? value.stage : null;
   const title = text(value.title, 180);
   const body = text(value.body, 600);
@@ -57,23 +77,40 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
   const expectedFrom = nullableIso(value.expectedFrom);
   const expectedTo = nullableIso(value.expectedTo);
   const expectedLabel = value.expectedLabel === null || value.expectedLabel === undefined ? null : text(value.expectedLabel, 140);
+  const availabilityScope = value.availabilityScope === "physical_branch" || value.availabilityScope === "online_retailer_readiness"
+    ? value.availabilityScope
+    : null;
+  const route = value.route === "local-radar" || value.route === "alerts" ? value.route : null;
+  const presentationType = value.presentationType === "readiness_echo" ? "readiness_echo" : null;
+  const availabilityVerified = value.availabilityVerified;
+  const sourceUrl = optionalHttpsUrl(value.sourceUrl);
+  const evidenceObservedAt = nullableIso(value.evidenceObservedAt);
   const languageGroup = optionalLanguageGroup(value.languageGroup);
   const setKey = optionalSetKey(value.setKey);
 
   if (!Number.isInteger(operatorIssue) || operatorIssue <= 0) return null;
-  if (!Number.isInteger(branchCount) || branchCount < 1 || branchCount > 100) return null;
-  if (!stage || !title || !body || !retailerId || !retailerName || !productTitle) return null;
+  if (!tcgCode || !stage || !title || !body || !retailerId || !retailerName || !productTitle) return null;
+  if (!availabilityScope || !route || availabilityVerified !== false) return null;
+  if (sourceUrl === undefined || evidenceObservedAt === undefined) return null;
   if (languageGroup === null || setKey === undefined) return null;
 
   if (testOnly) {
+    if (availabilityScope !== "physical_branch" || route !== "local-radar") return null;
+    if (!Number.isInteger(branchCount) || branchCount < 1 || branchCount > 100) return null;
     if (eventId !== `local-radar-operator-test:${operatorIssue}`) return null;
     if (title !== "FateDrop · Local Radar · TEST ONLY") return null;
     if (!body.startsWith("TEST ONLY · Operator transport verification matched ")) return null;
     if (!body.endsWith("No stock or Local Radar history has been created.")) return null;
-  } else {
+  } else if (availabilityScope === "online_retailer_readiness") {
     if (eventId !== `local-radar-operator:${operatorIssue}`) return null;
-    if (title !== "FateDrop · Local Radar · Incoming stock") return null;
-    if (!body.endsWith("Check Local Radar to see if a participating store is near you.")) return null;
+    if (stage !== "ECHO" || route !== "alerts" || presentationType !== "readiness_echo") return null;
+    if (Number.isFinite(branchCount) && branchCount !== 0) return null;
+    if (title !== "FateDrop · Echo · Be ready") return null;
+    if (!body.endsWith("This is readiness evidence, not confirmed stock.")) return null;
+  } else {
+    // Physical Big Fate intelligence is consumed from Cloud through radius-filtered
+    // Local Radar. It must never enter this chain-wide interrupt endpoint.
+    return null;
   }
 
   if (expectedFrom === undefined || expectedTo === undefined) return null;
@@ -82,7 +119,12 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
 
   return {
     eventId,
+    tcgCode,
     stage,
+    route,
+    presentationType: testOnly ? "test_only" : "readiness_echo",
+    availabilityScope,
+    availabilityVerified: false,
     title,
     body,
     retailerId,
@@ -91,8 +133,10 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
     expectedFrom,
     expectedTo,
     expectedLabel,
-    branchCount,
+    branchCount: testOnly ? branchCount : 0,
     operatorIssue,
+    sourceUrl,
+    evidenceObservedAt,
     languageGroup,
     setKey,
   };
