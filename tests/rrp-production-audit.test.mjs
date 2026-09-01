@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const route = fs.readFileSync(new URL("../app/api/health/rrp-audit/route.ts", import.meta.url), "utf8");
+const workflow = fs.readFileSync(new URL("../.github/workflows/audit-rrp-production.yml", import.meta.url), "utf8");
 
 test("RRP production audit is read-only and keeps detailed candidates protected", () => {
   assert.match(route, /export async function GET\(request: Request\)/);
@@ -27,4 +28,14 @@ test("RRP audit defines verified reference independently from observed offer pri
   assert.match(route, /missing_rrp/);
   assert.match(route, /missing_source/);
   assert.match(route, /missing_verified_at/);
+});
+
+test("RRP production audit tolerates only the bounded 401 window after rotating the Cloudflare secret", () => {
+  assert.match(workflow, /for attempt in 1 2 3 4 5 6/);
+  assert.match(workflow, /\[ "\$detail_status" != "401" \]/);
+  assert.match(workflow, /RRP audit secret not active for detail yet/);
+  assert.match(workflow, /\[ "\$checkpoint_status" != "401" \]/);
+  assert.match(workflow, /RRP audit secret not active for checkpoint yet/);
+  assert.match(workflow, /sleep 3/);
+  assert.doesNotMatch(workflow, /retrying.*503/i);
 });
