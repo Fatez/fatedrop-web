@@ -5,6 +5,7 @@ import { listWishlist } from "@/lib/wishlist-storage";
 import { listUserFateMatches } from "@/lib/fate-match-storage";
 import { listHostedFateMatches } from "@/lib/hosted-fate-match-storage";
 import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences } from "@/lib/notification-preferences";
+import { getOperatorCapabilities, NO_OPERATOR_CAPABILITIES } from "@/lib/operator-capabilities";
 import { normalizeSelectedTcgCodes, normalizeTcgAlertPreferences } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
@@ -15,11 +16,12 @@ export async function GET(request: Request) {
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
   if (!betaAccessIsApproved(snapshot.betaAccess)) return betaAccessDeniedResponse(snapshot.betaAccess);
 
-  const [wishlistResult, fateFindResult, fateMatchResult, preferenceResult] = await Promise.allSettled([
+  const [wishlistResult, fateFindResult, fateMatchResult, preferenceResult, operatorCapabilityResult] = await Promise.allSettled([
     listWishlist(snapshot.account.id),
     listUserFateMatches(snapshot.account.id),
     listHostedFateMatches(snapshot.account.id),
     getNotificationPreferences(snapshot.account.id),
+    getOperatorCapabilities(snapshot.account.id),
   ]);
 
   const pendingMigrations: string[] = [];
@@ -32,6 +34,7 @@ export async function GET(request: Request) {
     contractVersion: 2,
     accessAllowed: true,
     betaAccess: snapshot.betaAccess,
+    operatorCapabilities: operatorCapabilityResult.status === "fulfilled" ? operatorCapabilityResult.value : NO_OPERATOR_CAPABILITIES,
     syncedAt: Math.floor(Date.now() / 1000),
     user: {
       id: snapshot.account.id,

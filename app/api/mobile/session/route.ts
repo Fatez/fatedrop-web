@@ -3,17 +3,20 @@ import { authRateLimitResponse, checkAuthRateLimit, isRequestTooLargeError, read
 import { bearerTokenFromRequest, endApiSession, getSnapshotForRequest, startApiSession, verifyLoginPassword } from "@/lib/auth";
 import { betaAccessIsApproved } from "@/lib/beta-access";
 import { capabilitiesForMembership, effectiveTier, membershipIsActive } from "@/lib/entitlements";
+import { getOperatorCapabilities } from "@/lib/operator-capabilities";
 import { normalizeSelectedTcgCodes, normalizeTcgAlertPreferences } from "@/lib/tcg-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnapshotForRequest>>>) {
+async function sessionPayload(snapshot: NonNullable<Awaited<ReturnType<typeof getSnapshotForRequest>>>) {
   const betaApproved = betaAccessIsApproved(snapshot.betaAccess);
+  const operatorCapabilities = await getOperatorCapabilities(snapshot.account.id);
   return {
     contractVersion: 2,
     accessAllowed: betaApproved,
     betaAccess: snapshot.betaAccess,
+    operatorCapabilities,
     user: {
       id: snapshot.account.id,
       fateId: snapshot.account.fateId,
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
       { allowPending: true },
     );
     if (!snapshot) throw new Error("SESSION_NOT_FOUND");
-    return Response.json({ sessionToken: session.token, expiresAt: session.expiresAt, ...sessionPayload(snapshot) }, { headers: { "cache-control": "private, no-store, max-age=0" } });
+    return Response.json({ sessionToken: session.token, expiresAt: session.expiresAt, ...await sessionPayload(snapshot) }, { headers: { "cache-control": "private, no-store, max-age=0" } });
   } catch (error) {
     if (isRequestTooLargeError(error)) return Response.json({ error: "Request is too large." }, { status: 413, headers: { "cache-control": "no-store" } });
     if (error instanceof SyntaxError) return Response.json({ error: "Invalid request." }, { status: 400, headers: { "cache-control": "no-store" } });
@@ -72,7 +75,7 @@ export async function GET(request: Request) {
   try {
     const snapshot = await getSnapshotForRequest(request, { allowPending: true });
     if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "no-store" } });
-    return Response.json(sessionPayload(snapshot), { headers: { "cache-control": "private, no-store, max-age=0" } });
+    return Response.json(await sessionPayload(snapshot), { headers: { "cache-control": "private, no-store, max-age=0" } });
   } catch (error) {
     if (error instanceof AccountStorageUnavailableError) return Response.json({ error: "Account storage is not configured yet." }, { status: 503 });
     return Response.json({ error: "FateDrop ID could not be loaded." }, { status: 500 });
