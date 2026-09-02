@@ -23,10 +23,13 @@ test("mobile pagination is stage-scoped and returns a cursor from the last deliv
   assert.doesNotMatch(mobileRoute, /offset=/);
 });
 
-test("read basis preserves the previous 100-per-lifecycle unread window with one lightweight App response", () => {
+test("read basis preserves the previous 100-per-lifecycle count and unread window with one lightweight App response", () => {
   assert.match(mobileRoute, /retrievalLimit = readBasis \? 100/);
   assert.match(mobileRoute, /listCanonicalAlertWindow/);
-  assert.match(mobileRoute, /alertReadBasis = eligibleAlerts\.map\(\(alert\) => \(\{ id: alert\.id, fateStage: alert\.fateStage, detectedAt: alert\.detectedAt \}\)\)/);
+  assert.match(mobileRoute, /alertReadBasis = eligibleAlerts\.map/);
+  assert.match(mobileRoute, /tcgCode: alert\.tcgCode/);
+  assert.match(mobileRoute, /fateStage: alert\.fateStage/);
+  assert.match(mobileRoute, /detectedAt: alert\.detectedAt/);
   assert.match(mobileRoute, /readBasis: true/);
   assert.doesNotMatch(mobileRoute, /readBasis[\s\S]{0,300}product:/);
 });

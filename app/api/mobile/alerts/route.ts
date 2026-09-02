@@ -102,7 +102,12 @@ export async function GET(request: Request) {
       .filter((alert) => notificationPreferencesAllowAlert(alert, preferences));
 
     if (readBasis) {
-      const alertReadBasis = eligibleAlerts.map((alert) => ({ id: alert.id, fateStage: alert.fateStage, detectedAt: alert.detectedAt }));
+      const alertReadBasis = eligibleAlerts.map((alert) => ({
+        id: alert.id,
+        tcgCode: alert.tcgCode,
+        fateStage: alert.fateStage,
+        detectedAt: alert.detectedAt,
+      }));
       return Response.json({ success: true, readBasis: true, count: alertReadBasis.length, alerts: alertReadBasis }, { headers: { "cache-control": "private, no-store" } });
     }
 
