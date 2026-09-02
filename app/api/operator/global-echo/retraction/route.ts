@@ -1,4 +1,4 @@
-import { getSnapshotForRequest } from "@/lib/auth";
+import { assertSameOrigin, getSnapshotForRequest } from "@/lib/auth";
 import { getOperatorCapabilities } from "@/lib/operator-capabilities";
 import { retractGlobalEchoInCloud } from "@/lib/operator-global-echo-retraction-cloud";
 import { cancelPendingGlobalEchoPushes } from "@/lib/operator-global-echo-retraction";
@@ -16,6 +16,15 @@ function cleanEventId(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "CROSS_ORIGIN") {
+      return Response.json({ error: "Request rejected." }, { status: 403, headers: { "cache-control": "private, no-store" } });
+    }
+    throw error;
+  }
+
   const snapshot = await getSnapshotForRequest(request, { allowPending: true });
   if (!snapshot) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "cache-control": "private, no-store" } });
 
