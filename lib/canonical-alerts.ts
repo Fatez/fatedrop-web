@@ -1,5 +1,4 @@
 import { getLiveCloudAlerts, type CloudAlertFacets, type CloudLifecycleState } from "@/lib/live-signals";
-import { projectGlobalEchoRetractions } from "@/lib/operator-global-echo-retraction";
 import type { ProductAlertClassification } from "@/lib/product-alert-intelligence";
 
 export type FatePriceVerdict = "LOWEST_KNOWN" | "BETTER_OFFER_FOUND" | "NO_FAIR_COMPARISON";
@@ -292,14 +291,13 @@ export async function listCanonicalAlerts({
     throw new Error("Canonical Cloud alert feed unavailable");
   }
   const alerts = response.alerts.filter(isCanonicalAlert);
-  const projected = await projectGlobalEchoRetractions(alerts, { requestedId: id ?? null });
   const current = currentOnly
-    ? projected.filter((alert) => alert.fateStage === "MANIFESTED"
+    ? alerts.filter((alert) => alert.fateStage === "MANIFESTED"
       && alert.liveWindow?.historyComplete === true
       && alert.liveWindow.vanishedAt === null
       && alert.liveWindow.lastConfirmedLiveAt !== null
       && alert.opportunity?.current !== false)
-    : projected;
+    : alerts;
   return current.slice(0, safeLimit);
 }
 

@@ -2,19 +2,16 @@ import { getOwnerRole, type OwnerRoleSnapshot } from "@/lib/owner-access";
 
 export type OperatorCapabilities = {
   canSendGlobalEcho: boolean;
-  canRetractGlobalEcho: boolean;
 };
 
 export const NO_OPERATOR_CAPABILITIES: OperatorCapabilities = Object.freeze({
   canSendGlobalEcho: false,
-  canRetractGlobalEcho: false,
 });
 
 export function operatorCapabilitiesFromOwnerRole(
   role: Pick<OwnerRoleSnapshot, "role"> | null | undefined,
 ): OperatorCapabilities {
-  const owner = role?.role === "owner";
-  return { canSendGlobalEcho: owner, canRetractGlobalEcho: owner };
+  return { canSendGlobalEcho: role?.role === "owner" };
 }
 
 export async function getOperatorCapabilities(userId: string): Promise<OperatorCapabilities> {

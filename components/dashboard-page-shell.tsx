@@ -8,13 +8,11 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { DashboardPageGuide } from "@/components/dashboard-page-guide";
 import { getCurrentSnapshot } from "@/lib/auth";
 import { membershipLabel } from "@/lib/membership";
-import { getOperatorCapabilities } from "@/lib/operator-capabilities";
 
 export async function DashboardPageShell({ title, eyebrow, children }: { title: string; eyebrow?: string; children: ReactNode }) {
   const snapshot = await getCurrentSnapshot();
   if (!snapshot) redirect(`/account/login?next=/dashboard`);
   const plan = membershipLabel(snapshot.membership);
-  const operatorCapabilities = await getOperatorCapabilities(snapshot.account.id);
 
   return <main className="fd-dashboard fd-collector-dashboard fd-reference-dashboard">
     <aside className="fd-ref-sidebar">
@@ -38,7 +36,6 @@ export async function DashboardPageShell({ title, eyebrow, children }: { title: 
           <span>⌕</span><input name="q" aria-label="Search cards, sets or retailers" placeholder="Search cards, sets or retailers…"/><kbd>⌘K</kbd>
         </form>
         <nav className="fd-ref-top-actions" aria-label="Dashboard quick actions">
-          {operatorCapabilities.canRetractGlobalEcho ? <Link href="/dashboard/operator-echoes" aria-label="Manage operator Global Echoes" title="Manage operator Global Echoes"><span>↺</span></Link> : null}
           <Link href="/dashboard/alerts" aria-label="Open alerts"><span>♧</span></Link>
           <Link href="/dashboard/wishlist" aria-label="Open wishlist"><span>☆</span></Link>
           <Link href="/dashboard/profile" className="fd-ref-profile">
