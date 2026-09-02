@@ -27,13 +27,13 @@ function cloudBaseUrl() {
   return (process.env.FATEDROP_SIGNAL_ENGINE_URL || DEFAULT_SIGNAL_ENGINE_URL).replace(/\/+$/, "");
 }
 
-function cloudSecret() {
-  return String(process.env.FATEDROP_METRICS_INGEST_SECRET || "").trim();
+function cloudBearerToken() {
+  return String(process.env.FATEDROP_SIGNAL_ENGINE_STATUS_TOKEN || "").trim();
 }
 
 async function internalPost<T>(pathname: string, body: unknown, timeoutMs = 8_000): Promise<{ ok: boolean; status: number; data: T | null }> {
-  const secret = cloudSecret();
-  if (!secret) return { ok: false, status: 503, data: null };
+  const token = cloudBearerToken();
+  if (!token) return { ok: false, status: 503, data: null };
   try {
     const response = await fetch(new URL(pathname, `${cloudBaseUrl()}/`), {
       method: "POST",
@@ -41,7 +41,7 @@ async function internalPost<T>(pathname: string, body: unknown, timeoutMs = 8_00
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        "x-fatedrop-secret": secret,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(Math.max(250, timeoutMs)),
@@ -54,7 +54,7 @@ async function internalPost<T>(pathname: string, body: unknown, timeoutMs = 8_00
 }
 
 export async function getCloudGlobalEchoRetractions(eventIds: string[]) {
-  const clean = [...new Set(eventIds.map((value) => value.trim()).filter(Boolean))].slice(0, 100);
+  const clean = [...new Set(eventIds.map((value) => value.trim()).filter((value) => /^local-radar-operator:\d+$/.test(value)))].slice(0, 100);
   if (!clean.length) return new Map<string, GlobalEchoRetractionStatus>();
   const result = await internalPost<RetractionStatusResponse>("/internal/operator-echo/retraction-status", { eventIds: clean });
   if (!result.ok || !result.data?.success || !result.data.retractions) {
@@ -69,14 +69,20 @@ export async function getCloudGlobalEchoRetractions(eventIds: string[]) {
 }
 
 export async function retractGlobalEchoInCloud({ eventId, reason, retractedBy }: { eventId: string; reason: string; retractedBy: string }) {
-  const result = await internalPost<RetractionResponse>("/internal/operator-echo/retract", { eventId, reason, retractedBy });
+  const cleanEventId = eventId.trim();
+  if (!/^local-radar-operator:\d+$/.test(cleanEventId)) {
+    const error = new Error("Only manual Global Echo events can be retracted.");
+    Object.assign(error, { status: 400, code: "EVENT_REQUIRED" });
+    throw error;
+  }
+  const result = await internalPost<RetractionResponse>("/internal/operator-echo/retract", { eventId: cleanEventId, reason, retractedBy });
   if (!result.ok || !result.data?.success || !result.data.retraction) {
     const error = new Error(result.data?.error || "Cloud Global Echo retraction failed");
     Object.assign(error, { status: result.status, code: result.data?.code || "RETRACTION_FAILED" });
     throw error;
   }
   return {
-    eventId: result.data.eventId || eventId,
+    eventId: result.data.eventId || cleanEventId,
     duplicate: result.data.duplicate === true,
     retraction: result.data.retraction,
   };
