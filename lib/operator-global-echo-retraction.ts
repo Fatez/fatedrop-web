@@ -3,13 +3,26 @@ import { getCloudGlobalEchoRetractions, type GlobalEchoRetractionStatus } from "
 
 export const RETRACTED_ECHO_MESSAGE = "This Echo was retracted by FateDrop.";
 
+type ProjectableGlobalEchoAlert = Record<string, unknown> & {
+  id?: unknown;
+  signalKind?: string | null;
+  operatorIntelligence?: { sourceType?: string | null; availabilityScope?: string | null } | null;
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
 export function isManualGlobalEchoAlert(alert: { signalKind?: string | null; operatorIntelligence?: { sourceType?: string | null; availabilityScope?: string | null } | null }) {
   return alert.signalKind === "operator_readiness"
     && alert.operatorIntelligence?.sourceType === "operator_manual"
     && alert.operatorIntelligence?.availabilityScope === "online_retailer_readiness";
 }
 
-export function toRetractedEchoTombstone<T extends Record<string, any>>(alert: T, retraction: GlobalEchoRetractionStatus): T {
+export function toRetractedEchoTombstone<T extends ProjectableGlobalEchoAlert>(alert: T, retraction: GlobalEchoRetractionStatus): T {
+  const product = asRecord(alert.product);
+  const notification = asRecord(alert.notification);
+  const notificationData = asRecord(notification.data);
   return {
     ...alert,
     status: "retracted",
@@ -19,7 +32,7 @@ export function toRetractedEchoTombstone<T extends Record<string, any>>(alert: T
     title: "Echo retracted",
     message: RETRACTED_ECHO_MESSAGE,
     productUrl: "",
-    product: { ...(alert.product || {}), title: "Echo retracted", url: "", stockStatus: null },
+    product: { ...product, title: "Echo retracted", url: "", stockStatus: null },
     preparedLinks: {
       primary: null,
       lowestKnown: null,
@@ -29,21 +42,21 @@ export function toRetractedEchoTombstone<T extends Record<string, any>>(alert: T
       fateFindQuery: "",
     },
     notification: {
-      ...(alert.notification || {}),
+      ...notification,
       title: "FateDrop · Echo retracted",
       body: RETRACTED_ECHO_MESSAGE,
       data: {
-        ...((alert.notification || {}).data || {}),
+        ...notificationData,
         productUrl: "",
         lowestKnownUrl: null,
         compareQuery: "",
         retracted: true,
       },
     },
-  };
+  } as T;
 }
 
-export async function projectGlobalEchoRetractions<T extends Record<string, any>>(alerts: T[], { requestedId = null }: { requestedId?: string | null } = {}) {
+export async function projectGlobalEchoRetractions<T extends ProjectableGlobalEchoAlert>(alerts: T[], { requestedId = null }: { requestedId?: string | null } = {}) {
   const manual = alerts.filter(isManualGlobalEchoAlert);
   if (!manual.length) return alerts;
   const retractions = await getCloudGlobalEchoRetractions(manual.map((alert) => String(alert.id)));
