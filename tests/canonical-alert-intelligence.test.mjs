@@ -83,7 +83,8 @@ test('mobile API consumes the complete shared Cloud alert envelope and redacts p
   assert.match(routeSource, /lowestKnown: null/);
   assert.match(routeSource, /officialReference: null/);
   assert.match(routeSource, /alternatives: \[\]/);
-  assert.match(routeSource, /alertsWithDelivery\.map\(freeAlert\)/);
+  assert.match(routeSource, /const windowAlerts = eligibleAlerts\.slice\(0, limit\)/);
+  assert.match(routeSource, /windowAlerts\.map\(freeAlert\)/);
 });
 
 test('push delivery is feature-gated, deduplicated and honors all four lifecycle preferences', () => {

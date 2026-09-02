@@ -39,5 +39,6 @@ test("mobile API carries presentation metadata while preserving free-tier redact
   assert.match(canonicalAlerts, /isCanonicalPresentation\(value\.presentation\)/);
   assert.doesNotMatch(mobileRoute, /listCanonicalAlertPresentations/);
   assert.match(mobileRoute, /presentation: null/);
-  assert.match(mobileRoute, /alertsWithDelivery\.map\(freeAlert\)/);
+  assert.match(mobileRoute, /const windowAlerts = eligibleAlerts\.slice\(0, limit\)/);
+  assert.match(mobileRoute, /windowAlerts\.map\(freeAlert\)/);
 });

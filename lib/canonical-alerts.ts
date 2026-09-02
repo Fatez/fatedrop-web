@@ -271,16 +271,22 @@ function isCanonicalAlert(value: unknown): value is CanonicalAlert {
 export async function listCanonicalAlerts({
   id,
   state,
+  before,
+  beforeId,
   currentOnly = false,
   limit = 50,
 }: {
   id?: string | null;
   state?: CloudLifecycleState | null;
+  before?: number | null;
+  beforeId?: string | null;
   currentOnly?: boolean;
   limit?: number;
 } = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
-  const response = await getLiveCloudAlerts({ id, state, currentOnly, limit: safeLimit });
+  const response = before || beforeId
+    ? await getLiveCloudAlerts({ id, state, before, beforeId, currentOnly, limit: safeLimit })
+    : await getLiveCloudAlerts({ id, state, currentOnly, limit: safeLimit });
   if (!response?.success || response.available !== true || response.source !== "FATEDROP_CLOUD" || !Array.isArray(response.alerts)) {
     throw new Error("Canonical Cloud alert feed unavailable");
   }
@@ -300,16 +306,20 @@ const balancedLifecycleStates = ["whisper", "echo", "manifested", "vanished"] as
 export async function listCanonicalAlertWindow({
   id,
   state,
+  before,
+  beforeId,
   currentOnly = false,
   limitPerStage = 50,
 }: {
   id?: string | null;
   state?: CloudLifecycleState | null;
+  before?: number | null;
+  beforeId?: string | null;
   currentOnly?: boolean;
   limitPerStage?: number;
 } = {}) {
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limitPerStage)));
-  if (id || state || currentOnly) return listCanonicalAlerts({ id, state, currentOnly, limit: safeLimit });
+  if (id || state || currentOnly || before || beforeId) return listCanonicalAlerts({ id, state, before, beforeId, currentOnly, limit: safeLimit });
 
   const windows = await Promise.all(
     balancedLifecycleStates.map((lifecycleState) => listCanonicalAlerts({ state: lifecycleState, limit: safeLimit })),
