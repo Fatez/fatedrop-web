@@ -14,9 +14,12 @@ export function toRetractedEchoTombstone<T extends Record<string, any>>(alert: T
     ...alert,
     status: "retracted",
     retraction,
+    interruptEligible: false,
+    deliveryPolicy: "history_only",
+    title: "Echo retracted",
     message: RETRACTED_ECHO_MESSAGE,
     productUrl: "",
-    product: { ...(alert.product || {}), url: "", stockStatus: null },
+    product: { ...(alert.product || {}), title: "Echo retracted", url: "", stockStatus: null },
     preparedLinks: {
       primary: null,
       lowestKnown: null,
@@ -82,4 +85,19 @@ export async function markClaimedGlobalEchoCancelled(outboxIds: string[], detail
       AND state='sending'
     RETURNING id`;
   return { cancelled: rows.length };
+}
+
+export async function markClaimedGlobalEchoHeld(outboxIds: string[], detail = "Global Echo retraction status could not be verified before Expo delivery.") {
+  const ids = [...new Set(outboxIds.map((value) => value.trim()).filter(Boolean))];
+  if (!ids.length) return { held: 0 };
+  const sql = await fateDropPostgres();
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await sql`
+    UPDATE fatedrop_notification_outbox
+    SET state='failed',attempts=GREATEST(attempts-1,0),last_error=${detail},next_attempt_at=${now + 30},updated_at=${now}
+    WHERE id = ANY(${ids}::text[])
+      AND channel='push'
+      AND state='sending'
+    RETURNING id`;
+  return { held: rows.length };
 }
