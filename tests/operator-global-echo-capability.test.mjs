@@ -2,17 +2,20 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { operatorCapabilitiesFromOwnerRole } from "../lib/operator-capabilities.ts";
+const operatorCapabilitiesUrl = new URL("../lib/operator-capabilities.ts", import.meta.url);
 
-test("Global Echo capability fails closed unless the server role is owner", () => {
-  assert.deepEqual(operatorCapabilitiesFromOwnerRole(null), { canSendGlobalEcho: false });
-  assert.deepEqual(operatorCapabilitiesFromOwnerRole(undefined), { canSendGlobalEcho: false });
-  assert.deepEqual(operatorCapabilitiesFromOwnerRole({ role: "owner" }), { canSendGlobalEcho: true });
+test("Global Echo capability fails closed unless the server role is owner", async () => {
+  const source = await readFile(operatorCapabilitiesUrl, "utf8");
+
+  assert.match(source, /NO_OPERATOR_CAPABILITIES[\s\S]*canSendGlobalEcho:\s*false/);
+  assert.match(source, /return \{ canSendGlobalEcho: role\?\.role === "owner" \}/);
+  assert.match(source, /if \(!cleanUserId\) return NO_OPERATOR_CAPABILITIES/);
+  assert.match(source, /catch \{[\s\S]*return NO_OPERATOR_CAPABILITIES/);
 });
 
 test("Global Echo authority is keyed by immutable internal user id, not mutable identity fields", async () => {
   const ownerAccess = await readFile(new URL("../lib/owner-access.ts", import.meta.url), "utf8");
-  const operatorCapabilities = await readFile(new URL("../lib/operator-capabilities.ts", import.meta.url), "utf8");
+  const operatorCapabilities = await readFile(operatorCapabilitiesUrl, "utf8");
 
   assert.match(ownerAccess, /WHERE user_id = \$\{cleanUserId\} AND role = 'owner'/);
   assert.match(operatorCapabilities, /getOwnerRole\(cleanUserId\)/);
