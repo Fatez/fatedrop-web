@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { betaPremiumEnabled } from "@/lib/beta-premium";
 import { listCanonicalAlertRecoveryWindow, type CanonicalAlert, type CanonicalAlertFacets } from "@/lib/canonical-alerts";
+import { getCloudGlobalEchoRetractions } from "@/lib/operator-global-echo-retraction-cloud";
+import { markClaimedGlobalEchoCancelled, markClaimedGlobalEchoHeld } from "@/lib/operator-global-echo-retraction";
 import { fateDropPostgres } from "@/lib/postgres";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 import { expoAndroidIcon, pushNotificationBranding } from "@/lib/push-notification-branding";
@@ -52,6 +54,7 @@ type RecipientRow = {
 type OutboxRow = {
   id: string;
   user_id: string;
+  event_type: string;
   event_id: string;
   title: string;
   body: string;
@@ -579,7 +582,7 @@ async function claimPending(limit = 100) {
     SET state='sending',attempts=outbox.attempts+1,updated_at=${now}
     FROM candidates
     WHERE outbox.id=candidates.id
-    RETURNING outbox.id,outbox.user_id,outbox.event_id,outbox.title,outbox.body,outbox.url,outbox.payload_json,outbox.attempts`;
+    RETURNING outbox.id,outbox.user_id,outbox.event_type,outbox.event_id,outbox.title,outbox.body,outbox.url,outbox.payload_json,outbox.attempts`;
   return rows as OutboxRow[];
 }
 
@@ -629,9 +632,33 @@ async function recordResult(row: OutboxRow, ticket: ExpoTicket, transportError: 
 }
 
 async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
-  if (!rows.length) return { claimed: 0, sent: 0, failed: 0 };
+  if (!rows.length) return { claimed: 0, sent: 0, failed: 0, cancelled: 0, held: 0 };
 
-  const messages = rows.map((row) => {
+  const operatorRows = rows.filter((row) => row.event_type === "operator_readiness_echo");
+  let deliverable = rows;
+  let cancelled = 0;
+  let held = 0;
+  if (operatorRows.length) {
+    try {
+      const retractions = await getCloudGlobalEchoRetractions(operatorRows.map((row) => row.event_id));
+      const cancelledRows = operatorRows.filter((row) => retractions.has(row.event_id));
+      if (cancelledRows.length) {
+        const result = await markClaimedGlobalEchoCancelled(cancelledRows.map((row) => row.id));
+        cancelled = result.cancelled;
+        const cancelledIds = new Set(cancelledRows.map((row) => row.id));
+        deliverable = deliverable.filter((row) => !cancelledIds.has(row.id));
+      }
+    } catch {
+      const result = await markClaimedGlobalEchoHeld(operatorRows.map((row) => row.id));
+      held = result.held;
+      const heldIds = new Set(operatorRows.map((row) => row.id));
+      deliverable = deliverable.filter((row) => !heldIds.has(row.id));
+    }
+  }
+
+  if (!deliverable.length) return { claimed: rows.length, sent: 0, failed: 0, cancelled, held };
+
+  const messages = deliverable.map((row) => {
     const data = payload(row.payload_json);
     const branding = pushNotificationBranding({ platform: data.pushPlatform, stage: data.stage, route: data.route });
     const icon = expoAndroidIcon(data.pushPlatform, branding);
@@ -678,21 +705,21 @@ async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
     const result = await response.json().catch(() => null) as { data?: ExpoTicket[] | ExpoTicket; errors?: unknown } | null;
     if (!response.ok) throw new Error(`Expo push HTTP ${response.status}`);
     tickets = Array.isArray(result?.data) ? result.data : result?.data ? [result.data] : [];
-    if (tickets.length !== rows.length) throw new Error("Expo push ticket count mismatch");
+    if (tickets.length !== deliverable.length) throw new Error("Expo push ticket count mismatch");
   } catch (error) {
     transportError = error instanceof Error ? error.message : "Expo push transport failed";
-    tickets = rows.map(() => ({ status: "error", message: transportError || undefined }));
+    tickets = deliverable.map(() => ({ status: "error", message: transportError || undefined }));
   }
 
   let sent = 0;
   let failed = 0;
-  for (let index = 0; index < rows.length; index += 1) {
+  for (let index = 0; index < deliverable.length; index += 1) {
     const ticket = tickets[index] ?? { status: "error", message: "Missing Expo push ticket" };
     if (!transportError && ticket.status === "ok") sent += 1;
     else failed += 1;
-    await recordResult(rows[index], ticket, transportError);
+    await recordResult(deliverable[index], ticket, transportError);
   }
-  return { claimed: rows.length, sent, failed };
+  return { claimed: rows.length, sent, failed, cancelled, held };
 }
 
 export async function dispatchCanonicalPushAlerts({ measuredAt = Math.floor(Date.now() / 1000), fetchImpl = fetch }: { measuredAt?: number; fetchImpl?: typeof fetch } = {}) {

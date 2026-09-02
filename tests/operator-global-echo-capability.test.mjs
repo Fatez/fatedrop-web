@@ -4,11 +4,12 @@ import test from "node:test";
 
 const operatorCapabilitiesUrl = new URL("../lib/operator-capabilities.ts", import.meta.url);
 
-test("Global Echo capability fails closed unless the server role is owner", async () => {
+test("Global Echo capabilities fail closed unless the server role is owner", async () => {
   const source = await readFile(operatorCapabilitiesUrl, "utf8");
 
-  assert.match(source, /NO_OPERATOR_CAPABILITIES[\s\S]*canSendGlobalEcho:\s*false/);
-  assert.match(source, /return \{ canSendGlobalEcho: role\?\.role === "owner" \}/);
+  assert.match(source, /NO_OPERATOR_CAPABILITIES[\s\S]*canSendGlobalEcho:\s*false[\s\S]*canRetractGlobalEcho:\s*false/);
+  assert.match(source, /const owner = role\?\.role === "owner"/);
+  assert.match(source, /return \{ canSendGlobalEcho: owner, canRetractGlobalEcho: owner \}/);
   assert.match(source, /if \(!cleanUserId\) return NO_OPERATOR_CAPABILITIES/);
   assert.match(source, /catch \{[\s\S]*return NO_OPERATOR_CAPABILITIES/);
 });
