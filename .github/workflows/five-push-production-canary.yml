@@ -88,6 +88,8 @@ jobs:
           printf '%s' "$canary_secret" | npx wrangler secret put FATEDROP_PUSH_CRON_SECRET
           printf 'FATEDROP_PUSH_CRON_SECRET=%s\n' "$canary_secret" >> "$GITHUB_ENV"
           unset canary_secret
+          echo "Waiting briefly for Cloudflare secret propagation..."
+          sleep 5
 
       - name: Send production test alert selection
         if: steps.marker.outputs.run == 'true'
@@ -97,23 +99,51 @@ jobs:
         run: |
           set -euo pipefail
           WEB="https://fatedrop.co.uk"
-          if [ "$CANARY_KIND" = "suite" ]; then
-            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-              -X POST \
-              -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
-              -H "Accept: application/json" \
-              "$WEB/api/dashboard/push-canary" \
-              -o /tmp/push-canary.json
-          else
-            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-              -X POST \
-              -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
-              -H "Accept: application/json" \
-              -H "Content-Type: application/json" \
-              --data "{\"kind\":\"$CANARY_KIND\"}" \
-              "$WEB/api/dashboard/push-canary" \
-              -o /tmp/push-canary.json
-          fi
+
+          call_canary() {
+            local status=""
+            local attempt
+            for attempt in 1 2 3 4 5 6; do
+              if [ "$CANARY_KIND" = "suite" ]; then
+                status="$(curl --silent --show-error --retry 3 --retry-delay 2 --retry-connrefused \
+                  -X POST \
+                  -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+                  -H "Accept: application/json" \
+                  -o /tmp/push-canary.json \
+                  -w '%{http_code}' \
+                  "$WEB/api/dashboard/push-canary" || true)"
+              else
+                status="$(curl --silent --show-error --retry 3 --retry-delay 2 --retry-connrefused \
+                  -X POST \
+                  -H "Authorization: Bearer $FATEDROP_PUSH_CRON_SECRET" \
+                  -H "Accept: application/json" \
+                  -H "Content-Type: application/json" \
+                  --data "{\"kind\":\"$CANARY_KIND\"}" \
+                  -o /tmp/push-canary.json \
+                  -w '%{http_code}' \
+                  "$WEB/api/dashboard/push-canary" || true)"
+              fi
+
+              if [ "$status" = "200" ]; then
+                return 0
+              fi
+
+              if [ "$status" = "401" ] && [ "$attempt" -lt 6 ]; then
+                echo "Canary secret not propagated yet (HTTP 401, attempt $attempt/6); waiting 5s..."
+                sleep 5
+                continue
+              fi
+
+              echo "Push canary request failed with HTTP ${status:-unknown}."
+              if [ -s /tmp/push-canary.json ]; then
+                cat /tmp/push-canary.json
+                echo
+              fi
+              return 1
+            done
+          }
+
+          call_canary
           node -e '
             const fs=require("fs");
             const result=JSON.parse(fs.readFileSync("/tmp/push-canary.json","utf8"));
