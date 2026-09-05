@@ -164,6 +164,16 @@ export type CanonicalAlert = {
       linksPrepared: true;
     };
   };
+  operatorIntelligence?: {
+    availabilityScope: "online_retailer_readiness";
+    availabilityVerified: false;
+    sourceType: string | null;
+    expectedFrom: string | null;
+    expectedTo: string | null;
+    expectedLabel: string | null;
+    expiresAt: string | null;
+    operatorIssue: number | null;
+  } | null;
   confidence: number;
 };
 
