@@ -69,7 +69,7 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
   const eventId = text(value.eventId, 180);
   const tcgCode = activeTcgCode(value.tcgCode);
   const stage = value.stage === "WHISPER" || value.stage === "ECHO" ? value.stage : null;
-  const title = text(value.title, 180);
+  const title = text(value.title, 260);
   const body = text(value.body, 600);
   const retailerId = text(value.retailerId, 120);
   const retailerName = text(value.retailerName, 140);
@@ -105,8 +105,9 @@ function parseOperatorPush(payload: unknown): LocalRadarOperatorPush | null {
     if (eventId !== `local-radar-operator:${operatorIssue}`) return null;
     if (stage !== "ECHO" || route !== "alerts" || presentationType !== "readiness_echo") return null;
     if (Number.isFinite(branchCount) && branchCount !== 0) return null;
-    if (title !== "FateDrop · Echo · Be ready") return null;
-    if (!body.endsWith("This is readiness evidence, not confirmed stock.")) return null;
+    if (title !== `Echo · ${productTitle}`) return null;
+    const expectedBody = `${retailerName} · ${expectedLabel || "Retailer activity detected"}\nPossible drop approaching · Stock not confirmed`;
+    if (body !== expectedBody) return null;
   } else {
     // Physical Big Fate intelligence is consumed from Cloud through radius-filtered
     // Local Radar. It must never enter this chain-wide interrupt endpoint.

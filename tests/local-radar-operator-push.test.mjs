@@ -57,8 +57,8 @@ test("operator dispatch inherits stale-sending lease recovery before claiming wo
 });
 
 test("Web validates online readiness Echo copy and rejects physical national interruption", () => {
-  assert.match(route, /FateDrop · Echo · Be ready/);
-  assert.match(route, /This is readiness evidence, not confirmed stock\./);
+  assert.match(route, /title !== `Echo · \$\{productTitle\}`/);
+  assert.match(route, /Possible drop approaching · Stock not confirmed/);
   assert.match(route, /eventId !== `local-radar-operator:\$\{operatorIssue\}`/);
   assert.match(route, /availabilityScope === "online_retailer_readiness"/);
   assert.match(route, /Physical Big Fate intelligence is consumed from Cloud through radius-filtered/);

@@ -16,8 +16,8 @@ test("Web accepts TEST ONLY operator transport only through an explicit boolean 
 
 test("TEST ONLY cannot masquerade as the normal operator event contract", () => {
   assert.match(route, /if \(testOnly\)[\s\S]*local-radar-operator-test:[\s\S]*online_retailer_readiness[\s\S]*local-radar-operator:/);
-  assert.match(route, /FateDrop · Echo · Be ready/);
-  assert.match(route, /This is readiness evidence, not confirmed stock\./);
+  assert.match(route, /title !== `Echo · \$\{productTitle\}`/);
+  assert.match(route, /Possible drop approaching · Stock not confirmed/);
 });
 
 test("TEST ONLY reuses the real outbox transport with a separate event identity", () => {

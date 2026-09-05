@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { betaPremiumEnabled } from "@/lib/beta-premium";
 import { listCanonicalAlertRecoveryWindow, type CanonicalAlert, type CanonicalAlertFacets } from "@/lib/canonical-alerts";
+import { retractedOperatorEchoIds } from "@/lib/operator-echo-retraction";
 import { fateDropPostgres } from "@/lib/postgres";
 import { productAlertEnabled } from "@/lib/product-alert-intelligence";
 import { expoAndroidIcon, pushNotificationBranding } from "@/lib/push-notification-branding";
@@ -460,6 +461,11 @@ async function enqueueRecentAlerts({ measuredAt, lookbackSeconds = CANONICAL_PUS
       id text,dedupe_key text,user_id text,event_type text,event_id text,channel text,title text,body text,url text,
       payload_json jsonb,state text,attempts integer,next_attempt_at bigint,created_at bigint,updated_at bigint
     )
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM fatedrop_operator_echo_retractions retraction
+      WHERE retraction.target_event_id=item.event_id
+    )
     ON CONFLICT (dedupe_key) DO NOTHING
     RETURNING id`;
   await recordRecoveryCheckpoint(measuredAt);
@@ -532,6 +538,11 @@ async function enqueueLocalRadarOperatorPush(event: LocalRadarOperatorPush) {
       id text,dedupe_key text,user_id text,event_type text,event_id text,channel text,title text,body text,url text,
       payload_json jsonb,state text,attempts integer,next_attempt_at bigint,created_at bigint,updated_at bigint
     )
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM fatedrop_operator_echo_retractions retraction
+      WHERE retraction.target_event_id=item.event_id
+    )
     ON CONFLICT (dedupe_key) DO NOTHING
     RETURNING id`;
   return { recipients: recipients.length, queued: inserted.length };
@@ -562,6 +573,11 @@ async function claimPending(limit = 100) {
       FROM fatedrop_notification_outbox
       WHERE channel='push'
         AND state IN ('pending','failed')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM fatedrop_operator_echo_retractions retraction
+          WHERE retraction.target_event_id=fatedrop_notification_outbox.event_id
+        )
         AND attempts < ${MAX_ATTEMPTS}
         AND next_attempt_at <= ${now}
       ORDER BY
@@ -604,7 +620,8 @@ async function recordResult(row: OutboxRow, ticket: ExpoTicket, transportError: 
       last_error=${ticketOk ? null : detail},
       next_attempt_at=${nextAttempt},
       updated_at=${now}
-    WHERE id=${row.id}`;
+    WHERE id=${row.id}
+      AND state='sending'`;
 
   await sql`
     INSERT INTO fatedrop_notification_delivery_attempts (
@@ -631,7 +648,22 @@ async function recordResult(row: OutboxRow, ticket: ExpoTicket, transportError: 
 async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
   if (!rows.length) return { claimed: 0, sent: 0, failed: 0 };
 
-  const messages = rows.map((row) => {
+  const retracted = await retractedOperatorEchoIds(rows.map((row) => row.event_id));
+  const suppressedRows = rows.filter((row) => retracted.has(row.event_id));
+  const activeRows = rows.filter((row) => !retracted.has(row.event_id));
+  if (suppressedRows.length) {
+    const sql = await fateDropPostgres();
+    const now = Math.floor(Date.now() / 1000);
+    const ids = JSON.stringify(suppressedRows.map((row) => row.id));
+    await sql`
+      UPDATE fatedrop_notification_outbox
+      SET state='suppressed',last_error='operator_echo_retracted_before_send',updated_at=${now}
+      WHERE id IN (SELECT jsonb_array_elements_text(${ids}::jsonb))
+        AND state='sending'`;
+  }
+  if (!activeRows.length) return { claimed: rows.length, sent: 0, failed: 0, suppressed: suppressedRows.length };
+
+  const messages = activeRows.map((row) => {
     const data = payload(row.payload_json);
     const branding = pushNotificationBranding({ platform: data.pushPlatform, stage: data.stage, route: data.route });
     const icon = expoAndroidIcon(data.pushPlatform, branding);
@@ -678,21 +710,21 @@ async function sendClaimed(rows: OutboxRow[], fetchImpl: typeof fetch = fetch) {
     const result = await response.json().catch(() => null) as { data?: ExpoTicket[] | ExpoTicket; errors?: unknown } | null;
     if (!response.ok) throw new Error(`Expo push HTTP ${response.status}`);
     tickets = Array.isArray(result?.data) ? result.data : result?.data ? [result.data] : [];
-    if (tickets.length !== rows.length) throw new Error("Expo push ticket count mismatch");
+    if (tickets.length !== activeRows.length) throw new Error("Expo push ticket count mismatch");
   } catch (error) {
     transportError = error instanceof Error ? error.message : "Expo push transport failed";
-    tickets = rows.map(() => ({ status: "error", message: transportError || undefined }));
+    tickets = activeRows.map(() => ({ status: "error", message: transportError || undefined }));
   }
 
   let sent = 0;
   let failed = 0;
-  for (let index = 0; index < rows.length; index += 1) {
+  for (let index = 0; index < activeRows.length; index += 1) {
     const ticket = tickets[index] ?? { status: "error", message: "Missing Expo push ticket" };
     if (!transportError && ticket.status === "ok") sent += 1;
     else failed += 1;
-    await recordResult(rows[index], ticket, transportError);
+    await recordResult(activeRows[index], ticket, transportError);
   }
-  return { claimed: rows.length, sent, failed };
+  return { claimed: rows.length, sent, failed, suppressed: suppressedRows.length };
 }
 
 export async function dispatchCanonicalPushAlerts({ measuredAt = Math.floor(Date.now() / 1000), fetchImpl = fetch }: { measuredAt?: number; fetchImpl?: typeof fetch } = {}) {

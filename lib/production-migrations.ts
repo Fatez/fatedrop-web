@@ -313,6 +313,35 @@ WHERE NULLIF(BTRIM(tcg_code),'') IS NULL`,
   ON fatedrop_account_deletion_requests (status, requested_at ASC)`,
     ],
   },
+  {
+    id: "2026-09-05-operator-echo-retractions.sql",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS fatedrop_operator_echo_retractions (
+  target_event_id text PRIMARY KEY CHECK (target_event_id ~ '^local-radar-operator:[1-9][0-9]*$'),
+  retraction_event_id text NOT NULL UNIQUE CHECK (retraction_event_id ~ '^local-radar-operator-retraction:[1-9][0-9]*$'),
+  original_operator_issue bigint NOT NULL CHECK (original_operator_issue > 0),
+  retraction_issue bigint NOT NULL UNIQUE CHECK (retraction_issue > 0),
+  reason text NOT NULL CHECK (char_length(reason) BETWEEN 10 AND 500),
+  operator_login text NOT NULL,
+  requested_at bigint NOT NULL,
+  retracted_at bigint NOT NULL,
+  payload_json jsonb NOT NULL
+)`,
+      `CREATE INDEX IF NOT EXISTS fatedrop_operator_echo_retractions_time_idx
+  ON fatedrop_operator_echo_retractions (retracted_at DESC)`,
+      `CREATE TABLE IF NOT EXISTS fatedrop_operator_echo_retraction_audit (
+  request_event_id text PRIMARY KEY CHECK (request_event_id ~ '^local-radar-operator-retraction:[1-9][0-9]*$'),
+  target_event_id text NOT NULL REFERENCES fatedrop_operator_echo_retractions(target_event_id),
+  outcome text NOT NULL CHECK (outcome IN ('effective', 'already_retracted')),
+  reason text NOT NULL CHECK (char_length(reason) BETWEEN 10 AND 500),
+  operator_login text NOT NULL,
+  requested_at bigint NOT NULL,
+  recorded_at bigint NOT NULL
+)`,
+      `CREATE INDEX IF NOT EXISTS fatedrop_operator_echo_retraction_audit_target_time_idx
+  ON fatedrop_operator_echo_retraction_audit (target_event_id, recorded_at DESC)`,
+    ],
+  },
 ] as const;
 
 export const PRODUCTION_MIGRATION_CUTOFF = MIGRATION_CUTOFF;
@@ -390,6 +419,10 @@ export async function runProductionMigrations() {
     SELECT
       (SELECT COUNT(*) FROM fatedrop_fate_matches WHERE NULLIF(BTRIM(tcg_code),'') IS NULL)::int
       + (SELECT COUNT(*) FROM fatedrop_hosted_fate_matches WHERE NULLIF(BTRIM(tcg_code),'') IS NULL)::int AS count`;
+  const operatorEchoRetractionRows = await sql`
+    SELECT
+      to_regclass('public.fatedrop_operator_echo_retractions')::text AS retractions_table,
+      to_regclass('public.fatedrop_operator_echo_retraction_audit')::text AS audit_table`;
 
   if (!vanishedDefault.includes("true")) throw new Error("Production migration verification failed: Vanished default is not enabled.");
   if (facetColumns.size !== 10) throw new Error(`Production migration verification failed: expected 10 alert market/set preference columns, found ${facetColumns.size}.`);
@@ -400,6 +433,7 @@ export async function runProductionMigrations() {
   if (!recoveryCheckpointRows[0]?.checkpoint_table) throw new Error("Production migration verification failed: push recovery checkpoint is missing.");
   if (fateMatchTcgRows.length !== 2 || fateMatchTcgRows.some((row) => String(row.is_nullable) !== "NO")) throw new Error("Production migration verification failed: FateMatch TCG scope is missing or nullable.");
   if (Number(unscopedFateMatchRows[0]?.count ?? 0) !== 0) throw new Error("Production migration verification failed: unscoped FateMatch rows remain.");
+  if (!operatorEchoRetractionRows[0]?.retractions_table || !operatorEchoRetractionRows[0]?.audit_table) throw new Error("Production migration verification failed: operator Echo retraction audit storage is missing.");
   if (pending.length) throw new Error(`Production migration verification failed: pending migrations: ${pending.join(", ")}`);
 
   return {
@@ -415,5 +449,6 @@ export async function runProductionMigrations() {
     multiTcgPreferenceColumnsVerified: true,
     pushRecoveryCheckpointVerified: true,
     fateMatchTcgScopeVerified: true,
+    operatorEchoRetractionStorageVerified: true,
   };
 }

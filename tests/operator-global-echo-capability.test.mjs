@@ -8,7 +8,9 @@ test("Global Echo capability fails closed unless the server role is owner", asyn
   const source = await readFile(operatorCapabilitiesUrl, "utf8");
 
   assert.match(source, /NO_OPERATOR_CAPABILITIES[\s\S]*canSendGlobalEcho:\s*false/);
-  assert.match(source, /return \{ canSendGlobalEcho: role\?\.role === "owner" \}/);
+  assert.match(source, /NO_OPERATOR_CAPABILITIES[\s\S]*canRetractGlobalEcho:\s*false/);
+  assert.match(source, /const owner = role\?\.role === "owner"/);
+  assert.match(source, /return \{ canSendGlobalEcho: owner, canRetractGlobalEcho: owner \}/);
   assert.match(source, /if \(!cleanUserId\) return NO_OPERATOR_CAPABILITIES/);
   assert.match(source, /catch \{[\s\S]*return NO_OPERATOR_CAPABILITIES/);
 });
